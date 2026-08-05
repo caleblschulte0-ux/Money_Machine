@@ -21,6 +21,19 @@ const RUN_TONE: Record<string, "positive" | "caution" | "negative" | "neutral" |
 export default async function AutomationPage() {
   const { platform, organizationId } = await getPlatform();
 
+  // EMPTY_PLATFORM_GUARD — nothing is operating; say so rather than render zeros.
+  if (!organizationId) {
+    return (
+      <>
+        <h1 className="page-title">Automation</h1>
+        <EmptyState
+          title="Nothing is operating"
+          description="Workflows and agents are registered by venture modules; none are installed. Run DEMO_DATA=true pnpm dev to explore with fictional data, or create a real organization and venture first."
+        />
+      </>
+    );
+  }
+
   const workflows = platform.workflows.list();
   const agents = platform.agents.list();
   const runs = (

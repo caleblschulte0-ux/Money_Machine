@@ -20,13 +20,23 @@ automated, standardised, or at minimum made measurable.
 
 ```bash
 pnpm install
-pnpm seed        # fictional demo data, in-memory, no credentials needed
 pnpm dev         # Command Center at http://localhost:3000
 pnpm test        # 133 tests
 ```
 
 No database, no API keys and no accounts are required. The default store is
 in-memory and every external provider is a mock.
+
+**The dashboard opens empty, and that is correct.** No venture is operating, so
+there is no revenue, no customer and no activity to show. To see how it behaves
+with data in it:
+
+```bash
+DEMO_DATA=true pnpm dev    # fictional companies, invented figures
+```
+
+Demo data is opt-in rather than the default because a dashboard that greets you
+with invented revenue trains you to trust numbers that are not real.
 
 To use PostgreSQL:
 

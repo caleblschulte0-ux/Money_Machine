@@ -15,6 +15,19 @@ export const dynamic = "force-dynamic";
 
 export default async function ApprovalsPage() {
   const { platform, organizationId } = await getPlatform();
+
+  // EMPTY_PLATFORM_GUARD — nothing is operating; say so rather than render zeros.
+  if (!organizationId) {
+    return (
+      <>
+        <h1 className="page-title">Human approval queue</h1>
+        <EmptyState
+          title="Nothing is operating"
+          description="No approvals exist because nothing is running. Run DEMO_DATA=true pnpm dev to explore with fictional data, or create a real organization and venture first."
+        />
+      </>
+    );
+  }
   const summary = await platform.approvals.summary(organizationId);
   const pending = await platform.approvals.pending(organizationId);
   const decided = [

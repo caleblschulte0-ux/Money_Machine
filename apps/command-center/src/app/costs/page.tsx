@@ -9,6 +9,19 @@ export const dynamic = "force-dynamic";
 export default async function CostsPage() {
   const { platform, organizationId, periodKey } = await getPlatform();
 
+  // EMPTY_PLATFORM_GUARD — nothing is operating; say so rather than render zeros.
+  if (!organizationId) {
+    return (
+      <>
+        <h1 className="page-title">Costs and capital</h1>
+        <EmptyState
+          title="Nothing is operating"
+          description="No spend has been recorded because nothing is operating. Run DEMO_DATA=true pnpm dev to explore with fictional data, or create a real organization and venture first."
+        />
+      </>
+    );
+  }
+
   const byCategory = await platform.costs.byCategory(organizationId, periodKey);
   const byVenture = await platform.costs.byVenture(organizationId, periodKey);
   const ventures = await platform.ventures.list(organizationId);

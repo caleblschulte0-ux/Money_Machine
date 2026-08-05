@@ -26,6 +26,18 @@ have done and return `simulated: true`:
 A workflow using them completes, and its output is explicitly marked so no
 report can mistake it for a real effect.
 
+## The dashboard has nothing real to show yet
+
+The Command Center works, but no venture is operating, so by default it shows
+an empty state rather than figures. Its value today is proving the platform
+records and surfaces what it is given — not reporting on a business.
+
+Demo data is behind `DEMO_DATA=true` for that reason. It was previously seeded
+automatically whenever the store was in-memory, which meant a fresh clone
+opened on a dashboard reporting revenue that did not exist. A "Demo data"
+banner did not fix that, because the rest of the screen still read as a
+business performing well.
+
 ## The Command Center is read-only
 
 Every page renders real data, but **no page performs a write**. You cannot

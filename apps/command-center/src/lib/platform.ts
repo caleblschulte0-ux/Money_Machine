@@ -25,13 +25,22 @@ export interface PlatformContext {
 }
 
 async function boot(): Promise<PlatformContext> {
+  // Demo data is opt-in, never the default.
+  //
+  // It used to seed automatically whenever the store was in-memory, which meant
+  // a fresh clone opened on a dashboard confidently reporting revenue that does
+  // not exist. A "Demo data" banner does not fix that: the rest of the screen
+  // still reads as a real business performing well. An empty dashboard is the
+  // honest default, because the honest answer today is "nothing is operating".
+  const demoRequested = process.env["DEMO_DATA"] === "true";
+
   const platform = await createPlatform(
     process.env["STORE_DRIVER"] === "prisma"
       ? {}
-      : { clock: new FixedClock(new Date("2026-03-15T14:00:00.000Z")) },
+      : { clock: demoRequested ? new FixedClock(new Date("2026-03-15T14:00:00.000Z")) : systemClock },
   );
 
-  if (platform.store.driver === "memory") {
+  if (platform.store.driver === "memory" && demoRequested) {
     const seeded = await seedDemoData(platform);
     return {
       platform,

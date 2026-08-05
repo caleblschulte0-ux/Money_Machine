@@ -15,6 +15,41 @@ export const dynamic = "force-dynamic";
 
 export default async function PortfolioPage() {
   const { platform, organizationId, periodKey } = await getPlatform();
+
+  // Nothing is operating yet. Say that, rather than rendering a grid of zeros
+  // that reads like a business with no sales this month.
+  if (!organizationId) {
+    return (
+      <>
+        <h1 className="page-title">Portfolio overview</h1>
+        <p className="page-subtitle">No organization exists in this database yet.</p>
+        <Card title="Nothing is operating">
+          <p style={{ marginTop: 0 }}>
+            This platform has no ventures, no customers and no revenue. That is the accurate
+            state, not a loading failure. There are no figures to show because nothing has
+            happened yet.
+          </p>
+          <p>To put something in it:</p>
+          <ul className="small">
+            <li>
+              <code className="mono">DEMO_DATA=true pnpm dev</code> — load fictional companies to
+              see how the dashboard behaves with data in it. Every figure will be invented.
+            </li>
+            <li>
+              Or register a real organization and venture through{" "}
+              <code className="mono">platform.auth</code> and{" "}
+              <code className="mono">platform.ventures</code>, then record real activity.
+            </li>
+          </ul>
+          <Disclaimer>
+            A venture only appears here once it has been created in the registry. Revenue only
+            appears once a metric snapshot has been recorded from real activity.
+          </Disclaimer>
+        </Card>
+      </>
+    );
+  }
+
   const summary = await platform.analytics.portfolio(organizationId, periodKey);
   const approvals = await platform.approvals.summary(organizationId);
   const automation = await platform.analytics.automationHealth(organizationId);

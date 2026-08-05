@@ -5,6 +5,19 @@ export const dynamic = "force-dynamic";
 
 export default async function ExperimentsPage() {
   const { platform, organizationId } = await getPlatform();
+
+  // EMPTY_PLATFORM_GUARD — nothing is operating; say so rather than render zeros.
+  if (!organizationId) {
+    return (
+      <>
+        <h1 className="page-title">Experiments</h1>
+        <EmptyState
+          title="Nothing is operating"
+          description="No experiments have been created. Run DEMO_DATA=true pnpm dev to explore with fictional data, or create a real organization and venture first."
+        />
+      </>
+    );
+  }
   const experiments = await platform.experiments.list(organizationId);
   const dueForReview = await platform.experiments.reviewDue(organizationId);
 

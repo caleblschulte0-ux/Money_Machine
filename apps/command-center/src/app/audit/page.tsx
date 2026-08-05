@@ -13,6 +13,19 @@ const ACTOR_TONE: Record<string, "positive" | "info" | "caution" | "neutral"> = 
 
 export default async function AuditPage() {
   const { platform, organizationId } = await getPlatform();
+
+  // EMPTY_PLATFORM_GUARD — nothing is operating; say so rather than render zeros.
+  if (!organizationId) {
+    return (
+      <>
+        <h1 className="page-title">Audit trail</h1>
+        <EmptyState
+          title="Nothing is operating"
+          description="No actions have been taken yet. Run DEMO_DATA=true pnpm dev to explore with fictional data, or create a real organization and venture first."
+        />
+      </>
+    );
+  }
   const events = await platform.audit.query({ organizationId, limit: 100 });
 
   return (
