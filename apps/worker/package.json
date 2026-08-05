@@ -1,0 +1,28 @@
+{
+  "name": "@holdco/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "dev": "tsx watch src/main.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@holdco/platform": "workspace:*",
+    "@holdco/core": "workspace:*",
+    "@holdco/config": "workspace:*",
+    "@holdco/observability": "workspace:*",
+    "@holdco/workflows": "workspace:*",
+    "@holdco/agents": "workspace:*",
+    "@holdco/analytics": "workspace:*",
+    "@holdco/approvals": "workspace:*",
+    "@holdco/knowledge": "workspace:*",
+    "@holdco/experiments": "workspace:*",
+    "@holdco/auth": "workspace:*",
+    "@holdco/database": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

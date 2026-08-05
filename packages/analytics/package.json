@@ -1,0 +1,25 @@
+{
+  "name": "@holdco/analytics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --root ../.. --dir \"packages/analytics\""
+  },
+  "dependencies": {
+    "@holdco/core": "workspace:*",
+    "@holdco/database": "workspace:*",
+    "@holdco/cost-accounting": "workspace:*",
+    "@holdco/ventures": "workspace:*",
+    "@holdco/billing": "workspace:*"
+  },
+  "devDependencies": {
+    "@holdco/testing": "workspace:*"
+  }
+}

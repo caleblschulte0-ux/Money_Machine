@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: holdco-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: holdco
+      POSTGRES_PASSWORD: holdco
+      POSTGRES_DB: holdco
+    ports:
+      - "5432:5432"
+    volumes:
+      - holdco-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U holdco -d holdco"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: holdco-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - holdco-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    # Local SMTP sink. Nothing leaves the machine — this is how we honour
+    # "never send live communications during testing" when exercising the
+    # SMTP adapter instead of the mock adapter.
+    image: axllent/mailpit:latest
+    container_name: holdco-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  holdco-postgres:
+  holdco-redis:

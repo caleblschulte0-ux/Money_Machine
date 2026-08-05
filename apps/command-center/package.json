@@ -1,0 +1,40 @@
+{
+  "name": "@holdco/command-center",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@holdco/platform": "workspace:*",
+    "@holdco/design-system": "workspace:*",
+    "@holdco/core": "workspace:*",
+    "@holdco/config": "workspace:*",
+    "@holdco/ventures": "workspace:*",
+    "@holdco/crm": "workspace:*",
+    "@holdco/approvals": "workspace:*",
+    "@holdco/workflows": "workspace:*",
+    "@holdco/agents": "workspace:*",
+    "@holdco/analytics": "workspace:*",
+    "@holdco/cost-accounting": "workspace:*",
+    "@holdco/experiments": "workspace:*",
+    "@holdco/auth": "workspace:*",
+    "next": "^15.5.22",
+    "react": "^19.0.8",
+    "react-dom": "^19.0.8",
+    "@holdco/demo-data": "workspace:*",
+    "@holdco/database": "workspace:*",
+    "@holdco/knowledge": "workspace:*",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "postcss": "^8.5.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  }
+}

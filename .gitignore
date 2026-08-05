@@ -1,0 +1,23 @@
+node_modules/
+.next/
+dist/
+build/
+out/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Environment / secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Local data
+*.log
+.DS_Store
+.pnpm-store/
+prisma/*.db
+tmp/
+
+# Next.js generated
+next-env.d.ts

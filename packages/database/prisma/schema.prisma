@@ -1,0 +1,954 @@
+// AI Holding Company — durable domain model.
+//
+// Field names match `src/types.ts` exactly. That is load-bearing: the Prisma
+// store adapter passes rows through generically instead of hand-mapping 40
+// repositories, so a rename here without a rename there will break at runtime.
+//
+// Money is always an Int in minor units (cents). Never Float, never Decimal.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy, identity and access
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id        String   @id
+  name      String
+  slug      String   @unique
+  kind      String
+  status    String   @default("active")
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind, status])
+}
+
+model User {
+  id             String    @id
+  organizationId String
+  email          String
+  name           String
+  passwordHash   String?
+  status         String    @default("invited")
+  mfaEnrolled    Boolean   @default(false)
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, email])
+  @@index([organizationId, status])
+}
+
+model Membership {
+  id             String   @id
+  organizationId String
+  userId         String
+  role           String
+  ventureIds     Json?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, userId])
+  @@index([userId, status])
+}
+
+model Session {
+  id             String    @id
+  organizationId String
+  userId         String
+  tokenDigest    String    @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  ipAddress      String?
+  userAgent      String?
+  mfaSatisfied   Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId, expiresAt])
+}
+
+model ApiKey {
+  id                 String    @id
+  organizationId     String
+  ventureId          String?
+  name               String
+  tokenDigest        String    @unique
+  scopes             String[]
+  lastUsedAt         DateTime?
+  revokedAt          DateTime?
+  rateLimitPerMinute Int       @default(120)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([organizationId, ventureId])
+}
+
+// ---------------------------------------------------------------------------
+// Venture registry
+// ---------------------------------------------------------------------------
+
+model Venture {
+  id                String    @id
+  organizationId    String
+  key               String
+  name              String
+  brandName         String
+  stage             String
+  thesis            String
+  ownerUserId       String?
+  domains           String[]
+  maxAutonomyLevel  Int       @default(2)
+  monthlyBudgetMinor Int      @default(0)
+  stopLossMinor     Int       @default(0)
+  launchedAt        DateTime?
+  closedAt          DateTime?
+  stageReason       String?
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId, stage])
+}
+
+model VentureMetricSnapshot {
+  id                   String   @id
+  organizationId       String
+  ventureId            String
+  periodKey            String
+  revenueMinor         Int      @default(0)
+  cogsMinor            Int      @default(0)
+  marketingSpendMinor  Int      @default(0)
+  contractorSpendMinor Int      @default(0)
+  aiSpendMinor         Int      @default(0)
+  otherSpendMinor      Int      @default(0)
+  customerCount        Int      @default(0)
+  activeSubscriptions  Int      @default(0)
+  newCustomers         Int      @default(0)
+  churnedCustomers     Int      @default(0)
+  refundsMinor         Int      @default(0)
+  receivablesMinor     Int      @default(0)
+  supportCases         Int      @default(0)
+  humanHours           Float    @default(0)
+  automatedActions     Int      @default(0)
+  manualActions        Int      @default(0)
+  capturedAt           DateTime
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([ventureId, periodKey])
+  @@index([organizationId, periodKey])
+}
+
+model VentureGateResult {
+  id               String    @id
+  organizationId   String
+  ventureId        String
+  gate             String
+  passed           Boolean
+  evidence         Json      @default("{}")
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([ventureId, gate])
+}
+
+// ---------------------------------------------------------------------------
+// CRM
+// ---------------------------------------------------------------------------
+
+model Account {
+  id              String   @id
+  organizationId  String
+  ventureId       String?
+  name            String
+  type            String
+  domain          String?
+  industry        String?
+  employeeCount   Int?
+  city            String?
+  state           String?
+  country         String?
+  status          String   @default("active")
+  ownerUserId     String?
+  source          String
+  dataConfidence  Float    @default(0.5)
+  consentStatus   String   @default("unknown")
+  retentionPolicy String?
+  tags            String[]
+  metadata        Json     @default("{}")
+  assignedUserId  String?
+  assignedAgentId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, ventureId, type])
+  @@index([organizationId, name])
+}
+
+model Contact {
+  id              String   @id
+  organizationId  String
+  ventureId       String?
+  accountId       String?
+  firstName       String
+  lastName        String
+  email           String?
+  emailBlindIndex String?
+  phone           String?
+  title           String?
+  timezone        String?
+  status          String   @default("active")
+  source          String
+  dataConfidence  Float    @default(0.5)
+  consentStatus   String   @default("unknown")
+  retentionPolicy String?
+  tags            String[]
+  metadata        Json     @default("{}")
+  assignedUserId  String?
+  assignedAgentId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, ventureId])
+  @@index([emailBlindIndex])
+  @@index([accountId])
+}
+
+model Lead {
+  id                  String    @id
+  organizationId      String
+  ventureId           String?
+  contactId           String?
+  accountId           String?
+  campaignId          String?
+  status              String    @default("new")
+  score               Int       @default(0)
+  scoreReasons        String[]
+  intent              String?
+  channel             String
+  dedupeKey           String
+  duplicateOfId       String?
+  estimatedValueMinor Int?
+  disqualifyReason    String?
+  routedToAccountId   String?
+  routedAt            DateTime?
+  acceptedAt          DateTime?
+  rejectedReason      String?
+  payload             Json      @default("{}")
+  source              String
+  dataConfidence      Float     @default(0.5)
+  consentStatus       String    @default("unknown")
+  retentionPolicy     String?
+  tags                String[]
+  metadata            Json      @default("{}")
+  assignedUserId      String?
+  assignedAgentId     String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, status])
+  @@index([dedupeKey])
+  @@index([routedToAccountId])
+}
+
+model Opportunity {
+  id                 String    @id
+  organizationId     String
+  ventureId          String?
+  accountId          String
+  contactId          String?
+  name               String
+  stage              String    @default("discovery")
+  amountMinor        Int       @default(0)
+  probability        Float     @default(0.1)
+  expectedCloseDate  DateTime?
+  closedAt           DateTime?
+  lostReason         String?
+  offerKey           String?
+  source             String
+  dataConfidence     Float     @default(0.5)
+  consentStatus      String    @default("unknown")
+  retentionPolicy    String?
+  tags               String[]
+  metadata           Json      @default("{}")
+  assignedUserId     String?
+  assignedAgentId    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, stage])
+  @@index([accountId])
+}
+
+model Task {
+  id              String    @id
+  organizationId  String
+  ventureId       String?
+  title           String
+  description     String?
+  status          String    @default("open")
+  priority        String    @default("normal")
+  dueAt           DateTime?
+  completedAt     DateTime?
+  assignedUserId  String?
+  assignedAgentId String?
+  relatedType     String?
+  relatedId       String?
+  createdBy       String
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, status])
+  @@index([assignedUserId, status])
+}
+
+model Note {
+  id             String   @id
+  organizationId String
+  ventureId      String?
+  body           String
+  authorType     String
+  authorId       String?
+  relatedType    String
+  relatedId      String
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([relatedType, relatedId])
+}
+
+model Communication {
+  id                String    @id
+  organizationId    String
+  ventureId         String?
+  channel           String
+  direction         String
+  status            String
+  contactId         String?
+  accountId         String?
+  subject           String?
+  body              String
+  fromAddress       String?
+  toAddress         String?
+  providerMessageId String?
+  providerName      String
+  failureReason     String?
+  sentAt            DateTime?
+  durationSeconds   Int?
+  recordingUrl      String?
+  transcript        String?
+  summary           String?
+  workflowRunId     String?
+  agentRunId        String?
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, channel, status])
+  @@index([contactId])
+}
+
+model SupportCase {
+  id                String    @id
+  organizationId    String
+  ventureId         String?
+  accountId         String?
+  contactId         String?
+  subject           String
+  description       String
+  status            String    @default("new")
+  priority          String    @default("normal")
+  category          String?
+  assignedUserId    String?
+  assignedAgentId   String?
+  firstResponseAt   DateTime?
+  resolvedAt        DateTime?
+  escalatedReason   String?
+  satisfactionScore Int?
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, status])
+}
+
+model Campaign {
+  id             String    @id
+  organizationId String
+  ventureId      String?
+  name           String
+  channel        String
+  status         String    @default("draft")
+  budgetMinor    Int       @default(0)
+  spendMinor     Int       @default(0)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  offerKey       String?
+  metadata       Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, status])
+}
+
+model Project {
+  id                  String    @id
+  organizationId      String
+  ventureId           String?
+  accountId           String?
+  name                String
+  status              String    @default("planned")
+  packageKey          String?
+  contractValueMinor  Int       @default(0)
+  deliveredValueMinor Int       @default(0)
+  startsAt            DateTime?
+  dueAt               DateTime?
+  completedAt         DateTime?
+  ownerUserId         String?
+  metadata            Json      @default("{}")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, status])
+}
+
+model DocumentRecord {
+  id                     String   @id
+  organizationId         String
+  ventureId              String?
+  name                   String
+  kind                   String
+  status                 String   @default("draft")
+  storageKey             String?
+  contentType            String?
+  sizeBytes              Int?
+  relatedType            String?
+  relatedId              String?
+  generatedByAgentRunId  String?
+  metadata               Json     @default("{}")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([organizationId, ventureId, kind])
+}
+
+// ---------------------------------------------------------------------------
+// Automation
+// ---------------------------------------------------------------------------
+
+model WorkflowDefinition {
+  id                String    @id
+  organizationId    String
+  ventureId         String?
+  key               String
+  version           Int
+  name              String
+  description       String
+  triggerType       String
+  definition        Json
+  autonomyLevel     Int       @default(2)
+  status            String    @default("draft")
+  maxRunCostMinor   Int       @default(0)
+  publishedAt       DateTime?
+  publishedByUserId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([organizationId, key, version])
+  @@index([organizationId, ventureId, status])
+}
+
+model WorkflowRun {
+  id              String    @id
+  organizationId  String
+  ventureId       String?
+  workflowKey     String
+  workflowVersion Int
+  status          String
+  mode            String    @default("live")
+  triggerType     String
+  triggerPayload  Json      @default("{}")
+  idempotencyKey  String?
+  correlationId   String
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  attempt         Int       @default(1)
+  costMinor       Int       @default(0)
+  error           Json?
+  output          Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([organizationId, workflowKey, idempotencyKey])
+  @@index([organizationId, ventureId, status])
+  @@index([correlationId])
+}
+
+model WorkflowStepRun {
+  id             String    @id
+  organizationId String
+  workflowRunId  String
+  stepId         String
+  index          Int
+  actionKind     String
+  status         String
+  input          Json      @default("{}")
+  output         Json?
+  error          Json?
+  approvalId     String?
+  costMinor      Int       @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  attempts       Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([workflowRunId, index])
+}
+
+model AgentDefinition {
+  id                 String   @id
+  organizationId     String
+  ventureId          String?
+  key                String
+  version            Int
+  name               String
+  role               String
+  objective          String
+  allowedTools       String[]
+  prohibitedActions  String[]
+  promptKey          String
+  promptVersion      Int
+  modelConfig        Json     @default("{}")
+  costBudgetMinor    Int      @default(0)
+  timeoutMs          Int      @default(60000)
+  maxRetries         Int      @default(1)
+  autonomyLevel      Int      @default(1)
+  escalationRules    Json     @default("{}")
+  status             String   @default("draft")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([organizationId, key, version])
+}
+
+model AgentRun {
+  id               String    @id
+  organizationId   String
+  ventureId        String?
+  agentKey         String
+  agentVersion     Int
+  status           String
+  mode             String    @default("mock")
+  input            Json      @default("{}")
+  output           Json?
+  error            Json?
+  provider         String
+  model            String
+  promptKey        String
+  promptVersion    Int
+  inputTokens      Int       @default(0)
+  outputTokens     Int       @default(0)
+  costMinor        Int       @default(0)
+  latencyMs        Int       @default(0)
+  toolCalls        Json      @default("[]")
+  escalationReason String?
+  workflowRunId    String?
+  correlationId    String
+  startedAt        DateTime
+  finishedAt       DateTime?
+  qualityScore     Float?
+  reviewedByUserId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, agentKey, status])
+  @@index([correlationId])
+}
+
+model Approval {
+  id                   String    @id
+  organizationId       String
+  ventureId            String?
+  actionKind           String
+  title                String
+  summary              String
+  reason               String
+  evidence             Json      @default("{}")
+  financialImpactMinor Int       @default(0)
+  riskClass            String
+  reversible           Boolean   @default(true)
+  status               String    @default("pending")
+  requestedBy          String
+  requestedByType      String
+  agentRunId           String?
+  workflowRunId        String?
+  deadlineAt           DateTime?
+  decidedByUserId      String?
+  decidedAt            DateTime?
+  decisionNotes        String?
+  payload              Json      @default("{}")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([ventureId, status])
+}
+
+model IdempotencyRecord {
+  id             String   @id
+  organizationId String
+  key            String
+  scope          String
+  resultRef      String?
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, scope, key])
+  @@index([expiresAt])
+}
+
+model DomainEvent {
+  id             String    @id
+  organizationId String
+  ventureId      String?
+  type           String
+  payload        Json      @default("{}")
+  occurredAt     DateTime
+  processedAt    DateTime?
+  correlationId  String
+  source         String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId, type, processedAt])
+}
+
+model ScheduledJob {
+  id             String    @id
+  organizationId String
+  ventureId      String?
+  key            String
+  cron           String?
+  runAt          DateTime
+  status         String    @default("scheduled")
+  payload        Json      @default("{}")
+  attempts       Int       @default(0)
+  lastError      String?
+  lockedUntil    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, runAt])
+}
+
+// ---------------------------------------------------------------------------
+// Money
+// ---------------------------------------------------------------------------
+
+model CostEntry {
+  id                String   @id
+  organizationId    String
+  ventureId         String?
+  category          String
+  amountMinor       Int
+  currency          String   @default("USD")
+  description       String
+  incurredAt        DateTime
+  periodKey         String
+  customerAccountId String?
+  campaignId        String?
+  productKey        String?
+  experimentId      String?
+  workflowRunId     String?
+  agentRunId        String?
+  vendorName        String?
+  external          Boolean  @default(true)
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([organizationId, ventureId, periodKey, category])
+  @@index([customerAccountId, periodKey])
+  @@index([experimentId])
+}
+
+model Budget {
+  id             String   @id
+  organizationId String
+  ventureId      String?
+  category       String
+  periodKey      String
+  limitMinor     Int
+  enforcement    String   @default("hard")
+  setByUserId    String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, ventureId, category, periodKey])
+}
+
+model Plan {
+  id                    String   @id
+  organizationId        String
+  ventureId             String?
+  key                   String
+  name                  String
+  description           String
+  billingInterval       String
+  priceMinor            Int
+  setupFeeMinor         Int      @default(0)
+  includedUnits         Int      @default(0)
+  overageUnitPriceMinor Int      @default(0)
+  unitName              String?
+  status                String   @default("draft")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([organizationId, key])
+}
+
+model Subscription {
+  id                     String    @id
+  organizationId         String
+  ventureId              String?
+  accountId              String
+  planKey                String
+  status                 String
+  quantity               Int       @default(1)
+  startedAt              DateTime
+  currentPeriodStart     DateTime
+  currentPeriodEnd       DateTime
+  cancelAt               DateTime?
+  cancelledAt            DateTime?
+  cancelReason           String?
+  providerSubscriptionId String?
+  metadata               Json      @default("{}")
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, status])
+  @@index([accountId])
+}
+
+model Invoice {
+  id                String    @id
+  organizationId    String
+  ventureId         String?
+  accountId         String
+  number            String
+  status            String    @default("draft")
+  subtotalMinor     Int       @default(0)
+  totalMinor        Int       @default(0)
+  amountPaidMinor   Int       @default(0)
+  currency          String    @default("USD")
+  issuedAt          DateTime?
+  dueAt             DateTime?
+  paidAt            DateTime?
+  lines             Json      @default("[]")
+  subscriptionId    String?
+  providerInvoiceId String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([organizationId, number])
+  @@index([accountId, status])
+}
+
+model Payment {
+  id                String    @id
+  organizationId    String
+  ventureId         String?
+  accountId         String
+  invoiceId         String?
+  amountMinor       Int
+  currency          String    @default("USD")
+  status            String
+  method            String
+  provider          String
+  providerPaymentId String?
+  failureReason     String?
+  refundedMinor     Int       @default(0)
+  processedAt       DateTime?
+  metadata          Json      @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([organizationId, status])
+  @@index([invoiceId])
+}
+
+// ---------------------------------------------------------------------------
+// Compliance, knowledge, experiments, audit
+// ---------------------------------------------------------------------------
+
+model Consent {
+  id             String    @id
+  organizationId String
+  ventureId      String?
+  contactId      String?
+  identifier     String
+  channel        String
+  status         String
+  basis          String
+  capturedAt     DateTime
+  capturedVia    String
+  evidence       Json      @default("{}")
+  expiresAt      DateTime?
+  withdrawnAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId, identifier, channel])
+}
+
+model Suppression {
+  id             String    @id
+  organizationId String
+  ventureId      String?
+  identifier     String
+  channel        String
+  reason         String
+  scope          String    @default("organization")
+  notes          String?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId, identifier, channel])
+}
+
+model DataSubjectRequest {
+  id              String    @id
+  organizationId  String
+  ventureId       String?
+  identifier      String
+  kind            String
+  status          String    @default("received")
+  receivedAt      DateTime
+  dueAt           DateTime
+  completedAt     DateTime?
+  handledByUserId String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([organizationId, status, dueAt])
+}
+
+model KnowledgeDocument {
+  id                String    @id
+  organizationId    String
+  ventureId         String?
+  key               String
+  version           Int
+  title             String
+  body              String
+  kind              String
+  status            String    @default("draft")
+  ownerUserId       String?
+  approvedByUserId  String?
+  effectiveFrom     DateTime?
+  expiresAt         DateTime?
+  accountId         String?
+  sourceUrls        String[]
+  tags              String[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([organizationId, key, version])
+  @@index([organizationId, ventureId, kind, status])
+}
+
+model Experiment {
+  id                  String    @id
+  organizationId      String
+  ventureId           String?
+  key                 String
+  hypothesis          String
+  customerDescription String
+  problem             String
+  proposedSolution    String
+  acquisitionChannel  String
+  offer               String
+  priceMinor          Int       @default(0)
+  budgetMinor         Int       @default(0)
+  maxLossMinor        Int       @default(0)
+  startsAt            DateTime
+  endsAt              DateTime
+  successMetric       String
+  successThreshold    String
+  failureMetric       String
+  failureThreshold    String
+  ownerUserId         String?
+  status              String    @default("proposed")
+  results             Json?
+  decision            String?
+  decisionNotes       String?
+  decidedAt           DateTime?
+  spendMinor          Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId, ventureId, status])
+}
+
+model AuditEvent {
+  id             String   @id
+  organizationId String
+  ventureId      String?
+  action         String
+  entityType     String
+  entityId       String?
+  actorType      String
+  actorId        String?
+  summary        String
+  before         Json?
+  after          Json?
+  correlationId  String?
+  ipAddress      String?
+  occurredAt     DateTime
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, occurredAt])
+  @@index([correlationId])
+}
+
+model FlagOverride {
+  id             String    @id
+  organizationId String
+  ventureId      String?
+  key            String
+  value          Boolean
+  reason         String
+  setByUserId    String?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId, ventureId, key])
+}

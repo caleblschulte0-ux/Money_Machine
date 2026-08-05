@@ -1,0 +1,46 @@
+{
+  "name": "ai-holdco",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "seed": "tsx scripts/seed.ts",
+    "venture:scaffold": "tsx scripts/scaffold-venture.ts",
+    "db:generate": "pnpm --filter @holdco/database exec prisma generate",
+    "db:push": "pnpm --filter @holdco/database exec prisma db push",
+    "db:migrate": "pnpm --filter @holdco/database exec prisma migrate dev",
+    "worker": "pnpm --filter @holdco/worker start",
+    "check": "pnpm typecheck && pnpm test"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.2",
+    "turbo": "^2.10.8",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7",
+    "@holdco/platform": "workspace:*",
+    "@holdco/testing": "workspace:*",
+    "@holdco/ventures": "workspace:*",
+    "@holdco/core": "workspace:*",
+    "@venture/automation-agency": "workspace:*",
+    "@holdco/demo-data": "workspace:*"
+  }
+}

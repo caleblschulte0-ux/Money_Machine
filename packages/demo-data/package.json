@@ -1,0 +1,22 @@
+{
+  "name": "@holdco/demo-data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@holdco/core": "workspace:*",
+    "@holdco/platform": "workspace:*",
+    "@holdco/ventures": "workspace:*",
+    "@venture/automation-agency": "workspace:*",
+    "@venture/ai-visibility": "workspace:*",
+    "@venture/lead-generation": "workspace:*"
+  }
+}

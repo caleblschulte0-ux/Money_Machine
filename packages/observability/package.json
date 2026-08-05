@@ -1,0 +1,19 @@
+{
+  "name": "@holdco/observability",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --root ../.. --dir \"packages/observability\""
+  },
+  "dependencies": {
+    "@holdco/core": "workspace:*",
+    "@holdco/config": "workspace:*"
+  }
+}
