@@ -47,13 +47,16 @@ a:hover {
 
 .shell {
   display: grid;
-  grid-template-columns: 232px 1fr;
+  /* minmax(0, 1fr) rather than 1fr: a plain fr track is min-content sized, so a
+     wide table would stretch the whole page instead of scrolling inside its own
+     container. Paired with min-width: 0 on .main below. */
+  grid-template-columns: 232px minmax(0, 1fr);
   min-height: 100vh;
 }
 
 @media (max-width: 900px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .sidebar {
     position: static !important;
@@ -106,6 +109,13 @@ a:hover {
 .main {
   padding: 28px 32px 64px;
   max-width: 1240px;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .main {
+    padding: 20px 16px 48px;
+  }
 }
 
 .page-title {
