@@ -204,3 +204,27 @@ pnpm db:push          # push schema to Postgres
 6. Put a kill switch on every automated workflow.
 7. Build every system so a human can inspect what happened.
 8. Sunk cost is not a reason to continue a venture.
+
+---
+
+## Throwing a lot of ideas at the wall
+
+`pnpm shots` runs a separate small app for testing offers cheaply. One entry in
+`apps/shots/src/shots.config.ts` gets you a live page at `/s/<slug>` with a
+signup form; the scoreboard at `/` tells you which ideas got a response.
+
+Two things it enforces, because they are what usually goes wrong:
+
+- **It will not let you call an idea dead until at least 30 people have seen
+  it.** No signups and no visitors means you learned nothing — you published,
+  you did not test. That is a different situation from a real rejection, and
+  the scoreboard says which one you are in.
+- **Signups are weighted by what you asked for.** Forty email addresses rank
+  below two booked calls, because they are worth less as evidence.
+
+Every idea declares `successLooksLike` in numbers before launch and a
+`killAfterDays` date, so a result cannot be reinterpreted as a success
+afterwards and nothing lingers by default.
+
+Signups become ordinary CRM leads tagged `shot:<slug>`, so an idea that works
+arrives with its early interest already in the system.

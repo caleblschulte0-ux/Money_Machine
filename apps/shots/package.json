@@ -1,0 +1,25 @@
+{
+  "name": "@holdco/shots-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@holdco/core": "workspace:*",
+    "@holdco/crm": "workspace:*",
+    "@holdco/database": "workspace:*",
+    "@holdco/platform": "workspace:*",
+    "@holdco/shots": "workspace:*",
+    "next": "^15.5.22",
+    "react": "^19.0.8",
+    "react-dom": "^19.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  }
+}
