@@ -19,7 +19,8 @@
     "db:push": "pnpm --filter @holdco/database exec prisma db push",
     "db:migrate": "pnpm --filter @holdco/database exec prisma migrate dev",
     "worker": "pnpm --filter @holdco/worker start",
-    "check": "pnpm typecheck && pnpm test"
+    "check": "pnpm typecheck && pnpm test",
+    "demo:engine": "tsx scripts/demo-engine.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
