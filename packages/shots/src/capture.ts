@@ -41,6 +41,25 @@ export class ShotCapture {
     });
   }
 
+  /** Someone clicked through to the payment link. Stronger than a signup. */
+  async recordPaymentClick(input: {
+    organizationId: string;
+    slug: string;
+    visitor: string;
+  }): Promise<void> {
+    await this.store.domainEvents.create({
+      id: newId("evt", this.clock.epochMillis()),
+      organizationId: input.organizationId,
+      ventureId: null,
+      type: "shot.payment_click",
+      payload: { slug: input.slug, visitor: input.visitor } as JsonObject,
+      occurredAt: this.clock.now(),
+      processedAt: null,
+      correlationId: input.visitor,
+      source: "shot_page",
+    });
+  }
+
   /**
    * Someone acted. This is the only number that matters on a shot page, and it
    * goes through the normal CRM path, so spam and duplicate handling apply

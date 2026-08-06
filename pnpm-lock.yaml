@@ -190,6 +190,9 @@ importers:
       '@holdco/platform':
         specifier: workspace:*
         version: link:../../packages/platform
+      '@holdco/shots':
+        specifier: workspace:*
+        version: link:../../packages/shots
       '@holdco/workflows':
         specifier: workspace:*
         version: link:../../packages/workflows

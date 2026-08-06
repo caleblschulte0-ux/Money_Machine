@@ -22,7 +22,7 @@ export async function submitSignup(
     return { status: "error", message: "That email address doesn't look right." };
   }
 
-  const { registry, capture, organizationId } = await getShots();
+  const { registry, capture, organizationId, platform } = await getShots();
   const shot = registry.get(slug);
   if (!shot) {
     return { status: "error", message: "This offer is no longer available." };
@@ -37,6 +37,30 @@ export async function submitSignup(
     honeypot,
     submissionTimeMs: renderedAt > 0 ? Date.now() - renderedAt : undefined,
   });
+
+  // Tell the owner a human responded — this is the moment the whole system
+  // exists for. Best-effort: a notification failure must never lose a signup.
+  const notifyTo = platform.env.OWNER_NOTIFY_EMAIL;
+  if (result.accepted && notifyTo) {
+    try {
+      await platform.communications.sendEmail({
+        organizationId,
+        ventureId: null,
+        to: notifyTo,
+        from: platform.env.SMTP_FROM ?? "shots@localhost",
+        subject: `[shot: ${shot.slug}] signup from ${email}`,
+        body:
+          `Shot: ${shot.name} (${shot.slug})\n` +
+          `Who:  ${name || "(no name)"} <${email}>\n` +
+          (note ? `Note: ${note}\n` : "") +
+          `Ask:  ${shot.askedFor}\n\n` +
+          `Reply to them personally and quickly — speed is most of the conversion.`,
+        purpose: "transactional",
+      });
+    } catch {
+      // Logged by the communications service; the signup is already stored.
+    }
+  }
 
   return {
     status: result.accepted ? "ok" : "error",

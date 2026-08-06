@@ -58,6 +58,13 @@ export interface Shot {
   readonly status: ShotStatus;
   /** Optional: where you'll send traffic from. Keeps you honest about reach. */
   readonly trafficPlan?: string;
+  /**
+   * Optional payment link (e.g. a Stripe Payment Link). When set on a shot
+   * whose ask is deposit/prepaid, the success panel offers it after signup —
+   * capture the contact first, then let them pay. The platform itself still
+   * moves no money; the link is the owner's own checkout page.
+   */
+  readonly paymentLinkUrl?: string;
 }
 
 export const shotSchema = z.object({
@@ -76,6 +83,7 @@ export const shotSchema = z.object({
   killAfterDays: z.number().int().min(1).max(90),
   status: z.enum(["draft", "live", "stuck", "dead", "graduated"]),
   trafficPlan: z.string().optional(),
+  paymentLinkUrl: z.string().url().optional(),
 });
 
 export class ShotError extends Error {}

@@ -4,15 +4,20 @@ Written so nobody discovers these by being surprised in production.
 
 ## Never executed against a real dependency
 
-**The Prisma adapter has never run against a live PostgreSQL instance.** It is
-written and typechecked, and the filter grammar was designed to be a subset of
-Prisma's `where` syntax, but the first `pnpm db:push` in a real environment
-should be treated as unverified. The in-memory store is what the 133 tests
-exercise.
+**The Prisma adapter is now exercised, with one caveat.** It has run against a
+real PostgreSQL 16: schema push, the full seed, the engine demo (workflows,
+idempotency, approvals, budgets, suppression, kill switch) and a browser
+signup that survived an app restart. Not yet observed: behaviour under real
+concurrency, and long-lived connection handling. The unit suite still runs on
+the in-memory store.
 
-**No paid provider adapter exists.** Model, SMS, telephony and payment adapters
-for real vendors throw a clear error naming what is missing. They do not
-half-work and they never fabricate success.
+**SMTP email is real; every other external adapter is not.** The SMTP client
+(plain, STARTTLS, implicit TLS, AUTH PLAIN/LOGIN) is tested against a
+protocol-level test server, and delivery was verified end to end against a
+local sink. It has not yet been run against a commercial SMTP vendor — treat
+your first send through one as a smoke test (GO_LIVE.md includes it). Model,
+SMS, telephony and payment adapters for real vendors still throw a clear
+error naming what is missing rather than half-working.
 
 ## Simulated actions
 

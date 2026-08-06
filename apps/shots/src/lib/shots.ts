@@ -1,7 +1,6 @@
 import "server-only";
 import { createPlatform, type Platform } from "@holdco/platform";
-import { ShotCapture, ShotRegistry, ShotScoreboard, type Shot } from "@holdco/shots";
-import { SHOTS } from "@/shots.config";
+import { SHOTS, ShotCapture, ShotRegistry, ShotScoreboard, type Shot } from "@holdco/shots";
 
 /**
  * One process serves every shot page. Adding idea number forty costs one entry

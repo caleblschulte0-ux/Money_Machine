@@ -4,6 +4,7 @@ import type { FlagRegistry } from "@holdco/config";
 import { AUDIT_ACTIONS, AuditLog } from "@holdco/audit";
 import { ComplianceService } from "@holdco/compliance";
 import { METRICS, type Logger, type MetricsRegistry } from "@holdco/observability";
+import { SmtpEmailProvider } from "./smtp.ts";
 
 /**
  * Outbound communications.
@@ -286,11 +287,29 @@ export interface ProviderSelection {
   email: "mock" | "smtp" | "resend";
   sms: "mock" | "twilio";
   allowPaidProviders: boolean;
+  smtp?: {
+    host: string;
+    port: number;
+    user?: string;
+    pass?: string;
+    secure: boolean;
+    rejectUnauthorized?: boolean;
+  };
 }
 
 export function createEmailProvider(selection: ProviderSelection): EmailProvider {
   if (selection.email === "mock") return new MockEmailProvider();
-  if (!selection.allowPaidProviders && selection.email !== "smtp") {
+  if (selection.email === "smtp") {
+    if (!selection.smtp?.host) {
+      throw errors.providerDisabled(
+        "EMAIL_PROVIDER=smtp requires SMTP_HOST (and usually SMTP_USER/SMTP_PASS) to be set.",
+      );
+    }
+    // SMTP itself is not a paid vendor, but it DELIVERS — every send still
+    // passes the ALLOW_LIVE_COMMUNICATIONS gate in CommunicationsService.
+    return new SmtpEmailProvider(selection.smtp);
+  }
+  if (!selection.allowPaidProviders) {
     throw errors.providerDisabled(
       `EMAIL_PROVIDER=${selection.email} requires ALLOW_PAID_PROVIDERS=true.`,
     );
@@ -305,3 +324,5 @@ export function createSmsProvider(selection: ProviderSelection): SmsProvider {
   }
   return new UnimplementedSmsProvider(selection.sms);
 }
+
+export { SmtpEmailProvider, sendSmtp, type SmtpConfig } from "./smtp.ts";

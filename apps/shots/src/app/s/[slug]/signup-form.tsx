@@ -9,10 +9,12 @@ export function SignupForm({
   slug,
   cta,
   askedFor,
+  paymentLinkUrl,
 }: {
   slug: string;
   cta: string;
   askedFor: string;
+  paymentLinkUrl?: string;
 }) {
   const [state, action, pending] = useActionState(submitSignup, initial);
 
@@ -20,6 +22,12 @@ export function SignupForm({
     return (
       <div className="result ok" role="status">
         <strong>{state.message}</strong>
+        {paymentLinkUrl && (
+          <p style={{ margin: "10px 0 0" }}>
+            Want to lock in a spot now? <a href={`/s/${slug}/pay`}>Pay the deposit</a> — fully
+            refundable if this doesn&apos;t launch.
+          </p>
+        )}
       </div>
     );
   }

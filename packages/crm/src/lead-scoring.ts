@@ -187,8 +187,11 @@ export function detectSpam(input: SpamCheckInput): readonly SpamSignal[] {
       signals.push({ key: "excessive_links", detail: `${links} links in the message body.` });
     }
   }
-  if (input.name && /^[a-z]{16,}$/i.test(input.name.replace(/\s/g, ""))) {
-    signals.push({ key: "gibberish_name", detail: "Name looks machine-generated." });
+  // Only a single unbroken run of 16+ letters is suspicious. Do NOT strip
+  // spaces first: "Priya Raghunathan" is 16 letters and a perfectly ordinary
+  // name — collapsing it to one token flagged real people as bots.
+  if (input.name && /^[a-z]{16,}$/i.test(input.name.trim())) {
+    signals.push({ key: "gibberish_name", detail: "Name is one unbroken 16+ letter string." });
   }
 
   return signals;

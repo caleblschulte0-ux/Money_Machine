@@ -13,7 +13,26 @@ const VERDICT_LABEL: Record<string, { text: string; tone: string }> = {
   not_launched: { text: "not launched", tone: "muted" },
 };
 
-export default async function Scoreboard() {
+export default async function Scoreboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ key?: string }>;
+}) {
+  // The shot pages are public by design; the scoreboard is yours. Set
+  // SCOREBOARD_KEY in the environment and open /?key=<value> when deployed.
+  const requiredKey = process.env["SCOREBOARD_KEY"];
+  if (requiredKey) {
+    const { key } = await searchParams;
+    if (key !== requiredKey) {
+      return (
+        <main className="page">
+          <h1>Not available</h1>
+          <p className="summary">This page is private.</p>
+        </main>
+      );
+    }
+  }
+
   const { registry, scoreboard, organizationId } = await getShots();
   const results = await scoreboard.scoreAll(organizationId, registry.list());
 
@@ -30,6 +49,7 @@ export default async function Scoreboard() {
             <th className="n">Seen by</th>
             <th className="n">Signups</th>
             <th className="n">Rate</th>
+            <th className="n">Pay clicks</th>
             <th>Verdict</th>
           </tr>
         </thead>
@@ -49,6 +69,7 @@ export default async function Scoreboard() {
                 <td className="n">
                   {r.conversionRate === null ? "—" : `${(r.conversionRate * 100).toFixed(1)}%`}
                 </td>
+                <td className="n">{r.shot.paymentLinkUrl ? r.paymentClicks : "—"}</td>
                 <td>
                   <span className={`tag ${v.tone}`}>{v.text}</span>
                   <div className="sub">

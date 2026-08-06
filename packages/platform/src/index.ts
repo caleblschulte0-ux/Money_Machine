@@ -154,6 +154,17 @@ export async function createPlatform(options: CreatePlatformOptions = {}): Promi
       email: env.EMAIL_PROVIDER,
       sms: env.SMS_PROVIDER,
       allowPaidProviders: env.ALLOW_PAID_PROVIDERS,
+      ...(env.SMTP_HOST
+        ? {
+            smtp: {
+              host: env.SMTP_HOST,
+              port: env.SMTP_PORT,
+              user: env.SMTP_USER,
+              pass: env.SMTP_PASS,
+              secure: env.SMTP_SECURE,
+            },
+          }
+        : {}),
     });
   const smsProvider =
     options.providers?.sms ??

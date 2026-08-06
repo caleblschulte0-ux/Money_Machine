@@ -36,7 +36,7 @@ Nothing below is described as working because it was designed to work.
 | `security` | **Built** | scrypt, token digests, AES-256-GCM, rate limiting, webhook verification. Not independently unit-tested; exercised through `auth`. |
 | `observability` | **Built** | Redacting logger, metrics, alerts with runbook enforcement. |
 | `database` | **Built** | 41-collection Prisma schema; memory adapter tested including transaction rollback. |
-| `database` (Prisma adapter) | **Scaffolded** | Code complete and typechecked, but **never executed against a live Postgres in this environment**. Treat the first `pnpm db:push` as unverified. |
+| `database` (Prisma adapter) | **Built** | Exercised against PostgreSQL 16: schema push, full seed, engine demo, browser signup persisting across an app restart. Concurrency behaviour not yet observed. |
 | `audit` | **Built** | Every service writes through it; payloads redacted. |
 | `auth` | **Built** | Sessions, RBAC, rate-limited login, no user enumeration. MFA is a flag on the session, not an implemented second factor. |
 | `ventures` | **Built** | Registry, lifecycle graph, launch gates, health scoring, kill criteria. Heavily tested. |
@@ -66,7 +66,8 @@ Nothing below is described as working because it was designed to work.
 | Model — mock | **Built** | Deterministic. Its default reply says it is a mock and produced no facts. |
 | Model — Anthropic/OpenAI | **Not started** | Throws a clear error naming what is missing. Refuses to run without verified pricing. |
 | Email — mock | **Built** | Captures messages in memory. |
-| Email — SMTP/Resend | **Not started** | Throws. Mailpit is in `docker-compose.yml` for a local sink when SMTP is written. |
+| Email — SMTP | **Built** | Dependency-free client: plain/STARTTLS/implicit TLS, AUTH PLAIN/LOGIN, header-injection guard. 8 protocol-level tests plus a verified end-to-end delivery. Not yet run against a commercial vendor. |
+| Email — Resend | **Not started** | Throws. |
 | SMS — mock | **Built** | Captures messages. |
 | SMS — Twilio | **Not started** | Throws. |
 | Telephony | **Not started** | No call handling exists. |

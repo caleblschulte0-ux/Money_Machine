@@ -183,3 +183,55 @@ describe("CrmService.routeLead", () => {
     await expect(crm.routeLead(ctx, result.lead.id, "cus_buyer_1")).rejects.toThrow(/Only qualified/);
   });
 });
+
+describe("detectSpam name heuristic", () => {
+  it("does not flag a real two-word name of 16+ letters", async () => {
+    const clock = testClock();
+    const store = testStore(clock);
+    const crm = new CrmService(store, new AuditLog(store, clock), clock);
+    const organization = await seedOrganization(store);
+    const venture = await seedVenture(store, organization.id);
+
+    // "Priya Raghunathan" is 16 letters — previously stripped of its space and
+    // flagged as machine-generated, which combined with a fast submission to
+    // reject a real person. Regression test for that exact case.
+    const result = await crm.captureLead(
+      { organizationId: organization.id, ventureId: venture.id, actor: { type: "system" } },
+      {
+        channel: "web_form",
+        source: "shot_page",
+        contact: {
+          firstName: "Priya",
+          lastName: "Raghunathan",
+          email: "priya.r@meridian-doors.invalid",
+          source: "web",
+        },
+        submissionTimeMs: 900,
+      },
+    );
+    expect(result.outcome).not.toBe("spam");
+  });
+
+  it("still flags a single unbroken 16+ letter token plus another signal", async () => {
+    const clock = testClock();
+    const store = testStore(clock);
+    const crm = new CrmService(store, new AuditLog(store, clock), clock);
+    const organization = await seedOrganization(store);
+    const venture = await seedVenture(store, organization.id);
+
+    const result = await crm.captureLead(
+      { organizationId: organization.id, ventureId: venture.id, actor: { type: "system" } },
+      {
+        channel: "web_form",
+        source: "shot_page",
+        contact: {
+          firstName: "xkqzvbnmtrwplsdh",
+          lastName: "",
+          email: "x@mailinator.com",
+          source: "web",
+        },
+      },
+    );
+    expect(result.outcome).toBe("spam");
+  });
+});

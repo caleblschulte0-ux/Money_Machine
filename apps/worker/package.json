@@ -20,7 +20,8 @@
     "@holdco/knowledge": "workspace:*",
     "@holdco/experiments": "workspace:*",
     "@holdco/auth": "workspace:*",
-    "@holdco/database": "workspace:*"
+    "@holdco/database": "workspace:*",
+    "@holdco/shots": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

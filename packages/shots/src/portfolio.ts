@@ -1,4 +1,4 @@
-import type { Shot } from "@holdco/shots";
+import type { Shot } from "./definition.ts";
 
 /**
  * Your ideas. One entry each.

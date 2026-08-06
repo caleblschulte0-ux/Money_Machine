@@ -37,6 +37,15 @@ export const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: positiveNumber.default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_SECURE: booleanish.default(false),
+  SMTP_FROM: z.string().optional(),
+  /** Where signup alerts and digests go. The owner's real inbox. */
+  OWNER_NOTIFY_EMAIL: z.string().optional(),
+
   SESSION_SECRET: z.string().default("dev-only-session-secret-change-me"),
   FIELD_ENCRYPTION_KEY: z.string().default("dev-only-field-encryption-key-change"),
 
@@ -79,6 +88,9 @@ export function loadEnv(source: NodeJS.ProcessEnv | Record<string, unknown> = pr
   }
   if (env.QUEUE_DRIVER === "redis" && !env.REDIS_URL) {
     throw new ConfigError("QUEUE_DRIVER=redis requires REDIS_URL to be set.");
+  }
+  if (env.EMAIL_PROVIDER === "smtp" && !env.SMTP_HOST) {
+    throw new ConfigError("EMAIL_PROVIDER=smtp requires SMTP_HOST to be set.");
   }
 
   const paidProviders: Array<[string, string]> = [

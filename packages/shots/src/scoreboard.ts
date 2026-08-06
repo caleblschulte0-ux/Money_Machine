@@ -19,6 +19,8 @@ export interface ShotResult {
   readonly views: number;
   readonly uniqueVisitors: number;
   readonly signups: number;
+  /** Click-throughs to the payment link, when the shot has one. */
+  readonly paymentClicks: number;
   /** Signups weighted by what was actually asked for. */
   readonly weightedSignal: number;
   readonly conversionRate: number | null;
@@ -50,6 +52,11 @@ export class ShotScoreboard {
     });
     const views = viewEvents.filter((e) => e.payload["slug"] === shot.slug);
     const uniqueVisitors = new Set(views.map((v) => String(v.payload["visitor"] ?? v.id))).size;
+
+    const paymentEvents = await this.store.domainEvents.all({
+      where: { organizationId, type: "shot.payment_click" } as never,
+    });
+    const paymentClicks = paymentEvents.filter((e) => e.payload["slug"] === shot.slug).length;
 
     const leads = await this.store.leads.all({
       where: { organizationId, channel: `shot:${shot.slug}` } as never,
@@ -99,7 +106,7 @@ export class ShotScoreboard {
     }
 
     return {
-      shot, views: views.length, uniqueVisitors, signups,
+      shot, views: views.length, uniqueVisitors, signups, paymentClicks,
       weightedSignal, conversionRate, daysLive, verdict, whatToDo,
     };
   }

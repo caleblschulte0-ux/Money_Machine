@@ -14,6 +14,7 @@
  */
 import { createPlatform, type Platform } from "@holdco/platform";
 import { errorContext } from "@holdco/observability";
+import { SHOTS, ShotScoreboard } from "@holdco/shots";
 
 interface JobResult {
   readonly job: string;
@@ -94,6 +95,37 @@ const JOBS: Record<string, (platform: Platform) => Promise<string>> = {
         });
       }
       return `${health.workflowRuns} workflow runs, ${health.workflowFailures} failures`;
+    });
+  },
+
+  /**
+   * Email the owner a digest of how every shot is doing. This is the
+   * hands-off loop: nothing to check, the numbers arrive. Requires
+   * OWNER_NOTIFY_EMAIL and a delivering email provider; otherwise reports
+   * what is missing instead of pretending it sent.
+   */
+  async shotsDigest(platform) {
+    const to = platform.env.OWNER_NOTIFY_EMAIL;
+    if (!to) return "skipped — OWNER_NOTIFY_EMAIL is not set";
+
+    return forEachOrganization(platform, async (organizationId) => {
+      const scoreboard = new ShotScoreboard(platform.store, platform.clock);
+      const results = await scoreboard.scoreAll(organizationId, SHOTS);
+      const lines = results.map(
+        (r) =>
+          `${r.shot.name.padEnd(24)} seen ${String(r.uniqueVisitors).padStart(4)}  ` +
+          `signups ${String(r.signups).padStart(3)}  ${r.verdict.replace(/_/g, " ")}\n  -> ${r.whatToDo}`,
+      );
+      const outcome = await platform.communications.sendEmail({
+        organizationId,
+        ventureId: null,
+        to,
+        from: platform.env.SMTP_FROM ?? "shots@localhost",
+        subject: `Shots digest — ${scoreboard.summarize(results)}`,
+        body: `${scoreboard.summarize(results)}\n\n${lines.join("\n\n")}\n`,
+        purpose: "transactional",
+      });
+      return `digest ${outcome.status}` + ("reason" in outcome ? ` (${outcome.reason})` : "");
     });
   },
 

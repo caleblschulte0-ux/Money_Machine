@@ -52,7 +52,7 @@ export default async function ShotPage({ params }: { params: Promise<{ slug: str
           ))}
         </ul>
 
-        <SignupForm slug={shot.slug} cta={shot.cta} askedFor={shot.askedFor} />
+        <SignupForm slug={shot.slug} cta={shot.cta} askedFor={shot.askedFor} paymentLinkUrl={shot.paymentLinkUrl} />
 
         <section className="not-promised">
           <h3>What this does not do</h3>
