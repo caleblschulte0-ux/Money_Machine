@@ -8,7 +8,7 @@ import numpy as np
 import wave
 
 SR = 44100
-DUR = 39.5
+DUR = 42.0
 BPM = 96
 BEAT = 60.0 / BPM
 BAR = BEAT * 4

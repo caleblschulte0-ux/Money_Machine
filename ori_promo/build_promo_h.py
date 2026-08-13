@@ -29,10 +29,8 @@ SEGS = [
      [(f"{O}/hud.png", 0.0, 0), (f"{O}/card_mill.png", 0.55, 46)], False),
     ("s4b", "raw/IMG_6804.MOV", 23.0, 3.3, "video",
      [(f"{O}/hud.png", 0.0, 0), (f"{O}/card_river.png", 0.45, 46)], False),
-    ("s5a", "ai/settlers.png", 0, 4.0, "still_in",
-     [(f"{O}/hud.png", 0.0, 0), (f"{O}/chip_1873.png", 0.4, 36)], True),
-    ("s5b", "ai/iceage.png", 0, 4.0, "still_out",
-     [(f"{O}/hud.png", 0.0, 0), (f"{O}/chip_ice.png", 0.4, 36)], True),
+    ("s5a", None, 0, 5.0, "timelayer_1873", [], False),
+    ("s5b", None, 0, 5.0, "timelayer_ice", [], False),
     ("s6", "raw/IMG_6805.MOV", 41.0, 3.8, "video", [], False),
     ("s7", "raw/IMG_6682.MOV", 6.0, 5.9, "video",
      [(f"{O}/endcard.png", 0.5, 40)], False),
@@ -43,20 +41,85 @@ VO = [
     ("work/vo2.mp3", 4.55),
     ("work/vo3.mp3", 10.10),
     ("work/vo4h.mp3", 14.70),
-    ("work/vo5h.mp3", 21.40),
-    ("work/vo5.mp3", 29.40),   # "No tour group..."
-    ("work/vo6.mp3", 33.30),   # "Open Range Interactive. See the story..."
+    ("work/vo5h.mp3", 21.60),
+    ("work/vo5.mp3", 31.40),   # "No tour group..."
+    ("work/vo6.mp3", 35.30),   # "Open Range Interactive. See the story..."
 ]
 
 ACCENTS = [
     (f"{SFX}/whoosh.wav", 9.85, 0.55),   # brand reveal
     (f"{SFX}/pop.wav", 15.05, 0.6),      # mill card
     (f"{SFX}/pop.wav", 18.15, 0.6),      # river card
-    (f"{SFX}/whoosh.wav", 21.10, 0.65),  # flash -> 1873
-    (f"{SFX}/whoosh.wav", 25.10, 0.65),  # flash -> ice age
-    (f"{SFX}/riser.wav", 31.20, 0.45),   # into end card
-    (f"{SFX}/boom.wav", 33.05, 0.5),     # logo lands
+    (f"{SFX}/whoosh.wav", 22.30, 0.65),  # repaint wipe -> 1873
+    (f"{SFX}/whoosh.wav", 27.30, 0.65),  # repaint wipe -> glacial
+    (f"{SFX}/riser.wav", 33.30, 0.45),   # into end card
+    (f"{SFX}/boom.wav", 35.05, 0.5),     # logo lands
 ]
+
+# The AR "repaint": same continuous real shot; at WIPE_AT a wiperight
+# sweeps the treated version (grade + holograms/snow + chip) across the
+# frame — the glasses painting the past onto the place you're standing.
+WIPE_AT, WIPE_DUR = 1.3, 0.7
+
+
+def timelayer_1873(name, dur):
+    src, in_ts = "raw/IMG_6791.MOV", 12.5
+    cmd = ["ffmpeg", "-v", "error",
+           "-ss", str(in_ts), "-t", str(dur), "-i", src,          # 0 base
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/settlers_holo.png",  # 1
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/hud.png",            # 2
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/chip_1873.png"]      # 3
+    chip_t = WIPE_AT + WIPE_DUR + 0.2
+    fc = (
+        "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,"
+        f"crop=1920:1080,fps={FPS},split=2[a][b];"
+        # 1873 mode: sepia-leaning grade + grain, ghosts bob gently
+        "[b]eq=saturation=0.72:brightness=-0.02:contrast=1.04,"
+        "colorbalance=rs=.10:gs=.02:bs=-.12:rm=.06:bm=-.08,noise=alls=7:allf=t[bg];"
+        "[1:v]format=rgba[holo];"
+        "[bg][holo]overlay=x=0:y='6*sin(2*PI*t/2.6)'[bh];"
+        f"[a]trim=0:{WIPE_AT + WIPE_DUR},setpts=PTS-STARTPTS,settb=AVTB[a2];"
+        f"[bh]trim={WIPE_AT}:{dur},setpts=PTS-STARTPTS,settb=AVTB[b2];"
+        f"[a2][b2]xfade=transition=wiperight:duration={WIPE_DUR}:offset={WIPE_AT}[x];"
+        "[x][2:v]overlay=0:0[xh];"
+        f"[3:v]format=rgba,fade=t=in:st={chip_t}:d=0.3:alpha=1[chip];"
+        f"[xh][chip]overlay=x=0:y='-36*max(0,1-min((t-{chip_t})/0.35,1))'"
+        f":enable='gte(t,{chip_t})',fps={FPS},setsar=1,format=yuv420p[vout]")
+    cmd += ["-filter_complex", fc, "-map", "[vout]", "-an",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+            f"work/h_{name}.mp4", "-y"]
+    run(cmd)
+    print("built", name)
+
+
+def timelayer_ice(name, dur):
+    src, in_ts = "raw/IMG_6682.MOV", 24.0
+    cmd = ["ffmpeg", "-v", "error",
+           "-ss", str(in_ts), "-t", str(dur / 2), "-i", src,  # 0 (slowed 2x)
+           "-i", "work/snow.mp4",                              # 1
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/hud.png",       # 2
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/chip_ice.png"]  # 3
+    chip_t = WIPE_AT + WIPE_DUR + 0.2
+    fc = (
+        "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,"
+        f"crop=1920:1080,setpts=2*PTS,fps={FPS},split=2[a][b];"
+        # glacial mode: cold desaturated grade, water crawling at half speed
+        "[b]eq=saturation=0.30:brightness=0.07:contrast=1.07,"
+        "colorbalance=bs=.28:bm=.18:bh=.10:rs=-.06,"
+        "curves=lighter[bg];"
+        "[1:v]fps=30[snowv];[bg][snowv]blend=all_mode=screen:all_opacity=0.85[bs];"
+        f"[a]trim=0:{WIPE_AT + WIPE_DUR},setpts=PTS-STARTPTS,settb=AVTB[a2];"
+        f"[bs]trim={WIPE_AT}:{dur},setpts=PTS-STARTPTS,settb=AVTB[b2];"
+        f"[a2][b2]xfade=transition=wiperight:duration={WIPE_DUR}:offset={WIPE_AT}[x];"
+        "[x][2:v]overlay=0:0[xh];"
+        f"[3:v]format=rgba,fade=t=in:st={chip_t}:d=0.3:alpha=1[chip];"
+        f"[xh][chip]overlay=x=0:y='-36*max(0,1-min((t-{chip_t})/0.35,1))'"
+        f":enable='gte(t,{chip_t})',fps={FPS},setsar=1,format=yuv420p[vout]")
+    cmd += ["-filter_complex", fc, "-map", "[vout]", "-an",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+            f"work/h_{name}.mp4", "-y"]
+    run(cmd)
+    print("built", name)
 
 
 def run(cmd):
@@ -68,19 +131,16 @@ def run(cmd):
 
 def build_segments():
     for name, src, in_ts, dur, kind, overlays, flash in SEGS:
-        n_frames = int(dur * FPS)
+        if kind == "timelayer_1873":
+            timelayer_1873(name, dur)
+            continue
+        if kind == "timelayer_ice":
+            timelayer_ice(name, dur)
+            continue
         cmd = ["ffmpeg", "-v", "error"]
-        if kind == "video":
-            cmd += ["-ss", str(in_ts), "-t", str(dur), "-i", src]
-            base = ("scale=1920:1080:force_original_aspect_ratio=increase,"
-                    "crop=1920:1080")
-        else:
-            cmd += ["-loop", "1", "-t", str(dur), "-i", src]
-            zoom = ("'1+0.10*on/{}'".format(n_frames) if kind == "still_in"
-                    else "'max(1.12-0.12*on/{},1)'".format(n_frames))
-            base = ("scale=2400:1350:flags=lanczos,"
-                    f"zoompan=z={zoom}:x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2'"
-                    f":d=1:s=1920x1080:fps={FPS}")
+        cmd += ["-ss", str(in_ts), "-t", str(dur), "-i", src]
+        base = ("scale=1920:1080:force_original_aspect_ratio=increase,"
+                "crop=1920:1080")
         for png, _, _ in overlays:
             cmd += ["-loop", "1", "-t", str(dur), "-i", png]
         chain = "[0:v]" + base
