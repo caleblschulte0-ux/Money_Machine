@@ -25,9 +25,9 @@ SEGS = [
     ("s2b", "raw/IMG_6796.MOV", 15.5, 2.8, "video", [], False),
     ("s3", "raw/IMG_6799.MOV", 1.0, 4.6, "video",
      [(f"{O}/brand.png", 0.7, 46)], False),
-    ("s4a", "raw/IMG_6806.MOV", 40.5, 3.4, "video",
+    ("s4a", "raw/IMG_6796.MOV", 47.0, 3.4, "video",
      [(f"{O}/hud.png", 0.0, 0), (f"{O}/card_mill.png", 0.55, 46)], False),
-    ("s4b", "raw/IMG_6804.MOV", 23.0, 3.3, "video",
+    ("s4b", "raw/IMG_6806.MOV", 40.5, 3.3, "video",
      [(f"{O}/hud.png", 0.0, 0), (f"{O}/card_river.png", 0.45, 46)], False),
     ("s5a", None, 0, 5.0, "timelayer_1873", [], False),
     ("s5b", None, 0, 5.0, "timelayer_ice", [], False),
@@ -74,8 +74,9 @@ def timelayer_1873(name, dur):
         "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,"
         f"crop=1920:1080,fps={FPS},split=2[a][b];"
         # 1873 mode: sepia-leaning grade + grain, ghosts bob gently
-        "[b]eq=saturation=0.72:brightness=-0.02:contrast=1.04,"
-        "colorbalance=rs=.10:gs=.02:bs=-.12:rm=.06:bm=-.08,noise=alls=7:allf=t[bg];"
+        "[b]eq=saturation=0.55:brightness=-0.02:contrast=1.06,"
+        "colorbalance=rs=.24:rm=.18:rh=.08:gs=.09:gm=.06:bs=-.28:bm=-.20:bh=-.10,"
+        "vignette=PI/4.6[bg];"
         "[1:v]format=rgba[holo];"
         "[bg][holo]overlay=x=0:y='6*sin(2*PI*t/2.6)'[bh];"
         f"[a]trim=0:{WIPE_AT + WIPE_DUR},setpts=PTS-STARTPTS,settb=AVTB[a2];"
@@ -93,26 +94,42 @@ def timelayer_1873(name, dur):
 
 
 def timelayer_ice(name, dur):
+    """Real falls run live, then the wipe freezes them SOLID: the treated
+    side is a single frozen frame (slow push-in) under a steel-blue
+    duotone, glacier fog burying the skyline, silhouette mammoths on the
+    rock shelves, frost crawling the frame edges, and snowfall."""
     src, in_ts = "raw/IMG_6682.MOV", 24.0
+    n_frames = int(dur * FPS)
     cmd = ["ffmpeg", "-v", "error",
-           "-ss", str(in_ts), "-t", str(dur / 2), "-i", src,  # 0 (slowed 2x)
-           "-i", "work/snow.mp4",                              # 1
-           "-loop", "1", "-t", str(dur), "-i", f"{O}/hud.png",       # 2
-           "-loop", "1", "-t", str(dur), "-i", f"{O}/chip_ice.png"]  # 3
+           "-ss", str(in_ts), "-t", str(dur), "-i", src,          # 0 live
+           "-loop", "1", "-t", str(dur), "-i", "work/ice_base.png",  # 1 frozen
+           "-i", "work/fog.mp4",                                   # 2
+           "-i", "work/snow.mp4",                                  # 3
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/mammoths.png",  # 4
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/frost.png",     # 5
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/hud.png",       # 6
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/chip_ice.png"]  # 7
     chip_t = WIPE_AT + WIPE_DUR + 0.2
     fc = (
         "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,"
-        f"crop=1920:1080,setpts=2*PTS,fps={FPS},split=2[a][b];"
-        # glacial mode: cold desaturated grade, water crawling at half speed
-        "[b]eq=saturation=0.30:brightness=0.07:contrast=1.07,"
-        "colorbalance=bs=.28:bm=.18:bh=.10:rs=-.06,"
-        "curves=lighter[bg];"
-        "[1:v]fps=30[snowv];[bg][snowv]blend=all_mode=screen:all_opacity=0.85[bs];"
-        f"[a]trim=0:{WIPE_AT + WIPE_DUR},setpts=PTS-STARTPTS,settb=AVTB[a2];"
+        f"crop=1920:1080,fps={FPS},settb=AVTB[live];"
+        # frozen still with a slow push-in
+        f"[1:v]scale=2100:1182:flags=lanczos,"
+        f"zoompan=z='1+0.07*on/{n_frames}':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2'"
+        f":d=1:s=1920x1080:fps={FPS},"
+        # glacial duotone: crushed saturation, icy lift, hard blue cast
+        "eq=saturation=0:contrast=1.10:brightness=0.05,"
+        "colorchannelmixer=rr=0.62:gg=0.88:bb=1.12,"
+        "colorbalance=bh=.08,format=gbrp[frozen];"
+        "[2:v]fps=30,format=gbrp[fogv];[frozen][fogv]blend=all_mode=screen:all_opacity=0.85[f1];"
+        "[4:v]format=rgba[mam];[f1][mam]overlay=0:0[f2];"
+        "[5:v]format=rgba[fr];[f2][fr]overlay=0:0[f3];"
+        "[3:v]fps=30,format=gbrp[snowv];[f3]format=gbrp[f3r];[f3r][snowv]blend=all_mode=screen:all_opacity=0.75[bs];"
+        f"[live]trim=0:{WIPE_AT + WIPE_DUR},setpts=PTS-STARTPTS,settb=AVTB[a2];"
         f"[bs]trim={WIPE_AT}:{dur},setpts=PTS-STARTPTS,settb=AVTB[b2];"
         f"[a2][b2]xfade=transition=wiperight:duration={WIPE_DUR}:offset={WIPE_AT}[x];"
-        "[x][2:v]overlay=0:0[xh];"
-        f"[3:v]format=rgba,fade=t=in:st={chip_t}:d=0.3:alpha=1[chip];"
+        "[x][6:v]overlay=0:0[xh];"
+        f"[7:v]format=rgba,fade=t=in:st={chip_t}:d=0.3:alpha=1[chip];"
         f"[xh][chip]overlay=x=0:y='-36*max(0,1-min((t-{chip_t})/0.35,1))'"
         f":enable='gte(t,{chip_t})',fps={FPS},setsar=1,format=yuv420p[vout]")
     cmd += ["-filter_complex", fc, "-map", "[vout]", "-an",
