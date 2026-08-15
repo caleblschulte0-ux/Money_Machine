@@ -1,0 +1,41 @@
+ORI_trailer_pitch_v5.mp4 — build notes
+1920x1080 / 30fps / H.264 / 53.2s / loudness -15.7 LUFS integrated
+
+WHAT CHANGED FROM V4
+- Reconstruction material rebuilt: every historical figure/object is now an
+  obviously-digital museum reconstruction — warm limestone/amber duotone
+  (~87% monochrome), quantized contour lines, faint scan rows, point-cloud
+  breakup at the silhouette edges. Fully opaque, reads as photogrammetry,
+  not a ghost and not a pasted photo.
+- Historical shots shortened to 2.8–3.4s each (ice discovery is the one
+  long-hold exception).
+- Dakota re-edited onto the over-shoulder POV plate (IMG_6804): a real
+  person in frame looking at the reconstruction, figure ~1/3 frame height,
+  standing on the real rock shelf behind a real foreground ridge
+  (terrain occlusion cut from the plate itself). Second Dakota beat is a
+  single tipi on the far-bank grass — the earlier multi-figure wide is gone.
+- Settlement: wagon sits behind the real quartzite ruin stones (occluded),
+  plus one tight single-settler shot. No crowds.
+- Mammoth kept, but as a distant discovery: small in frame, atmospheric
+  haze band, quiet fade-resolve instead of the activation burst.
+- SABERTOOTH REMOVED (per direction).
+- MAP CUT (redesign-or-cut call: no version of it earned its 4 seconds;
+  the city-overlook release shot now carries "any place with a story").
+- Product shot ~30% brighter: lifted hero exposure, radial backlight stage,
+  floor reflection.
+- Zone is a segmented terrain-conforming trace with one traveling pulse,
+  not a clean ellipse.
+- Text reduced to 8 moments; hook is left-aligned, two lines.
+- Narration rewritten to 88 words, VO en-US-Andrew.
+
+STILL NEEDED (placeholders — not generated, per the no-new-AI-images rule)
+- NEEDED_glasses_turntable_video: a real 360 turntable or 3D render of the
+  hardware would replace the still product stage (s03) outright.
+- NEEDED_walk_cycle_or_video_assets: any animated/video versions of the
+  historical assets would let the reconstructions move; today they hold a
+  pose because the source PNGs are stills.
+
+REPRODUCING
+trailer/v5_ui.py -> trailer/v5_scenes.py -> trailer/v5_build.py
+(assets sliced by trailer/slice_sheets.py from the supplied sheets; VO/score
+in trailer/audio/). Master: out/ORI_trailer_pitch_v5_master.mp4.
