@@ -1,0 +1,77 @@
+OPEN RANGE INTERACTIVE — CONCEPT TRAILER (82s, 1920x1080/30, H.264)
+Build notes — 2026-08-15
+
+STRUCTURE (12 shots)
+ 00.0  Hook — falls hero, "History, where it happened."
+ 06.8  Queen Bee Mill ruins walk + minimal anchor pin
+ 11.0  Overlook
+ 14.6  Product — glasses schematic (dip to black)
+ 23.4  Viewing zone — walker + ground boundary + activation pulse
+ 28.6  Time layer: Dakota encampment (half-speed clean plate)
+ 36.6  Time layer: 1873 settlement camp
+ 44.6  Time layer: glacial edge (gradual environmental freeze)
+ 54.6  Group sync — two viewers, shared marker
+ 60.1  Falls Park beta route map
+ 66.6  Release — city overlook, experience ends
+ 71.1  End card — wordmark / "The past, anchored to place."
+
+MAJOR CHANGES FROM PRIOR VERSION
+- Complete re-edit to a 12-shot, 82-second pitch structure with
+  rewritten, re-recorded narration (10 lines) answering what/why/how.
+- All typography replaced with Inter (Display/Light/Regular/Medium/
+  SemiBold), letter-spaced and consistently aligned. Old HUD removed.
+- New minimal spatial UI: locality label, era labels with hairline
+  rules, dot+leader anchor pins, ground-plane viewing-zone ellipse
+  with activation pulse, 2-SYNCED badge. No panels, no cyan glass.
+- Group PNGs deconstructed into 15 individually staged elements
+  (settler figures, wagon+driver unit, campfire, ox, tipis, Dakota
+  figures, mammoth, saber-toothed cat), each placed with
+  perspective-derived scale, contact shadows, atmospheric wash by
+  depth, and micro-motion (breathing, sway, walk drift, fire flicker
+  with a light pool that flickers in sync).
+- Occlusion: the 1873 wagon sits partially behind a feathered cut of
+  the real stone ruins pile from the plate itself.
+- Ice age fully redesigned: no duotone. Live falls cool gradually
+  (white-balance shift + desaturation), snowfall and a natural grey
+  haze bank rise, the falls freeze via a 3-second dissolve to a
+  matched frozen frame, then fauna materialize at anchored scale.
+- The three composite plates are the most tripod-stable windows found
+  by motion analysis across all 34 clips; the Dakota plate runs at
+  half speed to stay clear of park visitors.
+- All real footage passes through one base grade (soft S-curve,
+  highlight rolloff, exposure consistency); era grades are applied
+  over plate+figures together so they share light.
+- New product scene: hairline technical schematic of the glasses with
+  four feature callouts (deliberate design-language choice — an honest
+  schematic rather than a fake photoreal render).
+- New Falls Park beta route map (5 experiences, 0.9-mile loop),
+  restrained dark cartography.
+- Audio rebuilt: real location ambience lifted from the iPhone clips
+  (falls roar, park air), synthesized fire crackle / arctic wind /
+  mammoth low-end / soft two-note UI tick / materialize shimmer, and
+  a restrained felt-piano + air-pad score that builds by act and
+  resolves under the end card. Mix loudness-normalized to -15 LUFS.
+
+ASSETS
+- assets_user/  five supplied transparent photoreal images (mammoth,
+  sabertooth, pioneer camp, tipi family, beadwork circle)
+- trailer/elements/  15 sliced individual elements
+- trailer/ui/  full UI kit renders (Inter)
+- trailer/seq/  animated overlay sequences (dakota/settlement/ice)
+- trailer/audio/  VO lines, ambience, foley, score
+- trailer/*.py  fully reproducible build (slice -> ui -> scenes ->
+  audio -> assemble)
+
+KNOWN LIMITATIONS
+- Historical figures use controlled micro-motion (breathing, sway,
+  drift), not full character animation — no video-generation model is
+  available in this environment.
+- The glasses are presented as a design schematic, not a photoreal
+  product render, for the same reason.
+- A few distant park visitors remain visible in wide plates; they are
+  small, and era grades reduce their presence.
+- Narration is a neural voice (Andrew); a human VO session would be a
+  drop-in replacement.
+- The pipeline's automated QA flags the intentional dark product and
+  end-card scenes as "black frames" — verified to be exactly those
+  designed segments.
