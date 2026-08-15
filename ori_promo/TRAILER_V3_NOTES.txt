@@ -1,0 +1,54 @@
+OPEN RANGE INTERACTIVE — PITCH TRAILER v3 (82s, 1920x1080/30, H.264)
+Third pass — 2026-08-15
+
+WHAT CHANGED FROM v2
+- All historical subjects now come from the supplied individual
+  transparent assets, used one-PNG-per-object. No group slicing, no
+  fabricated substitutes.
+- Compositing upgraded: perspective-derived scale from each plate's
+  px/m ladder (real anchors measured in-shot), fore/mid/background
+  staging with FEWER elements (Dakota: 4, Settlement: 5, Ice: 2),
+  soft directional contact shadows matching the plate sun, atmospheric
+  wash + slight defocus by depth, feet terminated on the ground plane,
+  wagon partially occluded by a feathered cut of the real stone ruins.
+- Activation replaced ghost-fades: anchor dot, then a 0.42s left-to-
+  right depth-scan reveal with a soft bright leading edge; every
+  element resolves FULLY OPAQUE and then holds still. No bobbing.
+  Only the fire flickers (brightness + light pool) and the mammoth
+  breathes at ~1px.
+- Ice age: naturalistic transformation kept; fauna restaged — ONE
+  massive hero mammoth in the near-midground (feet claimed by painted
+  snow drifts, subtle breathing), sabertooth revealed later, far away
+  on the opposite shelf.
+- Typography: everything re-set at Medium/SemiBold with gradient
+  scrims; hook title 70px SemiBold; era labels 37/25 on a scrim; zone
+  labels 31/25; sync upgraded to a readable "SHARED EXPERIENCE /
+  2 viewers synchronized" block; 2-3px rules everywhere.
+- Product scene rebuilt around the SUPPLIED photoreal glasses hero:
+  schematic lines intro -> hero resolves with floor reflection ->
+  title -> four sequential callouts (LOCATION AWARE / ON-DEVICE
+  COMPUTE / SPATIAL AUDIO / SELF-CONTAINED) -> callouts exit -> hero
+  alone. A second short glasses beat precedes the end card.
+- Map: brighter plate, larger type, five named nodes (ARRIVAL, DAKOTA
+  LIFE, GLACIAL EDGE, QUEEN BEE MILL, SETTLEMENT).
+- End card: 92px wordmark, tagline 44px, breathing room.
+- Cinematic base grade: filmic toe, highlight rolloff, restrained
+  saturation; era grades applied over plate+elements together.
+
+ASSET MANIFEST (supplied, used directly)
+  wagon, oxen, settler_man, settler_woman, settler_boy (unused this
+  cut), campfire, tipi_big, tipi_trio, dakota_man (unused this cut),
+  dakota_woman, dakota_crouch, dakota_rider (unused this cut),
+  mammoth, sabertooth, glasses_hero
+
+PLACEHOLDERS / WOULD IMPROVE WITH SUPPLIED ASSETS
+- NEEDED_walk_cycle_or_video_assets: true character animation is not
+  possible in this environment; subjects are static reconstructions
+  with micro-motion only.
+- NEEDED_glasses_turntable_video: a rotating product shot would
+  upgrade both product beats.
+
+REPRODUCIBLE BUILD
+  trailer/slice_sheets.py -> trailer/ui_kit.py + trailer/ui_v3.py ->
+  trailer/render_scenes_v3.py -> trailer/make_audio.py ->
+  trailer/build_trailer.py

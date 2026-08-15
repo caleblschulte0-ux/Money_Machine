@@ -15,8 +15,8 @@ UI = "trailer/ui"
 SEQ = "trailer/seq"
 AU = "trailer/audio"
 
-BASE_GRADE = ("curves=m='0/0 0.5/0.5 0.86/0.83 1/0.97',"
-              "eq=saturation=1.03:contrast=1.03")
+BASE_GRADE = ("curves=m='0/0 0.07/0.05 0.5/0.49 0.88/0.84 1/0.955',"
+              "eq=saturation=0.99:contrast=1.05:brightness=-0.01")
 GR_DAKOTA = ("eq=saturation=0.93:brightness=0.005:contrast=1.04,"
              "colorbalance=rs=.10:rm=.08:gs=.04:gm=.03:bs=-.07:bm=-.05")
 GR_1873 = ("eq=saturation=0.68:brightness=-0.015:contrast=1.05,"
@@ -84,9 +84,9 @@ def timelayer_shot(name, src, ss, dur, seq_dir, era_png, era_grade,
     slow_f = f"setpts={slow}*PTS," if slow != 1.0 else ""
     fc = ("[0:v]scale=1920:1080:force_original_aspect_ratio=increase,"
           f"crop=1920:1080,{slow_f}fps={FPS},{BASE_GRADE}[plate];"
-          f"[1:v]format=rgba,fade=t=in:st={t_mat}:d=1.1:alpha=1[els];"
+          f"[1:v]format=rgba[els];"
           f"[plate][els]overlay=0:0,{era_grade}[comp];"
-          f"[2:v]format=rgba,fade=t=in:st={t_mat + 1.5}:d=0.6:alpha=1[era];"
+          f"[2:v]format=rgba,fade=t=in:st={t_mat + 2.1}:d=0.6:alpha=1[era];"
           f"[comp][era]overlay=0:0," + push(zoom, dur) +
           ",setsar=1,format=yuv420p[v]")
     cmd += ["-filter_complex", fc, "-map", "[v]", "-an", "-c:v", "libx264",
@@ -112,7 +112,7 @@ def ice_shot(name, dur=10.0):
         f"[2:v]fps={FPS},format=gbrp,eq=brightness=-0.12[sn];"
         "[fr0][sn]blend=all_mode=screen:all_opacity=0.55,format=rgba[fr1];"
         "[4:v]format=rgba[hz];[fr1][hz]overlay=0:0[fr2];"
-        f"[3:v]format=rgba,fade=t=in:st=4.6:d=0.9:alpha=1[fauna];"
+        f"[3:v]format=rgba[fauna];"
         "[fr2][fauna]overlay=0:0[frozen];"
         "[frozen]settb=AVTB[frozenv];"
         f"[live]trim=0:4.6,setpts=PTS-STARTPTS,settb=AVTB[a2];"
@@ -128,14 +128,47 @@ def ice_shot(name, dur=10.0):
 
 
 def product_shot(name, dur=8.8):
+    layers = [f"{UI}/schematic.png", f"{UI}/glasses_plate.png",
+              f"{UI}/product_title.png", f"{UI}/callout_1.png",
+              f"{UI}/callout_2.png", f"{UI}/callout_3.png",
+              f"{UI}/callout_4.png"]
+    cmd = ["ffmpeg", "-v", "error",
+           "-loop", "1", "-t", str(dur), "-i", f"{UI}/product_bg.png"]
+    for p in layers:
+        cmd += ["-loop", "1", "-t", str(dur), "-i", p]
+    co = 7.2  # callouts exit
+    fc = (f"[0:v]fps={FPS},scale=1920:1080[bg];"
+          "[1:v]format=rgba,fade=t=in:st=0.4:d=0.6:alpha=1,"
+          "fade=t=out:st=2.0:d=0.6:alpha=1[sch];"
+          "[2:v]format=rgba,fade=t=in:st=2.3:d=0.7:alpha=1[hero];"
+          "[3:v]format=rgba,fade=t=in:st=3.0:d=0.6:alpha=1[tt];"
+          f"[4:v]format=rgba,fade=t=in:st=3.6:d=0.4:alpha=1,"
+          f"fade=t=out:st={co}:d=0.5:alpha=1[c1];"
+          f"[5:v]format=rgba,fade=t=in:st=4.2:d=0.4:alpha=1,"
+          f"fade=t=out:st={co}:d=0.5:alpha=1[c2];"
+          f"[6:v]format=rgba,fade=t=in:st=4.8:d=0.4:alpha=1,"
+          f"fade=t=out:st={co}:d=0.5:alpha=1[c3];"
+          f"[7:v]format=rgba,fade=t=in:st=5.4:d=0.4:alpha=1,"
+          f"fade=t=out:st={co}:d=0.5:alpha=1[c4];"
+          "[bg][sch]overlay=0:0[a];[a][hero]overlay=0:0[b];"
+          "[b][tt]overlay=0:0[c];[c][c1]overlay=0:0[e];[e][c2]overlay=0:0[f];"
+          "[f][c3]overlay=0:0[g];[g][c4]overlay=0:0[h];"
+          f"[h]fade=t=in:st=0:d=0.5,fade=t=out:st={dur - 0.45}:d=0.45,"
+          + push(1.02, dur) + ",setsar=1,format=yuv420p[v]")
+    cmd += ["-filter_complex", fc, "-map", "[v]", "-an", "-c:v", "libx264",
+            "-preset", "medium", "-crf", "17", f"trailer/out/{name}.mp4", "-y"]
+    run(cmd)
+    print("shot", name)
+
+
+def glasses_beat(name, dur=2.4):
     cmd = ["ffmpeg", "-v", "error",
            "-loop", "1", "-t", str(dur), "-i", f"{UI}/product_bg.png",
-           "-loop", "1", "-t", str(dur), "-i", f"{UI}/glasses.png"]
+           "-loop", "1", "-t", str(dur), "-i", f"{UI}/glasses_plate.png"]
     fc = (f"[0:v]fps={FPS},scale=1920:1080[bg];"
-          "[1:v]format=rgba,fade=t=in:st=0.5:d=0.9:alpha=1[g];"
-          "[bg][g]overlay=x=0:y='4*sin(2*PI*t/7)'[m];"
-          f"[m]fade=t=in:st=0:d=0.5,fade=t=out:st={dur - 0.45}:d=0.45,"
-          + push(1.02, dur) + ",setsar=1,format=yuv420p[v]")
+          "[1:v]format=rgba[g];[bg][g]overlay=0:0,"
+          f"fade=t=in:st=0:d=0.45,fade=t=out:st={dur - 0.5}:d=0.5,"
+          + push(1.025, dur) + ",setsar=1,format=yuv420p[v]")
     cmd += ["-filter_complex", fc, "-map", "[v]", "-an", "-c:v", "libx264",
             "-preset", "medium", "-crf", "17", f"trailer/out/{name}.mp4", "-y"]
     run(cmd)
@@ -161,7 +194,7 @@ def zone_shot(name, dur=5.2):
     print("shot", name)
 
 
-def map_shot(name, dur=6.5):
+def map_shot(name, dur=5.8):
     cmd = ["ffmpeg", "-v", "error",
            "-loop", "1", "-t", str(dur), "-i", f"{UI}/map.png"]
     fc = (f"[0:v]fps={FPS}," + push(1.05, dur) +
@@ -173,7 +206,7 @@ def map_shot(name, dur=6.5):
     print("shot", name)
 
 
-def end_shot(name, dur=10.9):
+def end_shot(name, dur=9.5):
     cmd = ["ffmpeg", "-v", "error",
            "-f", "lavfi", "-t", str(dur), "-i",
            f"color=c=0x050608:s=1920x1080:r={FPS}",
@@ -193,7 +226,7 @@ def end_shot(name, dur=10.9):
 
 
 SHOTS = ["s01", "s02", "s03", "s04", "s05", "s06", "s07", "s08", "s09",
-         "s10", "s11", "s12"]
+         "s10", "s11", "s11b", "s12"]
 
 
 def build_video():
@@ -217,9 +250,10 @@ def build_video():
     simple_shot("s09", "raw/IMG_6806.MOV", 40.5, 5.5, BASE_GRADE,
                 overlays=[(f"{UI}/sync.png", 1.0, 14),
                           (f"{UI}/pin_shared.png", 1.6, 0)])
+    glasses_beat("s11b")
     map_shot("s10")
-    simple_shot("s11", "raw/IMG_6799.MOV", 1.0, 4.5, BASE_GRADE,
-                zoom=1.04, fade_out=0.6)
+    simple_shot("s11", "raw/IMG_6799.MOV", 1.0, 4.2, BASE_GRADE,
+                zoom=1.04, fade_out=0.55)
     end_shot("s12")
     with open("trailer/out/concat.txt", "w") as f:
         for s in SHOTS:
@@ -244,8 +278,8 @@ CUES = [
     (f"{AU}/v06.mp3", 38.3, 1.0, None),
     (f"{AU}/v07.mp3", 46.3, 1.0, None),
     (f"{AU}/v08.mp3", 55.4, 1.0, None),
-    (f"{AU}/v09.mp3", 60.7, 1.0, None),
-    (f"{AU}/v10.mp3", 73.2, 1.0, None),
+    (f"{AU}/v09.mp3", 60.5, 1.0, None),
+    (f"{AU}/v10.mp3", 74.3, 1.0, None),
     # ambience
     (f"{AU}/amb_falls.wav", 0.0, 0.85, 7.2),
     (f"{AU}/amb_park.wav", 6.8, 0.5, 7.8),
@@ -255,12 +289,13 @@ CUES = [
     (f"{AU}/fire.wav", 37.6, 0.42, 7.0),
     (f"{AU}/rumble.wav", 49.2, 0.8, None),
     (f"{AU}/amb_falls.wav", 54.6, 0.5, 5.5),
-    (f"{AU}/amb_falls.wav", 66.6, 0.35, 4.5),
+    (f"{AU}/amb_falls.wav", 65.9, 0.35, 4.2),
     # UI + transitions
     (f"{AU}/tick.wav", 25.2, 0.6, None),
-    (f"{AU}/shimmer.wav", 29.8, 0.9, None),
-    (f"{AU}/shimmer.wav", 37.8, 0.8, None),
+    (f"{AU}/shimmer.wav", 30.0, 0.9, None),
+    (f"{AU}/shimmer.wav", 38.0, 0.8, None),
     (f"{AU}/shimmer.wav", 46.2, 1.1, None),
+    (f"{AU}/tick.wav", 49.5, 0.45, None),
     (f"{AU}/tick.wav", 56.1, 0.4, None),
 ]
 
@@ -298,8 +333,8 @@ def mux():
     run(["ffmpeg", "-v", "error", "-i", "trailer/out/video.mp4",
          "-i", "trailer/out/mix.wav", "-c:v", "copy", "-c:a", "aac",
          "-b:a", "224k", "-shortest", "-movflags", "+faststart",
-         "out/ORI_trailer_master.mp4", "-y"])
-    print("muxed -> out/ORI_trailer_master.mp4")
+         "out/ORI_trailer_pitch_v3_master.mp4", "-y"])
+    print("muxed -> out/ORI_trailer_pitch_v3_master.mp4")
 
 
 if __name__ == "__main__":
