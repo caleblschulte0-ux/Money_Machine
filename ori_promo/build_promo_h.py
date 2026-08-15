@@ -92,9 +92,9 @@ def timelayer_camp(name, dur, src, in_ts, scene_png, chip_png, grade):
     print("built", name)
 
 
-GRADE_NATIVE = ("eq=saturation=0.92:brightness=0.0:contrast=1.04,"
-                "colorbalance=rs=.12:rm=.09:gs=.04:gm=.03:bs=-.10:bm=-.07,"
-                "vignette=PI/5")
+GRADE_NATIVE = ("eq=saturation=0.90:brightness=0.01:contrast=1.05,"
+                "colorbalance=rs=.16:rm=.12:rh=.06:gs=.07:gm=.06:bs=-.12:bm=-.09,"
+                "vignette=PI/5.2")
 GRADE_1873 = ("eq=saturation=0.55:brightness=-0.02:contrast=1.06,"
               "colorbalance=rs=.24:rm=.18:rh=.08:gs=.09:gm=.06:bs=-.28:bm=-.20:bh=-.10,"
               "vignette=PI/4.6")

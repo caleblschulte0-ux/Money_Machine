@@ -43,20 +43,39 @@ def place(canvas, el, cx, ground_y, target_h, flip=False, shadow_scale=0.86,
 
 
 def native_scene():
-    """6808 @ ~26s: big lawn foreground — the encampment sits on it."""
+    """6808 @ ~27s. Perspective ladder from the plate: far-path people
+    measure ~80px (1m ~ 46px at y~650), rising to ~200px/m at the near
+    lawn. Three depth planes, diagonal composition: camp mid-left past
+    the path, an echo camp far-right on the bank, beadwork circle near-
+    right in the foreground."""
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     tipis = load("assets_user/tipis.png")
     beadwork = load("assets_user/beadwork.png")
-    place(canvas, tipis, 1330, 1040, 520)
-    place(canvas, beadwork, 400, 1066, 300)
+    # main camp mid-right lawn (adults ~190px at ~150px/m)
+    place(canvas, tipis, 1430, 890, 330, shadow_alpha=65)
+    # beadwork circle near-left foreground (seated ~200px)
+    place(canvas, beadwork, 560, 1035, 295, shadow_alpha=75)
     canvas.save("work/overlays_h/scene_native.png")
 
 
 def pioneer_scene():
-    """6805 @ ~27s: open lawn before the falls and mill house."""
+    """6805 @ ~28s. Anchors: trash can ~75px at y~650 (1m ~ 70px),
+    ~165px/m at y~950. Camp staged against the stone ruins pile so it
+    belongs to the environment, with a warm firelight pool spilling
+    onto the grass."""
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     pioneers = load("assets_user/pioneers.png")
-    place(canvas, pioneers, 1080, 962, 470)
+    place(canvas, pioneers, 1180, 950, 440, shadow_alpha=70)
+    # firelight spill on the grass under the campfire
+    gw = int(1536 * 440 / 1024)
+    fx, fy = int(1180 - gw / 2 + 0.48 * gw), int(950 - 0.10 * 440)
+    glow = Image.new("RGBA", (520, 300), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    for r, a in [(250, 26), (185, 40), (120, 60)]:
+        gd.ellipse((260 - r, 150 - r // 2, 260 + r, 150 + r // 2),
+                   fill=(255, 176, 88, a))
+    glow = glow.filter(ImageFilter.GaussianBlur(28))
+    canvas.alpha_composite(glow, (fx - 260, fy - 150))
     canvas.save("work/overlays_h/scene_pioneers.png")
 
 
