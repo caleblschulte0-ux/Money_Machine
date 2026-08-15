@@ -1,0 +1,41 @@
+OPEN RANGE INTERACTIVE — PITCH TRAILER v4 (65.8s, 1920x1080/30, H.264)
+
+ART DIRECTION CHANGE
+The historical material is now presented as a unified spatial
+reconstruction layer, not simulated photography: every reconstructed
+element in a scene shares one treatment (slight desaturation,
+compressed dynamic range, fine per-frame reconstruction grain), and
+resolves behind a signature activation — anchor lock, then a luminous
+ground front that expands through depth with fine particles; objects
+resolve fully opaque and then hold still. No ghost fades, no glow.
+
+EDIT
+12 shots, 65.8s. Hook -> mill anchor -> product (supplied photoreal
+glasses, 3 callouts, hero hold) -> viewing zone -> Dakota (punched-in
+plate, primary figure ~30% of frame height beside real rocks, one
+crouching figure, one tipi across the river) -> settlement wide (wagon
+occluded by real stone, one settler) -> settlement tight (fire
+foreground, oxen deeper) -> deep time (gradual freeze, ONE mammoth
+discovered on the mid outcrop with drifting mist at its legs; no
+sabertooth) -> shared experience (two markers join, one pulse, "See it
+together.") -> cinematic map (route draws progressively, three names)
+-> release ("ONE PARK." / "ANY PLACE WITH A STORY.") -> brand (glasses
+beat, two-line wordmark, normal tracking).
+
+TYPE / COLOR / SOUND
+Inter SemiBold headlines 58-118px with localized scrims, no aggressive
+letter-spacing, nothing under 24px. Filmic base grade with soft
+highlights and light grain across all footage. Real falls ambience
+carries transitions; reconstruction activations use a low bloom +
+granular texture; fire, wind, mammoth low-end; narration re-recorded
+(10 lines, ~110 words).
+
+NO NEW AI IMAGES were generated. All subjects are the supplied assets.
+
+PLACEHOLDERS
+- NEEDED_glasses_turntable_video: rotating product shot for both
+  product beats.
+- NEEDED_walk_cycle_or_video_assets: true character animation of the
+  supplied subjects.
+
+BUILD: trailer/v4_scenes.py, trailer/v4_ui.py, trailer/v4_build.py
