@@ -232,6 +232,7 @@ if __name__ == "__main__":
     card(f"{O}/card_river.png", "NATURAL FEATURE", "BIG SIOUX RIVER",
          "Falls avg. 7,400 gallons / second", cx=460, top=110,
          anchor=(855, 560))
+    time_chip(f"{O}/chip_native.png", "TIME LAYER · DAKOTA ENCAMPMENT")
     time_chip(f"{O}/chip_1873.png", "TIME LAYER · 1873 · SETTLEMENT ERA")
     time_chip(f"{O}/chip_ice.png", "TIME LAYER · GLACIAL ERA")
     endcard(f"{O}/endcard.png")

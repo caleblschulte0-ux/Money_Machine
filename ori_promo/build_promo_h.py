@@ -29,8 +29,9 @@ SEGS = [
      [(f"{O}/hud.png", 0.0, 0), (f"{O}/card_mill.png", 0.55, 46)], False),
     ("s4b", "raw/IMG_6806.MOV", 40.5, 3.3, "video",
      [(f"{O}/hud.png", 0.0, 0), (f"{O}/card_river.png", 0.45, 46)], False),
-    ("s5a", None, 0, 5.0, "timelayer_1873", [], False),
-    ("s5b", None, 0, 5.0, "timelayer_ice", [], False),
+    ("s5a", None, 0, 4.4, "timelayer_native", [], False),
+    ("s5b", None, 0, 4.4, "timelayer_1873", [], False),
+    ("s5c", None, 0, 5.0, "timelayer_ice", [], False),
     ("s6", "raw/IMG_6805.MOV", 41.0, 3.8, "video", [], False),
     ("s7", "raw/IMG_6682.MOV", 6.0, 5.9, "video",
      [(f"{O}/endcard.png", 0.5, 40)], False),
@@ -41,44 +42,42 @@ VO = [
     ("work/vo2.mp3", 4.55),
     ("work/vo3.mp3", 10.10),
     ("work/vo4h.mp3", 14.70),
-    ("work/vo5h.mp3", 21.60),
-    ("work/vo5.mp3", 31.40),   # "No tour group..."
-    ("work/vo6.mp3", 35.30),   # "Open Range Interactive. See the story..."
+    ("work/vo5h3.mp3", 21.60),
+    ("work/vo5.mp3", 35.20),   # "No tour group..."
+    ("work/vo6.mp3", 39.30),   # "Open Range Interactive. See the story..."
 ]
 
 ACCENTS = [
     (f"{SFX}/whoosh.wav", 9.85, 0.55),   # brand reveal
     (f"{SFX}/pop.wav", 15.05, 0.6),      # mill card
     (f"{SFX}/pop.wav", 18.15, 0.6),      # river card
-    (f"{SFX}/whoosh.wav", 22.30, 0.65),  # repaint wipe -> 1873
-    (f"{SFX}/whoosh.wav", 27.30, 0.65),  # repaint wipe -> glacial
-    (f"{SFX}/riser.wav", 33.30, 0.45),   # into end card
-    (f"{SFX}/boom.wav", 35.05, 0.5),     # logo lands
+    (f"{SFX}/whoosh.wav", 22.20, 0.65),  # wipe -> native encampment
+    (f"{SFX}/whoosh.wav", 26.60, 0.65),  # wipe -> 1873
+    (f"{SFX}/whoosh.wav", 31.00, 0.65),  # wipe -> glacial
+    (f"{SFX}/riser.wav", 37.20, 0.45),   # into end card
+    (f"{SFX}/boom.wav", 39.05, 0.5),     # logo lands
 ]
 
 # The AR "repaint": same continuous real shot; at WIPE_AT a wiperight
 # sweeps the treated version (grade + holograms/snow + chip) across the
 # frame — the glasses painting the past onto the place you're standing.
-WIPE_AT, WIPE_DUR = 1.3, 0.7
+WIPE_AT, WIPE_DUR = 1.1, 0.6
 
 
-def timelayer_1873(name, dur):
-    src, in_ts = "raw/IMG_6791.MOV", 12.5
+def timelayer_camp(name, dur, src, in_ts, scene_png, chip_png, grade):
+    """Real still plate -> wipe -> photoreal scene composited onto the
+    plate, unified by grading AFTER the overlay."""
     cmd = ["ffmpeg", "-v", "error",
            "-ss", str(in_ts), "-t", str(dur), "-i", src,          # 0 base
-           "-loop", "1", "-t", str(dur), "-i", f"{O}/settlers_holo.png",  # 1
-           "-loop", "1", "-t", str(dur), "-i", f"{O}/hud.png",            # 2
-           "-loop", "1", "-t", str(dur), "-i", f"{O}/chip_1873.png"]      # 3
+           "-loop", "1", "-t", str(dur), "-i", scene_png,          # 1
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/hud.png",     # 2
+           "-loop", "1", "-t", str(dur), "-i", chip_png]           # 3
     chip_t = WIPE_AT + WIPE_DUR + 0.2
     fc = (
         "[0:v]scale=1920:1080:force_original_aspect_ratio=increase,"
         f"crop=1920:1080,fps={FPS},split=2[a][b];"
-        # 1873 mode: sepia-leaning grade + grain, ghosts bob gently
-        "[b]eq=saturation=0.55:brightness=-0.02:contrast=1.06,"
-        "colorbalance=rs=.24:rm=.18:rh=.08:gs=.09:gm=.06:bs=-.28:bm=-.20:bh=-.10,"
-        "vignette=PI/4.6[bg];"
-        "[1:v]format=rgba[holo];"
-        "[bg][holo]overlay=x=0:y='6*sin(2*PI*t/2.6)'[bh];"
+        "[1:v]format=rgba[scene];"
+        f"[b][scene]overlay=0:0,{grade}[bh];"
         f"[a]trim=0:{WIPE_AT + WIPE_DUR},setpts=PTS-STARTPTS,settb=AVTB[a2];"
         f"[bh]trim={WIPE_AT}:{dur},setpts=PTS-STARTPTS,settb=AVTB[b2];"
         f"[a2][b2]xfade=transition=wiperight:duration={WIPE_DUR}:offset={WIPE_AT}[x];"
@@ -93,6 +92,14 @@ def timelayer_1873(name, dur):
     print("built", name)
 
 
+GRADE_NATIVE = ("eq=saturation=0.92:brightness=0.0:contrast=1.04,"
+                "colorbalance=rs=.12:rm=.09:gs=.04:gm=.03:bs=-.10:bm=-.07,"
+                "vignette=PI/5")
+GRADE_1873 = ("eq=saturation=0.55:brightness=-0.02:contrast=1.06,"
+              "colorbalance=rs=.24:rm=.18:rh=.08:gs=.09:gm=.06:bs=-.28:bm=-.20:bh=-.10,"
+              "vignette=PI/4.6")
+
+
 def timelayer_ice(name, dur):
     """Real falls run live, then the wipe freezes them SOLID: the treated
     side is a single frozen frame (slow push-in) under a steel-blue
@@ -105,7 +112,7 @@ def timelayer_ice(name, dur):
            "-loop", "1", "-t", str(dur), "-i", "work/ice_base.png",  # 1 frozen
            "-i", "work/fog.mp4",                                   # 2
            "-i", "work/snow.mp4",                                  # 3
-           "-loop", "1", "-t", str(dur), "-i", f"{O}/mammoths.png",  # 4
+           "-loop", "1", "-t", str(dur), "-i", f"{O}/animals_ice.png",  # 4
            "-loop", "1", "-t", str(dur), "-i", f"{O}/frost.png",     # 5
            "-loop", "1", "-t", str(dur), "-i", f"{O}/hud.png",       # 6
            "-loop", "1", "-t", str(dur), "-i", f"{O}/chip_ice.png"]  # 7
@@ -148,8 +155,15 @@ def run(cmd):
 
 def build_segments():
     for name, src, in_ts, dur, kind, overlays, flash in SEGS:
+        if kind == "timelayer_native":
+            timelayer_camp(name, dur, "raw/IMG_6808.MOV", 26.0,
+                           f"{O}/scene_native.png", f"{O}/chip_native.png",
+                           GRADE_NATIVE)
+            continue
         if kind == "timelayer_1873":
-            timelayer_1873(name, dur)
+            timelayer_camp(name, dur, "raw/IMG_6805.MOV", 27.0,
+                           f"{O}/scene_pioneers.png", f"{O}/chip_1873.png",
+                           GRADE_1873)
             continue
         if kind == "timelayer_ice":
             timelayer_ice(name, dur)

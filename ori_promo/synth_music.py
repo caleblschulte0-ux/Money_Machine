@@ -8,7 +8,7 @@ import numpy as np
 import wave
 
 SR = 44100
-DUR = 42.0
+DUR = 46.0
 BPM = 96
 BEAT = 60.0 / BPM
 BAR = BEAT * 4
@@ -26,7 +26,7 @@ CHORDS = [
 
 def adsr(n, a, r, sr=SR):
     env = np.ones(n)
-    an, rn = int(a * sr), int(r * sr)
+    an, rn = min(int(a * sr), n // 2), min(int(r * sr), n // 2)
     if an:
         env[:an] = np.linspace(0, 1, an)
     if rn:
