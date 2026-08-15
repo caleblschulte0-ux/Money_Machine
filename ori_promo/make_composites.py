@@ -17,11 +17,9 @@ def load(path, desat=0.94, bright=1.0, blur=0.5, cool=False):
     if cool:  # cold shift for the glacial beat
         ch = rgb.split()
         rgb = Image.merge("RGB", (
-            ch[0].point(lambda p: int(p * 0.78)),
-            ch[1].point(lambda p: int(p * 0.94)),
-            ch[2].point(lambda p: min(int(p * 1.14), 255))))
-        rgb = ImageEnhance.Color(rgb).enhance(0.55)
-        rgb = ImageEnhance.Brightness(rgb).enhance(1.06)
+            ch[0].point(lambda p: int(p * 0.86)),
+            ch[1].point(lambda p: int(p * 0.96)),
+            ch[2].point(lambda p: min(int(p * 1.08), 255))))
     out = Image.merge("RGBA", (*rgb.split(), a))
     if blur:
         out = out.filter(ImageFilter.GaussianBlur(blur))
@@ -62,14 +60,34 @@ def pioneer_scene():
     canvas.save("work/overlays_h/scene_pioneers.png")
 
 
+def wash(el, amount, color=(232, 244, 252)):
+    """Atmospheric perspective: haze between viewer and subject."""
+    hz = Image.new("RGBA", el.size, (*color, 0))
+    hz.putalpha(el.split()[3].point(lambda p: int(p * amount)))
+    out = el.copy()
+    out.alpha_composite(hz)
+    return out
+
+
 def ice_animals():
-    """Frozen 6682 still: mammoth right foreground facing the falls,
-    sabertooth on the left rocks facing it across the gorge."""
+    """Frozen 6682 still, scaled from real anchors: people on the far
+    bank measure ~30px, so 1m ~ 17px there; the mid rock outcrop is
+    ~2.2x closer (1m ~ 38px). Depth hierarchy: distant herd on the far
+    bank, hero mammoth crossing the mid outcrop, big low-key sabertooth
+    prowling into frame as the near framing element."""
     canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    mammoth = load("assets_user/mammoth.png", cool=True)
-    saber = load("assets_user/sabertooth.png", cool=True)
-    place(canvas, mammoth, 1430, 1062, 500, shadow_alpha=60)
-    place(canvas, saber, 330, 1000, 250, flip=True, shadow_alpha=60)
+    mam = load("assets_user/mammoth.png", desat=0.75, bright=0.95, cool=True)
+    saber = load("assets_user/sabertooth.png", desat=0.72, bright=0.62, cool=True)
+
+    # far herd on the upper bank (ground line y~300): 3.6m tall -> ~62px
+    place(canvas, wash(mam, 0.34), 1620, 302, 62, flip=True, shadow_alpha=28)
+    place(canvas, wash(mam, 0.30), 1755, 306, 55, shadow_alpha=24)
+    # hero on the mid-left outcrop top (y~385): 3.6m -> ~145px
+    place(canvas, wash(mam, 0.12), 585, 388, 148, flip=True, shadow_alpha=55)
+    # near sabertooth: cold-washed into the duotone, prowling toward
+    # the falls, partially cropped at bottom-left
+    saber = wash(saber, 0.24, color=(150, 190, 225))
+    place(canvas, saber, 300, 1135, 470, flip=True, shadow_alpha=40)
     canvas.save("work/overlays_h/animals_ice.png")
 
 
