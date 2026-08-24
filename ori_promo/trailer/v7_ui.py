@@ -130,13 +130,24 @@ def map_base():
     bg[..., 2] = v * 1.14
     img = Image.fromarray(bg.astype(np.uint8)).convert("RGBA")
 
+    # park landmass + contour bands, so the field reads as a site plan
+    land = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    dl = ImageDraw.Draw(land)
+    rpts = _curve(RIVER)
+    for band, (off, al) in enumerate(((120, 26), (250, 18), (400, 12))):
+        pl = [(x + off * 0.35, y + off) for x, y in rpts]
+        pl += [(x - off * 0.35, y - off) for x, y in reversed(rpts)]
+        dl.polygon(pl, outline=(150, 170, 188, al))
+    land = land.filter(ImageFilter.GaussianBlur(2.0))
+    img.alpha_composite(land)
+
     riv = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(riv)
     pts = _curve(RIVER)
     for i, (x, y) in enumerate(pts):
         w = 46 - 26 * (i / len(pts))
         d.ellipse((x - w, y - w * .5, x + w, y + w * .5),
-                  fill=(86, 116, 140, 150))
+                  fill=(96, 130, 158, 205))
     riv = riv.filter(ImageFilter.GaussianBlur(9))
     img.alpha_composite(riv)
 
@@ -150,8 +161,8 @@ def map_base():
     img.alpha_composite(fl.filter(ImageFilter.GaussianBlur(1.4)))
     lab = canvas()
     dl = ImageDraw.Draw(lab)
-    text(dl, (0, fy - 96), "THE FALLS", font("med", 30),
-         (188, 202, 214, 210), center=fx)
+    text(dl, (0, fy - 118), "THE FALLS", font("semi", 40),
+         (206, 220, 232, 236), center=fx)
     img.alpha_composite(soft(lab, blur=9, alpha=170))
     img.convert("RGB").save(f"{OUT}/map_base.png")
 
@@ -168,12 +179,18 @@ def map_seq(dur=9.5):
         img = canvas()
         d = ImageDraw.Draw(img)
         # progressive route
-        prog = 0.0 if t < 1.2 else min((t - 1.2) / 3.3, 1.0)
+        prog = 0.0 if t < 0.7 else min((t - 0.7) / 3.4, 1.0)
         upto = int(prog * n)
-        for i in range(upto):
+        ghost = int(min(t / 0.6, 1.0) * 62)
+        for i in range(0, n, 2):          # the planned route, dim
             x, y = pts[i]
-            a = 232 if i > upto - 26 else 196
-            d.ellipse((x - 3, y - 3, x + 3, y + 3), fill=(255, 253, 247, a))
+            d.ellipse((x - 2, y - 2, x + 2, y + 2),
+                      fill=(255, 253, 247, ghost))
+        for i in range(upto):             # the drawn route, bright
+            x, y = pts[i]
+            a = 240 if i > upto - 26 else 208
+            d.ellipse((x - 3.4, y - 3.4, x + 3.4, y + 3.4),
+                      fill=(255, 253, 247, a))
         # nodes
         for k, (frac, name, side) in enumerate(NODES):
             if prog < frac:
