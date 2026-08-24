@@ -99,10 +99,10 @@ def mill_dot():
 # --------------------------------------------------------------- the map
 RIVER = [(120, 980), (430, 880), (760, 760), (1060, 620), (1370, 470),
          (1720, 330), (1900, 286)]
-ROUTE = [(330, 1042), (600, 962), (880, 868), (1078, 762), (1300, 640),
-         (1536, 528), (1720, 456)]
-NODES = [(0.20, "DAKOTA LIFE", -1), (0.54, "QUEEN BEE MILL", 1),
-         (0.86, "GLACIAL EDGE", -1)]
+ROUTE = [(300, 1012), (520, 906), (760, 806), (980, 690), (1180, 566),
+         (1380, 438), (1560, 322)]
+NODES = [(0.27, "DAKOTA LIFE", -1), (0.56, "QUEEN BEE MILL", 1),
+         (0.87, "GLACIAL EDGE", -1)]
 
 
 def _curve(pts, n=460):
@@ -120,76 +120,38 @@ def _curve(pts, n=460):
 
 
 def map_base():
-    """A drawn site plan: river ribbon, falls mark, ground tone. No photo."""
-    bg = np.zeros((H, W, 3), np.float32)
-    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    r = np.sqrt(((xx - W * .5) / (W * .70)) ** 2 + ((yy - H * .5) / (H * .78)) ** 2)
-    v = np.clip(30 - r * 24, 6, 30)
-    bg[..., 0] = v * .92
-    bg[..., 1] = v
-    bg[..., 2] = v * 1.14
-    img = Image.fromarray(bg.astype(np.uint8)).convert("RGBA")
-
-    # park landmass + contour bands, so the field reads as a site plan
-    land = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    dl = ImageDraw.Draw(land)
-    rpts = _curve(RIVER)
-    for band, (off, al) in enumerate(((120, 26), (250, 18), (400, 12))):
-        pl = [(x + off * 0.35, y + off) for x, y in rpts]
-        pl += [(x - off * 0.35, y - off) for x, y in reversed(rpts)]
-        dl.polygon(pl, outline=(150, 170, 188, al))
-    land = land.filter(ImageFilter.GaussianBlur(2.0))
-    img.alpha_composite(land)
-
-    riv = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(riv)
-    pts = _curve(RIVER)
-    for i, (x, y) in enumerate(pts):
-        w = 46 - 26 * (i / len(pts))
-        d.ellipse((x - w, y - w * .5, x + w, y + w * .5),
-                  fill=(96, 130, 158, 205))
-    riv = riv.filter(ImageFilter.GaussianBlur(9))
-    img.alpha_composite(riv)
-
-    # the falls: a short bright break across the river
-    fl = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(fl)
-    fx, fy = pts[int(len(pts) * .52)]
-    for k in range(-4, 5):
-        d.line([(fx - 62, fy + k * 8 + 14), (fx + 62, fy + k * 8 - 14)],
-               fill=(214, 230, 242, 178), width=3)
-    img.alpha_composite(fl.filter(ImageFilter.GaussianBlur(1.4)))
-    lab = canvas()
-    dl = ImageDraw.Draw(lab)
-    text(dl, (0, fy - 118), "THE FALLS", font("semi", 40),
-         (206, 220, 232, 236), center=fx)
-    img.alpha_composite(soft(lab, blur=9, alpha=170))
-    img.convert("RGB").save(f"{OUT}/map_base.png")
+    """r04: a dim, desaturated REAL Falls Park aerial under clean graphics.
+    Source is the operator's own reference map (ref 0:39.0-0:48.5), processed
+    to texture — no generated imagery, and no invented river on top of a
+    photograph that already has one."""
+    Image.open("work/aerial_texture.png").convert("RGB").save(
+        f"{OUT}/map_base.png")
 
 
-def map_seq(dur=9.5):
-    """Route draws 1.2-4.5s, nodes land, each pulses once 4.5-7.5s."""
+def map_seq(dur=7.8):
+    """r04 timing: ghost route from frame one, a 1.5s bright sweep,
+    nodes 0.85s apart, all three held, then the payoff line."""
     os.makedirs(f"{OUT}/mseq", exist_ok=True)
     pts = _curve(ROUTE)
     n = len(pts)
-    fs = font("semi", 34)
+    fs = font("semi", 64)
     frames = int(dur * FPS)
     for f in range(frames):
         t = f / FPS
         img = canvas()
         d = ImageDraw.Draw(img)
         # progressive route
-        prog = 0.0 if t < 0.7 else min((t - 0.7) / 3.4, 1.0)
+        prog = 0.0 if t < 0.3 else min((t - 0.3) / 1.5, 1.0)
         upto = int(prog * n)
-        ghost = int(min(t / 0.6, 1.0) * 62)
+        ghost = int(min(t / 0.35, 1.0) * 89)
         for i in range(0, n, 2):          # the planned route, dim
             x, y = pts[i]
-            d.ellipse((x - 2, y - 2, x + 2, y + 2),
+            d.ellipse((x - 3, y - 3, x + 3, y + 3),
                       fill=(255, 253, 247, ghost))
         for i in range(upto):             # the drawn route, bright
             x, y = pts[i]
-            a = 240 if i > upto - 26 else 208
-            d.ellipse((x - 3.4, y - 3.4, x + 3.4, y + 3.4),
+            a = 245 if i > upto - 30 else 216
+            d.ellipse((x - 4.6, y - 4.6, x + 4.6, y + 4.6),
                       fill=(255, 253, 247, a))
         # nodes
         for k, (frac, name, side) in enumerate(NODES):
@@ -197,27 +159,27 @@ def map_seq(dur=9.5):
                 continue
             x, y = pts[int(frac * (n - 1))]
             appear = min((prog - frac) * 6, 1.0)
-            rr = 9 * appear
+            rr = 13 * appear
             d.ellipse((x - rr, y - rr, x + rr, y + rr),
                       fill=(255, 253, 247, int(250 * appear)))
             d.ellipse((x - rr * 2.4, y - rr * 2.4, x + rr * 2.4, y + rr * 2.4),
                       outline=(255, 253, 247, int(200 * appear)), width=2)
             # one pulse, staggered per node
-            pt0 = 4.5 + k * 0.85
-            if pt0 <= t < pt0 + 1.15:
-                p = (t - pt0) / 1.15
-                pr = 22 + p * 118
+            pt0 = 1.9 + k * 0.85
+            if pt0 <= t < pt0 + 1.0:
+                p = (t - pt0) / 1.0
+                pr = 26 + p * 132
                 d.ellipse((x - pr, y - pr * .62, x + pr, y + pr * .62),
                           outline=(255, 253, 247, int(190 * (1 - p))), width=3)
             # label after its pulse starts
             if t >= pt0 - 0.1:
                 la = min((t - (pt0 - 0.1)) * 3.2, 1.0)
                 tw = d.textlength(name, font=fs)
-                lx = x - tw - 40 if side < 0 else x + 40
-                ly = y - 20
-                d.line([(x + (-26 if side < 0 else 26), y),
-                        (lx + (tw + 12 if side < 0 else -12), ly + 18)],
-                       fill=(255, 255, 255, int(150 * la)), width=2)
+                lx = x - tw - 56 if side < 0 else x + 56
+                ly = y - 34
+                d.line([(x + (-34 if side < 0 else 34), y),
+                        (lx + (tw + 16 if side < 0 else -16), ly + 32)],
+                       fill=(255, 255, 255, int(165 * la)), width=3)
                 d.text((lx, ly), name, font=fs,
                        fill=(255, 255, 255, int(248 * la)))
         img.save(f"{OUT}/mseq/{f:04d}.png")

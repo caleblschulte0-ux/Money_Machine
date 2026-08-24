@@ -199,9 +199,10 @@ def sync2(name, dur=5.6):
     print("shot", name)
 
 
-def route_map(name, dur=9.5):
-    """The new beat r02 asked for: a drawn Falls Park beta route with three
-    labeled zone nodes. Graphics only — no photo, no generated image."""
+def route_map(name, dur=7.8):
+    """r04 revision: a dim REAL Falls Park aerial (the operator's own
+    reference map, processed to texture) under clean graphics. Ghost route
+    from frame one, 1.5s bright sweep, nodes 0.85s apart, then the payoff."""
     cmd = ["ffmpeg", "-v", "error",
            "-loop", "1", "-t", str(dur), "-i", f"{U7}/map_base.png",
            "-framerate", str(FPS), "-i", f"{U7}/mseq/%04d.png",
@@ -210,9 +211,9 @@ def route_map(name, dur=9.5):
     fc = (f"[0:v]fps={FPS},scale=1920:1080[bg];"
           "[1:v]format=rgba[sq];[bg][sq]overlay=0:0[a];"
           "[2:v]format=rgba,fade=t=in:st=0.2:d=0.5:alpha=1,"
-          "fade=t=out:st=7.0:d=0.4:alpha=1[t1];"
+          "fade=t=out:st=5.5:d=0.4:alpha=1[t1];"
           "[a][t1]overlay[b];"
-          "[3:v]format=rgba,fade=t=in:st=7.5:d=0.5:alpha=1[t2];"
+          "[3:v]format=rgba,fade=t=in:st=6.05:d=0.45:alpha=1[t2];"
           "[b][t2]overlay,"
           f"fade=t=in:st=0:d=0.4,fade=t=out:st={dur - 0.45}:d=0.45,"
           + push(1.025, dur) + ",setsar=1,format=yuv420p[v]")
@@ -253,7 +254,7 @@ def endcard(name, dur=5.4):
 
 
 SHOTS = [f"s{i:02d}" for i in range(20)]
-TOTAL = 91.1
+TOTAL = 89.4
 
 
 def build_video():
@@ -312,9 +313,9 @@ CUES = [
     (f"{AU}/y08.mp3", 41.8, 1.0, None),
     (f"{AU}/y05.mp3", 48.2, 1.0, None),
     (f"{AU}/y09.mp3", 58.2, 1.0, None),
-    (f"{AU}/y12.mp3", 71.0, 1.0, None),
-    (f"{AU}/y10.mp3", 80.0, 1.0, None),
-    (f"{AU}/y11.mp3", 86.2, 1.0, None),
+    (f"{AU}/y12.mp3", 70.2, 1.0, None),
+    (f"{AU}/y10.mp3", 78.3, 1.0, None),
+    (f"{AU}/y11.mp3", 84.5, 1.0, None),
     (f"{AU}/amb_falls.wav", 1.7, 0.9, 9.0),
     (f"{AU}/amb_park.wav", 10.4, 0.5, 14.4),
     (f"{AU}/amb_park.wav", 24.8, 0.45, 16.2),
@@ -324,7 +325,7 @@ CUES = [
     (f"{AU}/creak.wav", 42.0, 0.6, None),
     (f"{AU}/rumble.wav", 43.4, 0.55, None),
     (f"{AU}/amb_park.wav", 57.6, 0.5, 12.2),
-    (f"{AU}/amb_falls.wav", 79.3, 0.4, 5.4),
+    (f"{AU}/amb_falls.wav", 77.6, 0.4, 5.4),
     (f"{AU}/scan.wav", 20.2, 0.85, None),
     (f"{AU}/scan.wav", 26.4, 0.8, None),
     (f"{AU}/scan.wav", 30.7, 0.6, None),
@@ -336,11 +337,10 @@ CUES = [
     (f"{AU}/tick.wav", 58.9, 0.5, None),
     (f"{AU}/tick.wav", 66.6, 0.45, None),
     (f"{AU}/shimmer.wav", 52.2, 0.4, None),
-    (f"{AU}/tick.wav", 71.2, 0.5, None),
-    (f"{AU}/tick.wav", 74.5, 0.45, None),
-    (f"{AU}/tick.wav", 75.4, 0.45, None),
-    (f"{AU}/tick.wav", 76.3, 0.45, None),
-    (f"{AU}/shimmer.wav", 84.7, 0.35, None),
+    (f"{AU}/tick.wav", 71.7, 0.5, None),
+    (f"{AU}/tick.wav", 72.55, 0.45, None),
+    (f"{AU}/tick.wav", 73.4, 0.45, None),
+    (f"{AU}/shimmer.wav", 83.0, 0.35, None),
 ]
 
 
@@ -370,7 +370,7 @@ def mux():
     run(["ffmpeg", "-v", "error", "-i", "trailer/out7/video.mp4",
          "-i", "trailer/out7/mix.wav", "-c:v", "copy", "-c:a", "aac",
          "-b:a", "224k", "-shortest", "-movflags", "+faststart",
-         "out/ORI_demo_v2_r03_master.mp4", "-y"])
+         "out/ORI_demo_v2_r05_master.mp4", "-y"])
     print("muxed")
 
 
