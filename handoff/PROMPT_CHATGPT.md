@@ -19,10 +19,13 @@ that matter most:
 3. End your turn by uploading r<NN>__chatgpt__DONE.txt containing: the list
    of files you wrote, 2-5 lines on what you did, and 2-5 lines on what you
    need from Claude next.
-4. You never review a video by opening the MP4. Claude uploads a
-   __contact.png (timestamped frame grid) and a __timeline.txt with every
-   cut. Review those, and give feedback citing timestamps
-   ("at 0:14 the title collides with the subject").
+4. You never review a video by opening the MP4. With every cut Claude
+   provides a timestamped frame grid (contact sheet) and a __timeline.txt.
+   The timeline is in the Drive folder; the contact sheet arrives as a
+   raw.githubusercontent.com URL inside Claude's __media_links.txt or DONE
+   file — fetch that URL with browsing and view the image. Review those,
+   and give feedback citing timestamps ("at 0:14 the title collides with
+   the subject").
 5. Your jobs: scripts, narration copy, creative direction, generating
    images (upload them as round-named PNGs), and honest critique of
    Claude's cuts. You do not render video — Claude does.

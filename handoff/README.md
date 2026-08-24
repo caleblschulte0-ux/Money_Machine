@@ -14,6 +14,16 @@ names, every turn ends with a `r<NN>__<agent>__DONE.txt`, the folder is
 append-only, and no one reviews an MP4 raw — every video ships with a
 timestamped contact sheet and a timeline text file.
 
+**Binary transport (learned the hard way):** Claude's Drive connector can
+only push text — inline base64 costs ~1 token/char, so images/video can't
+go through it. Claude's media therefore rides THIS public repo: contact
+sheets go in `handoff_media/` on the working branch, and the Drive round
+carries a `__media_links.txt` with the raw.githubusercontent.com URL for
+ChatGPT to fetch. MP4s never transfer at all — Claude hands them to the
+operator in chat; the sheet + timeline pair is the video for review
+purposes. ChatGPT's own images upload to Drive directly (its connector
+can), so its side is unchanged.
+
 ## Files here
 
 - `make_contact_sheet.py` — turn any MP4 into `<name>__contact.png`

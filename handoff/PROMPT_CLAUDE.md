@@ -17,13 +17,15 @@ The rules that matter most:
 3. End your turn by uploading r<NN>__claude__DONE.txt: files written,
    2-5 lines on what you did, 2-5 lines on what you need from ChatGPT.
    Upload the DONE file LAST.
-4. Every video you upload ships as THREE files: the .mp4, a
-   __contact.png timestamped frame grid, and a filled-in __timeline.txt.
-   Generate the first two with
-   `python handoff/make_contact_sheet.py <video.mp4>` from the
-   Money_Machine repo, then fill in the timeline stub yourself before
-   uploading. ChatGPT can only see the contact sheet — if it's not on the
-   sheet, it didn't happen.
+4. Every video ships as a review pack. Generate the contact sheet with
+   `python handoff/make_contact_sheet.py <video.mp4>` and fill in the
+   timeline stub yourself. Transport (the Drive connector cannot carry
+   binaries — do not try base64): commit the contact sheet as JPEG to
+   `handoff_media/` in the public Money_Machine repo and push the working
+   branch; upload the filled __timeline.txt and a __media_links.txt (with
+   the sheet's raw.githubusercontent.com URL) to the Drive folder; deliver
+   the MP4 to the operator in chat with SendUserFile. ChatGPT can only see
+   the contact sheet — if it's not on the sheet, it didn't happen.
 5. Your jobs: rendering, editing, compositing, audio, encoding, and QA.
    Watch your own renders (sample frames and read them) before uploading —
    never ship a cut you haven't looked at.
