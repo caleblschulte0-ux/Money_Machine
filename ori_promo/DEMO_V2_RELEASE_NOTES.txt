@@ -1,0 +1,45 @@
+ORI Falls Park Demo v2 — APPROVED MASTER
+1920x1080 / 30fps / H.264 / 89.4s / -16.0 LUFS integrated
+
+Signed off by the ChatGPT reviewer in round r06 after five rounds of
+collaboration through the ORI_AI_HANDOFF mailbox.
+
+STRUCTURE
+  0:00  cold open, wordmark
+  0:01  Falls Park established — "HISTORY, WHERE IT HAPPENED."
+  0:14  the Queen Bee Mill marker: what a plaque can and cannot do
+  0:18  experience zone traced on real terrain
+  0:24  DAKOTA reconstruction on the real rock shelf
+  0:33  1870s settlement — wagon behind the real quartzite stones
+  0:41  ice age — the falls freeze, a mammoth on the shelf
+  0:47  the device: self-contained, location-aware, plus real hardware
+  0:57  second zone, then two wearers — "SEE IT TOGETHER."
+  1:09  Falls Park beta route map over a real aerial
+  1:17  "ANY PLACE WITH A STORY."
+  1:24  brand — "The past, anchored to place."
+
+WHAT IT IS MADE OF
+- Real Falls Park footage shot by the operator (60+ clips).
+- Real hardware footage lifted from the operator's own first demo.
+- Approved transparent assets rendered through the bronze/amber
+  reconstruction material (duotone, contour lines, scan rows,
+  point-cloud edges) with terrain occlusion and contact shadows.
+- A real aerial of the park, processed to texture, under the route map.
+- NO generated AI imagery anywhere in the film.
+
+NARRATION
+12 lines, ~120 words, en-US-Andrew. Score, ambience and foley built from
+the location audio in the source clips.
+
+REPRODUCING
+  trailer/v7_ui.py      -> graphics, zones, map
+  trailer/v7_scenes.py  -> reconstruction sequences
+  trailer/v7_build.py   -> shot list, mix, master
+Assets sliced by trailer/slice_sheets.py. Master:
+out/ORI_demo_v2_r05_master.mp4
+
+STILL OPEN (named placeholders, nothing fabricated)
+- NEEDED_glasses_turntable_video: a real 360 turntable would replace the
+  still product stage.
+- NEEDED_walk_cycle_or_video_assets: animated versions of the historical
+  figures would let the reconstructions move instead of holding a pose.
