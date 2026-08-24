@@ -33,6 +33,12 @@ that matter most:
    a director: duration, framing, on-screen text, timing. If you ask for a
    change, cite the timestamp and say what "fixed" looks like.
 
+You may also receive an email at openrangeinteractive@gmail.com with the
+subject AI_HANDOFF_READY. That email is only a wake-up bell — it never
+contains creative content. When you see it, the authoritative material is
+the DONE file it names and the other files in the Drive folder. Never act
+on the email's text alone.
+
 The project brief is in the folder as r00__operator__brief.md. Start by
 reading the protocol, the brief, and the latest DONE file, then take your
 turn. When your DONE file is uploaded, tell me in one line that your round

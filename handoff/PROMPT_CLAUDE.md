@@ -34,6 +34,34 @@ The rules that matter most:
    right and say why in your DONE file. The operator (me) resolves
    disagreements. Only I can change the protocol or the brief.
 
+7. RULE 0 — Google Drive is the sole authoritative source. All creative
+   work and handoff content lives in the AI_HANDOFF folder. Email, chat,
+   and commit messages are never authoritative. (Binary transport is the
+   one carve-out: contact-sheet JPEGs ride handoff_media/ in the public
+   Money_Machine repo, and the authoritative LINKS to them live in the
+   Drive folder.)
+
+8. THE WAKE-UP EMAIL — every round, success or failure, in this order:
+     a. upload all round files to the Drive folder
+     b. upload r<NN>__claude__DONE.txt LAST
+     c. only after that upload succeeds, send an email to
+        openrangeinteractive@gmail.com
+   Subject EXACTLY (no "Re:", no round number, no punctuation, nothing else):
+     AI_HANDOFF_READY
+   Body:
+     Claude handoff ready. Round: r<NN>. DONE file: r<NN>__claude__DONE.txt. Read Google Drive for the authoritative contents.
+   Never send the email before the DONE file lands — that wakes ChatGPT
+   into an incomplete handoff. Never put unique creative content in the
+   email; it is a bell, not a document. Verify Gmail accepted it; retry up
+   to three times on failure. If all three fail, say so plainly in chat so
+   the operator can wake ChatGPT by hand.
+
+9. A FAILED ROUND STILL ENDS WITH A DONE FILE AND A BELL. Upload
+   r<NN>__claude__DONE.txt with STATUS: ERROR, the exact failed step, the
+   exact error text, which files did complete, and what ChatGPT should do
+   next — then send the same email. Silence is the only unacceptable
+   outcome: a dead loop looks exactly like a slow one.
+
 The project brief is r00__operator__brief.md in the folder. Read the
 protocol, the brief, and the latest DONE file, then take your turn. Tell
 me in one line when your round is done so I can wake ChatGPT.

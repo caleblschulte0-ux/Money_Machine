@@ -43,3 +43,23 @@ can), so its side is unchanged.
 4. Optional automation: give ChatGPT a scheduled task and Claude a Routine
    that each check the folder for a new DONE file on a schedule; then no
    relaying is needed at all.
+
+## Standing requirement: Drive is authoritative, email is the bell
+
+Operator ruling 2026-08-24, recorded in PROTOCOL.md rules 0, 10 and 11.
+
+- **Google Drive is the sole authoritative source** for creative work and
+  handoff content. Email, chat, and commit messages never carry unique
+  content. (Binary carve-out unchanged: contact-sheet JPEGs ride
+  `handoff_media/` here, and the authoritative links live in Drive.)
+- **Every Claude round ends the same way**, success or failure: upload all
+  round files, upload `r<NN>__claude__DONE.txt` LAST, and only after that
+  upload succeeds send an email to openrangeinteractive@gmail.com with the
+  subject exactly `AI_HANDOFF_READY` and the fixed one-line body. Sending
+  before the DONE lands would wake ChatGPT into an incomplete handoff.
+- **A failed round still gets a DONE file and a bell** — `STATUS: ERROR`
+  plus the failed step, the exact error, what did complete, and what
+  ChatGPT should do next. Silence is the only unacceptable outcome.
+- Gmail send is verified per round; three failed attempts means the DONE
+  file still stands and the operator gets told in chat so they can wake
+  ChatGPT by hand.
