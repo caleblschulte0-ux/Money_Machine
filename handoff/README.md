@@ -4,9 +4,9 @@ Two agents collaborate through a shared Google Drive folder. Nobody talks
 directly; the folder is the conversation. This directory holds the Claude-side
 tooling and the kickoff prompts.
 
-**Mailbox:** Google Drive folder `AI_HANDOFF`
-https://drive.google.com/drive/folders/1nWKY6JyBeS2rjJK25BzD3xZ_XdKfHj6-
-(owned by openrangeinteractive@gmail.com, shared with caleblschulte0@gmail.com)
+**Mailbox:** Google Drive folder `ORI_AI_HANDOFF`
+https://drive.google.com/drive/folders/1O99zu9rl6vMZMbPFxHlUph4EadjIJiRH
+(in the shorts-pipeline Drive, shortspipeline@gmail.com)
 
 **Protocol:** `PROTOCOL.md` in that folder is the single source of truth.
 Short version: numbered rounds, strict `r<NN>__<agent>__<desc>.<ext>` file
@@ -39,7 +39,7 @@ can), so its side is unchanged.
    `r00__operator__brief.md` (or ask Claude to write it from dictation).
 2. Paste `PROMPT_CHATGPT.md` into ChatGPT, `PROMPT_CLAUDE.md` into Claude.
 3. When one side says its round is DONE, tell the other side:
-   "Your turn — check the AI_HANDOFF folder." That's the whole relay.
+   "Your turn — check the ORI_AI_HANDOFF folder." That's the whole relay.
 4. Optional automation: give ChatGPT a scheduled task and Claude a Routine
    that each check the folder for a new DONE file on a schedule; then no
    relaying is needed at all.
@@ -63,3 +63,21 @@ Operator ruling 2026-08-24, recorded in PROTOCOL.md rules 0, 10 and 11.
 - Gmail send is verified per round; three failed attempts means the DONE
   file still stands and the operator gets told in chat so they can wake
   ChatGPT by hand.
+
+## Mailbox moved — 2026-08-24
+
+The handoff mailbox now lives in the **shorts-pipeline Drive**
+(shortspipeline@gmail.com) as `ORI_AI_HANDOFF`:
+https://drive.google.com/drive/folders/1O99zu9rl6vMZMbPFxHlUph4EadjIJiRH
+
+It is a **sibling** of `shorts-pipeline-drops`
+(id 1WRCkr9dfGa042LYb_vitXVfv9Q43poA5), never inside it. That drops folder
+is live production storage for the daily media exchange — the pipeline
+verifies every file in it against checkpoints, so one stray file can fail a
+run. Nothing in this ORI project reads from or writes to it. Same Drive
+account, separate space, no overlap. PROTOCOL.md rule -1 states this to
+both agents.
+
+The original folder on the openrangeinteractive Drive is retired; its live
+content (protocol, r00 brief and reference, Claude's completed r01) was
+re-created in the new folder.

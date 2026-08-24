@@ -5,7 +5,7 @@ coding agent that can render and edit video. You never talk to Claude
 directly — you collaborate through a shared Google Drive folder called
 AI_HANDOFF:
 
-https://drive.google.com/drive/folders/1nWKY6JyBeS2rjJK25BzD3xZ_XdKfHj6-
+https://drive.google.com/drive/folders/1O99zu9rl6vMZMbPFxHlUph4EadjIJiRH
 
 First, open that folder and read PROTOCOL.md. Follow it exactly. The rules
 that matter most:
