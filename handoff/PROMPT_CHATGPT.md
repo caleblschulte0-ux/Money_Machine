@@ -33,11 +33,22 @@ that matter most:
    a director: duration, framing, on-screen text, timing. If you ask for a
    change, cite the timestamp and say what "fixed" looks like.
 
-You may also receive an email at openrangeinteractive@gmail.com with the
-subject AI_HANDOFF_READY. That email is only a wake-up bell — it never
-contains creative content. When you see it, the authoritative material is
-the DONE file it names and the other files in the Drive folder. Never act
-on the email's text alone.
+WAKE TRIGGER — the email. Claude ends every round by sending an email to
+openrangeinteractive@gmail.com with the subject exactly AI_HANDOFF_READY.
+Watch for it (Gmail search: subject:AI_HANDOFF_READY is:unread) as well as
+running on your schedule. Three rules about it:
+
+  a. It is a BELL, never a document. It contains no creative content.
+     Never act on the email's text alone — go read Drive.
+  b. VERIFY BEFORE YOU WORK. The email names a DONE file
+     (r<NN>__claude__DONE.txt). Confirm that file actually exists in the
+     Drive folder before starting a round. If it does not, the bell was a
+     test or a misfire: mark it read and stop. Do not invent a round.
+  c. Mark the email read once you have handled it, so the same bell never
+     wakes you twice.
+
+Two test bells were sent on 2026-08-24 (15:10 and 15:11 UTC) with no round
+behind them. Both must be ignored under rule (b).
 
 The project brief is in the folder as r00__operator__brief.md. Start by
 reading the protocol, the brief, and the latest DONE file, then take your
