@@ -8,12 +8,26 @@ Produces, next to the input video:
 
 Only needs ffmpeg + ffprobe on PATH. Usage:
   python make_contact_sheet.py path/to/video.mp4 [--interval 1.5] [--cols 6]
+
+Sampling is done with one explicit seek per tile. It used to be done with a
+single `fps=1/interval,...,tile=` chain, which was much faster and WRONG: the
+fps filter re-bases output timestamps, so each tile drifted later than the
+label burned onto it — about +2s by the 40-second mark of a 100-second film,
+and growing. Every timestamped review note written against those sheets was
+aimed at the wrong frame. Correctness beats speed here; the whole point of
+the sheet is that a partner who cannot open the MP4 can cite a timestamp and
+have it mean something.
 """
 import argparse
 import math
 import os
 import subprocess
 import sys
+
+FONTS = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+]
 
 
 def probe_duration(path):
@@ -22,6 +36,19 @@ def probe_duration(path):
          "-of", "default=nw=1:nk=1", path],
         capture_output=True, text=True, check=True).stdout.strip()
     return float(out)
+
+
+def hms(t):
+    h, rem = divmod(int(t), 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:d}:{m:02d}:{s:02d}.{int(round((t % 1) * 10))}"
+
+
+def font_path():
+    for f in FONTS:
+        if os.path.exists(f):
+            return f
+    return None
 
 
 def main():
@@ -36,6 +63,10 @@ def main():
 
     if not os.path.exists(args.video):
         sys.exit(f"not found: {args.video}")
+    try:
+        from PIL import Image
+    except ImportError:
+        sys.exit("needs Pillow (pip install pillow)")
 
     dur = probe_duration(args.video)
     n = max(1, math.ceil(dur / args.interval))
@@ -43,25 +74,45 @@ def main():
     base = os.path.splitext(args.video)[0]
     sheet = f"{base}__contact.png"
     timeline = f"{base}__timeline.txt"
+    tmpdir = f"{base}__tiles"
+    os.makedirs(tmpdir, exist_ok=True)
 
-    stamp = ("drawtext=text='%{pts\\:hms}':fontcolor=white:fontsize=20:"
-             "box=1:boxcolor=black@0.55:boxborderw=4:x=8:y=h-30,")
-    vf = (f"fps=1/{args.interval},scale={args.width}:-2,"
-          f"{stamp}tile={args.cols}x{rows}")
-    cmd = ["ffmpeg", "-y", "-i", args.video, "-vf", vf,
-           "-frames:v", "1", sheet]
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    if r.returncode != 0 and "drawtext" in r.stderr:
-        # ffmpeg built without freetype: fall back to an unstamped grid
-        vf = (f"fps=1/{args.interval},scale={args.width}:-2,"
-              f"tile={args.cols}x{rows}")
-        subprocess.run(["ffmpeg", "-y", "-i", args.video, "-vf", vf,
-                        "-frames:v", "1", sheet], check=True)
-        stamped = False
-    elif r.returncode != 0:
-        sys.exit(r.stderr[-2000:])
-    else:
-        stamped = True
+    fp = font_path()
+    tiles, stamped = [], fp is not None
+    for i in range(n):
+        t = min(i * args.interval, max(dur - 0.05, 0))
+        out = os.path.join(tmpdir, f"{i:04d}.jpg")
+        vf = f"scale={args.width}:-2"
+        if fp:
+            # label is the time we SEEKED to, not a filtered timestamp
+            lbl = hms(t).replace(":", r"\:")
+            vf += (f",drawtext=fontfile={fp}:text='{lbl}':fontcolor=white:"
+                   f"fontsize=18:box=1:boxcolor=black@0.62:boxborderw=4:"
+                   f"x=6:y=h-26")
+        r = subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.3f}",
+                            "-i", args.video, "-frames:v", "1", "-vf", vf, out],
+                           capture_output=True, text=True)
+        if r.returncode != 0 or not os.path.exists(out):
+            if fp:      # ffmpeg without freetype: fall back to unstamped tiles
+                fp, stamped = None, False
+                subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.3f}",
+                                "-i", args.video, "-frames:v", "1", "-vf",
+                                f"scale={args.width}:-2", out], check=True)
+            else:
+                sys.exit(r.stderr[-2000:])
+        tiles.append(out)
+
+    ims = [Image.open(p) for p in tiles]
+    tw, th = ims[0].size
+    grid = Image.new("RGB", (tw * args.cols, th * rows), (12, 12, 14))
+    for i, im in enumerate(ims):
+        if im.size != (tw, th):
+            im = im.resize((tw, th))
+        grid.paste(im, ((i % args.cols) * tw, (i // args.cols) * th))
+    grid.save(sheet)
+    for p in tiles:
+        os.remove(p)
+    os.rmdir(tmpdir)
 
     with open(timeline, "w") as f:
         f.write(f"# Timeline for {os.path.basename(args.video)}\n")
@@ -69,6 +120,7 @@ def main():
                 f"{args.interval}s, {args.cols} per row, reading order "
                 f"left-to-right then down"
                 f"{'' if stamped else ' (tiles unstamped; use this list)'}\n")
+        f.write("# Each tile is an exact seek to the time burned on it.\n")
         f.write("# Fill in: what is on screen + narration/text per span.\n\n")
         for i in range(n):
             t0 = i * args.interval
