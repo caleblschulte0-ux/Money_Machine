@@ -150,7 +150,7 @@ def build_video():
     seq += ["a02", "a03"]
     # 3 — 19.0-31.8  experience zones, no permanent installation
     clip("a04", f"{OUT}/n05.mp4", 0.0, 6.4, card="c3", cin=1.6)
-    clip("a05", f"{OUT}/n14.mp4", 0.0, 6.4)
+    clip("a05", f"{OUT}/n14.mp4", 0.0, 3.4)
     seq += ["a04", "a05"]
     # 4 — 31.8-44.6  Dakota, entering from the real plate
     raw("a06", "raw/IMG_6804.MOV", 17.5, 4.0)
@@ -199,37 +199,37 @@ def build_video():
     print("concat done")
 
 
-TOTAL = 122.4
+TOTAL = 119.4
 CUES = [
-    (f"{AU}/score_long.wav", 0.0, 0.58, 92.0),
-    (f"{AU}/score_long.wav", 92.0, 0.62, 31.0),
+    (f"{AU}/score_long.wav", 0.0, 0.58, 89.0),
+    (f"{AU}/score_long.wav", 89.0, 0.62, 31.0),
     (f"{AU}/p01.mp3", 1.2, 1.0, None),
     (f"{AU}/p02.mp3", 8.8, 1.0, None),
     (f"{AU}/p03.mp3", 19.8, 1.0, None),
-    (f"{AU}/p04.mp3", 33.0, 1.0, None),
-    (f"{AU}/p05.mp3", 45.6, 1.0, None),
-    (f"{AU}/p06.mp3", 57.0, 1.0, None),
-    (f"{AU}/p07.mp3", 68.6, 1.0, None),
-    (f"{AU}/p08.mp3", 82.6, 1.0, None),
-    (f"{AU}/p09.mp3", 96.6, 1.0, None),
-    (f"{AU}/p10.mp3", 109.4, 1.0, None),
-    (f"{AU}/p11.mp3", 119.0, 1.0, None),
+    (f"{AU}/p04.mp3", 30.0, 1.0, None),
+    (f"{AU}/p05.mp3", 42.6, 1.0, None),
+    (f"{AU}/p06.mp3", 54.0, 1.0, None),
+    (f"{AU}/p07.mp3", 65.6, 1.0, None),
+    (f"{AU}/p08.mp3", 79.6, 1.0, None),
+    (f"{AU}/p09.mp3", 93.6, 1.0, None),
+    (f"{AU}/p10.mp3", 106.4, 1.0, None),
+    (f"{AU}/p11.mp3", 116.0, 1.0, None),
     (f"{AU}/amb_falls.wav", 0.0, 0.85, 8.0),
     (f"{AU}/amb_park.wav", 8.0, 0.5, 11.0),
-    (f"{AU}/amb_park.wav", 31.8, 0.45, 12.8),
-    (f"{AU}/fire.wav", 45.0, 0.35, 3.0),
-    (f"{AU}/amb_falls.wav", 56.0, 0.55, 5.0),
-    (f"{AU}/wind.wav", 60.5, 0.5, 6.0),
-    (f"{AU}/rumble.wav", 61.5, 0.45, None),
-    (f"{AU}/amb_park.wav", 81.6, 0.45, 14.0),
-    (f"{AU}/amb_falls.wav", 108.4, 0.4, 10.0),
+    (f"{AU}/amb_park.wav", 28.8, 0.45, 12.8),
+    (f"{AU}/fire.wav", 42.0, 0.35, 3.0),
+    (f"{AU}/amb_falls.wav", 53.0, 0.55, 5.0),
+    (f"{AU}/wind.wav", 57.5, 0.5, 6.0),
+    (f"{AU}/rumble.wav", 58.5, 0.45, None),
+    (f"{AU}/amb_park.wav", 78.6, 0.45, 14.0),
+    (f"{AU}/amb_falls.wav", 105.4, 0.4, 10.0),
     (f"{AU}/scan.wav", 20.8, 0.75, None),
-    (f"{AU}/scan.wav", 36.8, 0.7, None),
-    (f"{AU}/scan.wav", 49.2, 0.65, None),
-    (f"{AU}/scan.wav", 62.2, 0.6, None),
-    (f"{AU}/tick.wav", 100.8, 0.45, None),
-    (f"{AU}/tick.wav", 101.7, 0.45, None),
-    (f"{AU}/tick.wav", 102.6, 0.45, None),
+    (f"{AU}/scan.wav", 33.8, 0.7, None),
+    (f"{AU}/scan.wav", 46.2, 0.65, None),
+    (f"{AU}/scan.wav", 59.2, 0.6, None),
+    (f"{AU}/tick.wav", 97.8, 0.45, None),
+    (f"{AU}/tick.wav", 98.7, 0.45, None),
+    (f"{AU}/tick.wav", 99.6, 0.45, None),
 ]
 
 
