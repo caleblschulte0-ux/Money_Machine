@@ -140,8 +140,8 @@ def build_video():
     plate("k04", "raw/IMG_6805.MOV", 22.0, 3.0)
     rendered("k05", f"{OUT}/z_set.mp4", 0.0, 4.0, card="m4", cin=0.6, cout=3.2)
     # --- 0:25-0:32  geology, then the mammoth after 0:27
-    plate("k06", "raw/IMG_6682.MOV", 18.0, 0.4)
-    rendered("k07", f"{IN}/s10.mp4", 0.0, 6.6, card="m5", cin=2.2, cout=5.8)
+    plate("k06", "raw/IMG_6682.MOV", 18.0, 0.7)
+    rendered("k07", f"{IN}/s10.mp4", 0.0, 6.3, card="m5", cin=2.0, cout=5.5)
     # --- 0:32-0:39  the device, identified not sold
     rendered("k08", f"{OUT}/z_prod.mp4", 0.0, 5.0, card="m6", cin=0.8, cout=4.2)
     rendered("k09", f"{IN}/s12.mp4", 0.0, 2.0)
