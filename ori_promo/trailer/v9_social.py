@@ -40,7 +40,7 @@ BEATS = [
     ("s10", 1.4, 4.8, 336, ["AND BEFORE THAT —", "ICE"]),
     ("prod_clean", 0.1, 4.4, 656, ["SELF-CONTAINED", "AR GLASSES"]),
     ("s13", 0.1, 3.0, 656, ["NO PHONE.", "NO SIGNAL."]),
-    ("s15", 2.0, 3.0, 700, ["EVERYONE SEES", "THE SAME THING"]),
+    ("sync_clean", 0.0, 3.0, -1, ["EVERYONE SEES", "THE SAME THING"]),
 ]
 END = 3.4
 TOTAL = sum(b[2] for b in BEATS) + END
@@ -93,9 +93,14 @@ def build_video():
     names = []
     for i, (src, ss, dur, cx, _) in enumerate(BEATS):
         out = f"{OUT}/v{i:02d}.mp4"
-        vf = (f"crop=608:1080:{cx}:0,scale={W}:{H}:flags=lanczos,fps={FPS}")
+        if cx < 0:
+            # letterbox the full 16:9 plate so BOTH wearers stay in frame
+            vf = (f"scale={W}:-2:flags=lanczos,fps={FPS},"
+                  f"pad={W}:{H}:0:(oh-ih)/2:color=0x07090c")
+        else:
+            vf = (f"crop=608:1080:{cx}:0,scale={W}:{H}:flags=lanczos,fps={FPS}")
         run(["ffmpeg", "-v", "error", "-ss", str(ss), "-t", str(dur),
-             "-i", (f"{OUT}/{src}.mp4" if src.startswith("prod")
+             "-i", (f"{OUT}/{src}.mp4" if src.startswith(("prod", "sync"))
                     else f"{IN}/{src}.mp4"),
              "-loop", "1", "-t", str(dur), "-i", f"{CAP}/{i:02d}.png",
              "-filter_complex",
