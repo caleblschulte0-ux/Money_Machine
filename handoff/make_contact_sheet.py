@@ -86,9 +86,12 @@ def main():
         if fp:
             # label is the time we SEEKED to, not a filtered timestamp
             lbl = hms(t).replace(":", r"\:")
+            # UPPER RIGHT, not lower left: films put their own lower-left
+            # titles and time-of-day cards exactly where this used to sit, and
+            # a review partner then cannot judge the very text it covers.
             vf += (f",drawtext=fontfile={fp}:text='{lbl}':fontcolor=white:"
                    f"fontsize=18:box=1:boxcolor=black@0.62:boxborderw=4:"
-                   f"x=6:y=h-26")
+                   f"x=w-tw-8:y=8")
         r = subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{t:.3f}",
                             "-i", args.video, "-frames:v", "1", "-vf", vf, out],
                            capture_output=True, text=True)
