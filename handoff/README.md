@@ -53,6 +53,12 @@ can), so its side is unchanged.
     the pass touched nothing it was not allowed to, the source/guard/
     continuity table, and the simulator that chooses a target on eight
     frames instead of on a 35-minute render.
+  - `sourcesC.py`, `renderC2.py`, `typeC.py`, `assembleC.py`, `audioC2.py` —
+    Film C's r56 rebuild: the beat/source table, plates → shot normalization
+    → the global finish, the typographic layer, the composite, and the
+    two-layer sound. `typeC.py` carries the layout reasoning (local scrims,
+    hand-rolled tracking and anchoring, why there is no dashboard chrome);
+    `renderC2.py` records why no parallax is used on live-motion plates.
   - `proofB.py` — the same-pixel proof. Samples are frozen PIXEL SETS taken
     from the untouched plate, not rectangles, because the subject is ~80px
     wide in some shots and any usable rectangle catches shirt print and skin.
