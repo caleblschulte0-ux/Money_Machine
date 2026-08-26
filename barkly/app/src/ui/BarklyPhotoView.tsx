@@ -28,6 +28,11 @@ const RENDERS = {
   face: require('../../assets/barkly/renders/face.png'),
 } as const;
 
+// Facial variants derived from the front render (see assets README):
+// real jaw-flap while speaking, real blinks while idle.
+const FRONT_MOUTH_OPEN = require('../../assets/barkly/renders/front_mouth_open.png');
+const FRONT_BLINK = require('../../assets/barkly/renders/front_blink.png');
+
 type Pose = keyof typeof RENDERS;
 
 function poseFor(state: BarklyState): Pose {
@@ -116,13 +121,48 @@ function SleepZs() {
 export default function BarklyPhotoView({ state, actions }: BarklyRenderProps) {
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
+  const talking = has('MOUTH_MOVE');
   const pose = poseFor(state);
   const size = POSE_SIZE[pose];
+
+  // Jaw-flap: alternate open/closed mouth frames while speaking.
+  const [jawOpen, setJawOpen] = useState(false);
+  useEffect(() => {
+    if (!talking) {
+      setJawOpen(false);
+      return;
+    }
+    const id = setInterval(() => setJawOpen((j) => !j), 150);
+    return () => clearInterval(id);
+  }, [talking]);
+
+  // Occasional deadpan blink (front pose only — the others hold their look).
+  const [blinking, setBlinking] = useState(false);
+  useEffect(() => {
+    if (asleep) return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (!alive) return;
+        setBlinking(true);
+        setTimeout(() => {
+          if (alive) setBlinking(false);
+          schedule();
+        }, 130);
+      }, 2600 + Math.random() * 3000);
+    };
+    schedule();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [asleep]);
 
   // --- continuous loops ---
   const breathe = useLoop(true, asleep ? 1700 : 2300);
   const drift = useLoop(true, 3600); // slow ambient lean so idle never freezes
-  const bob = useLoop(has('MOUTH_MOVE'), 170);
+  const bob = useLoop(talking, 170);
   const bounce = useLoop(has('EXCITED'), 270);
   const sway = useLoop(has('TAIL_WAG'), 340);
   const look = useLoop(has('LOOK_LEFT') || has('LOOK_RIGHT'), 950);
@@ -220,12 +260,24 @@ export default function BarklyPhotoView({ state, actions }: BarklyRenderProps) {
             />
           )}
           <Animated.Image
-            source={RENDERS[shown.current]}
+            source={
+              shown.current === 'front'
+                ? talking && jawOpen
+                  ? FRONT_MOUTH_OPEN
+                  : blinking
+                    ? FRONT_BLINK
+                    : RENDERS.front
+                : RENDERS[shown.current]
+            }
             style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
             resizeMode="contain"
           />
         </View>
       </Animated.View>
+
+      {/* invisible preloads so the first jaw-flap/blink never flickers */}
+      <Image source={FRONT_MOUTH_OPEN} style={styles.preload} />
+      <Image source={FRONT_BLINK} style={styles.preload} />
 
       {asleep && <SleepZs />}
     </View>
@@ -234,6 +286,7 @@ export default function BarklyPhotoView({ state, actions }: BarklyRenderProps) {
 
 const styles = StyleSheet.create({
   stage: { width: 300, height: 322, alignItems: 'center', justifyContent: 'flex-end' },
+  preload: { position: 'absolute', width: 1, height: 1, opacity: 0 },
   zzzWrap: { position: 'absolute', top: 8, right: 34, width: 60, height: 60 },
   zzz: { position: 'absolute', bottom: 0, color: '#A08F6F', fontWeight: '800' },
 });

@@ -12,8 +12,18 @@ Canon reference: [`../../../docs/CHARACTER.md`](../../../docs/CHARACTER.md) — 
 | `renders/three_quarter.png` | 3/4 view — used for playing/excited. | **Committed.** |
 | `renders/face.png` | Expression closeup — used for thinking/annoyed zoom beats. | **Committed.** |
 
+| `renders/front_mouth_open.png` | Front view with painted open mouth — alternated with `front.png` for jaw-flap while speaking. | **Committed** (derived from front.png). |
+| `renders/front_blink.png` | Front view with painted closed eyes — used for blinks. | **Committed** (derived from front.png). |
+
 The app's default renderer (`src/ui/BarklyPhotoView.tsx`) shows these real
-renders with whole-image motion (breathe, bounce, tilt, talk-bob, sway).
+renders with whole-image motion (breathe, bounce, tilt, talk-bob, sway),
+plus real jaw-flap and blinking via the derived frames above.
+
+> Generation attempt log: the Shorts-pipeline `GEMINI_API_KEY` is free-tier —
+> `gemini-2.5-flash-image` has zero free quota and the free 2.0 image models
+> are retired (404s), so CI generation produced nothing. The per-state set
+> below still needs ChatGPT (request relayed to the Open Range session) or a
+> billed image API key.
 `src/ui/BarklyView.tsx` is a hand-drawn vector fallback
 (`EXPO_PUBLIC_BARKLY_RENDERER=vector`).
 
