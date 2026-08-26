@@ -1,37 +1,42 @@
 /**
- * PLACEHOLDER Barkly renderer.
+ * PLACEHOLDER Barkly renderer — vector edition.
  *
- * This is development stand-in art, not the product. It draws Barkly from
- * plain RN Views because the locked design is deliberately blocky — squat
- * body, rectangular head, mustard/cream, deadpan eyes, snaggletooth, bent
- * ears, ring tail, leg stripes, brass "B" tag — so box geometry is genuinely
- * on-model. It follows docs/CHARACTER.md; do not "cute it up".
+ * Draws Barkly with react-native-svg, following the LOCKED design in
+ * docs/CHARACTER.md: squat low-slung body, rectangular head, mustard/cream,
+ * narrow deadpan eyes, snaggletooth, ears bent outward/downward, curled ring
+ * tail, front-leg stripes, thick collar with a brass "B" tag. Blocky and
+ * toy-like on purpose — this pass is about rendering him cleanly, not
+ * redesigning him.
  *
- * It implements the BarklyRenderProps contract (src/animation/renderer.ts).
- * Production art (Rive recommended) replaces this file wholesale; nothing
- * else in the app changes.
+ * Implements BarklyRenderProps (src/animation/renderer.ts). Production art
+ * (Rive recommended) replaces this file; nothing else changes.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { BarklyRenderProps } from '../animation/renderer';
 import { BodyAction } from '../barkly/types';
 
-// Palette from the concept sheet (docs/CHARACTER.md)
-const MUSTARD = '#D9A441';
-const MUSTARD_DARK = '#B8862F';
-const CREAM = '#F3E7C9';
-const CHARCOAL = '#2E2A26';
-const COLLAR = '#3B3230';
-const BRASS = '#C9963C';
+// Palette (concept sheet, docs/CHARACTER.md)
+const MUSTARD = '#E0A93E';
+const MUSTARD_DEEP = '#C08A2E';
+const MUSTARD_SHADE = '#AA7A28';
+const CREAM = '#F7EDD2';
+const OUTLINE = '#4A3B2A';
+const NOSE = '#332B24';
+const COLLAR = '#453931';
+const BRASS = '#D9A93F';
+const BRASS_DARK = '#A87E27';
+const TONGUE = '#D97B6C';
 
-/** Loop an Animated.Value 0→1→0 while `active`; snap to 0 when not. */
+/** Loop an Animated.Value 0→1→0 while `active`; ease back to 0 when not. */
 function useLoop(active: boolean, duration: number): Animated.Value {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!active) {
       v.stopAnimation();
-      Animated.timing(v, { toValue: 0, duration: 150, useNativeDriver: true }).start();
+      Animated.timing(v, { toValue: 0, duration: 160, useNativeDriver: true }).start();
       return;
     }
     const loop = Animated.loop(
@@ -46,312 +51,253 @@ function useLoop(active: boolean, duration: number): Animated.Value {
   return v;
 }
 
+type EyeMode = 'open' | 'closed' | 'annoyed';
+
 export default function BarklyView({ state, actions }: BarklyRenderProps) {
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
+  const perked = has('EAR_PERK');
+  const talking = has('MOUTH_MOVE');
 
-  // --- animation drivers ---
-  const wag = useLoop(has('TAIL_WAG'), 180);
-  const mouth = useLoop(has('MOUTH_MOVE'), 130);
-  const bounce = useLoop(has('EXCITED'), 260);
-  const breathe = useLoop(true, asleep ? 1400 : 2200);
+  const wag = useLoop(has('TAIL_WAG'), 170);
+  const mouth = useLoop(talking, 120);
+  const bounce = useLoop(has('EXCITED'), 250);
+  const breathe = useLoop(true, asleep ? 1500 : 2400);
   const look = useLoop(has('LOOK_LEFT') || has('LOOK_RIGHT'), 900);
 
-  // Head tilt eases to a held angle rather than looping.
   const tilt = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(tilt, {
       toValue: has('HEAD_TILT') ? 1 : 0,
-      duration: 350,
-      easing: Easing.out(Easing.back(1.4)),
+      duration: 380,
+      easing: Easing.out(Easing.back(1.6)),
       useNativeDriver: true,
     }).start();
   }, [actions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Occasional deadpan blink (only when eyes are open and BLINK is ambient).
-  const blink = useRef(new Animated.Value(0)).current;
+  // Occasional deadpan blink.
+  const [blinking, setBlinking] = useState(false);
   useEffect(() => {
-    if (!has('BLINK') || asleep) return;
+    if (asleep) return;
     let alive = true;
-    const doBlink = () => {
-      if (!alive) return;
-      Animated.sequence([
-        Animated.timing(blink, { toValue: 1, duration: 70, useNativeDriver: false }),
-        Animated.timing(blink, { toValue: 0, duration: 90, useNativeDriver: false }),
-      ]).start(() => {
-        if (alive) timer = setTimeout(doBlink, 2200 + Math.random() * 2600);
-      });
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (!alive) return;
+        setBlinking(true);
+        setTimeout(() => {
+          if (alive) setBlinking(false);
+          schedule();
+        }, 110);
+      }, 2400 + Math.random() * 2800);
     };
-    let timer = setTimeout(doBlink, 1500);
+    schedule();
     return () => {
       alive = false;
       clearTimeout(timer);
     };
-  }, [actions, asleep]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [asleep]);
 
-  const tailRotate = wag.interpolate({ inputRange: [0, 1], outputRange: ['-16deg', '24deg'] });
-  const mouthScale = mouth.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
-  const bodyLift = bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -14] });
-  const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, asleep ? 1.035 : 1.015] });
-  const headTilt = tilt.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-9deg'] });
+  const eyes: EyeMode = asleep || blinking ? 'closed' : state === 'annoyed' ? 'annoyed' : 'open';
+
+  const tailRotate = wag.interpolate({ inputRange: [0, 1], outputRange: ['-14deg', '22deg'] });
+  const mouthScale = mouth.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
+  const lift = bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
+  const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, asleep ? 1.03 : 1.012] });
+  const headTilt = tilt.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-8deg'] });
   const lookShift = look.interpolate({
     inputRange: [0, 1],
-    outputRange: has('LOOK_LEFT') && has('LOOK_RIGHT')
-      ? [-5, 5]
-      : has('LOOK_LEFT') ? [0, -6] : [0, 6],
+    outputRange: has('LOOK_LEFT') && has('LOOK_RIGHT') ? [-7, 7] : has('LOOK_LEFT') ? [0, -8] : [0, 8],
   });
-  const eyeHeight = blink.interpolate({ inputRange: [0, 1], outputRange: [7, 2] });
-
-  // Deadpan by default; narrower when annoyed; closed when asleep.
-  const annoyed = state === 'annoyed';
-  const mouthOpen = has('MOUTH_MOVE');
 
   return (
     <View style={styles.stage}>
-      <Animated.View style={{ transform: [{ translateY: bodyLift }, { scale: breatheScale }] }}>
+      <Animated.View style={[styles.character, { transform: [{ translateY: lift }, { scale: breatheScale }] }]}>
 
-        {/* HEAD — rectangular/blocky, on purpose */}
-        <Animated.View style={[styles.head, { transform: [{ rotate: headTilt }] }]}>
-          {/* ears: bent outward/downward */}
-          <View style={[styles.ear, styles.earLeft, has('EAR_PERK') && styles.earPerked]} />
-          <View style={[styles.ear, styles.earRight, has('EAR_PERK') && styles.earPerkedR]} />
-
-          {/* eyes: narrow + deadpan; slightly asymmetric on purpose */}
-          <View style={styles.eyeRow}>
-            {asleep ? (
-              <>
-                <View style={styles.eyeClosed} />
-                <View style={[styles.eyeClosed, { width: 20 }]} />
-              </>
-            ) : (
-              <>
-                <Animated.View style={[styles.eye, { height: eyeHeight, transform: [{ translateX: lookShift }] }, annoyed && styles.eyeAnnoyed]} />
-                <Animated.View style={[styles.eye, { height: eyeHeight, width: 24, transform: [{ translateX: lookShift }] }, annoyed && styles.eyeAnnoyed]} />
-              </>
-            )}
-          </View>
-
-          {/* cream muzzle with big rounded-square charcoal nose */}
-          <View style={styles.muzzle}>
-            <View style={styles.nose} />
-            {/* mouth + the snaggletooth */}
-            <View style={styles.mouthArea}>
-              <Animated.View style={[styles.mouth, { transform: [{ scaleY: mouthOpen ? mouthScale : 0.35 }] }]} />
-              <View style={styles.snaggletooth} />
-            </View>
-          </View>
+        {/* tail — curled ring, wags from its base */}
+        <Animated.View style={[styles.tailWrap, { transform: [{ rotate: tailRotate }] }]}>
+          <Svg width={70} height={70} viewBox="0 0 70 70">
+            <Circle cx={35} cy={35} r={20} stroke={OUTLINE} strokeWidth={17} fill="none"
+              strokeDasharray="88 40" strokeLinecap="round" transform="rotate(-30 35 35)" />
+            <Circle cx={35} cy={35} r={20} stroke={MUSTARD_DEEP} strokeWidth={11} fill="none"
+              strokeDasharray="86 42" strokeLinecap="round" transform="rotate(-30 35 35)" />
+          </Svg>
         </Animated.View>
 
-        {/* COLLAR — thick, dark, round brass B tag */}
+        {/* body — squat and low-slung */}
+        <Svg width={276} height={168} viewBox="0 0 276 168" style={styles.body}>
+          {/* back legs, tucked behind */}
+          <Rect x={30} y={98} width={30} height={42} rx={11} fill={MUSTARD_SHADE} />
+          <Rect x={216} y={98} width={30} height={42} rx={11} fill={MUSTARD_SHADE} />
+          <Rect x={33} y={128} width={24} height={12} rx={6} fill={CREAM} />
+          <Rect x={219} y={128} width={24} height={12} rx={6} fill={CREAM} />
+
+          {/* torso */}
+          <Rect x={14} y={26} width={248} height={94} rx={46} fill={MUSTARD} stroke={OUTLINE} strokeWidth={5} />
+          {/* belly shade + soft back highlight */}
+          <Path d="M26 96 Q138 132 250 96 L250 74 Q138 112 26 74 Z" fill={MUSTARD_SHADE} opacity={0.24} />
+          {/* cream chest, tucked between the front legs */}
+          <Path d="M104 58 Q138 48 172 58 Q182 84 172 108 Q138 122 104 108 Q94 84 104 58 Z" fill={CREAM} />
+
+          {/* front legs with stripes, planted wide */}
+          <Rect x={72} y={90} width={33} height={56} rx={13} fill={MUSTARD} stroke={OUTLINE} strokeWidth={4.5} />
+          <Rect x={171} y={90} width={33} height={56} rx={13} fill={MUSTARD} stroke={OUTLINE} strokeWidth={4.5} />
+          <Rect x={74.5} y={104} width={28} height={7} rx={3.5} fill={MUSTARD_SHADE} />
+          <Rect x={74.5} y={116} width={28} height={7} rx={3.5} fill={MUSTARD_SHADE} />
+          <Rect x={173.5} y={104} width={28} height={7} rx={3.5} fill={MUSTARD_SHADE} />
+          <Rect x={173.5} y={116} width={28} height={7} rx={3.5} fill={MUSTARD_SHADE} />
+          {/* cream paws */}
+          <Path d="M74.5 130 h28 v4 a11 11 0 0 1 -11 11 h-6 a11 11 0 0 1 -11 -11 Z" fill={CREAM} />
+          <Path d="M173.5 130 h28 v4 a11 11 0 0 1 -11 11 h-6 a11 11 0 0 1 -11 -11 Z" fill={CREAM} />
+        </Svg>
+
+        {/* collar — thick, with brass B tag */}
         <View style={styles.collar}>
+          <View style={styles.collarStitch} />
           <View style={styles.tag}>
             <Text style={styles.tagText}>B</Text>
           </View>
         </View>
 
-        {/* BODY — squat and low-slung, cream chest */}
-        <View style={styles.body}>
-          <View style={styles.chest} />
-          {/* curled ring tail */}
-          <Animated.View style={[styles.tail, { transform: [{ rotate: tailRotate }] }]} />
-          {/* legs: front pair with stripes, cream feet */}
-          <View style={styles.legRow}>
-            {[0, 1, 2, 3].map((i) => (
-              <View key={i} style={styles.leg}>
-                {i < 2 && (
-                  <>
-                    <View style={[styles.stripe, { top: 4 }]} />
-                    <View style={[styles.stripe, { top: 12 }]} />
-                  </>
-                )}
-                <View style={styles.foot} />
-              </View>
-            ))}
+        {/* head — rectangular, deadpan, snaggletoothed */}
+        <Animated.View style={[styles.headWrap, { transform: [{ rotate: headTilt }] }]}>
+          <Svg width={224} height={176} viewBox="0 0 224 176">
+            {/* ears: bent outward/downward (or perked) */}
+            {perked ? (
+              <>
+                {/* perked: flaps lift up and out */}
+                <Path d="M58 36 C40 20 20 8 16 20 C11 34 26 52 46 58 Z" fill={MUSTARD_DEEP} stroke={OUTLINE} strokeWidth={4.5} strokeLinejoin="round" />
+                <Path d="M166 36 C184 20 204 8 208 20 C213 34 198 52 178 58 Z" fill={MUSTARD_DEEP} stroke={OUTLINE} strokeWidth={4.5} strokeLinejoin="round" />
+              </>
+            ) : (
+              <>
+                {/* bent outward/downward: flaps anchored at the head's top
+                    corners, folding out and hanging to cheek height */}
+                <Rect x={28} y={24} width={44} height={68} rx={20} fill={MUSTARD_DEEP}
+                  stroke={OUTLINE} strokeWidth={4.5} transform="rotate(36 50 30)" />
+                <Rect x={152} y={24} width={44} height={68} rx={20} fill={MUSTARD_DEEP}
+                  stroke={OUTLINE} strokeWidth={4.5} transform="rotate(-36 174 30)" />
+                <Rect x={39} y={48} width={22} height={36} rx={11} fill={MUSTARD_SHADE}
+                  transform="rotate(36 50 30)" opacity={0.8} />
+                <Rect x={163} y={48} width={22} height={36} rx={11} fill={MUSTARD_SHADE}
+                  transform="rotate(-36 174 30)" opacity={0.8} />
+              </>
+            )}
+
+            {/* head block */}
+            <Rect x={32} y={22} width={160} height={126} rx={30} fill={MUSTARD} stroke={OUTLINE} strokeWidth={5} />
+            <Rect x={50} y={30} width={124} height={14} rx={7} fill="#FFFFFF" opacity={0.1} />
+            <Path d="M40 120 Q112 148 184 120 L184 132 Q160 148 112 148 Q64 148 40 132 Z" fill={MUSTARD_SHADE} opacity={0.2} />
+
+            {/* muzzle */}
+            <Rect x={68} y={84} width={88} height={58} rx={21} fill={CREAM} stroke={OUTLINE} strokeWidth={3.5} />
+            {/* freckles */}
+            <Circle cx={82} cy={106} r={1.8} fill={OUTLINE} opacity={0.5} />
+            <Circle cx={88} cy={112} r={1.8} fill={OUTLINE} opacity={0.5} />
+            <Circle cx={140} cy={106} r={1.8} fill={OUTLINE} opacity={0.5} />
+            <Circle cx={134} cy={112} r={1.8} fill={OUTLINE} opacity={0.5} />
+            {/* big rounded-square nose */}
+            <Rect x={93} y={88} width={38} height={27} rx={9} fill={NOSE} />
+            <Circle cx={102} cy={95} r={3.4} fill="#FFFFFF" opacity={0.3} />
+          </Svg>
+
+          {/* eyes overlay — narrow + deadpan, drifts when looking around */}
+          <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: lookShift }] }]}>
+            <Svg width={224} height={176} viewBox="0 0 224 176">
+              {eyes === 'open' && (
+                <>
+                  <Rect x={62} y={62} width={25} height={9} rx={4.5} fill={NOSE} />
+                  <Rect x={135} y={62} width={29} height={9} rx={4.5} fill={NOSE} />
+                </>
+              )}
+              {eyes === 'annoyed' && (
+                <>
+                  <Rect x={62} y={64} width={25} height={5.5} rx={2.7} fill={NOSE} />
+                  <Rect x={135} y={64} width={29} height={5.5} rx={2.7} fill={NOSE} />
+                  <Rect x={58} y={56} width={30} height={4} rx={2} fill={NOSE} transform="rotate(9 73 58)" opacity={0.85} />
+                  <Rect x={134} y={56} width={30} height={4} rx={2} fill={NOSE} transform="rotate(-9 149 58)" opacity={0.85} />
+                </>
+              )}
+              {eyes === 'closed' && (
+                <>
+                  <Path d="M62 66 Q74.5 73 87 66" stroke={NOSE} strokeWidth={4.5} fill="none" strokeLinecap="round" />
+                  <Path d="M135 66 Q149.5 73 164 66" stroke={NOSE} strokeWidth={4.5} fill="none" strokeLinecap="round" />
+                </>
+              )}
+            </Svg>
+          </Animated.View>
+
+          {/* mouth overlay — closed smirk + snaggletooth, or animated open jaw */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {talking ? (
+              <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scaleY: mouthScale }] }]}>
+                <Svg width={224} height={176} viewBox="0 0 224 176">
+                  <Ellipse cx={112} cy={127} rx={15} ry={11.5} fill="#42302A" stroke={OUTLINE} strokeWidth={3} />
+                  <Ellipse cx={112} cy={132} rx={8.5} ry={5.5} fill={TONGUE} />
+                  <Rect x={119} y={114} width={8} height={10} rx={2.5} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={2} transform="rotate(7 123 119)" />
+                </Svg>
+              </Animated.View>
+            ) : (
+              <Svg width={224} height={176} viewBox="0 0 224 176">
+                <Path d="M96 123 Q112 131 128 122" stroke={OUTLINE} strokeWidth={4} fill="none" strokeLinecap="round" />
+                <Rect x={120} y={113} width={8} height={11} rx={2.5} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={2} transform="rotate(7 124 118)" />
+              </Svg>
+            )}
           </View>
-        </View>
+        </Animated.View>
       </Animated.View>
 
-      {asleep && <Text style={styles.zzz}>z  z  z</Text>}
+      {asleep && (
+        <View style={styles.zzzWrap} pointerEvents="none">
+          <Text style={[styles.zzz, { fontSize: 15, opacity: 0.5 }]}>z</Text>
+          <Text style={[styles.zzz, { fontSize: 19, opacity: 0.7, marginLeft: 10, marginBottom: 10 }]}>z</Text>
+          <Text style={[styles.zzz, { fontSize: 24, marginLeft: 10, marginBottom: 22 }]}>z</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stage: { alignItems: 'center', justifyContent: 'flex-end' },
+  stage: { width: 300, height: 296, alignItems: 'center' },
+  character: { width: 300, height: 296, alignItems: 'center' },
 
-  head: {
-    width: 150,
-    height: 110,
-    backgroundColor: MUSTARD,
-    borderRadius: 18,
-    borderWidth: 3,
-    borderColor: CHARCOAL,
-    zIndex: 3,
-    alignItems: 'center',
-  },
-  ear: {
-    position: 'absolute',
-    top: -14,
-    width: 34,
-    height: 44,
-    backgroundColor: MUSTARD_DARK,
-    borderWidth: 3,
-    borderColor: CHARCOAL,
-    borderRadius: 10,
-  },
-  earLeft: { left: -12, transform: [{ rotate: '-38deg' }] },
-  earRight: { right: -12, transform: [{ rotate: '38deg' }] },
-  earPerked: { transform: [{ rotate: '-10deg' }], top: -24 },
-  earPerkedR: { transform: [{ rotate: '10deg' }], top: -24 },
-
-  eyeRow: {
-    flexDirection: 'row',
-    gap: 34,
-    marginTop: 30,
-  },
-  eye: {
-    width: 20,
-    height: 7,
-    backgroundColor: CHARCOAL,
-    borderRadius: 3,
-  },
-  eyeAnnoyed: { height: 4 },
-  eyeClosed: {
-    width: 22,
-    height: 3,
-    backgroundColor: CHARCOAL,
-    borderRadius: 2,
-    marginTop: 3,
-  },
-
-  muzzle: {
-    marginTop: 10,
-    width: 84,
-    height: 52,
-    backgroundColor: CREAM,
-    borderRadius: 12,
-    borderWidth: 3,
-    borderColor: CHARCOAL,
-    alignItems: 'center',
-  },
-  nose: {
-    marginTop: 4,
-    width: 30,
-    height: 20,
-    backgroundColor: CHARCOAL,
-    borderRadius: 7, // large rounded-square nose
-  },
-  mouthArea: { alignItems: 'center', marginTop: 2 },
-  mouth: {
-    width: 26,
-    height: 14,
-    backgroundColor: CHARCOAL,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-  },
-  snaggletooth: {
-    position: 'absolute',
-    top: 6,
-    right: -16,
-    width: 7,
-    height: 9,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: CHARCOAL,
-    borderRadius: 2,
-    transform: [{ rotate: '8deg' }],
-  },
+  tailWrap: { position: 'absolute', right: -4, top: 106, zIndex: 1 },
+  body: { position: 'absolute', bottom: 0, zIndex: 2 },
 
   collar: {
-    width: 96,
-    height: 18,
-    backgroundColor: COLLAR,
-    borderRadius: 7,
-    marginTop: -9,
-    zIndex: 4,
-    alignItems: 'center',
-  },
-  tag: {
     position: 'absolute',
-    bottom: -14,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: BRASS,
-    borderWidth: 2,
-    borderColor: CHARCOAL,
+    bottom: 128,
+    width: 112,
+    height: 21,
+    backgroundColor: COLLAR,
+    borderRadius: 9,
+    zIndex: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tagText: { fontSize: 11, fontWeight: '800', color: CHARCOAL },
+  collarStitch: {
+    width: 92,
+    height: 1.5,
+    borderRadius: 1,
+    backgroundColor: '#6B594C',
+  },
+  tag: {
+    position: 'absolute',
+    bottom: -15,
+    width: 25,
+    height: 25,
+    borderRadius: 12.5,
+    backgroundColor: BRASS,
+    borderWidth: 2.5,
+    borderColor: BRASS_DARK,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagText: { fontSize: 12, fontWeight: '900', color: '#6B4E14', lineHeight: 14 },
 
-  body: {
-    width: 190,
-    height: 88, // squat, low-slung
-    backgroundColor: MUSTARD,
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: CHARCOAL,
-    marginTop: -6,
-    zIndex: 2,
-    alignItems: 'center',
-  },
-  chest: {
-    position: 'absolute',
-    left: 18,
-    top: 14,
-    width: 52,
-    height: 58,
-    backgroundColor: CREAM,
-    borderRadius: 16,
-  },
-  tail: {
-    position: 'absolute',
-    right: -26,
-    top: -18,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 9,
-    borderColor: MUSTARD_DARK, // ring/donut = curled tail
-    backgroundColor: 'transparent',
-  },
-  legRow: {
-    position: 'absolute',
-    bottom: -22,
-    flexDirection: 'row',
-    gap: 22,
-  },
-  leg: {
-    width: 22,
-    height: 26,
-    backgroundColor: MUSTARD,
-    borderWidth: 3,
-    borderColor: CHARCOAL,
-    borderBottomLeftRadius: 6,
-    borderBottomRightRadius: 6,
-    overflow: 'hidden',
-    alignItems: 'center',
-  },
-  stripe: {
-    position: 'absolute',
-    width: 22,
-    height: 4,
-    backgroundColor: MUSTARD_DARK,
-  },
-  foot: {
-    position: 'absolute',
-    bottom: 0,
-    width: 22,
-    height: 8,
-    backgroundColor: CREAM,
-  },
-  zzz: {
-    position: 'absolute',
-    top: -6,
-    right: 30,
-    fontSize: 18,
-    color: '#8B8378',
-    fontWeight: '700',
-  },
+  headWrap: { position: 'absolute', top: 0, width: 224, height: 176, zIndex: 5 },
+
+  zzzWrap: { position: 'absolute', top: -8, right: 26, flexDirection: 'row', alignItems: 'flex-end' },
+  zzz: { color: '#A08F6F', fontWeight: '800' },
 });

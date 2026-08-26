@@ -22,15 +22,27 @@ export function createExpoSpeechTts(): TextToSpeechProvider {
           resolve();
           return;
         }
-        Speech.speak(text, {
-          pitch: 1.25,
-          rate: 1.05,
-          language: 'en-US',
-          onStart: opts?.onStart,
-          onDone: () => resolve(),
-          onStopped: () => resolve(),
-          onError: () => resolve(), // a silent Barkly beats a hung UI
-        });
+        // Some environments (headless browsers, muted webviews) never fire
+        // speech events. Resolve on a reading-time estimate as a backstop so
+        // the UI can never get stuck in "speaking".
+        const fallback = setTimeout(resolve, Math.min(1500 + text.length * 80, 15000));
+        const done = () => {
+          clearTimeout(fallback);
+          resolve();
+        };
+        try {
+          Speech.speak(text, {
+            pitch: 1.25,
+            rate: 1.05,
+            language: 'en-US',
+            onStart: opts?.onStart,
+            onDone: done,
+            onStopped: done,
+            onError: done, // a silent Barkly beats a hung UI
+          });
+        } catch {
+          done();
+        }
       });
     },
 

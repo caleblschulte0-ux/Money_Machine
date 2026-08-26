@@ -1,7 +1,7 @@
 /**
  * The home screen — Barkly's room. Barkly is the product: he owns the
  * screen, the UI stays out of his way. Controls: TALK (hold), PLAY, FEED,
- * SLEEP, and a small settings gear. No currencies, no popups, no banners.
+ * SLEEP, and a small settings control. No currencies, no popups, no banners.
  */
 
 import React, { useState } from 'react';
@@ -19,19 +19,22 @@ import BarklyView from './BarklyView';
 import SettingsSheet from './SettingsSheet';
 import { BarklyState } from '../barkly/types';
 
-const STATE_LABEL: Record<BarklyState, string> = {
-  idle: '',
-  listening: 'listening…',
-  thinking: 'thinking…',
-  speaking: '',
-  happy: '',
-  excited: '',
+const STATE_LABEL: Partial<Record<BarklyState, string>> = {
+  listening: 'listening',
+  thinking: 'thinking',
   annoyed: 'hmph.',
   sleepy: 'napping',
   hungry: 'hungry',
-  playing: '',
   eating: 'nom nom',
+  playing: 'zoomies',
 };
+
+const INK = '#3E3428';
+const INK_SOFT = '#8A7A5F';
+const WALL = '#F3EBDA';
+const FLOOR = '#E9DDC2';
+const CARD = '#FFFDF7';
+const ACCENT = '#D99A2B';
 
 export default function BarklyRoom() {
   const barkly = useBarkly();
@@ -48,77 +51,108 @@ export default function BarklyRoom() {
     await barkly.submitText(text);
   };
 
+  const bubbleText = listening && partialTranscript
+    ? `“${partialTranscript}”`
+    : lastExchange?.barklyText;
+
   return (
-    <KeyboardAvoidingView
-      style={styles.room}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* settings gear — the only chrome */}
-      <Pressable style={styles.gear} hitSlop={10} onPress={() => setSettingsOpen(true)}>
-        <Text style={styles.gearText}>⚙︎</Text>
-      </Pressable>
+    <View style={styles.room}>
+      {/* the room: wall + floor */}
+      <View style={styles.wall} />
+      <View style={styles.floor} />
 
-      {/* caption area: what was said */}
-      <View style={styles.captions}>
-        {listening && partialTranscript ? (
-          <Text style={styles.userLine} numberOfLines={2}>“{partialTranscript}”</Text>
-        ) : lastExchange ? (
-          <>
-            <Text style={styles.userLine} numberOfLines={2}>You: “{lastExchange.userText}”</Text>
-            <Text style={styles.barklyLine} numberOfLines={4}>{lastExchange.barklyText}</Text>
-          </>
-        ) : (
-          <Text style={styles.hint}>
-            {sttAvailable ? 'Hold TALK and say hi to Barkly.' : 'Type something and say hi to Barkly.'}
-          </Text>
-        )}
-        {error && <Text style={styles.error}>{error}</Text>}
-      </View>
-
-      {/* Barkly owns the middle of the screen */}
-      <View style={styles.stage}>
-        <BarklyView state={snapshot.state} actions={actions} />
-        <View style={styles.ground} />
-        {!!stateLabel && <Text style={styles.stateLabel}>{stateLabel}</Text>}
-      </View>
-
-      {/* controls */}
-      {sttAvailable ? (
-        <Pressable
-          style={[styles.talk, listening && styles.talkActive, busy && styles.talkDisabled]}
-          disabled={busy}
-          onPressIn={barkly.startTalk}
-          onPressOut={barkly.stopTalk}
-        >
-          <Text style={styles.talkText}>{listening ? 'LISTENING — release to send' : 'HOLD TO TALK'}</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.typeRow}>
-          <TextInput
-            style={styles.input}
-            value={typed}
-            onChangeText={setTyped}
-            placeholder="Say something to Barkly…"
-            placeholderTextColor="#9A8F7A"
-            editable={!busy}
-            onSubmitEditing={sendTyped}
-            returnKeyType="send"
-          />
-          <Pressable style={[styles.send, (busy || !typed.trim()) && styles.talkDisabled]} disabled={busy || !typed.trim()} onPress={sendTyped}>
-            <Text style={styles.sendText}>TALK</Text>
+      <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* header: name + settings */}
+        <View style={styles.header}>
+          <Text style={styles.wordmark}>Barkly</Text>
+          <Pressable style={styles.gear} hitSlop={10} onPress={() => setSettingsOpen(true)}>
+            <View style={styles.gearDot} />
+            <View style={styles.gearDot} />
+            <View style={styles.gearDot} />
           </Pressable>
         </View>
-      )}
 
-      <View style={styles.actionsRow}>
-        <ActionButton label="PLAY" onPress={barkly.play} disabled={busy} />
-        <ActionButton label="FEED" onPress={barkly.feed} disabled={busy} />
-        <ActionButton
-          label={snapshot.state === 'sleepy' ? 'WAKE' : 'SLEEP'}
-          onPress={barkly.sleepToggle}
-          disabled={busy}
-        />
-      </View>
+        {/* speech bubble */}
+        <View style={styles.bubbleZone}>
+          {bubbleText ? (
+            <View style={styles.bubble}>
+              {lastExchange && !listening && (
+                <Text style={styles.bubbleYou} numberOfLines={1}>you said “{lastExchange.userText}”</Text>
+              )}
+              <Text style={styles.bubbleText} numberOfLines={4}>{bubbleText}</Text>
+              <View style={styles.bubbleTail} />
+            </View>
+          ) : (
+            <Text style={styles.hint}>
+              {sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
+            </Text>
+          )}
+          {error && <Text style={styles.error}>{error}</Text>}
+        </View>
+
+        {/* Barkly owns the middle of the screen */}
+        <View style={styles.stageArea}>
+          <View style={styles.rug} />
+          <View style={styles.shadow} />
+          <BarklyView state={snapshot.state} actions={actions} />
+          {stateLabel && (
+            <View style={styles.chip}>
+              {(listening || snapshot.state === 'thinking') && <View style={styles.chipDot} />}
+              <Text style={styles.chipText}>{stateLabel}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* controls */}
+        <View style={styles.controls}>
+          {sttAvailable ? (
+            <Pressable
+              style={({ pressed }) => [
+                styles.talk,
+                listening && styles.talkActive,
+                (busy || pressed) && styles.pressed,
+                busy && styles.disabled,
+              ]}
+              disabled={busy}
+              onPressIn={barkly.startTalk}
+              onPressOut={barkly.stopTalk}
+            >
+              <View style={[styles.micDot, listening && styles.micDotLive]} />
+              <Text style={styles.talkText}>{listening ? 'listening — release to send' : 'hold to talk'}</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.typeRow}>
+              <TextInput
+                style={styles.input}
+                value={typed}
+                onChangeText={setTyped}
+                placeholder="say something to Barkly…"
+                placeholderTextColor={INK_SOFT}
+                editable={!busy}
+                onSubmitEditing={sendTyped}
+                returnKeyType="send"
+              />
+              <Pressable
+                style={({ pressed }) => [styles.send, pressed && styles.pressed, (busy || !typed.trim()) && styles.disabled]}
+                disabled={busy || !typed.trim()}
+                onPress={sendTyped}
+              >
+                <Text style={styles.sendText}>talk</Text>
+              </Pressable>
+            </View>
+          )}
+
+          <View style={styles.actionsRow}>
+            <ActionButton label="play" onPress={barkly.play} disabled={busy} />
+            <ActionButton label="feed" onPress={barkly.feed} disabled={busy} />
+            <ActionButton
+              label={snapshot.state === 'sleepy' ? 'wake' : 'sleep'}
+              onPress={barkly.sleepToggle}
+              disabled={busy}
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
 
       <SettingsSheet
         visible={settingsOpen}
@@ -128,14 +162,14 @@ export default function BarklyRoom() {
         sttAvailable={sttAvailable}
         onForgetEverything={barkly.forgetEverything}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 function ActionButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.action, pressed && styles.actionPressed, disabled && styles.talkDisabled]}
+      style={({ pressed }) => [styles.action, pressed && styles.actionPressed, disabled && styles.disabled]}
       onPress={onPress}
       disabled={disabled}
     >
@@ -144,69 +178,154 @@ function ActionButton({ label, onPress, disabled }: { label: string; onPress: ()
   );
 }
 
+const shadowCard = Platform.select({
+  web: { boxShadow: '0 10px 24px rgba(74, 59, 42, 0.12)' } as object,
+  default: {
+    shadowColor: '#4A3B2A',
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+});
+
 const styles = StyleSheet.create({
-  room: { flex: 1, backgroundColor: '#F6EDD9', paddingTop: 64, paddingBottom: 36, paddingHorizontal: 20 },
-  gear: { position: 'absolute', top: 58, right: 20, zIndex: 10 },
-  gearText: { fontSize: 24, color: '#8B7B55' },
+  room: { flex: 1, backgroundColor: WALL },
+  wall: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: WALL },
+  floor: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '46%',
+    backgroundColor: FLOOR,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
+  },
 
-  captions: { minHeight: 96, justifyContent: 'flex-end' },
-  hint: { fontSize: 15, color: '#9A8F7A', textAlign: 'center' },
-  userLine: { fontSize: 14, color: '#8B7B55', textAlign: 'center', marginBottom: 6 },
-  barklyLine: { fontSize: 17, fontWeight: '600', color: '#2E2A26', textAlign: 'center', lineHeight: 23 },
-  error: { marginTop: 6, fontSize: 13, color: '#B3402E', textAlign: 'center' },
+  content: { flex: 1, paddingTop: 58, paddingBottom: 28, paddingHorizontal: 22 },
 
-  stage: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 40 },
-  ground: {
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  wordmark: { fontSize: 22, fontWeight: '800', color: INK, letterSpacing: 0.3 },
+  gear: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: CARD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 3,
+    ...(shadowCard as object),
+  },
+  gearDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INK_SOFT },
+
+  bubbleZone: { minHeight: 108, justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 },
+  hint: { fontSize: 15, color: INK_SOFT, marginBottom: 16 },
+  bubble: {
+    maxWidth: '92%',
+    backgroundColor: CARD,
+    borderRadius: 22,
+    borderBottomLeftRadius: 22,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    ...(shadowCard as object),
+  },
+  bubbleYou: { fontSize: 12, color: INK_SOFT, marginBottom: 5 },
+  bubbleText: { fontSize: 17, fontWeight: '600', color: INK, lineHeight: 24 },
+  bubbleTail: {
+    position: 'absolute',
+    bottom: -7,
+    left: '48%',
+    width: 16,
+    height: 16,
+    backgroundColor: CARD,
+    borderRadius: 3,
+    transform: [{ rotate: '45deg' }],
+  },
+  error: { marginTop: 8, fontSize: 13, color: '#B3402E', textAlign: 'center' },
+
+  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 26 },
+  rug: {
     position: 'absolute',
     bottom: 8,
-    width: 260,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(46,42,38,0.08)',
+    width: 300,
+    height: 64,
+    borderRadius: 150,
+    backgroundColor: '#E0CFa8',
+    opacity: 0.5,
   },
-  stateLabel: { position: 'absolute', bottom: -14, fontSize: 13, color: '#8B7B55', fontStyle: 'italic' },
-
-  talk: {
-    backgroundColor: '#2E2A26',
-    borderRadius: 16,
-    paddingVertical: 18,
+  shadow: {
+    position: 'absolute',
+    bottom: 22,
+    width: 230,
+    height: 30,
+    borderRadius: 115,
+    backgroundColor: '#4A3B2A',
+    opacity: 0.13,
+  },
+  chip: {
+    position: 'absolute',
+    bottom: -6,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 18,
+    gap: 6,
+    backgroundColor: CARD,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 13,
+    ...(shadowCard as object),
+  },
+  chipDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: ACCENT },
+  chipText: { fontSize: 13, fontWeight: '700', color: INK_SOFT },
+
+  controls: { gap: 10 },
+  talk: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: INK,
+    borderRadius: 999,
+    paddingVertical: 18,
+    ...(shadowCard as object),
   },
   talkActive: { backgroundColor: '#B3402E' },
-  talkDisabled: { opacity: 0.45 },
-  talkText: { color: '#F6EDD9', fontWeight: '800', fontSize: 16, letterSpacing: 1 },
+  micDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: ACCENT },
+  micDotLive: { backgroundColor: '#FFD9CF' },
+  talkText: { color: '#FBF6EA', fontWeight: '800', fontSize: 16, letterSpacing: 0.4 },
 
-  typeRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  typeRow: { flexDirection: 'row', gap: 10 },
   input: {
     flex: 1,
-    backgroundColor: 'white',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: '#2E2A26',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    backgroundColor: CARD,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     fontSize: 15,
-    color: '#2E2A26',
+    color: INK,
+    ...(shadowCard as object),
   },
   send: {
-    backgroundColor: '#2E2A26',
-    borderRadius: 14,
-    paddingHorizontal: 18,
+    backgroundColor: INK,
+    borderRadius: 999,
+    paddingHorizontal: 24,
     justifyContent: 'center',
+    ...(shadowCard as object),
   },
-  sendText: { color: '#F6EDD9', fontWeight: '800' },
+  sendText: { color: '#FBF6EA', fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
-  actionsRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  actionsRow: { flexDirection: 'row', gap: 10 },
   action: {
     flex: 1,
-    backgroundColor: '#D9A441',
-    borderWidth: 2,
-    borderColor: '#2E2A26',
-    borderRadius: 14,
-    paddingVertical: 13,
+    backgroundColor: CARD,
+    borderRadius: 999,
+    paddingVertical: 14,
     alignItems: 'center',
+    ...(shadowCard as object),
   },
-  actionPressed: { backgroundColor: '#B8862F' },
-  actionText: { fontWeight: '800', color: '#2E2A26', letterSpacing: 1 },
+  actionPressed: { backgroundColor: '#F1E6CC', transform: [{ scale: 0.97 }] },
+  pressed: { transform: [{ scale: 0.98 }] },
+  disabled: { opacity: 0.45 },
+  actionText: { fontWeight: '800', color: INK, fontSize: 15, letterSpacing: 0.4 },
 });
