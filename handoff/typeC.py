@@ -53,6 +53,25 @@ def track_w(d, text, font, sp):
     return sum(d.textlength(c, font=font) for c in text) + sp*max(0, len(text)-1)
 
 
+SHADOW = (6, 7, 9)
+
+
+def track_sh(d, xy, text, font, fill, sp=0.0, anchor="ls", off=2, a=None):
+    """tracked text with a dark drop shadow underneath"""
+    al = fill[3] if len(fill) > 3 else 255
+    sa = int((a if a is not None else 0.72) * al)
+    x, y = xy
+    track(d, (x + off, y + off), text, font, SHADOW + (sa,), sp=sp, anchor=anchor)
+    track(d, (x, y), text, font, fill, sp=sp, anchor=anchor)
+
+
+def rect_sh(d, box, fill, off=2, a=0.72):
+    al = fill[3] if len(fill) > 3 else 255
+    x0, y0, x1, y1 = box
+    d.rectangle([x0+off, y0+off, x1+off, y1+off], fill=SHADOW + (int(a*al),))
+    d.rectangle(box, fill=fill)
+
+
 def track(d, xy, text, font, fill, sp=0.0, anchor="ls"):
     """Letterspaced text. PIL has no tracking and the spacing IS the design.
 
@@ -116,11 +135,16 @@ def rule_block(d, num, name, status, t, dur):
 
 
 def open_indicator(d, x, y, label, t, delay):
-    """An indicator that is OPEN. Hollow, never a tick -- see the r05 note."""
+    """An indicator that is OPEN. Hollow, never a tick -- see the r05 note.
+
+    r58 sized these up ~18% and opened their spacing: at review-grid scale the
+    structure read but the individual items did not. Still hollow rings, still
+    no completion state of any kind."""
     if t < delay: return
-    k = ease((t - delay)/0.4); al = int(235*k)
-    d.ellipse([x, y, x+22, y+22], outline=OPEN + (al,), width=3)
-    track(d, (x+40, y+19), label, mono(24), DIM + (al,), sp=3.0)
+    k = ease((t - delay)/0.4); al = int(244*k)
+    d.ellipse([x+2, y+2, x+28, y+28], outline=SHADOW + (int(0.7*al),), width=3)
+    d.ellipse([x, y, x+26, y+26], outline=OPEN + (al,), width=3)
+    track_sh(d, (x+46, y+22), label, mono(28), INK + (al,), sp=3.2)
 
 
 def compose(beat, t, dur):
@@ -154,7 +178,7 @@ def compose(beat, t, dur):
         if beat in ("r02", "r03", "r06"):
             box = [(0, H-430, 1180, H), (1120, 100, W, 330)]
         if beat == "r05":
-            box = [(0, H-430, 1180, H), (1300, 150, W, 700)]
+            box = [(0, H-430, 1180, H), (1290, 140, W, 740)]
 
         if beat == "r02" and t > 1.9:
             k = ease((t - 1.9)/0.45)
@@ -185,20 +209,20 @@ def compose(beat, t, dur):
             # that breathes.
             go = 1.0 if t < 5.3 else max(0.0, (5.9 - t)/0.6)
             if t > 1.7:
-                k = ease((t - 1.7)/0.5); al = int(232*k*go)
-                d.rectangle([784, 545, 1252, 548], fill=HAIR + (al,))
-                d.rectangle([784, 545, 787, 582], fill=HAIR + (al,))
-                d.rectangle([1249, 545, 1252, 582], fill=HAIR + (al,))
-                track(d, (784, 523), "VIEWING AREA", mono(27), INK + (al,), sp=4.5)
+                k = ease((t - 1.7)/0.5); al = int(238*k*go)
+                rect_sh(d, [784, 545, 1252, 548], HAIR + (al,))
+                rect_sh(d, [784, 545, 787, 582], HAIR + (al,))
+                rect_sh(d, [1249, 545, 1252, 582], HAIR + (al,))
+                track_sh(d, (784, 523), "VIEWING AREA", mono(27), INK + (al,), sp=4.5)
             if t > 2.5:
-                k = ease((t - 2.5)/0.5); al = int(228*k*go)
+                k = ease((t - 2.5)/0.5); al = int(234*k*go)
                 for i in range(12):
                     x0 = 300 + i*38
-                    d.rectangle([x0, 648, x0+20, 651], fill=OPEN + (al,))
-                track(d, (300, 626), "EXCLUSION EDGE", mono(27), OPEN + (al,), sp=4.5)
+                    rect_sh(d, [x0, 648, x0+20, 651], OPEN + (al,))
+                track_sh(d, (300, 626), "EXCLUSION EDGE", mono(27), OPEN + (al,), sp=4.5)
             if t > 3.4:
                 k = ease((t - 3.4)/0.5)
-                track(d, (300, 700), "ENTRY EDGE", mono(24), DIM + (int(206*k*go),), sp=4.0)
+                track_sh(d, (300, 700), "ENTRY EDGE", mono(24), DIM + (int(214*k*go),), sp=4.0)
 
         if beat == "r05":
             # r55: an UNCOMPLETED gate. Open indicators, nothing approved,
@@ -210,12 +234,12 @@ def compose(beat, t, dur):
                 d.rectangle([W-M-352, 232, W-M, 234], fill=HAIR + (int(150*k),))
             for i, lab in enumerate(["NARRATIVE TEXT", "RECONSTRUCTION",
                                      "PLACEMENT", "ATTRIBUTION"]):
-                open_indicator(d, 1392, 316 + i*56, lab, t, 2.1 + i*0.28)
+                open_indicator(d, 1392, 312 + i*66, lab, t, 2.1 + i*0.28)
             if t > 4.0:
                 k = ease((t - 4.0)/0.5); al = int(240*k)
-                d.rectangle([1392, 566, 1395, 636], fill=OPEN + (al,))
-                track(d, (1420, 596), "RELEASE BLOCKED", mono(27, True), OPEN + (al,), sp=3.5)
-                track(d, (1420, 632), "UNTIL REVIEW", mono(27, True), OPEN + (al,), sp=3.5)
+                rect_sh(d, [1392, 596, 1396, 674], OPEN + (al,))
+                track_sh(d, (1424, 628), "RELEASE BLOCKED", mono(29, True), OPEN + (al,), sp=3.5)
+                track_sh(d, (1424, 666), "UNTIL REVIEW", mono(29, True), OPEN + (al,), sp=3.5)
 
         if beat == "r06" and t > 1.9:
             k = ease((t - 1.9)/0.45)
@@ -229,17 +253,18 @@ def compose(beat, t, dur):
             dl = 0.35 + i*0.20
             if t < dl: continue
             k = ease((t - dl)/0.35); al = int(236*k)
-            y = 316 + i*54
-            track(d, (M, y), num, mono(26), DIM + (al,), sp=4.0)
-            d.text((M + 78, y), name, font=inter(34, "Medium"), fill=INK + (al,), anchor="ls")
+            y = 312 + i*61
+            track_sh(d, (M, y), num, mono(28), DIM + (al,), sp=4.0)
+            d.text((M + 86, y + 2), name, font=inter(38, "Medium"), fill=SHADOW + (int(0.7*al),), anchor="ls")
+            d.text((M + 84, y), name, font=inter(38, "Medium"), fill=INK + (al,), anchor="ls")
             col = AMBER if status == "PROTOTYPE TARGET" else DIM
-            track(d, (M + 940, y), status, mono(21), col + (int(214*k),), sp=3.0)
+            track_sh(d, (M + 1044, y), status, mono(23), col + (int(226*k),), sp=3.0)
         if t > 2.1:
             k = ease((t - 2.1)/0.5)
-            d.text((M, 740), "ONE SYSTEM", font=inter(104), fill=INK + (int(255*k),), anchor="ls")
+            d.text((M, 762), "ONE SYSTEM", font=inter(104), fill=INK + (int(255*k),), anchor="ls")
         if t > 3.0:
             k = ease((t - 3.0)/0.5)
-            d.text((M, 826), "THE REQUIREMENTS ARE THE PRODUCT.",
+            d.text((M, 846), "THE REQUIREMENTS ARE THE PRODUCT.",
                    font=inter(44, "Medium"), fill=DIM + (int(238*k),), anchor="ls")
         if t > 4.0:
             k = ease((t - 4.0)/0.5); al = int(236*k)
