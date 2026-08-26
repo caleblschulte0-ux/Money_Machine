@@ -5,6 +5,8 @@
  *   EXPO_PUBLIC_ANTHROPIC_API_KEY   dev-only direct Anthropic access
  *   EXPO_PUBLIC_BARKLY_BACKEND_URL production proxy base URL (preferred)
  *   EXPO_PUBLIC_BARKLY_MODEL       override dialogue model id
+ *   EXPO_PUBLIC_BARKLY_FORCE_KEYBOARD=1  report STT unavailable so the UI uses
+ *                                  typed input (browser demos, sandboxed pages)
  *
  * With no configuration at all the app still runs: scripted dialogue +
  * on-device TTS + (native STT if dev-built, else typed input in the UI).
@@ -32,9 +34,10 @@ export function createProviders(): ProviderSet {
     ? anthropic
     : createScriptedDialogue();
 
-  return {
-    stt: createExpoSpeechRecognitionStt(),
-    dialogue,
-    tts: createExpoSpeechTts(),
-  };
+  const stt = createExpoSpeechRecognitionStt();
+  if (process.env.EXPO_PUBLIC_BARKLY_FORCE_KEYBOARD === '1') {
+    stt.isAvailable = async () => false;
+  }
+
+  return { stt, dialogue, tts: createExpoSpeechTts() };
 }
