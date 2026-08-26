@@ -23,7 +23,17 @@ def _smoothstep(x):
     x = np.clip(x, 0.0, 1.0)
     return x * x * (3.0 - 2.0 * x)
 
-def terrain(bgr, debug=False):
+FAR_PCTL = 45.0   # the farthest 45% of each plate's own depth is background.
+                  # A fixed absolute threshold does not transfer between plates:
+                  # 0.16 excluded the d05 treeline perfectly but blocked 51% of
+                  # d04 -- a wide flat landscape whose median depth is 0.143 --
+                  # taking the rock flat with it. As a per-plate percentile, 45
+                  # blocks the d04 treeline 100% and the d05 treeline 98.4%
+                  # while leaving BOTH rock surfaces at 0% blocked. At 50 it
+                  # starts eating d04's rock flat.
+
+
+def terrain(bgr, depth=None, debug=False):
     """1.0 where strata may draw, 0.0 where they may not."""
     b = np.clip(bgr.astype(np.float32), 0, 1) if bgr.dtype != np.uint8 \
         else bgr.astype(np.float32) / 255.0
@@ -65,7 +75,21 @@ def terrain(bgr, debug=False):
     vert = cv2.morphologyEx(e, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_RECT, (1, 41)))
     built = cv2.dilate(np.maximum(horiz, vert), np.ones((25, 25), np.uint8)).astype(np.float32) / 255.0
 
-    block = np.clip(foliage + sky + manmade + foam + water + built, 0.0, 1.0)
+    # FAR BACKGROUND, by depth. r47 found pale contours still describing the
+    # d05 treeline and individual crowns, and on that plate NOTHING in colour
+    # or texture separates distant foliage from rock: the treeline measures
+    # hue 110 / sat 0.111 against a rock ledge at hue 134 / sat 0.114, and
+    # their high-frequency energy is 8.5 against 8.6. Depth does separate them
+    # cleanly -- treeline 0.067, rock ledge 0.294 -- so at FAR_DEPTH the
+    # treeline is 100% excluded and the ledge 0%.
+    far = np.zeros_like(lum)
+    if depth is not None:
+        d = cv2.resize(depth.astype(np.float32), (W, H)) if depth.shape != lum.shape \
+            else depth.astype(np.float32)
+        th = float(np.percentile(d, FAR_PCTL))
+        far = 1.0 - _smoothstep((d - th * 0.55) / max(th * 0.9, 1e-3))
+
+    block = np.clip(foliage + sky + manmade + foam + water + built + far, 0.0, 1.0)
     block = cv2.GaussianBlur(block, (0, 0), 5.0)
     keep = 1.0 - _smoothstep((block - 0.18) / 0.34)
     keep = cv2.GaussianBlur(keep, (0, 0), 7.0)
@@ -73,5 +97,5 @@ def terrain(bgr, debug=False):
         return keep, dict(foliage=float(foliage.mean()), sky=float(sky.mean()),
                           manmade=float(manmade.mean()), foam=float(foam.mean()),
                           water=float(water.mean()), built=float(built.mean()),
-                          keep=float(keep.mean()))
+                          far=float(far.mean()), keep=float(keep.mean()))
     return keep
