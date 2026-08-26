@@ -30,6 +30,24 @@ can), so its side is unchanged.
   (timestamped frame grid) plus a `<name>__timeline.txt` stub to fill in.
   Needs only ffmpeg/ffprobe. Run:
   `python handoff/make_contact_sheet.py path/to/video.mp4`
+- **Film-finishing modules**, copied here as the durable record of what
+  produced each delivered master. They are read-only evidence, not a library
+  the pipeline imports; the Shorts-pipeline repo is never modified.
+  - `shotnorm.py` — the shot-level technical normalization stage (black point,
+    white point, white balance; the median is deliberately NOT matched).
+  - `native_check.py` — refuses any source that would be upscaled into the
+    delivery frame. 9 of the 34 clips are rotated portrait and fail it.
+  - `highkey.py` — restores Film B's own high-key curve after normalization.
+  - `watercalm.py`, `terrainmask.py`, `peoplecheck.py` — Film D's water,
+    landform-material and figure-audit passes.
+  - `garmentguard.py` + `apply_guard.py` — Film B's r52 chroma-continuity
+    guard and the render driver. The guard runs AFTER the finish; the
+    docstrings carry the measurement that settled that order.
+  - `proofB.py` — the same-pixel proof. Samples are frozen PIXEL SETS taken
+    from the untouched plate, not rectangles, because the subject is ~80px
+    wide in some shots and any usable rectangle catches shirt print and skin.
+  - `continuity_preview.py` — measures the trade between source fidelity and
+    wardrobe continuity without rendering anything.
 - `PROMPT_CHATGPT.md` — paste into a new ChatGPT conversation to enroll it.
 - `PROMPT_CLAUDE.md` — paste into a new Claude Code session to enroll it.
 
