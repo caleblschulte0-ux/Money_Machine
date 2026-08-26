@@ -124,31 +124,42 @@ export default function BarklyView({ state, actions }: BarklyRenderProps) {
           </Svg>
         </Animated.View>
 
-        {/* body — squat and low-slung */}
-        <Svg width={276} height={168} viewBox="0 0 276 168" style={styles.body}>
-          {/* back legs, tucked behind */}
-          <Rect x={30} y={98} width={30} height={42} rx={11} fill={MUSTARD_SHADE} />
-          <Rect x={216} y={98} width={30} height={42} rx={11} fill={MUSTARD_SHADE} />
-          <Rect x={33} y={128} width={24} height={12} rx={6} fill={CREAM} />
-          <Rect x={219} y={128} width={24} height={12} rx={6} fill={CREAM} />
+        {/* body — front-facing sitting pose: chest at top, haunches spread
+            on the floor, front legs planted straight down */}
+        <Svg width={244} height={192} viewBox="0 0 244 192" style={styles.body}>
+          {/* torso: pear silhouette, narrow at the neck, wide at the hips */}
+          <Path
+            d="M82 10 L162 10 C196 34 216 96 216 148 C216 168 204 178 184 178 L60 178 C40 178 28 168 28 148 C28 96 48 34 82 10 Z"
+            fill={MUSTARD} stroke={OUTLINE} strokeWidth={5} strokeLinejoin="round" />
+          {/* haunch creases */}
+          <Path d="M52 168 C40 138 44 106 62 84" stroke={MUSTARD_SHADE} strokeWidth={5}
+            strokeLinecap="round" fill="none" opacity={0.55} />
+          <Path d="M192 168 C204 138 200 106 182 84" stroke={MUSTARD_SHADE} strokeWidth={5}
+            strokeLinecap="round" fill="none" opacity={0.55} />
+          {/* cream chest bib running down the middle */}
+          <Path d="M96 12 L148 12 C158 44 158 84 146 116 L98 116 C86 84 86 44 96 12 Z" fill={CREAM} />
 
-          {/* torso */}
-          <Rect x={14} y={26} width={248} height={94} rx={46} fill={MUSTARD} stroke={OUTLINE} strokeWidth={5} />
-          {/* belly shade + soft back highlight */}
-          <Path d="M26 96 Q138 132 250 96 L250 74 Q138 112 26 74 Z" fill={MUSTARD_SHADE} opacity={0.24} />
-          {/* cream chest, tucked between the front legs */}
-          <Path d="M104 58 Q138 48 172 58 Q182 84 172 108 Q138 122 104 108 Q94 84 104 58 Z" fill={CREAM} />
+          {/* back paws peeking out beside the haunches */}
+          <Path d="M32 158 h40 v6 a14 14 0 0 1 -14 14 h-12 a14 14 0 0 1 -14 -14 Z"
+            fill={MUSTARD_DEEP} stroke={OUTLINE} strokeWidth={4} />
+          <Path d="M172 158 h40 v6 a14 14 0 0 1 -14 14 h-12 a14 14 0 0 1 -14 -14 Z"
+            fill={MUSTARD_DEEP} stroke={OUTLINE} strokeWidth={4} />
 
-          {/* front legs with stripes, planted wide */}
-          <Rect x={72} y={90} width={33} height={56} rx={13} fill={MUSTARD} stroke={OUTLINE} strokeWidth={4.5} />
-          <Rect x={171} y={90} width={33} height={56} rx={13} fill={MUSTARD} stroke={OUTLINE} strokeWidth={4.5} />
-          <Rect x={74.5} y={104} width={28} height={7} rx={3.5} fill={MUSTARD_SHADE} />
-          <Rect x={74.5} y={116} width={28} height={7} rx={3.5} fill={MUSTARD_SHADE} />
-          <Rect x={173.5} y={104} width={28} height={7} rx={3.5} fill={MUSTARD_SHADE} />
-          <Rect x={173.5} y={116} width={28} height={7} rx={3.5} fill={MUSTARD_SHADE} />
-          {/* cream paws */}
-          <Path d="M74.5 130 h28 v4 a11 11 0 0 1 -11 11 h-6 a11 11 0 0 1 -11 -11 Z" fill={CREAM} />
-          <Path d="M173.5 130 h28 v4 a11 11 0 0 1 -11 11 h-6 a11 11 0 0 1 -11 -11 Z" fill={CREAM} />
+          {/* front legs, striped, planted straight down */}
+          <Rect x={80} y={78} width={34} height={92} rx={15} fill={MUSTARD} stroke={OUTLINE} strokeWidth={4.5} />
+          <Rect x={130} y={78} width={34} height={92} rx={15} fill={MUSTARD} stroke={OUTLINE} strokeWidth={4.5} />
+          <Rect x={82.5} y={104} width={29} height={8} rx={4} fill={MUSTARD_SHADE} />
+          <Rect x={82.5} y={118} width={29} height={8} rx={4} fill={MUSTARD_SHADE} />
+          <Rect x={132.5} y={104} width={29} height={8} rx={4} fill={MUSTARD_SHADE} />
+          <Rect x={132.5} y={118} width={29} height={8} rx={4} fill={MUSTARD_SHADE} />
+
+          {/* cream front paws with toe lines */}
+          <Path d="M78 152 h38 v8 a14 14 0 0 1 -14 14 h-10 a14 14 0 0 1 -14 -14 Z"
+            fill={CREAM} stroke={OUTLINE} strokeWidth={4} />
+          <Path d="M128 152 h38 v8 a14 14 0 0 1 -14 14 h-10 a14 14 0 0 1 -14 -14 Z"
+            fill={CREAM} stroke={OUTLINE} strokeWidth={4} />
+          <Path d="M97 164 v7" stroke={OUTLINE} strokeWidth={2.5} strokeLinecap="round" />
+          <Path d="M147 164 v7" stroke={OUTLINE} strokeWidth={2.5} strokeLinecap="round" />
         </Svg>
 
         {/* collar — thick, with brass B tag */}
@@ -259,15 +270,15 @@ export default function BarklyView({ state, actions }: BarklyRenderProps) {
 }
 
 const styles = StyleSheet.create({
-  stage: { width: 300, height: 296, alignItems: 'center' },
-  character: { width: 300, height: 296, alignItems: 'center' },
+  stage: { width: 300, height: 330, alignItems: 'center' },
+  character: { width: 300, height: 330, alignItems: 'center' },
 
-  tailWrap: { position: 'absolute', right: -4, top: 106, zIndex: 1 },
+  tailWrap: { position: 'absolute', right: 2, top: 198, zIndex: 1 },
   body: { position: 'absolute', bottom: 0, zIndex: 2 },
 
   collar: {
     position: 'absolute',
-    bottom: 128,
+    bottom: 167,
     width: 112,
     height: 21,
     backgroundColor: COLLAR,
