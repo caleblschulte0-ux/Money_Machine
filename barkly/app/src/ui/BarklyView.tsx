@@ -1,12 +1,13 @@
 /**
- * PLACEHOLDER Barkly renderer — vector edition.
+ * PLACEHOLDER Barkly renderer — drawn to match the approved concept sheet
+ * (assets/barkly/concept/barkly-concept.png, "Barkley – Concept 3").
  *
- * Draws Barkly with react-native-svg, following the LOCKED design in
- * docs/CHARACTER.md: squat low-slung body, rectangular head, mustard/cream,
- * narrow deadpan eyes, snaggletooth, ears bent outward/downward, curled ring
- * tail, front-leg stripes, thick collar with a brass "B" tag. Blocky and
- * toy-like on purpose — this pass is about rendering him cleanly, not
- * redesigning him.
+ * Front view, standing. Key reads from the sheet: the head dominates the
+ * body; long cream muzzle with a huge rounded-square charcoal nose; smug
+ * half-lidded eyes; stiff bent ears angling outward; cream blaze; thick
+ * belt-style collar with brass buckle and B tag; three-stripe knit socks
+ * on the front paws; ring tail curl; low-slung body. Soft clay style —
+ * no hard outlines, soft shading.
  *
  * Implements BarklyRenderProps (src/animation/renderer.ts). Production art
  * (Rive recommended) replaces this file; nothing else changes.
@@ -14,21 +15,23 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Ellipse, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { BarklyRenderProps } from '../animation/renderer';
 import { BodyAction } from '../barkly/types';
 
-// Palette (concept sheet, docs/CHARACTER.md)
-const MUSTARD = '#E0A93E';
-const MUSTARD_DEEP = '#C08A2E';
-const MUSTARD_SHADE = '#AA7A28';
-const CREAM = '#F7EDD2';
-const OUTLINE = '#4A3B2A';
-const NOSE = '#332B24';
-const COLLAR = '#453931';
-const BRASS = '#D9A93F';
-const BRASS_DARK = '#A87E27';
-const TONGUE = '#D97B6C';
+// Palette sampled from the concept sheet
+const MUSTARD = '#C6952F';
+const MUSTARD_EAR = '#AF7F22';
+const MUSTARD_SHADE = '#9C7120';
+const CREAM = '#F1E6CB';
+const CREAM_SHADE = '#DECFA8';
+const NOSE = '#3E332A';
+const CHARCOAL = '#35302A';
+const COLLAR = '#4B3527';
+const COLLAR_DARK = '#3B2A1E';
+const BRASS = '#B98F3E';
+const BRASS_DARK = '#8F6B25';
+const TONGUE = '#C9705F';
 
 /** Loop an Animated.Value 0→1→0 while `active`; ease back to 0 when not. */
 function useLoop(active: boolean, duration: number): Animated.Value {
@@ -100,158 +103,163 @@ export default function BarklyView({ state, actions }: BarklyRenderProps) {
 
   const eyes: EyeMode = asleep || blinking ? 'closed' : state === 'annoyed' ? 'annoyed' : 'open';
 
-  const tailRotate = wag.interpolate({ inputRange: [0, 1], outputRange: ['-14deg', '22deg'] });
+  const tailRotate = wag.interpolate({ inputRange: [0, 1], outputRange: ['-12deg', '18deg'] });
   const mouthScale = mouth.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
   const lift = bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
   const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, asleep ? 1.03 : 1.012] });
   const headTilt = tilt.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-8deg'] });
   const lookShift = look.interpolate({
     inputRange: [0, 1],
-    outputRange: has('LOOK_LEFT') && has('LOOK_RIGHT') ? [-7, 7] : has('LOOK_LEFT') ? [0, -8] : [0, 8],
+    outputRange: has('LOOK_LEFT') && has('LOOK_RIGHT') ? [-6, 6] : has('LOOK_LEFT') ? [0, -7] : [0, 7],
   });
 
+  // Pupils drift when he looks around; lids stay put (keeps the smug look).
   return (
     <View style={styles.stage}>
       <Animated.View style={[styles.character, { transform: [{ translateY: lift }, { scale: breatheScale }] }]}>
 
-        {/* tail — curled ring, wags from its base */}
+        {/* ring tail curl, peeking over the back (right side) */}
         <Animated.View style={[styles.tailWrap, { transform: [{ rotate: tailRotate }] }]}>
-          <Svg width={70} height={70} viewBox="0 0 70 70">
-            <Circle cx={35} cy={35} r={20} stroke={OUTLINE} strokeWidth={17} fill="none"
-              strokeDasharray="88 40" strokeLinecap="round" transform="rotate(-30 35 35)" />
-            <Circle cx={35} cy={35} r={20} stroke={MUSTARD_DEEP} strokeWidth={11} fill="none"
-              strokeDasharray="86 42" strokeLinecap="round" transform="rotate(-30 35 35)" />
+          <Svg width={64} height={64} viewBox="0 0 64 64">
+            <Circle cx={32} cy={32} r={19} stroke={MUSTARD} strokeWidth={13}
+              fill="none" strokeDasharray="90 30" strokeLinecap="round" transform="rotate(-55 32 32)" />
+            <Circle cx={32} cy={32} r={19} stroke={MUSTARD_SHADE} strokeWidth={13} opacity={0.25}
+              fill="none" strokeDasharray="30 90" strokeLinecap="round" transform="rotate(60 32 32)" />
           </Svg>
         </Animated.View>
 
-        {/* body — front-facing sitting pose: chest at top, haunches spread
-            on the floor, front legs planted straight down */}
-        <Svg width={244} height={192} viewBox="0 0 244 192" style={styles.body}>
-          {/* torso: pear silhouette, narrow at the neck, wide at the hips */}
-          <Path
-            d="M82 10 L162 10 C196 34 216 96 216 148 C216 168 204 178 184 178 L60 178 C40 178 28 168 28 148 C28 96 48 34 82 10 Z"
-            fill={MUSTARD} stroke={OUTLINE} strokeWidth={5} strokeLinejoin="round" />
-          {/* haunch creases */}
-          <Path d="M52 168 C40 138 44 106 62 84" stroke={MUSTARD_SHADE} strokeWidth={5}
-            strokeLinecap="round" fill="none" opacity={0.55} />
-          <Path d="M192 168 C204 138 200 106 182 84" stroke={MUSTARD_SHADE} strokeWidth={5}
-            strokeLinecap="round" fill="none" opacity={0.55} />
-          {/* cream chest bib running down the middle */}
-          <Path d="M96 12 L148 12 C158 44 158 84 146 116 L98 116 C86 84 86 44 96 12 Z" fill={CREAM} />
+        {/* body — standing, low-slung, narrower than the head */}
+        <Svg width={250} height={158} viewBox="0 0 250 158" style={styles.body}>
+          {/* rear feet peeking out */}
+          <Rect x={30} y={122} width={40} height={26} rx={11} fill={CREAM_SHADE} />
+          <Rect x={180} y={122} width={40} height={26} rx={11} fill={CREAM_SHADE} />
 
-          {/* back paws peeking out beside the haunches */}
-          <Path d="M32 158 h40 v6 a14 14 0 0 1 -14 14 h-12 a14 14 0 0 1 -14 -14 Z"
-            fill={MUSTARD_DEEP} stroke={OUTLINE} strokeWidth={4} />
-          <Path d="M172 158 h40 v6 a14 14 0 0 1 -14 14 h-12 a14 14 0 0 1 -14 -14 Z"
-            fill={MUSTARD_DEEP} stroke={OUTLINE} strokeWidth={4} />
+          {/* torso */}
+          <Rect x={48} y={8} width={154} height={104} rx={38} fill={MUSTARD} />
+          <Path d="M56 96 Q125 122 194 96 L194 76 Q125 104 56 76 Z" fill={MUSTARD_SHADE} opacity={0.18} />
+          {/* cream chest/belly column */}
+          <Rect x={89} y={20} width={72} height={92} rx={26} fill={CREAM} />
 
-          {/* front legs, striped, planted straight down */}
-          <Rect x={80} y={78} width={34} height={92} rx={15} fill={MUSTARD} stroke={OUTLINE} strokeWidth={4.5} />
-          <Rect x={130} y={78} width={34} height={92} rx={15} fill={MUSTARD} stroke={OUTLINE} strokeWidth={4.5} />
-          <Rect x={82.5} y={104} width={29} height={8} rx={4} fill={MUSTARD_SHADE} />
-          <Rect x={82.5} y={118} width={29} height={8} rx={4} fill={MUSTARD_SHADE} />
-          <Rect x={132.5} y={104} width={29} height={8} rx={4} fill={MUSTARD_SHADE} />
-          <Rect x={132.5} y={118} width={29} height={8} rx={4} fill={MUSTARD_SHADE} />
+          {/* front legs: cream knit socks with three stripes */}
+          <Rect x={64} y={54} width={40} height={80} rx={15} fill={CREAM} />
+          <Rect x={146} y={54} width={40} height={80} rx={15} fill={CREAM} />
+          <Path d="M68 60 a 15 15 0 0 1 10 -6 v 76 h -10 Z" fill={CREAM_SHADE} opacity={0.5} />
+          <Path d="M150 60 a 15 15 0 0 1 10 -6 v 76 h -10 Z" fill={CREAM_SHADE} opacity={0.5} />
+          {[92, 103, 114].map((y) => (
+            <React.Fragment key={y}>
+              <Rect x={64} y={y} width={40} height={6.5} fill={CHARCOAL} />
+              <Rect x={146} y={y} width={40} height={6.5} fill={CHARCOAL} />
+            </React.Fragment>
+          ))}
 
-          {/* cream front paws with toe lines */}
-          <Path d="M78 152 h38 v8 a14 14 0 0 1 -14 14 h-10 a14 14 0 0 1 -14 -14 Z"
-            fill={CREAM} stroke={OUTLINE} strokeWidth={4} />
-          <Path d="M128 152 h38 v8 a14 14 0 0 1 -14 14 h-10 a14 14 0 0 1 -14 -14 Z"
-            fill={CREAM} stroke={OUTLINE} strokeWidth={4} />
-          <Path d="M97 164 v7" stroke={OUTLINE} strokeWidth={2.5} strokeLinecap="round" />
-          <Path d="M147 164 v7" stroke={OUTLINE} strokeWidth={2.5} strokeLinecap="round" />
+          {/* front feet with toe grooves */}
+          <Rect x={58} y={126} width={52} height={28} rx={12} fill={CREAM} />
+          <Rect x={140} y={126} width={52} height={28} rx={12} fill={CREAM} />
+          <Path d="M76 140 v11" stroke={CREAM_SHADE} strokeWidth={3.5} strokeLinecap="round" />
+          <Path d="M92 140 v11" stroke={CREAM_SHADE} strokeWidth={3.5} strokeLinecap="round" />
+          <Path d="M158 140 v11" stroke={CREAM_SHADE} strokeWidth={3.5} strokeLinecap="round" />
+          <Path d="M174 140 v11" stroke={CREAM_SHADE} strokeWidth={3.5} strokeLinecap="round" />
         </Svg>
 
-        {/* collar — thick, with brass B tag */}
-        <View style={styles.collar}>
-          <View style={styles.collarStitch} />
-          <View style={styles.tag}>
-            <Text style={styles.tagText}>B</Text>
-          </View>
-        </View>
+        {/* thick belt collar with brass buckle + B tag */}
+        <Svg width={180} height={92} viewBox="0 0 180 92" style={styles.collar}>
+          <Rect x={8} y={10} width={164} height={28} rx={11} fill={COLLAR} />
+          <Rect x={8} y={10} width={164} height={9} rx={4.5} fill="#5C4433" opacity={0.8} />
+          {/* strap end tucked through */}
+          <Rect x={98} y={16} width={44} height={17} rx={8} fill={COLLAR_DARK} />
+          {/* buckle */}
+          <Rect x={58} y={4} width={36} height={40} rx={8} fill="none" stroke={BRASS} strokeWidth={7} />
+          <Rect x={73} y={8} width={5} height={22} rx={2.5} fill={BRASS_DARK} />
+          {/* tag on its ring */}
+          <Circle cx={90} cy={46} r={5} stroke={BRASS_DARK} strokeWidth={3} fill="none" />
+          <Circle cx={90} cy={66} r={18} fill={BRASS} />
+          <Circle cx={90} cy={66} r={18} stroke={BRASS_DARK} strokeWidth={2.5} fill="none" />
+          <SvgText x={90} y={73} fontSize={19} fontWeight="bold" fill={COLLAR_DARK} textAnchor="middle">B</SvgText>
+        </Svg>
 
-        {/* head — rectangular, deadpan, snaggletoothed */}
+        {/* head — the dominant mass */}
         <Animated.View style={[styles.headWrap, { transform: [{ rotate: headTilt }] }]}>
-          <Svg width={224} height={176} viewBox="0 0 224 176">
-            {/* ears: bent outward/downward (or perked) */}
+          <Svg width={240} height={196} viewBox="0 0 240 196">
+            {/* stiff bent ears, angling outward */}
             {perked ? (
               <>
-                {/* perked: flaps lift up and out */}
-                <Path d="M58 36 C40 20 20 8 16 20 C11 34 26 52 46 58 Z" fill={MUSTARD_DEEP} stroke={OUTLINE} strokeWidth={4.5} strokeLinejoin="round" />
-                <Path d="M166 36 C184 20 204 8 208 20 C213 34 198 52 178 58 Z" fill={MUSTARD_DEEP} stroke={OUTLINE} strokeWidth={4.5} strokeLinejoin="round" />
+                <Path d="M70 42 L34 -2 L6 30 L52 68 Z" fill={MUSTARD_EAR} stroke={MUSTARD_EAR} strokeWidth={10} strokeLinejoin="round" />
+                <Path d="M170 42 L206 -2 L234 30 L188 68 Z" fill={MUSTARD_EAR} stroke={MUSTARD_EAR} strokeWidth={10} strokeLinejoin="round" />
               </>
             ) : (
               <>
-                {/* bent outward/downward: flaps anchored at the head's top
-                    corners, folding out and hanging to cheek height */}
-                <Rect x={28} y={24} width={44} height={68} rx={20} fill={MUSTARD_DEEP}
-                  stroke={OUTLINE} strokeWidth={4.5} transform="rotate(36 50 30)" />
-                <Rect x={152} y={24} width={44} height={68} rx={20} fill={MUSTARD_DEEP}
-                  stroke={OUTLINE} strokeWidth={4.5} transform="rotate(-36 174 30)" />
-                <Rect x={39} y={48} width={22} height={36} rx={11} fill={MUSTARD_SHADE}
-                  transform="rotate(36 50 30)" opacity={0.8} />
-                <Rect x={163} y={48} width={22} height={36} rx={11} fill={MUSTARD_SHADE}
-                  transform="rotate(-36 174 30)" opacity={0.8} />
+                <Path d="M74 46 L26 10 L8 52 L52 74 Z" fill={MUSTARD_EAR} stroke={MUSTARD_EAR} strokeWidth={10} strokeLinejoin="round" />
+                <Path d="M166 46 L214 10 L232 52 L188 74 Z" fill={MUSTARD_EAR} stroke={MUSTARD_EAR} strokeWidth={10} strokeLinejoin="round" />
+                {/* folded tips */}
+                <Path d="M26 12 L8 52 L24 60 Z" fill={MUSTARD_SHADE} opacity={0.45} />
+                <Path d="M214 12 L232 52 L216 60 Z" fill={MUSTARD_SHADE} opacity={0.45} />
               </>
             )}
 
-            {/* head block */}
-            <Rect x={32} y={22} width={160} height={126} rx={30} fill={MUSTARD} stroke={OUTLINE} strokeWidth={5} />
-            <Rect x={50} y={30} width={124} height={14} rx={7} fill="#FFFFFF" opacity={0.1} />
-            <Path d="M40 120 Q112 148 184 120 L184 132 Q160 148 112 148 Q64 148 40 132 Z" fill={MUSTARD_SHADE} opacity={0.2} />
+            {/* rectangular head block */}
+            <Rect x={40} y={30} width={160} height={152} rx={26} fill={MUSTARD} />
+            <Rect x={40} y={30} width={160} height={30} rx={15} fill="#FFFFFF" opacity={0.07} />
 
-            {/* muzzle */}
-            <Rect x={68} y={84} width={88} height={58} rx={21} fill={CREAM} stroke={OUTLINE} strokeWidth={3.5} />
-            {/* freckles */}
-            <Circle cx={82} cy={106} r={1.8} fill={OUTLINE} opacity={0.5} />
-            <Circle cx={88} cy={112} r={1.8} fill={OUTLINE} opacity={0.5} />
-            <Circle cx={140} cy={106} r={1.8} fill={OUTLINE} opacity={0.5} />
-            <Circle cx={134} cy={112} r={1.8} fill={OUTLINE} opacity={0.5} />
-            {/* big rounded-square nose */}
-            <Rect x={93} y={88} width={38} height={27} rx={9} fill={NOSE} />
-            <Circle cx={102} cy={95} r={3.4} fill="#FFFFFF" opacity={0.3} />
+            {/* cream blaze widening into the long, broad muzzle */}
+            <Path d="M103 30 L137 30 L139 82 C158 86 170 100 170 124 C170 158 152 178 120 178 C88 178 70 158 70 124 C70 100 82 86 101 82 Z" fill={CREAM} />
+            <Path d="M76 132 C76 160 92 174 120 174 C148 174 164 160 164 132 L164 142 C164 166 148 178 120 178 C92 178 76 166 76 142 Z" fill={CREAM_SHADE} opacity={0.5} />
+
+            {/* huge rounded-square nose */}
+            <Rect x={90} y={92} width={60} height={44} rx={14} fill={NOSE} />
+            <Rect x={96} y={96} width={48} height={11} rx={5.5} fill="#FFFFFF" opacity={0.09} />
+
+            {/* head-side shading */}
+            <Path d="M40 120 C40 156 52 176 74 180 L60 182 C46 174 40 152 40 132 Z" fill={MUSTARD_SHADE} opacity={0.25} />
           </Svg>
 
-          {/* eyes overlay — narrow + deadpan, drifts when looking around */}
-          <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: lookShift }] }]}>
-            <Svg width={224} height={176} viewBox="0 0 224 176">
-              {eyes === 'open' && (
+          {/* eyes overlay — solid dark pills that drift on look, under
+              static mustard lids (the lids are what keep him smug) */}
+          {eyes !== 'closed' && (
+            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: lookShift }] }]} pointerEvents="none">
+              <Svg width={240} height={196} viewBox="0 0 240 196">
+                <Rect x={54} y={52} width={40} height={26} rx={13} fill={NOSE} />
+                <Rect x={146} y={52} width={40} height={26} rx={13} fill={NOSE} />
+              </Svg>
+            </Animated.View>
+          )}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Svg width={240} height={196} viewBox="0 0 240 196">
+              {eyes !== 'closed' && (
                 <>
-                  <Rect x={62} y={62} width={25} height={9} rx={4.5} fill={NOSE} />
-                  <Rect x={135} y={62} width={29} height={9} rx={4.5} fill={NOSE} />
-                </>
-              )}
-              {eyes === 'annoyed' && (
-                <>
-                  <Rect x={62} y={64} width={25} height={5.5} rx={2.7} fill={NOSE} />
-                  <Rect x={135} y={64} width={29} height={5.5} rx={2.7} fill={NOSE} />
-                  <Rect x={58} y={56} width={30} height={4} rx={2} fill={NOSE} transform="rotate(9 73 58)" opacity={0.85} />
-                  <Rect x={134} y={56} width={30} height={4} rx={2} fill={NOSE} transform="rotate(-9 149 58)" opacity={0.85} />
+                  {/* heavy upper lids, tilted down-outward = smug (deeper when annoyed) */}
+                  <Rect x={46} y={eyes === 'annoyed' ? 46 : 38} width={56} height={20} rx={4}
+                    fill={MUSTARD} transform="rotate(-7 74 52)" />
+                  <Rect x={138} y={eyes === 'annoyed' ? 46 : 38} width={56} height={20} rx={4}
+                    fill={MUSTARD} transform="rotate(7 166 52)" />
+                  {/* lid crease */}
+                  <Path d="M54 60 L94 55" stroke={MUSTARD_SHADE} strokeWidth={3} strokeLinecap="round" opacity={0.55} />
+                  <Path d="M146 55 L186 60" stroke={MUSTARD_SHADE} strokeWidth={3} strokeLinecap="round" opacity={0.55} />
                 </>
               )}
               {eyes === 'closed' && (
                 <>
-                  <Path d="M62 66 Q74.5 73 87 66" stroke={NOSE} strokeWidth={4.5} fill="none" strokeLinecap="round" />
-                  <Path d="M135 66 Q149.5 73 164 66" stroke={NOSE} strokeWidth={4.5} fill="none" strokeLinecap="round" />
+                  <Path d="M58 68 Q74 76 90 68" stroke={NOSE} strokeWidth={4.5} fill="none" strokeLinecap="round" />
+                  <Path d="M150 68 Q166 76 182 68" stroke={NOSE} strokeWidth={4.5} fill="none" strokeLinecap="round" />
                 </>
               )}
             </Svg>
-          </Animated.View>
+          </View>
 
-          {/* mouth overlay — closed smirk + snaggletooth, or animated open jaw */}
+          {/* mouth overlay — clay crease + tiny snaggletooth, or open jaw */}
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
             {talking ? (
               <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scaleY: mouthScale }] }]}>
-                <Svg width={224} height={176} viewBox="0 0 224 176">
-                  <Ellipse cx={112} cy={127} rx={15} ry={11.5} fill="#42302A" stroke={OUTLINE} strokeWidth={3} />
-                  <Ellipse cx={112} cy={132} rx={8.5} ry={5.5} fill={TONGUE} />
-                  <Rect x={119} y={114} width={8} height={10} rx={2.5} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={2} transform="rotate(7 123 119)" />
+                <Svg width={240} height={196} viewBox="0 0 240 196">
+                  <Ellipse cx={120} cy={153} rx={14} ry={10} fill="#4A362C" />
+                  <Ellipse cx={120} cy={157} rx={8} ry={4.5} fill={TONGUE} />
+                  <Rect x={128} y={144} width={7} height={10} rx={2.5} fill="#FFFFFF" transform="rotate(5 131 149)" />
                 </Svg>
               </Animated.View>
             ) : (
-              <Svg width={224} height={176} viewBox="0 0 224 176">
-                <Path d="M96 123 Q112 131 128 122" stroke={OUTLINE} strokeWidth={4} fill="none" strokeLinecap="round" />
-                <Rect x={120} y={113} width={8} height={11} rx={2.5} fill="#FFFFFF" stroke={OUTLINE} strokeWidth={2} transform="rotate(7 124 118)" />
+              <Svg width={240} height={196} viewBox="0 0 240 196">
+                <Path d="M102 148 Q120 157 138 147" stroke={NOSE} strokeWidth={3.5} fill="none"
+                  strokeLinecap="round" opacity={0.65} />
+                <Rect x={127} y={147} width={7} height={11} rx={2.5} fill="#FFFFFF" transform="rotate(5 130 152)" />
               </Svg>
             )}
           </View>
@@ -270,45 +278,14 @@ export default function BarklyView({ state, actions }: BarklyRenderProps) {
 }
 
 const styles = StyleSheet.create({
-  stage: { width: 300, height: 330, alignItems: 'center' },
-  character: { width: 300, height: 330, alignItems: 'center' },
+  stage: { width: 300, height: 322, alignItems: 'center' },
+  character: { width: 300, height: 322, alignItems: 'center' },
 
-  tailWrap: { position: 'absolute', right: 2, top: 198, zIndex: 1 },
+  tailWrap: { position: 'absolute', right: 26, top: 132, zIndex: 1 },
   body: { position: 'absolute', bottom: 0, zIndex: 2 },
+  collar: { position: 'absolute', bottom: 62, zIndex: 4, alignSelf: 'center' },
+  headWrap: { position: 'absolute', top: 0, width: 240, height: 196, zIndex: 5 },
 
-  collar: {
-    position: 'absolute',
-    bottom: 167,
-    width: 112,
-    height: 21,
-    backgroundColor: COLLAR,
-    borderRadius: 9,
-    zIndex: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  collarStitch: {
-    width: 92,
-    height: 1.5,
-    borderRadius: 1,
-    backgroundColor: '#6B594C',
-  },
-  tag: {
-    position: 'absolute',
-    bottom: -15,
-    width: 25,
-    height: 25,
-    borderRadius: 12.5,
-    backgroundColor: BRASS,
-    borderWidth: 2.5,
-    borderColor: BRASS_DARK,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tagText: { fontSize: 12, fontWeight: '900', color: '#6B4E14', lineHeight: 14 },
-
-  headWrap: { position: 'absolute', top: 0, width: 224, height: 176, zIndex: 5 },
-
-  zzzWrap: { position: 'absolute', top: -8, right: 26, flexDirection: 'row', alignItems: 'flex-end' },
+  zzzWrap: { position: 'absolute', top: -8, right: 22, flexDirection: 'row', alignItems: 'flex-end' },
   zzz: { color: '#A08F6F', fontWeight: '800' },
 });

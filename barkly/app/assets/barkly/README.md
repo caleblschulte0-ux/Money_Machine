@@ -6,7 +6,7 @@ Canon reference: [`../../../docs/CHARACTER.md`](../../../docs/CHARACTER.md) — 
 
 | Path | What | Status |
 |---|---|---|
-| `concept/barkly-concept.png` | The approved concept sheet (visual source of truth). | **MISSING — commit the approved image here.** It was not available in the environment that scaffolded this repo. |
+| `concept/barkly-concept.png` | The approved concept sheet ("Barkley – Concept 3") — visual source of truth. | **Committed.** |
 | `rive/barkly.riv` | Production animated character (recommended path — see below). Inputs must mirror `src/barkly/types.ts`: one state-machine input per `BarklyState`, one trigger per `BodyAction`. | not started |
 | `sprites/` | Alternative: sprite-sheet frames per state, if Rive is not chosen. | not started |
 | `audio/` | Barkly sound effects (grumble, single bark, snore) — optional polish. | not started |
