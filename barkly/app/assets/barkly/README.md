@@ -2,34 +2,55 @@
 
 Canon reference: [`../../../docs/CHARACTER.md`](../../../docs/CHARACTER.md) — the design is **locked**.
 
-## Expected files
+## Current files
 
 | Path | What | Status |
 |---|---|---|
 | `concept/barkly-concept.png` | The approved concept sheet ("Barkley – Concept 3") — visual source of truth. | **Committed.** |
-| `rive/barkly.riv` | Production animated character (recommended path — see below). Inputs must mirror `src/barkly/types.ts`: one state-machine input per `BarklyState`, one trigger per `BodyAction`. | not started |
-| `sprites/` | Alternative: sprite-sheet frames per state, if Rive is not chosen. | not started |
-| `audio/` | Barkly sound effects (grumble, single bark, snore) — optional polish. | not started |
+| `renders/front.png` | Front view, cut from the sheet (background removed). Default pose in-app. | **Committed.** |
+| `renders/side.png` | Side view — used for sleeping. | **Committed.** |
+| `renders/three_quarter.png` | 3/4 view — used for playing/excited. | **Committed.** |
+| `renders/face.png` | Expression closeup — used for thinking/annoyed zoom beats. | **Committed.** |
 
-## Current placeholder
+The app's default renderer (`src/ui/BarklyPhotoView.tsx`) shows these real
+renders with whole-image motion (breathe, bounce, tilt, talk-bob, sway).
+`src/ui/BarklyView.tsx` is a hand-drawn vector fallback
+(`EXPO_PUBLIC_BARKLY_RENDERER=vector`).
 
-Development rendering does not use image assets at all: `src/ui/BarklyView.tsx`
-draws a deliberately blocky Barkly from plain React Native Views, following the
-locked traits (squat mustard body, rectangular head, cream muzzle, deadpan eyes,
-snaggletooth, bent ears, ring tail, leg stripes, brass "B" tag). It exists so no
-one wastes time polishing temporary art.
+## Wanted next: per-state renders (paste this to the image model that made the sheet)
 
-## Recommendation: Rive
+The original sheet came out of ChatGPT's image generation — the fastest
+quality upgrade is more renders in the identical style. Paste the brief below
+along with `concept/barkly-concept.png` as the reference image, generate each
+pose, and drop the results into `renders/states/<name>.png` (transparent or
+plain light background; the app pipeline strips backgrounds).
 
-For the MVP-to-production path, **Rive** is the recommended animation approach:
+> Using the attached "Barkley – Concept 3" sheet as the exact character
+> reference — same clay/vinyl toy render style, same proportions, materials,
+> lighting, and palette (mustard tan / cream / charcoal), same thick collar
+> with brass buckle and round brass "B" tag, same striped knit-sock front
+> paws, snaggletooth, ring tail curl — render the SAME character, front view,
+> full body, centered on a plain light background, one image per pose:
+>
+> 1. `listening.png` — ears perked up and forward, head tilted slightly, eyes a little wider
+> 2. `speaking_open.png` — mouth open mid-bark/talk, tongue slightly visible
+> 3. `speaking_closed.png` — same stance, mouth closed (for jaw-flap alternation)
+> 4. `happy.png` — subtle smile, tail curl raised, relaxed ears
+> 5. `excited.png` — mid-hop, ears up, mouth open happy
+> 6. `annoyed.png` — deeper eyelids, flat stare, slight head turn
+> 7. `sleepy.png` — lying down curled, eyes closed
+> 8. `eating.png` — head lowered over a small charcoal food bowl
+> 9. `playing.png` — play-bow, front down, rump up, tail curl high
+>
+> Do not restyle the character. No new markings, no extra props beyond the
+> bowl, no background scenery.
 
-- Its state machines map 1:1 onto our `BarklyState` + `BodyAction` model — the
-  brain's outputs literally become Rive inputs, no translation layer.
-- Tiny runtime, hardware-accelerated, first-class React Native/Expo support
-  (`rive-react-native`), designer-friendly editor.
-- The toy-like 2D geometry of the locked design suits Rive's vector rendering
-  perfectly, and rigged vector parts (jaw, ears, eyelids, tail) mirror the
-  servo layout of the eventual physical toy.
+When those land, extend `POSE_SIZE`/`poseFor` in `BarklyPhotoView.tsx` —
+ten-minute change, the contract already supports it.
 
-Live2D/Spine/3D remain viable behind the same `BarklyRenderProps` contract
-(`src/animation/renderer.ts`) if production art direction demands them.
+## Production path
+
+Long-term the character should be a **Rive** rig (state-machine inputs map
+1:1 onto `BarklyState` + `BodyAction` — see `src/animation/renderer.ts`), so
+the jaw, ears, eyelids, and tail animate as parts instead of pose swaps.
+Live2D/Spine/3D remain viable behind the same contract.

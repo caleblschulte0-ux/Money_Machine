@@ -6,18 +6,34 @@
 import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MemoryState } from '../barkly/memory';
+import { BarklyStats } from '../barkly/types';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   memory: MemoryState;
+  stats: BarklyStats;
   dialogueProviderName: string;
   sttAvailable: boolean;
   onForgetEverything: () => Promise<void>;
 }
 
+function StatBar({ label, value, invert }: { label: string; value: number; invert?: boolean }) {
+  // For hunger, "full" is the good end — invert the display so full bars
+  // always mean "he's doing great".
+  const shown = invert ? 100 - value : value;
+  return (
+    <View style={styles.statRow}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <View style={styles.statTrack}>
+        <View style={[styles.statFill, { width: `${Math.max(4, shown)}%` }]} />
+      </View>
+    </View>
+  );
+}
+
 export default function SettingsSheet(props: Props) {
-  const { visible, onClose, memory, dialogueProviderName, sttAvailable, onForgetEverything } = props;
+  const { visible, onClose, memory, stats, dialogueProviderName, sttAvailable, onForgetEverything } = props;
   const [wiping, setWiping] = useState(false);
 
   const confirmForget = () => {
@@ -51,6 +67,12 @@ export default function SettingsSheet(props: Props) {
           </View>
 
           <ScrollView style={styles.scroll}>
+            <Text style={styles.section}>How Barkly is doing</Text>
+            <StatBar label="mood" value={stats.mood} />
+            <StatBar label="energy" value={stats.energy} />
+            <StatBar label="tummy" value={stats.hunger} invert />
+            <StatBar label="bond" value={stats.affection} />
+
             <Text style={styles.section}>Providers</Text>
             <Text style={styles.row}>Dialogue: {dialogueProviderName}</Text>
             <Text style={styles.row}>
@@ -99,6 +121,10 @@ const styles = StyleSheet.create({
   section: { marginTop: 16, marginBottom: 6, fontSize: 13, fontWeight: '800', color: '#8B7B55', textTransform: 'uppercase' },
   row: { fontSize: 15, color: '#2E2A26', marginBottom: 4 },
   empty: { fontSize: 14, color: '#9A8F7A', fontStyle: 'italic' },
+  statRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 },
+  statLabel: { width: 56, fontSize: 13, fontWeight: '700', color: '#8B7B55' },
+  statTrack: { flex: 1, height: 9, borderRadius: 5, backgroundColor: '#E8DCC0', overflow: 'hidden' },
+  statFill: { height: 9, borderRadius: 5, backgroundColor: '#C6952F' },
   forget: {
     marginTop: 24,
     backgroundColor: '#B3402E',

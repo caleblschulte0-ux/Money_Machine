@@ -114,3 +114,34 @@ describe('transient beats', () => {
     expect(s.state).toBe('thinking');
   });
 });
+
+describe('petting', () => {
+  it('petting a happy dog builds affection', () => {
+    const before = snap();
+    const after = reduce(before, { type: 'PET' });
+    expect(after.state).toBe('happy');
+    expect(after.stats.affection).toBeGreaterThan(before.stats.affection);
+  });
+
+  it('petting a sleeping dog annoys him (but he secretly likes it)', () => {
+    const before = snap({ state: 'sleepy' });
+    const after = reduce(before, { type: 'PET' });
+    expect(after.state).toBe('annoyed');
+    expect(after.stats.affection).toBeGreaterThan(before.stats.affection);
+  });
+
+  it('petting never interrupts a conversation beat', () => {
+    for (const state of ['listening', 'thinking', 'speaking'] as const) {
+      expect(reduce(snap({ state }), { type: 'PET' }).state).toBe(state);
+    }
+  });
+});
+
+describe('feed refusal', () => {
+  it('a full dog refuses food with attitude', () => {
+    const full = snap({ stats: { ...DEFAULT_STATS, hunger: 5 } });
+    const after = reduce(full, { type: 'FEED' });
+    expect(after.state).toBe('annoyed');
+    expect(after.stats.hunger).toBe(5);
+  });
+});

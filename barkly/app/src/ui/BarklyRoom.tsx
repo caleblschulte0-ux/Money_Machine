@@ -15,9 +15,15 @@ import {
   View,
 } from 'react-native';
 import { useBarkly } from '../hooks/useBarkly';
+import BarklyPhotoView from './BarklyPhotoView';
 import BarklyView from './BarklyView';
 import SettingsSheet from './SettingsSheet';
 import { BarklyState } from '../barkly/types';
+
+// Renderer choice behind the BarklyRenderProps contract: 'photo' shows the
+// real concept-sheet renders (default); 'vector' is the hand-drawn fallback.
+const Renderer =
+  process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyView : BarklyPhotoView;
 
 const STATE_LABEL: Partial<Record<BarklyState, string>> = {
   listening: 'listening',
@@ -76,7 +82,7 @@ export default function BarklyRoom() {
         <View style={styles.bubbleZone}>
           {bubbleText ? (
             <View style={styles.bubble}>
-              {lastExchange && !listening && (
+              {lastExchange && !listening && lastExchange.userText !== '' && (
                 <Text style={styles.bubbleYou} numberOfLines={1}>you said “{lastExchange.userText}”</Text>
               )}
               <Text style={styles.bubbleText} numberOfLines={4}>{bubbleText}</Text>
@@ -94,7 +100,10 @@ export default function BarklyRoom() {
         <View style={styles.stageArea}>
           <View style={styles.rug} />
           <View style={styles.shadow} />
-          <BarklyView state={snapshot.state} actions={actions} />
+          {/* tapping Barkly is petting him */}
+          <Pressable onPress={barkly.pet} disabled={busy}>
+            <Renderer state={snapshot.state} actions={actions} />
+          </Pressable>
           {stateLabel && (
             <View style={styles.chip}>
               {(listening || snapshot.state === 'thinking') && <View style={styles.chipDot} />}
@@ -158,6 +167,7 @@ export default function BarklyRoom() {
         visible={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         memory={barkly.memorySnapshot()}
+        stats={snapshot.stats}
         dialogueProviderName={barkly.dialogueProviderName}
         sttAvailable={sttAvailable}
         onForgetEverything={barkly.forgetEverything}

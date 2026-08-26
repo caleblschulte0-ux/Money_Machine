@@ -97,11 +97,24 @@ export function reduce(snap: BarklySnapshot, event: BarklyEvent): BarklySnapshot
       };
     case 'FEED':
       if (state === 'eating') return snap; // no double-feeding spam
+      if (stats.hunger < 12) {
+        // A full dog turns his nose up at more food. That's character, not a bug.
+        return { ...snap, state: 'annoyed' };
+      }
       return {
         ...snap,
         state: 'eating',
         stats: adjust(stats, { hunger: -30, mood: +8, energy: +5, affection: +3 }),
       };
+    case 'PET': {
+      // Never interrupt a conversation beat with a pet.
+      if (state === 'listening' || state === 'thinking' || state === 'speaking') return snap;
+      if (state === 'sleepy') {
+        // Woken by petting: grumpy about it, secretly pleased.
+        return { ...snap, state: 'annoyed', stats: adjust(stats, { affection: +1 }) };
+      }
+      return { ...snap, state: 'happy', stats: adjust(stats, { affection: +3, mood: +2 }) };
+    }
     case 'PLAY':
       if (stats.energy < 15) {
         // Too tired to play — that's a mood, not a bug.

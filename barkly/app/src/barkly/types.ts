@@ -72,6 +72,7 @@ export type BarklyEvent =
   | { type: 'SPEAK_START' }
   | { type: 'SPEAK_END' }
   | { type: 'FEED' }
+  | { type: 'PET' }               // user tapped/stroked Barkly
   | { type: 'PLAY' }
   | { type: 'SLEEP_TOGGLE' }
   | { type: 'REACTION'; state: BarklyState; durationMs?: number } // brain-chosen emotional beat

@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { DialogueEngine } from '../barkly/dialogue';
+import { nameFromFacts, welcomeBack } from '../barkly/greetings';
 import { BarklyMemory, MemoryState } from '../barkly/memory';
 import {
   ambientActions,
@@ -52,6 +53,8 @@ export interface BarklyController {
   feed(): void;
   play(): void;
   sleepToggle(): void;
+  /** User tapped Barkly — a pet/stroke. */
+  pet(): void;
 
   memorySnapshot(): MemoryState;
   forgetEverything(): Promise<void>;
@@ -87,10 +90,12 @@ export function useBarkly(): BarklyController {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      let hoursAway = 0;
       try {
         const raw = await asyncStorageStore.get(SNAPSHOT_KEY);
         if (!cancelled && raw) {
           const saved = JSON.parse(raw) as BarklySnapshot;
+          hoursAway = (Date.now() - saved.updatedAt) / 3_600_000;
           const restored = reduce(
             { ...saved, state: 'idle' },
             { type: 'TICK', now: Date.now() },
@@ -101,7 +106,14 @@ export function useBarkly(): BarklyController {
       } catch {
         // corrupt snapshot: keep the fresh one
       }
-      await memory.load();
+      const mem = await memory.load();
+      // Away a while? Barkly noticed. Greet without a model call so it's
+      // instant, then speak it (may be muted by autoplay policies — fine).
+      if (!cancelled && hoursAway >= 6) {
+        const line = welcomeBack(nameFromFacts(mem.userFacts), Math.floor(hoursAway));
+        setLastExchange({ userText: '', barklyText: line });
+        providers.tts.speak(line).catch(() => {});
+      }
       const available = await providers.stt.isAvailable();
       if (!cancelled) setSttAvailable(available);
     })();
@@ -109,6 +121,30 @@ export function useBarkly(): BarklyController {
       cancelled = true;
     };
   }, [memory, providers]);
+
+  // --- Idle life: occasional small gestures so he never feels frozen ---
+  const [idleAction, setIdleAction] = useState<BodyAction | null>(null);
+  useEffect(() => {
+    const IDLE_STATES = ['idle', 'happy', 'hungry'];
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (!alive) return;
+        if (IDLE_STATES.includes(snapshotRef.current.state)) {
+          const pool: BodyAction[] = ['EAR_PERK', 'LOOK_LEFT', 'LOOK_RIGHT', 'TAIL_WAG', 'HEAD_TILT'];
+          setIdleAction(pool[Math.floor(Math.random() * pool.length)]);
+          setTimeout(() => alive && setIdleAction(null), 2000);
+        }
+        schedule();
+      }, 9000 + Math.random() * 9000);
+    };
+    schedule();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, []);
 
   // --- Persist snapshot on change ---
   useEffect(() => {
@@ -214,10 +250,13 @@ export function useBarkly(): BarklyController {
 
   const actions = useMemo<BodyAction[]>(() => {
     const ambient = ambientActions(snapshot.state);
-    return replyActions.length > 0 && snapshot.state === 'speaking'
-      ? Array.from(new Set([...ambient, ...replyActions]))
-      : ambient;
-  }, [snapshot.state, replyActions]);
+    const merged =
+      replyActions.length > 0 && snapshot.state === 'speaking'
+        ? [...ambient, ...replyActions]
+        : [...ambient];
+    if (idleAction) merged.push(idleAction);
+    return Array.from(new Set(merged));
+  }, [snapshot.state, replyActions, idleAction]);
 
   return {
     snapshot,
@@ -235,6 +274,7 @@ export function useBarkly(): BarklyController {
     feed: () => dispatch({ type: 'FEED' }),
     play: () => dispatch({ type: 'PLAY' }),
     sleepToggle: () => dispatch({ type: 'SLEEP_TOGGLE' }),
+    pet: () => dispatch({ type: 'PET' }),
     memorySnapshot: () => memory.snapshot(),
     forgetEverything: async () => {
       await memory.forgetAll();
