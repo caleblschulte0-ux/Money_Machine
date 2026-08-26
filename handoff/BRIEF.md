@@ -49,6 +49,37 @@ If two films end up demonstrating the same thing, one of them is wrong.
 - Shorts-pipeline tooling is **read-only**. Never modify that repo.
 - Never touch `shorts-pipeline-drops`.
 
+## Who does what — corrected 2026-08-26, after I over-corrected
+
+Operator: *"I still want ChatGPT giving advice, watching the video and giving
+you advice of stuff you're not seeing. But no one says it needs to be the
+fucking director. I want you to use it for more than just images, because I
+want it to be seeing stuff that maybe you're overlooking."*
+
+**ChatGPT — second pair of eyes, and images.** It watches every cut and says
+what it sees: pacing, whether a demo actually reads as a demo to a cold viewer,
+overlays that do not land, a shot that is weak, anything Claude has stopped
+noticing because he has looked at it forty times. It also generates the AR
+artwork. Its observations are INPUT.
+
+**ChatGPT does not** issue rulings, set numeric acceptance thresholds, declare
+a film locked or withheld, or direct the creative.
+
+**Claude decides.** Takes the advice, acts on what is right, and when he
+disagrees says so plainly and specifically in the handoff, with the reason, so
+there is a record either way. Disagreeing silently is not allowed; neither is
+obeying silently.
+
+**The operator picks.** Which of the five he sends to anyone is his call alone.
+
+Why the distinction matters, honestly: the observations in r39-r59 were mostly
+CORRECT. The garment really did change colour; the type really was too small.
+What went wrong is that every observation arrived as a mandate with a number
+attached — hue spread <= 25 degrees, luminance within 0.01 — and a mandate with
+a number is something you can satisfy completely without ever asking whether it
+mattered. Twenty rounds of hitting targets is what walking away from a brief
+looks like from the inside. Same eyes, no gavel.
+
 ## Gate 1 — the footage gate (`shotqc.py`)
 
 The operator: *"Some of that footage starts out good, but then the end of it
