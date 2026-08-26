@@ -4,8 +4,11 @@
  * SLEEP, and a small settings control. No currencies, no popups, no banners.
  */
 
-import React, { useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -37,15 +40,90 @@ const STATE_LABEL: Partial<Record<BarklyState, string>> = {
 
 const INK = '#3E3428';
 const INK_SOFT = '#8A7A5F';
-const WALL = '#F3EBDA';
-const FLOOR = '#E9DDC2';
+const WALL_TOP = '#F7F1E2';
+const WALL_BOTTOM = '#EFE5CE';
+const FLOOR_TOP = '#EBDFC4';
+const FLOOR_BOTTOM = '#E2D3B0';
 const CARD = '#FFFDF7';
 const ACCENT = '#D99A2B';
+
+/** Speech bubble that springs in whenever its text changes. */
+function AnimatedBubble({ children, changeKey }: { children: React.ReactNode; changeKey: string }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    v.setValue(0);
+    Animated.spring(v, { toValue: 1, friction: 7, tension: 120, useNativeDriver: true }).start();
+  }, [changeKey, v]);
+  return (
+    <Animated.View
+      style={[
+        styles.bubble,
+        {
+          opacity: v,
+          transform: [
+            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+            { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) },
+          ],
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/** Little hearts that float up from Barkly when he's petted. */
+function HeartBurst({ burst }: { burst: number }) {
+  const [hearts, setHearts] = useState<{ id: number; x: number; v: Animated.Value }[]>([]);
+  const nextId = useRef(0);
+  useEffect(() => {
+    if (burst === 0) return;
+    const created = Array.from({ length: 3 }, (_, i) => ({
+      id: nextId.current++,
+      x: -34 + Math.random() * 68,
+      v: new Animated.Value(0),
+    }));
+    setHearts((h) => [...h, ...created]);
+    created.forEach((heart, i) => {
+      Animated.timing(heart.v, {
+        toValue: 1,
+        duration: 850 + i * 140,
+        delay: i * 90,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start(() => setHearts((h) => h.filter((x) => x.id !== heart.id)));
+    });
+  }, [burst]);
+
+  return (
+    <View style={styles.heartLayer} pointerEvents="none">
+      {hearts.map((h) => (
+        <Animated.Text
+          key={h.id}
+          style={[
+            styles.heart,
+            {
+              transform: [
+                { translateX: h.x },
+                { translateY: h.v.interpolate({ inputRange: [0, 1], outputRange: [0, -92] }) },
+                { scale: h.v.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.5, 1.1, 0.9] }) },
+              ],
+              opacity: h.v.interpolate({ inputRange: [0, 0.15, 0.75, 1], outputRange: [0, 1, 0.9, 0] }),
+            },
+          ]}
+        >
+          ♥
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
 
 export default function BarklyRoom() {
   const barkly = useBarkly();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [typed, setTyped] = useState('');
+  const [heartBurst, setHeartBurst] = useState(0);
 
   const { snapshot, actions, lastExchange, partialTranscript, error, busy, sttAvailable } = barkly;
   const listening = snapshot.state === 'listening';
@@ -57,15 +135,20 @@ export default function BarklyRoom() {
     await barkly.submitText(text);
   };
 
+  const pet = () => {
+    barkly.pet();
+    if (snapshot.state !== 'sleepy') setHeartBurst((b) => b + 1);
+  };
+
   const bubbleText = listening && partialTranscript
     ? `“${partialTranscript}”`
     : lastExchange?.barklyText;
 
   return (
     <View style={styles.room}>
-      {/* the room: wall + floor */}
-      <View style={styles.wall} />
-      <View style={styles.floor} />
+      {/* the room: soft gradient wall + floor */}
+      <LinearGradient colors={[WALL_TOP, WALL_BOTTOM]} style={styles.wall} />
+      <LinearGradient colors={[FLOOR_TOP, FLOOR_BOTTOM]} style={styles.floor} />
 
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* header: name + settings */}
@@ -81,13 +164,13 @@ export default function BarklyRoom() {
         {/* speech bubble */}
         <View style={styles.bubbleZone}>
           {bubbleText ? (
-            <View style={styles.bubble}>
+            <AnimatedBubble changeKey={bubbleText}>
               {lastExchange && !listening && lastExchange.userText !== '' && (
                 <Text style={styles.bubbleYou} numberOfLines={1}>you said “{lastExchange.userText}”</Text>
               )}
               <Text style={styles.bubbleText} numberOfLines={4}>{bubbleText}</Text>
               <View style={styles.bubbleTail} />
-            </View>
+            </AnimatedBubble>
           ) : (
             <Text style={styles.hint}>
               {sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
@@ -101,9 +184,10 @@ export default function BarklyRoom() {
           <View style={styles.rug} />
           <View style={styles.shadow} />
           {/* tapping Barkly is petting him */}
-          <Pressable onPress={barkly.pet} disabled={busy}>
+          <Pressable onPress={pet} disabled={busy}>
             <Renderer state={snapshot.state} actions={actions} />
           </Pressable>
+          <HeartBurst burst={heartBurst} />
           {stateLabel && (
             <View style={styles.chip}>
               {(listening || snapshot.state === 'thinking') && <View style={styles.chipDot} />}
@@ -177,13 +261,20 @@ export default function BarklyRoom() {
 }
 
 function ActionButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const springTo = (v: number) =>
+    Animated.spring(scale, { toValue: v, friction: 5, tension: 300, useNativeDriver: true }).start();
   return (
     <Pressable
-      style={({ pressed }) => [styles.action, pressed && styles.actionPressed, disabled && styles.disabled]}
+      style={styles.actionWrap}
+      onPressIn={() => springTo(0.94)}
+      onPressOut={() => springTo(1)}
       onPress={onPress}
       disabled={disabled}
     >
-      <Text style={styles.actionText}>{label}</Text>
+      <Animated.View style={[styles.action, disabled && styles.disabled, { transform: [{ scale }] }]}>
+        <Text style={styles.actionText}>{label}</Text>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -200,15 +291,14 @@ const shadowCard = Platform.select({
 });
 
 const styles = StyleSheet.create({
-  room: { flex: 1, backgroundColor: WALL },
-  wall: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: WALL },
+  room: { flex: 1, backgroundColor: WALL_TOP },
+  wall: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   floor: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
     height: '46%',
-    backgroundColor: FLOOR,
     borderTopLeftRadius: 36,
     borderTopRightRadius: 36,
   },
@@ -236,7 +326,6 @@ const styles = StyleSheet.create({
     maxWidth: '92%',
     backgroundColor: CARD,
     borderRadius: 22,
-    borderBottomLeftRadius: 22,
     paddingVertical: 14,
     paddingHorizontal: 18,
     ...(shadowCard as object),
@@ -262,8 +351,8 @@ const styles = StyleSheet.create({
     width: 300,
     height: 64,
     borderRadius: 150,
-    backgroundColor: '#E0CFa8',
-    opacity: 0.5,
+    backgroundColor: '#DCC9A0',
+    opacity: 0.45,
   },
   shadow: {
     position: 'absolute',
@@ -274,6 +363,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#4A3B2A',
     opacity: 0.13,
   },
+  heartLayer: { position: 'absolute', bottom: 190, alignItems: 'center' },
+  heart: { position: 'absolute', fontSize: 24, color: '#D46A5A' },
   chip: {
     position: 'absolute',
     bottom: -6,
@@ -326,15 +417,14 @@ const styles = StyleSheet.create({
   sendText: { color: '#FBF6EA', fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
   actionsRow: { flexDirection: 'row', gap: 10 },
+  actionWrap: { flex: 1 },
   action: {
-    flex: 1,
     backgroundColor: CARD,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
     ...(shadowCard as object),
   },
-  actionPressed: { backgroundColor: '#F1E6CC', transform: [{ scale: 0.97 }] },
   pressed: { transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },
   actionText: { fontWeight: '800', color: INK, fontSize: 15, letterSpacing: 0.4 },

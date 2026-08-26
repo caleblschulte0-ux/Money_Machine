@@ -4,15 +4,19 @@
  * assets/barkly/concept/barkly-concept.png). This is the default renderer:
  * it looks exactly like the character because it IS the character.
  *
- * Liveliness comes from pose selection per state plus whole-image motion
- * (breathe, bounce, tilt, talk-bob, sway). Per-part animation (jaw, ears,
- * blinks) arrives with the rigged production asset — see
- * assets/barkly/README.md for the state-render request spec.
+ * Motion design: everything is spring- or sine-based so nothing snaps.
+ *  - entrance pop on mount
+ *  - continuous breathe + slow idle drift
+ *  - true crossfade between poses (two stacked images), with a scale settle
+ *  - one-shot squash-and-stretch pop on emotional beats
+ *  - talk-bob with a slight nod while speaking
+ *  - excited bounce with squash on landing, sway when the tail would wag
+ *  - floating, staggered z's while asleep
  *
  * Implements BarklyRenderProps (src/animation/renderer.ts).
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { BarklyRenderProps } from '../animation/renderer';
 import { BarklyState, BodyAction } from '../barkly/types';
@@ -26,7 +30,6 @@ const RENDERS = {
 
 type Pose = keyof typeof RENDERS;
 
-/** Which render carries each state. */
 function poseFor(state: BarklyState): Pose {
   switch (state) {
     case 'playing':
@@ -42,7 +45,6 @@ function poseFor(state: BarklyState): Pose {
   }
 }
 
-/** Display size per pose so the closeup doesn't dwarf the full-body shots. */
 const POSE_SIZE: Record<Pose, { width: number; height: number }> = {
   front: { width: 244, height: 305 },
   side: { width: 280, height: 313 },
@@ -50,18 +52,22 @@ const POSE_SIZE: Record<Pose, { width: number; height: number }> = {
   face: { width: 210, height: 170 },
 };
 
+/** States that get a one-shot squash-and-stretch pop when entered. */
+const POP_STATES: BarklyState[] = ['happy', 'excited', 'playing', 'eating', 'annoyed'];
+
+/** Continuous 0→1→0 sine-feel loop while `active`. */
 function useLoop(active: boolean, duration: number): Animated.Value {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!active) {
       v.stopAnimation();
-      Animated.timing(v, { toValue: 0, duration: 160, useNativeDriver: true }).start();
+      Animated.timing(v, { toValue: 0, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
       return;
     }
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(v, { toValue: 1, duration, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(v, { toValue: 0, duration, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(v, { toValue: 1, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     );
     loop.start();
@@ -70,81 +76,164 @@ function useLoop(active: boolean, duration: number): Animated.Value {
   return v;
 }
 
+/** Floating, staggered sleep z's. */
+function SleepZs() {
+  const drift = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(drift, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [drift]);
+
+  const zs = [
+    { size: 14, delayRange: [0, 0.55] as const, x: 0 },
+    { size: 18, delayRange: [0.2, 0.75] as const, x: 14 },
+    { size: 23, delayRange: [0.4, 0.95] as const, x: 26 },
+  ];
+  return (
+    <View style={styles.zzzWrap} pointerEvents="none">
+      {zs.map((z, i) => {
+        const rise = drift.interpolate({ inputRange: [0, 1], outputRange: [6, -14 - i * 6] });
+        const fade = drift.interpolate({
+          inputRange: [0, z.delayRange[0], z.delayRange[1], 1],
+          outputRange: [0, 0.15, 0.85, 0],
+        });
+        return (
+          <Animated.Text
+            key={i}
+            style={[styles.zzz, { fontSize: z.size, left: z.x, opacity: fade, transform: [{ translateY: rise }] }]}
+          >
+            z
+          </Animated.Text>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function BarklyPhotoView({ state, actions }: BarklyRenderProps) {
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
   const pose = poseFor(state);
   const size = POSE_SIZE[pose];
 
-  const breathe = useLoop(true, asleep ? 1600 : 2400);
-  const bob = useLoop(has('MOUTH_MOVE'), 160);       // talk rhythm
-  const bounce = useLoop(has('EXCITED'), 260);
-  const sway = useLoop(has('TAIL_WAG'), 300);        // happy rocking
-  const look = useLoop(has('LOOK_LEFT') || has('LOOK_RIGHT'), 900);
+  // --- continuous loops ---
+  const breathe = useLoop(true, asleep ? 1700 : 2300);
+  const drift = useLoop(true, 3600); // slow ambient lean so idle never freezes
+  const bob = useLoop(has('MOUTH_MOVE'), 170);
+  const bounce = useLoop(has('EXCITED'), 270);
+  const sway = useLoop(has('TAIL_WAG'), 340);
+  const look = useLoop(has('LOOK_LEFT') || has('LOOK_RIGHT'), 950);
+
+  // --- springs ---
+  const enter = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(enter, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }).start();
+  }, [enter]);
 
   const tilt = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(tilt, {
+    Animated.spring(tilt, {
       toValue: has('HEAD_TILT') ? 1 : 0,
-      duration: 380,
-      easing: Easing.out(Easing.back(1.6)),
+      friction: 5,
+      tension: 90,
       useNativeDriver: true,
     }).start();
   }, [actions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Quick fade-in whenever the pose changes so cuts read as intentional.
-  const fade = useRef(new Animated.Value(1)).current;
-  const prevPose = useRef(pose);
+  // One-shot squash-and-stretch when an emotional beat lands.
+  const squash = useRef(new Animated.Value(0)).current;
+  const prevState = useRef(state);
   useEffect(() => {
-    if (prevPose.current !== pose) {
-      prevPose.current = pose;
-      fade.setValue(0.25);
-      Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    if (prevState.current !== state && POP_STATES.includes(state)) {
+      squash.setValue(0);
+      Animated.sequence([
+        Animated.timing(squash, { toValue: 1, duration: 110, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.spring(squash, { toValue: 0, friction: 4, tension: 120, useNativeDriver: true }),
+      ]).start();
     }
-  }, [pose, fade]);
+    prevState.current = state;
+  }, [state, squash]);
 
-  const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, asleep ? 1.028 : 1.012] });
+  // --- pose crossfade: keep the old render on screen while the new fades in ---
+  const [shown, setShown] = useState<{ current: Pose; prev: Pose | null }>({ current: pose, prev: null });
+  const cross = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (pose === shown.current) return;
+    setShown({ current: pose, prev: shown.current });
+    cross.setValue(0);
+    Animated.spring(cross, { toValue: 1, friction: 8, tension: 90, useNativeDriver: true }).start(({ finished }) => {
+      if (finished) setShown((s) => ({ ...s, prev: null }));
+    });
+  }, [pose]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- derived transforms ---
+  const breatheScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, asleep ? 1.026 : 1.012] });
+  const driftRotate = drift.interpolate({ inputRange: [0, 1], outputRange: ['-0.7deg', '0.7deg'] });
   const talkBob = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
-  const bounceLift = bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -18] });
-  const swayRotate = sway.interpolate({ inputRange: [0, 1], outputRange: ['-1.6deg', '1.6deg'] });
+  const talkNod = bob.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '1.1deg'] });
+  const bounceLift = bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -20] });
+  const bounceSquash = bounce.interpolate({ inputRange: [0, 0.15, 1], outputRange: [1, 0.965, 1.02] });
+  const swayRotate = sway.interpolate({ inputRange: [0, 1], outputRange: ['-1.8deg', '1.8deg'] });
   const tiltRotate = tilt.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-6deg'] });
   const lookShift = look.interpolate({
     inputRange: [0, 1],
     outputRange: has('LOOK_LEFT') && has('LOOK_RIGHT') ? [-8, 8] : has('LOOK_LEFT') ? [0, -10] : [0, 10],
   });
+  const enterScale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
+  const squashX = squash.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] });
+  const squashY = squash.interpolate({ inputRange: [0, 1], outputRange: [1, 0.93] });
+  const crossIn = cross.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const crossOut = cross.interpolate({ inputRange: [0, 0.65, 1], outputRange: [1, 0, 0] });
+  const crossScale = cross.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
   const sleepDroop = asleep ? '2deg' : '0deg';
+
+  const prevSize = shown.prev ? POSE_SIZE[shown.prev] : size;
 
   return (
     <View style={styles.stage}>
       <Animated.View
         style={{
-          opacity: fade,
+          opacity: enter,
           transform: [
             { translateY: Animated.add(talkBob, bounceLift) },
             { translateX: lookShift },
-            { scale: breatheScale },
+            { rotate: driftRotate },
             { rotate: swayRotate },
             { rotate: tiltRotate },
+            { rotate: talkNod },
             { rotate: sleepDroop },
+            { scale: Animated.multiply(breatheScale, enterScale) },
+            { scaleX: Animated.multiply(squashX, bounceSquash) },
+            { scaleY: squashY },
           ],
         }}
       >
-        <Image source={RENDERS[pose]} style={{ width: size.width, height: size.height }} resizeMode="contain" />
+        <View style={{ width: size.width, height: size.height, alignItems: 'center', justifyContent: 'flex-end' }}>
+          {shown.prev && (
+            <Animated.Image
+              source={RENDERS[shown.prev]}
+              style={{ position: 'absolute', bottom: 0, width: prevSize.width, height: prevSize.height, opacity: crossOut }}
+              resizeMode="contain"
+            />
+          )}
+          <Animated.Image
+            source={RENDERS[shown.current]}
+            style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
+            resizeMode="contain"
+          />
+        </View>
       </Animated.View>
 
-      {asleep && (
-        <View style={styles.zzzWrap} pointerEvents="none">
-          <Text style={[styles.zzz, { fontSize: 15, opacity: 0.5 }]}>z</Text>
-          <Text style={[styles.zzz, { fontSize: 19, opacity: 0.7, marginLeft: 10, marginBottom: 10 }]}>z</Text>
-          <Text style={[styles.zzz, { fontSize: 24, marginLeft: 10, marginBottom: 22 }]}>z</Text>
-        </View>
-      )}
+      {asleep && <SleepZs />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   stage: { width: 300, height: 322, alignItems: 'center', justifyContent: 'flex-end' },
-  zzzWrap: { position: 'absolute', top: 4, right: 30, flexDirection: 'row', alignItems: 'flex-end' },
-  zzz: { color: '#A08F6F', fontWeight: '800' },
+  zzzWrap: { position: 'absolute', top: 8, right: 34, width: 60, height: 60 },
+  zzz: { position: 'absolute', bottom: 0, color: '#A08F6F', fontWeight: '800' },
 });
