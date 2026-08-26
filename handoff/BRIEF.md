@@ -32,12 +32,45 @@ different things this technology can do.
 | # | Film | Lead capability the overlay demonstrates |
 |---|---|---|
 | 1 | THROUGH THE GLASS | live recognition and in-place labelling — the glasses know what you are looking at |
-| 2 | ONE AFTERNOON | historical reconstruction — buildings and people that are gone, standing where they stood |
+| 2 | WHAT STOOD HERE | historical reconstruction — buildings that are gone, standing where they stood |
 | 3 | THEN AND NOW | time control — the same view across eras, under the viewer's control |
 | 4 | DEEP TIME | subsurface and data visualisation — what is inside and under the rock |
 | 5 | THE TOUR | multi-user and personalised — several people in one place, each seeing something different |
 
 If two films end up demonstrating the same thing, one of them is wrong.
+
+Film 2 was called ONE AFTERNOON in the first version of this table. That title
+already belongs to a different, locked film, and two unrelated pieces of work
+answering to one name in one handoff folder is a mess nobody needs. Renamed.
+
+### Build state — 2026-08-26
+
+| # | Film | State |
+|---|---|---|
+| 1 | THROUGH THE GLASS | **BUILT** — 32.000s, delivered to the operator |
+| 2 | WHAT STOOD HERE | **BUILT** — 33.5s, three reconstructions assembled in place |
+| 3 | THEN AND NOW | not started — the only one still outstanding |
+| 4 | DEEP TIME | **BUILT** — 33.5s, depth model + material classes + subsurface aperture |
+| 5 | THE TOUR | **BUILT** — 33.5s, two profiles in one frame plus a handed-over mark |
+
+### Where the AI imagery comes from
+
+ChatGPT's set is still unreachable: `ORI_AI_HANDOFF` is not link-shared, a
+plain fetch of a Drive URL returns a sign-in page, `share_file` errors on the
+"anyone" grant, and `download_file_content` returns 3.5-5.2 million base64
+characters. **One operator action unblocks it — set that folder to "Anyone
+with the link — Viewer."**
+
+Rather than hold two of five films at zero over a permission, the
+reconstruction imagery in Film 2 is generated locally (`ai/genimg.py`) and put
+through `ai/holo.py`, which turns any source image into luminous structure.
+That split matters for more than convenience: asking a generator for
+"holographic wireframe on black" was tried first and it returned four
+cinematic renders that ignored every word of the instruction. **The rule that
+this material must never pass as a photograph is now enforced by a transform
+we control, not by a sentence a model is free to ignore.** ChatGPT's images
+should replace these the moment they are reachable; `holo.py` treats them
+identically.
 
 ## Standing constraints — these predate the direction change and survive it
 
@@ -102,9 +135,36 @@ shipping it**, and either retime the segment or write down why the move is
 deliberate. What is not allowed is shipping a flagged segment without either.
 
 Measured on the already-locked films, which is how we know this is real:
-Film C flagged 6 of 9 segments — `r05` drifts **76%** of frame width, `sys`
-74%, `r04` 57%. Film B flagged 4 of 13, including `b09` whose tail motion is
-**15.5x** its middle. Both films are locked. Both have the defect.
+Film C flags 6 of 9 segments — `r05` drifts **77%** of frame width, `sys` 74%,
+`r04` 58%. Film B flags 3 of 13, including `b08` at 21% drift and `b09` whose
+tail motion is **15.5x** its middle. Both films are locked. Both have the
+defect.
+
+**Correction, 2026-08-26 — the gate itself had a bug, and these are the
+re-measured numbers.** `cv2.phaseCorrelate` multiplies BOTH of its input
+arrays by the window **in place**, and `shotqc.py` uses every frame twice — as
+`b` in one pair and as `a` in the next — so each frame arrived at its second
+use already tapered and was tapered again. Verified directly: a 64x64 float32
+array comes back with a max delta of 254 levels after one call. Fixed by
+passing copies.
+
+The published numbers were re-measured against the old code kept as an oracle
+(`regate.py`). The error was small but not nothing, and one verdict changed:
+Film B's `b00` JOLT was a **false positive the bug created** — peak 32.8 px
+became 7.5 px once the frames stopped being double-windowed. So Film B is 3 of
+13, not 4. Every other flag holds, Film C is unchanged at 6 of 9, and Demo 1's
+five plates are still clean, so Demo 1 stands as delivered.
+
+A gate that measures wrong is worse than no gate, because everyone downstream
+believes it. This is on the record rather than quietly corrected.
+
+**And it works.** Two of the three films built on 2026-08-26 were REFUSED on
+their first render and had to be retimed: Demo 2's opening reconstruction beat
+at 8.5s has a tail of 2.93 px/frame against a 0.58 middle, and Demo 5's
+closing beat at 4.5s has 3.97 against 0.95. Both are exactly the fault the
+operator described. Both plates are clean at other durations, which is the
+whole point — the tail has to be measured at the duration you are actually
+cutting.
 
 ## Gate 2 — the checkpoint. Every round, before anything else.
 
