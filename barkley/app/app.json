@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Barkley",
+    "slug": "barkley",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Barkley listens only while you hold the TALK button, so he can hear what you say to him.",
+        "NSSpeechRecognitionUsageDescription": "Turns what you say into text on this device so Barkley can understand you."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F6EDD9",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-audio",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Barkley listens only while you hold the TALK button.",
+          "speechRecognitionPermission": "Turns your speech into text on this device so Barkley can understand you."
+        }
+      ]
+    ]
+  }
+}
