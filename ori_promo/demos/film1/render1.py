@@ -13,6 +13,7 @@ import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont
 from spec1 import BEATS, ANCHORS, W, H, FPS
 import arlabel as AR
+import labelkit as LK
 import shotqc
 import shotnorm as SN
 from native_check import check as native_check
@@ -75,28 +76,10 @@ def read_frames(p):
 SHADOW = (5, 8, 10)
 
 
-def draw_label(d, anchor, box_xy, title, sub, k):
-    """A label has to READ. The first pass drew 40px grey on a bright sky and
-    it was invisible at any size the operator would actually watch it."""
-    ax, ay = anchor; bx, by = box_xy
-    al = int(248*k)
-    sh = int(150*k)
-    d.line([(ax+2, ay+2), (bx+2, by+2)], fill=SHADOW + (sh,), width=4)
-    d.line([(ax, ay), (bx, by)], fill=CYAN + (int(228*k),), width=3)
-    d.ellipse([ax-9, ay-9, ax+9, ay+9], outline=SHADOW + (sh,), width=5)
-    d.ellipse([ax-8, ay-8, ax+8, ay+8], outline=CYAN + (al,), width=3)
-    f1, f2 = inter(56), mono(31)
-    tw = d.textlength(title, font=f1)
-    x0 = bx if bx >= ax else bx - tw
-    d.rectangle([x0-20, by-56, x0-15, by+30], fill=SHADOW + (sh,))
-    d.rectangle([x0-22, by-58, x0-17, by+28], fill=CYAN + (al,))
-    d.text((x0+3, by+3), title, font=f1, fill=SHADOW + (sh,), anchor="ls")
-    d.text((x0, by), title, font=f1, fill=INK + (al,), anchor="ls")
-    x = x0
-    for ch in sub:
-        d.text((x+2, by+44), ch, font=f2, fill=SHADOW + (int(190*k),), anchor="ls")
-        d.text((x, by+42), ch, font=f2, fill=INK + (int(248*k),), anchor="ls")
-        x += d.textlength(ch, font=f2) + 4.0
+def draw_label(d, anchor, box_xy, title, sub, k, dim=1.0):
+    """Delegates to the shared labelkit -- see that module for why the label
+    grew. r67's cold-viewer review of THIS film is the reason it exists."""
+    LK.block(d, anchor, box_xy, title, sub, k, CYAN, W, H, dim=dim)
 
 
 def compose(beat, dur, frames):
@@ -104,6 +87,11 @@ def compose(beat, dur, frames):
     tracks = []
     for (pt, title, sub, t0, off) in ANCHORS.get(beat, []):
         tracks.append((AR.track_anchor(gray, pt), title, sub, t0, off))
+    # r67: "increase hierarchy between the active and already-locked object".
+    # On the two-anchor beat the label that locked FIRST steps back once the
+    # second one arrives, so the beat reads as one thing being recognised
+    # while another is already held -- not as two labels shouting.
+    last_t0 = max([tr[3] for tr in tracks], default=0.0)
     out = []
     for i, f in enumerate(frames):
         t = i/FPS
@@ -117,14 +105,21 @@ def compose(beat, dur, frames):
             if lt < 0:                                   # reticle converging
                 AR.reticle(d, (cx, cy), (t - (t0-0.55)), dur=0.55, a=250)
                 continue
-            if lt < 1.15:                                # scan, from the pixels
+            # the outline HOLDS at full strength before it eases off -- it is
+            # the evidence the machine saw the thing, and it was previously
+            # gone before a cold viewer could register it
+            w = LK.outline_weight(lt)
+            if w > 0:
                 m = AR.scan_outline(f, (cx, cy))
-                a = (np.clip(np.sin(min(lt, 1.15)/1.15*np.pi), 0, 1) * (m/255.0))[..., None]
+                a = (w * (m/255.0))[..., None]
                 base = base*(1-a) + np.array(CYAN[::-1], np.float32)*a
             AR.reticle(d, (cx, cy), 1.0, dur=0.55, a=210)
             k = AR.ease(min(1.0, (lt - 0.35)/0.5))
             if k > 0:
-                draw_label(d, (cx, cy), (cx+off[0], cy+off[1]), title, sub, k)
+                dim = 1.0
+                if len(tracks) > 1 and t0 < last_t0 and t >= last_t0:
+                    dim = 0.62
+                draw_label(d, (cx, cy), (cx+off[0], cy+off[1]), title, sub, k, dim)
         # a quiet frame cue so the viewer reads this as a WEARER'S VIEW
         cue = AR.ease(min(1.0, t/0.8)) * (1.0 if t < dur-0.5 else max(0.0,(dur-t)/0.5))
         c = int(120*cue)

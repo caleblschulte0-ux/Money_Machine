@@ -72,7 +72,7 @@ HANDOFF = {
 # the game away.
 LABELS = {
  "b1": ((1560, 620), "TWO VIEWERS", "ONE PLACE",        4.0, (-620, -240)),
- "b2": ((700, 620),  "SHARED MARK", "A HANDS IT TO B",  4.9, (300, -220)),
+ "b2": ((700, 860),  "SHARED MARK", "A HANDS IT TO B",  5.4, (300, -170)),
  "b3": ((900, 900),  "SAME ANCHOR", "DIFFERENT DEPTH",  4.3, (330, -300)),
  "b4": ((860, 820),  "THE TOUR",    "TWO CONNECTED",    2.7, (330, -300)),
 }

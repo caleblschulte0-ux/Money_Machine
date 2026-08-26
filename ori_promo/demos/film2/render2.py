@@ -35,6 +35,7 @@ import cv2
 from PIL import Image, ImageDraw, ImageFont
 from spec2 import BEATS, PLACES, LABELS, PICK, W, H, FPS
 import arlabel as AR
+import labelkit as LK
 import holo
 import shotqc
 import shotnorm as SN
@@ -117,30 +118,10 @@ def seg(t, a, b):
 
 
 def draw_label(d, anchor, box_xy, title, sub, k, col=CYAN):
-    ax, ay = anchor
-    bx, by = box_xy
-    al = int(248 * k)
-    s = int(150 * k)
-    f1, f2 = inter(56), mono(31)
-    tw = d.textlength(title, font=f1)
-    x0 = bx if bx >= ax else bx - tw
-    # clamp: a label that runs off the frame is a caption that lies by being
-    # cropped, which is exactly how "BELOW THE SURFACE" once read "SURFACE"
-    x0 = min(max(x0, 78.0), W - 78.0 - tw)
-    by = min(max(by, 130.0), H - 150.0)
-    d.line([(ax + 2, ay + 2), (bx + 2, by + 2)], fill=SHADOW + (s,), width=4)
-    d.line([(ax, ay), (bx, by)], fill=col + (int(228 * k),), width=3)
-    d.ellipse([ax - 9, ay - 9, ax + 9, ay + 9], outline=SHADOW + (s,), width=5)
-    d.ellipse([ax - 8, ay - 8, ax + 8, ay + 8], outline=col + (al,), width=3)
-    d.rectangle([x0 - 20, by - 56, x0 - 15, by + 30], fill=SHADOW + (s,))
-    d.rectangle([x0 - 22, by - 58, x0 - 17, by + 28], fill=col + (al,))
-    d.text((x0 + 3, by + 3), title, font=f1, fill=SHADOW + (s,), anchor="ls")
-    d.text((x0, by), title, font=f1, fill=INK + (al,), anchor="ls")
-    x = x0
-    for ch in sub:
-        d.text((x + 2, by + 44), ch, font=f2, fill=SHADOW + (int(190 * k),), anchor="ls")
-        d.text((x, by + 42), ch, font=f2, fill=INK + (int(248 * k),), anchor="ls")
-        x += d.textlength(ch, font=f2) + 4.0
+    """Delegates to the shared labelkit. r67's cold-viewer review found
+    every film's label too quiet against sky, water and pale stone; the
+    fix lives in one place so the five demos cannot drift apart."""
+    LK.block(d, anchor, box_xy, title, sub, k, col, W, H)
 
 
 def frame_cue(d, t, dur):
@@ -193,11 +174,13 @@ def compose(beat, dur, frames):
                 # the reticle converging on the ground IS the recognition
                 AR.reticle(d, (gx, gy), t - (t0 - 0.85), dur=0.55, a=248)
                 continue
-            if -0.30 <= lt < 0.55:
+            w = LK.outline_weight(lt)
+            if w > 0:
                 # the scan outline is Canny taken from the plate itself, so it
-                # hugs the real bank rather than a shape somebody drew
+                # hugs the real bank rather than a shape somebody drew, and it
+                # HOLDS at full strength -- r67: it is the evidence the machine
+                # saw the object, the label is merely the answer
                 m = AR.scan_outline(f, (gx, gy), r=240)
-                w = np.clip(np.sin(np.clip((lt + 0.30) / 0.85, 0, 1) * np.pi), 0, 1)
                 a = (w * (m / 255.0))[..., None]
                 base = base * (1 - a) + np.array(CYAN[::-1], np.float32) * a
             if lt >= 0:

@@ -42,13 +42,21 @@ def end_card(d_sec):
         f = base * (1.0 - 0.55*k)
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
+        # r67: "the small secondary lines are faint... 'VISUAL INTENTION ONLY'
+        # is responsible, though it should remain readable at delivery size."
+        # Both secondary lines are bigger and brighter, and the honesty tag
+        # gets a plate behind it -- a disclosure nobody can read is not one.
         a = int(252*min(1.0, max(0.0, (t-0.15)/0.45)))
         if a > 0:
-            track(d, (W//2, 520), "OPEN RANGE INTERACTIVE", inter(58), INK+(a,), 11.0, "ms")
-            track(d, (W//2, 584), "FALLS PARK, SIOUX FALLS", mono(28), DIM+(int(a*0.85),), 6.0, "ms")
-        a2 = int(240*min(1.0, max(0.0, (t-0.9)/0.45)))
+            track(d, (W//2, 520), "OPEN RANGE INTERACTIVE", inter(64), INK+(a,), 11.0, "ms")
+            track(d, (W//2, 596), "FALLS PARK, SIOUX FALLS", mono(34), INK+(int(a*0.92),), 6.0, "ms")
+        a2 = int(248*min(1.0, max(0.0, (t-0.9)/0.45)))
         if a2 > 0:
-            track(d, (W//2, 672), "VISUAL INTENTION ONLY", mono(26), CYAN+(a2,), 6.0, "ms")
+            s2 = "VISUAL INTENTION ONLY"
+            f2 = mono(32)
+            w2 = sum(d.textlength(c, font=f2) for c in s2) + 6.0*(len(s2)-1)
+            d.rectangle([W//2-w2/2-24, 652, W//2+w2/2+24, 700], fill=(6, 9, 12, int(150*a2/248)))
+            track(d, (W//2, 686), s2, f2, CYAN+(a2,), 6.0, "ms")
         ov = np.array(img).astype(np.float32); al = ov[..., 3:4]/255.0
         f = f*(1-al) + ov[..., :3][..., ::-1]*al
         enc.stdin.write(np.clip(f, 0, 255).astype(np.uint8).tobytes())

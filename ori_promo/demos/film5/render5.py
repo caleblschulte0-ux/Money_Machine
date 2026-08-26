@@ -29,6 +29,7 @@ import cv2
 from PIL import Image, ImageDraw, ImageFont
 from spec5 import BEATS, MARKS, HANDOFF, LABELS, PROFILES, W, H, FPS
 import arlabel as AR
+import labelkit as LK
 import shotqc
 import shotnorm as SN
 from native_check import check as native_check
@@ -106,34 +107,10 @@ def seg(t, a, b):
 
 
 def tag_label(d, anchor, box_xy, title, sub, k, col, tag=None):
-    """A label that says WHOSE it is. The tag chip is the whole point: without
-    it two colours are a colour scheme, and with it they are two people."""
-    ax, ay = anchor
-    bx, by = box_xy
-    al = int(248 * k)
-    s = int(150 * k)
-    f1, f2, f3 = inter(52), mono(29), mono(25)
-    tw = d.textlength(title, font=f1)
-    x0 = bx if bx >= ax else bx - tw
-    x0 = min(max(x0, 86.0), W - 86.0 - tw)
-    by = min(max(by, 156.0), H - 160.0)
-    d.line([(ax + 2, ay + 2), (bx + 2, by + 2)], fill=SHADOW + (s,), width=4)
-    d.line([(ax, ay), (bx, by)], fill=col + (int(228 * k),), width=3)
-    d.ellipse([ax - 9, ay - 9, ax + 9, ay + 9], outline=SHADOW + (s,), width=5)
-    d.ellipse([ax - 8, ay - 8, ax + 8, ay + 8], outline=col + (al,), width=3)
-    if tag:
-        cw = d.textlength(tag, font=f3) + 26
-        d.rectangle([x0 - 2, by - 96, x0 + cw, by - 62], fill=col + (int(228 * k),))
-        d.text((x0 + 13, by - 79), tag, font=f3, fill=(8, 11, 14, al), anchor="lm")
-    d.rectangle([x0 - 20, by - 52, x0 - 15, by + 28], fill=SHADOW + (s,))
-    d.rectangle([x0 - 22, by - 54, x0 - 17, by + 26], fill=col + (al,))
-    d.text((x0 + 3, by + 3), title, font=f1, fill=SHADOW + (s,), anchor="ls")
-    d.text((x0, by), title, font=f1, fill=INK + (al,), anchor="ls")
-    x = x0
-    for ch in sub:
-        d.text((x + 2, by + 42), ch, font=f2, fill=SHADOW + (int(190 * k),), anchor="ls")
-        d.text((x, by + 40), ch, font=f2, fill=col + (int(248 * k),), anchor="ls")
-        x += d.textlength(ch, font=f2) + 4.0
+    """Delegates to the shared labelkit. r67's cold-viewer review found
+    every film's label too quiet against sky, water and pale stone; the
+    fix lives in one place so the five demos cannot drift apart."""
+    LK.block(d, anchor, box_xy, title, sub, k, col, W, H, tag=tag)
 
 
 def pin(d, xy, k, col, size=22):
@@ -163,19 +140,31 @@ def arc_point(p0, p1, u, lift=0.34):
 
 
 def roster(d, k, names):
-    """Who is connected. Bottom left, small, with a plate behind it."""
-    if k <= 0:
+    """Who is connected. Bottom left, small, with a plate behind it.
+
+    The first version used a fixed 430px plate and right-aligned the count
+    inside it, so with two viewers the names ran straight through the count
+    and it rendered as "VIEWER A  VIEWERNECTED". Everything is measured now
+    and the plate is sized to what it actually has to hold.
+    """
+    if k <= 0 or not names:
         return
     f = mono(26)
+    fc = mono(22)
     y = H - 96
-    d.rectangle([70, y - 30, 70 + 430, y + 34], fill=(6, 9, 12, int(150 * k)))
-    x = 92
-    for i, (tag, col) in enumerate(names):
-        d.ellipse([x, y - 9, x + 18, y + 9], fill=col + (int(245 * k),))
-        d.text((x + 30, y), tag, font=f, fill=INK + (int(242 * k),), anchor="lm")
-        x += 30 + d.textlength(tag, font=f) + 40
-    d.text((70 + 430 - 18, y), f"{len(names)} CONNECTED", font=mono(22),
-           fill=INK + (int(190 * k),), anchor="rm")
+    count = f"{len(names)} CONNECTED"
+    DOT, GAPD, GAPI, PAD = 18, 12, 34, 22
+    wid = sum(DOT + GAPD + d.textlength(t, font=f) + GAPI for t, _ in names)
+    wid += d.textlength(count, font=fc) + 16
+    x0 = 70
+    d.rectangle([x0, y - 30, x0 + wid + PAD * 2, y + 34], fill=(6, 9, 12, int(150 * k)))
+    x = x0 + PAD
+    for tag, col in names:
+        d.ellipse([x, y - 9, x + DOT, y + 9], fill=col + (int(245 * k),))
+        x += DOT + GAPD
+        d.text((x, y), tag, font=f, fill=INK + (int(242 * k),), anchor="lm")
+        x += d.textlength(tag, font=f) + GAPI
+    d.text((x, y), count, font=fc, fill=INK + (int(190 * k),), anchor="lm")
 
 
 def frame_cue(d, t, dur):
@@ -218,11 +207,12 @@ def compose(beat, dur, frames):
             if lt < 0:
                 AR.reticle(d, (cx, cy), t - (t0 - 0.55), dur=0.55, col=col, a=248)
                 continue
-            if lt < 1.05:
+            w = LK.outline_weight(lt)
+            if w > 0:
                 # the scan comes from the plate's own pixels, in the viewer's
                 # colour, so even the recognition is attributed to a person
                 m = AR.scan_outline(f, (cx, cy), r=190)
-                a = (np.clip(np.sin(min(lt, 1.05) / 1.05 * np.pi), 0, 1) * (m / 255.0))[..., None]
+                a = (w * (m / 255.0))[..., None]
                 base = base * (1 - a) + np.array(col[::-1], np.float32) * a
             AR.reticle(d, (cx, cy), 1.0, dur=0.55, col=col, a=200)
             k = ease(min(1.0, (lt - 0.30) / 0.5))

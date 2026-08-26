@@ -34,10 +34,15 @@ BEATS = [
 # Anchors verified by marking them on the plate and looking -- see
 # anchorcheck.jpg. Every one sits ON its object, not in the sky above it,
 # which is where the first pass put them.
+# OFFSETS PULLED IN, r67. The review's exact diagnosis was distance, not just
+# weight: "In still frames it can read like an editorial callout rather than
+# tracked AR because the type is visually detached from the ruin." Every
+# vertical offset is roughly halved so the label sits ON its object's
+# territory instead of floating in the sky above it.
 ANCHORS = {
- "b1": [((600, 400),  "QUEEN BEE MILL",  "STRUCTURE / RUIN", 1.1, (330, -190))],
- "b2": [((1150, 430), "SIOUX FALLS",     "SKYLINE",          1.3, (-350, -180))],
- "b3": [((350, 870),  "BIG SIOUX RIVER", "WATER",            1.0, (250, -260)),
-        ((1150, 900), "SIOUX QUARTZITE", "SURFACE",          2.8, (180, -190))],
- "b4": [((800, 760),  "SIOUX QUARTZITE", "SURFACE",          0.6, (240, -230))],
+ "b1": [((600, 400),  "QUEEN BEE MILL",  "STRUCTURE / RUIN", 1.1, (250, -110))],
+ "b2": [((1150, 430), "SIOUX FALLS",     "SKYLINE",          1.3, (-300, -110))],
+ "b3": [((350, 870),  "BIG SIOUX RIVER", "WATER",            1.0, (210, -140)),
+        ((1150, 900), "SIOUX QUARTZITE", "SURFACE",          2.8, (160, -120))],
+ "b4": [((800, 760),  "SIOUX QUARTZITE", "SURFACE",          0.6, (200, -130))],
 }
