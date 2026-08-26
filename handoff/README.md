@@ -43,6 +43,16 @@ can), so its side is unchanged.
   - `garmentguard.py` + `apply_guard.py` — Film B's r52 chroma-continuity
     guard and the render driver. The guard runs AFTER the finish; the
     docstrings carry the measurement that settled that order.
+  - `garmentmask.py`, `seedsB.py`, `apply_cont.py` — r54's tracked garment
+    mask, its per-shot seeds, and the pass that applies the bounded Lab
+    continuity offset. The mask is the conjunction of a flow-tracked gate,
+    the dark-and-chromatic class, and a per-shot Lab-neighbourhood test;
+    the docstring records the two simpler approaches that failed first and
+    the measurements that killed them.
+  - `controlsB.py`, `tableB.py`, `contsim.py` — the control sets that prove
+    the pass touched nothing it was not allowed to, the source/guard/
+    continuity table, and the simulator that chooses a target on eight
+    frames instead of on a 35-minute render.
   - `proofB.py` — the same-pixel proof. Samples are frozen PIXEL SETS taken
     from the untouched plate, not rectangles, because the subject is ~80px
     wide in some shots and any usable rectangle catches shirt print and skin.
