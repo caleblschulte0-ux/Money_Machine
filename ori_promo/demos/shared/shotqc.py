@@ -76,7 +76,27 @@ def motion(clip, tin, dur, raw="raw"):
 
 def flags(m):
     f = []
-    if m["ratio"] >= 1.8 and m["tail"] >= 2.0: f.append("TAIL")
+    # TAIL threshold 2.0 -> 1.2 at r72.
+    #
+    # The AND is right and stays: ratio alone is useless on a near-static
+    # plate (IMG_6805 @4.5 runs ratio 3.4 with a tail of 0.51, because the
+    # MIDDLE is 0.13 -- nothing is wrong with that shot), and absolute tail
+    # alone would refuse a shot that legitimately moves throughout (IMG_6791
+    # @4.5, tail 1.35, ratio 1.14).
+    #
+    # But 2.0 was set high enough to miss the fault it exists to catch.
+    # Demo 3's b1 shipped at 7.5s with tail 1.55, ratio 3.74, drift 10.2% --
+    # a camera accelerating away from the shot at 3.7x its own middle -- and
+    # this function called it PASS. The operator caught it by eye and
+    # described it precisely: "it doesn't cut off in time, and then you just
+    # need panning away weirdly". A gate a human out-performs on the thing it
+    # was built for is set wrong.
+    #
+    # 1.2 is calibrated against that shot, not against making the current cuts
+    # pass. Re-measured over all 24 cuts in the five films, it flags exactly
+    # one: the offender. Both cuts of IMG_6806 @35.0 were retimed to 6.0s in
+    # the same change and now read tail 0.30, ratio 0.54.
+    if m["ratio"] >= 1.8 and m["tail"] >= 1.2: f.append("TAIL")
     if m["drift"] >= 0.18: f.append("DRIFT")
     if m["peak"] >= 14.0:  f.append("JOLT")
     return f

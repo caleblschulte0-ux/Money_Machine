@@ -15,15 +15,29 @@
 # stand behind an ordering and we cannot stand behind a year. Same rule as
 # every other film: AR content is a visualisation, never evidence.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 33.5
+TOTAL = 32.0
 
 BEATS = [
  ("open", "6790", 12.0,  0.0, 3.5, "at the rail, reading the panel. the scale comes up"),
- ("b1",   "6806", 35.0,  3.5, 7.5, "the seam sweeps the mill site: past left, present right"),
- ("b2",   "6804", 15.0, 11.0, 7.0, "the viewer NUDGES it -- back, forward, back. control, not playback"),
- ("b3",   "6796", 48.0, 18.0, 8.5, "at the marker, the seam opens the other way"),
- ("b4",   "6805", 60.0, 26.5, 4.5, "released. the seam runs off the frame and it is now again"),
- ("end",   None,   0.0, 31.0, 2.5, "held from b4's last frame"),
+ # r72 TAIL RETIME. b1 was 7.5s and it was the worst cut in the set for the
+ # exact fault the operator named -- "it doesn't cut off in time, and then
+ # you just need panning away weirdly". Measured across durations, IMG_6806
+ # @35.0 has a knee just past 6.0s:
+ #     dur   mid  tail  ratio  drift
+ #     5.0  0.64  0.16   0.25   4.0%
+ #     6.0  0.55  0.30   0.54   4.5%
+ #     6.5  0.42  0.55   1.31   5.1%
+ #     7.0  0.41  0.85   2.05   7.9%
+ #     7.5  0.41  1.55   3.74  10.2%
+ # At 6.0s the shot is SETTLING into the cut (tail below mid); at 7.5s it is
+ # accelerating away at 3.7x the middle. Nothing is lost by the trim: the
+ # seam sweep completes at 5.6s (see SEAM below), so all 1.5s removed were
+ # dead hold on a drifting camera. 33.5s -> 32.0s.
+ ("b1",   "6806", 35.0,  3.5, 6.0, "the seam sweeps the mill site: past left, present right"),
+ ("b2",   "6804", 15.0,  9.5, 7.0, "the viewer NUDGES it -- back, forward, back. control, not playback"),
+ ("b3",   "6796", 48.0, 16.5, 8.5, "at the marker, the seam opens the other way"),
+ ("b4",   "6805", 60.0, 25.0, 4.5, "released. the seam runs off the frame and it is now again"),
+ ("end",   None,   0.0, 29.5, 2.5, "held from b4's last frame"),
 ]
 
 # beat: (image key, centre_xy, height_px) -- what stands on the PAST side of

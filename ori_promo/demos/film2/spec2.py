@@ -17,7 +17,7 @@
 # Plates are all NEW to this project: none of the five is used by Demo 1 or
 # Demo 4, and all five pass shotqc with no TAIL, DRIFT or JOLT flag.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 33.5
+TOTAL = 32.5
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
@@ -27,11 +27,18 @@ BEATS = [
  # the operator described, "it doesn't cut off in time and then you just get
  # panning away weirdly". At 7.0 it holds. The second went to b3, which is
  # the steadiest plate in the film (mid 0.11, drift 0.7% over 8.5s).
- ("b1",   "6806", 35.0,  3.5, 7.0, "THE MILL: scanned, then assembled above the falls"),
- ("b2",   "6806", 15.0, 10.5, 7.0, "THE MILL WORKS: a structure back on the left bank"),
- ("b3",   "6804", 15.0, 17.5, 8.5, "THE CROSSING: a bridge built back over the shelf"),
- ("b4",   "6796", 48.0, 26.0, 5.0, "back at the marker -- and now it is standing behind him"),
- ("end",   None,   0.0, 31.0, 2.5, "held from b4's last frame"),
+ # r72: 7.0 -> 6.0. The r69 retime above stopped one step short. Sweeping the
+ # same plate across durations shows the knee sits just past 6.0s, not 7.0:
+ #   5.0 tail 0.16 ratio 0.25 drift 4.0%   |  6.5 tail 0.55 ratio 1.31 drift 5.1%
+ #   6.0 tail 0.30 ratio 0.54 drift 4.5%   |  7.0 tail 0.85 ratio 2.05 drift 7.9%
+ # At 7.0 the camera is already leaving -- milder than the 8.5 the gate
+ # refused, same direction. A1 finishes assembling at 4.1s (see PLACES), so
+ # 6.0 still holds the finished reconstruction for 1.9s. 33.5s -> 32.5s.
+ ("b1",   "6806", 35.0,  3.5, 6.0, "THE MILL: scanned, then assembled above the falls"),
+ ("b2",   "6806", 15.0,  9.5, 7.0, "THE MILL WORKS: a structure back on the left bank"),
+ ("b3",   "6804", 15.0, 16.5, 8.5, "THE CROSSING: a bridge built back over the shelf"),
+ ("b4",   "6796", 48.0, 25.0, 5.0, "back at the marker -- and now it is standing behind him"),
+ ("end",   None,   0.0, 30.0, 2.5, "held from b4's last frame"),
 ]
 
 # beat: (image key, centre_xy, height_px, appear_t, build_seconds)
