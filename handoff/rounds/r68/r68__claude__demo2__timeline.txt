@@ -1,0 +1,44 @@
+DEMO 2 — "WHAT STOOD HERE"
+Lead capability: historical reconstruction
+Running time 33.500s   1920x1080 @ 30 fps
+
+This file is GENERATED from the spec the renderer reads. It cannot
+drift from the film the way a hand-typed timeline can, and did.
+
+SHOT LIST — film time, source, and the footage-gate reading at the
+EXACT duration cut. A flagged plate is not cut, full stop.
+
+     0.0–  3.5  open   IMG_6796 @  30.0s
+                       he stops at the marker. the system comes up. nothing claimed
+                       gate: mot 0.38 tail 0.11 ratio 0.28 drift 4.1% peak 4.4  PASS
+     3.5– 10.5  b1     IMG_6806 @  35.0s
+                       THE MILL: scanned, then assembled above the falls
+                       gate: mot 0.41 tail 0.85 ratio 2.05 drift 7.9% peak 5.8  PASS
+    10.5– 17.5  b2     IMG_6806 @  15.0s
+                       THE MILL WORKS: a structure back on the left bank
+                       gate: mot 0.15 tail 0.08 ratio 0.54 drift 0.6% peak 0.8  PASS
+    17.5– 26.0  b3     IMG_6804 @  15.0s
+                       THE CROSSING: a bridge built back over the shelf
+                       gate: mot 0.11 tail 0.10 ratio 0.67 drift 0.7% peak 0.5  PASS
+    26.0– 31.0  b4     IMG_6796 @  48.0s
+                       back at the marker -- and now it is standing behind him
+                       gate: mot 0.23 tail 0.44 ratio 1.93 drift 1.0% peak 1.5  PASS
+    31.0– 33.5  end    (held)            held from b4's last frame
+
+ON-SCREEN COPY, VERBATIM
+
+     6.1s  "QUEEN BEE MILL" / "RECONSTRUCTION"
+    12.6s  "THE MILL WORKS" / "RECONSTRUCTION"
+    19.7s  "AN EARLIER CROSSING" / "RECONSTRUCTION"
+    27.6s  "IT STOOD HERE" / "RECONSTRUCTION"
+     5.4s  reconstruction A1 assembles over 2.2s at (560, 400), 460px tall
+    11.9s  reconstruction A2 assembles over 1.6s at (300, 540), 360px tall
+    19.0s  reconstruction A10 assembles over 1.8s at (1240, 640), 300px tall
+    26.7s  reconstruction A1 assembles over 1.2s at (470, 430), 430px tall
+
+STANDING DISCLOSURE
+  Any beat carrying a reconstruction shows, for its whole length:
+    VISUAL INTENTION ONLY — RECONSTRUCTION, NOT A PHOTOGRAPH
+  and the end card carries VISUAL INTENTION ONLY.
+  No date, no measurement, no attribution is asserted anywhere in
+  any of the five films.

@@ -1,0 +1,47 @@
+DEMO 5 — "THE TOUR"
+Lead capability: two viewers, different content, one shared mark
+Running time 33.500s   1920x1080 @ 30 fps
+
+This file is GENERATED from the spec the renderer reads. It cannot
+drift from the film the way a hand-typed timeline can, and did.
+
+SHOT LIST — film time, source, and the footage-gate reading at the
+EXACT duration cut. A flagged plate is not cut, full stop.
+
+     0.0–  3.5  open   IMG_6805 @  60.0s
+                       the place, both of them in it. nothing on screen yet
+                       gate: mot 0.11 tail 0.10 ratio 0.67 drift 0.5% peak 0.3  PASS
+     3.5– 11.0  b1     IMG_6806 @  15.0s
+                       TWO PROFILES: A reads stone, B reads structure
+                       gate: mot 0.14 tail 0.08 ratio 0.54 drift 0.6% peak 0.8  PASS
+    11.0– 18.0  b2     IMG_6805 @  20.0s
+                       THE PIN: A marks it, it crosses, B receives it
+                       gate: mot 0.05 tail 0.07 ratio 0.44 drift 0.1% peak 0.1  PASS
+    18.0– 26.5  b3     IMG_6804 @  15.0s
+                       SAME ANCHOR, DIFFERENT DEPTH: one rock, two readings
+                       gate: mot 0.11 tail 0.10 ratio 0.67 drift 0.7% peak 0.5  PASS
+    26.5– 31.0  b4     IMG_6805 @  44.0s
+                       both viewers' marks standing in one frame
+                       gate: mot 0.13 tail 0.18 ratio 1.18 drift 0.8% peak 0.4  PASS
+    31.0– 33.5  end    (held)            held from b4's last frame
+
+ON-SCREEN COPY, VERBATIM
+
+     7.5s  "TWO VIEWERS" / "ONE PLACE"
+    16.4s  "SHARED MARK" / "A HANDS IT TO B"
+    22.3s  "SAME ANCHOR" / "DIFFERENT DEPTH"
+    29.2s  "THE TOUR" / "TWO CONNECTED"
+     4.7s  [A] "SIOUX QUARTZITE" / "SURFACE"
+     5.9s  [B] "MILL HOUSE" / "STRUCTURE"
+    12.0s  [A] "THE FALLS" / "WATER"
+    19.1s  [A] "QUARTZITE" / "SURFACE"
+    20.6s  [B] "THE CROSSING" / "STRUCTURE"
+    27.3s  [A] "THE FALLS" / "WATER"
+    28.4s  [B] "THE RUINS" / "STRUCTURE"
+
+STANDING DISCLOSURE
+  Any beat carrying a reconstruction shows, for its whole length:
+    VISUAL INTENTION ONLY — RECONSTRUCTION, NOT A PHOTOGRAPH
+  and the end card carries VISUAL INTENTION ONLY.
+  No date, no measurement, no attribution is asserted anywhere in
+  any of the five films.

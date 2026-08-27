@@ -123,11 +123,20 @@ def past_grade(bgr):
     return np.clip(out, 0, 255)
 
 
-def seam_masks(x_frac, soft=26.0):
-    """-> (left_weight, edge_weight), both HxWx1 float32."""
+def seam_masks(x_frac, soft=11.0):
+    """-> (left_weight, edge_weight), both HxWx1 float32.
+
+    soft WAS 26, which with a 0.85 white add made a ~52px blown white bar
+    that read as a light leak rather than as a boundary being dragged. An
+    optical edge is thin. It is also suppressed entirely when the seam sits
+    outside the frame: at x_frac -0.05 the soft falloff still bled a white
+    band down the left edge of a shot that was supposed to show nothing yet.
+    """
     x = x_frac * W
-    left = np.clip((x - _X) / soft + 0.5, 0, 1)
+    left = np.clip((x - _X) / (soft * 2.2) + 0.5, 0, 1)
     edge = np.clip(1.0 - np.abs(_X - x) / soft, 0, 1)
+    if x_frac < -0.005 or x_frac > 1.005:
+        edge = edge * 0.0
     return left, edge
 
 
@@ -224,9 +233,9 @@ def compose(beat, dur, frames):
                 base = base * (1 - left) + built * left
             # the seam's own edge: a bright line with a chromatic split, so it
             # reads as an optical boundary being dragged and not as a mask
-            base = base + np.float32([210, 235, 250]) * edge * 0.85
+            base = base + np.float32([210, 235, 250]) * edge * 0.55
             shift = np.roll(base, 3, axis=1)
-            base = base * (1 - edge * 0.35) + shift * (edge * 0.35)
+            base = base * (1 - edge * 0.28) + shift * (edge * 0.28)
             base = np.clip(base, 0, 255)
 
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))

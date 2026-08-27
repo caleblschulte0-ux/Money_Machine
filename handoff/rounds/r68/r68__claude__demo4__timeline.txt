@@ -1,0 +1,40 @@
+DEMO 4 — "DEEP TIME"
+Lead capability: depth, material classes and what is under the ground
+Running time 33.500s   1920x1080 @ 30 fps
+
+This file is GENERATED from the spec the renderer reads. It cannot
+drift from the film the way a hand-typed timeline can, and did.
+
+SHOT LIST — film time, source, and the footage-gate reading at the
+EXACT duration cut. A flagged plate is not cut, full stop.
+
+     0.0–  3.5  open   IMG_6798 @   6.5s
+                       the walkway. system comes up, nothing claimed yet
+                       gate: mot 0.02 tail 0.02 ratio 0.16 drift 0.1% peak 0.2  PASS
+     3.5– 11.0  b1     IMG_6791 @   4.5s
+                       TERRAIN: depth shells, then a range sweep near->far
+                       gate: mot 1.30 tail 1.29 ratio 0.99 drift 14.5% peak 1.8  PASS
+    11.0– 18.0  b2     IMG_6805 @   4.5s
+                       MATERIALS: sky / vegetation / stone, outlined and named
+                       gate: mot 0.18 tail 1.03 ratio 5.81 drift 3.5% peak 1.8  PASS
+    18.0– 26.0  b3     IMG_6794 @  10.5s
+                       SUBSURFACE: an aperture opens in the stone
+                       gate: mot 0.12 tail 0.12 ratio 0.82 drift 0.7% peak 1.6  PASS
+    26.0– 31.0  b4     IMG_6796 @   8.5s
+                       ALL THREE AT ONCE -- the density beat
+                       gate: mot 0.27 tail 0.26 ratio 0.96 drift 1.3% peak 0.9  PASS
+    31.0– 33.5  end    (held)            held from b4's last frame
+
+ON-SCREEN COPY, VERBATIM
+
+     5.0s  "TERRAIN MODEL" / "DEPTH / ONE CAMERA"
+    12.2s  "MATERIAL CLASSES" / "SKY / PLANT / STONE"
+    19.6s  "BELOW THE SURFACE" / "VISUALISATION"
+    27.0s  "ONE PASS" / "RANGE + CLASS + CORE"
+
+STANDING DISCLOSURE
+  Any beat carrying a reconstruction shows, for its whole length:
+    VISUAL INTENTION ONLY — RECONSTRUCTION, NOT A PHOTOGRAPH
+  and the end card carries VISUAL INTENTION ONLY.
+  No date, no measurement, no attribution is asserted anywhere in
+  any of the five films.
