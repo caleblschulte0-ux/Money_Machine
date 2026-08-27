@@ -28,6 +28,20 @@ export const PLAY_LINES = [
   'Zoomies engaged. This was your idea, remember that.',
 ];
 
+/** With a ball. He has exactly one plan and it is a good plan. */
+export const BALL_LINES = [
+  'Throw it. Throw it throw it throw it. THROW IT.',
+  "The ball. My ball. Send it. I'll be right back.",
+  'Ball. Air. Me. In that order. Go.',
+];
+
+/** With a rope. This is not a game to him, it is a dispute. */
+export const TUG_LINES = [
+  "It's my rope. Pull. Go on. See what happens.",
+  'Grip it. I have been training. In my head. Constantly.',
+  "You're going to lose this and I want you to know that now.",
+];
+
 export const TIRED_LINES = [
   "No. Nap. We can do the running thing later.",
   "I've got maybe four percent battery. Ask the couch.",

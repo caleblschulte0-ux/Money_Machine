@@ -10,6 +10,8 @@ import {
   grantEverything,
   grantLevel,
   buy,
+  isPlaced,
+  placedIn,
   claimDaily,
   consume,
   earn,
@@ -172,16 +174,21 @@ describe('the store', () => {
 });
 
 describe('unlocks are places, not percentages', () => {
-  it('home is always open; the park and town are earned', () => {
-    expect(areaUnlocked('home', 0)).toBe(true);
-    expect(areaUnlocked('park', 0)).toBe(false);
-    expect(areaUnlocked('town', 0)).toBe(false);
-    expect(areaUnlocked('park', LEVEL_XP[1])).toBe(true);
-    expect(areaUnlocked('town', LEVEL_XP[3])).toBe(true);
+  it('everything that already exists is OPEN from the start', () => {
+    // Gating the park and the town meant a new player's first session was one
+    // room and a shop full of grey rows. That is a wall, not a hook.
+    for (const area of ['home', 'park', 'town']) {
+      expect(areaUnlocked(area, 0)).toBe(true);
+    }
+  });
+
+  it('the thing to work towards is somewhere NEW', () => {
+    expect(areaUnlocked('beach', 0)).toBe(false);
+    expect(areaUnlocked('beach', LEVEL_XP[3])).toBe(true);
   });
 
   it('an unknown area is not accidentally locked', () => {
-    expect(areaUnlocked('beach', 0)).toBe(true);
+    expect(areaUnlocked('somewhere-nobody-built-yet', 0)).toBe(true);
   });
 
   it('every level-up has something to show for it', () => {
@@ -193,15 +200,15 @@ describe('unlocks are places, not percentages', () => {
   });
 
   it('what unlocks is announced in his voice', () => {
-    const park = unlockedAt(2).find((u) => u.id === 'park');
-    expect(park?.line).toMatch(/BIRDS/);
+    const beach = unlockedAt(4).find((u) => u.id === 'beach');
+    expect(beach?.line).toMatch(/BEACH/);
   });
 });
 
 describe('dev mode never locks the builder out of his own app', () => {
   it('opens every area regardless of level', () => {
-    expect(areaUnlocked('town', 0)).toBe(false);
-    expect(areaUnlocked('town', 0, true)).toBe(true);
+    expect(areaUnlocked('beach', 0)).toBe(false);
+    expect(areaUnlocked('beach', 0, true)).toBe(true);
   });
 
   it('unlocks the whole shelf', () => {
@@ -249,5 +256,60 @@ describe('dev mode never locks the builder out of his own app', () => {
     expect(w.owned).toContain('collar_gold');
     expect(w.pantry.treat_biscuit).toBe(9); // not clobbered down to the default
     expect(w.pantry.treat_steak).toBeGreaterThan(0);
+  });
+});
+
+describe('the house holds more than one thing at a time', () => {
+  it('a bed and a rug and a window are not alternatives to each other', () => {
+    let w = rich();
+    for (const id of ['home_bed', 'home_rug', 'home_window']) {
+      w = buy(w, id).wallet;
+    }
+    expect(placedIn(w, 'home').map((i) => i.id).sort()).toEqual([
+      'home_bed',
+      'home_rug',
+      'home_window',
+    ]);
+  });
+
+  it('but he still wears exactly ONE collar', () => {
+    let w = buy(rich(), 'collar_red').wallet;
+    w = buy(w, 'collar_blue').wallet;
+    expect(placedIn(w, 'collar').map((i) => i.id)).toEqual(['collar_blue']);
+  });
+
+  it('a house item can be put away and put back', () => {
+    let w = buy(rich(), 'home_rug').wallet;
+    expect(isPlaced(w, 'home_rug')).toBe(true);
+    w = equip(w, 'home_rug');
+    expect(isPlaced(w, 'home_rug')).toBe(false); // still owned, just not out
+    expect(w.owned).toContain('home_rug');
+    w = equip(w, 'home_rug');
+    expect(isPlaced(w, 'home_rug')).toBe(true);
+  });
+
+  it('a bought house item is OUT immediately - nobody buys a rug to roll it up', () => {
+    const w = buy(rich(), 'home_bed').wallet;
+    expect(isPlaced(w, 'home_bed')).toBe(true);
+  });
+
+  it('give-me-everything also puts something ON him', () => {
+    // Owning a ball he is not holding leaves the play button behaving exactly
+    // as it did before, which makes the grant look broken.
+    const w = grantEverything(freshWallet());
+    expect(equippedItem(w, 'toy')).toBeDefined();
+    expect(equippedItem(w, 'collar')).toBeDefined();
+  });
+
+  it('does not swap out something he is already wearing', () => {
+    const chosen = buy(rich(), 'collar_blue').wallet;
+    expect(equippedItem(grantEverything(chosen), 'collar')?.id).toBe('collar_blue');
+  });
+
+  it('give-me-everything furnishes the whole room', () => {
+    const w = grantEverything(freshWallet());
+    expect(placedIn(w, 'home').length).toBe(
+      STORE.filter((i) => i.slot === 'home').length,
+    );
   });
 });

@@ -13,6 +13,8 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
+  isMultiSlot,
+  isPlaced,
   ItemSlot,
   levelProgress,
   StoreItem,
@@ -71,8 +73,16 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
       return;
     }
     if (owned && !item.consumable) {
+      const wasOut = isPlaced(wallet, item.id);
       onEquip(item.id);
-      setFlash(`${item.name} on.`);
+      // The house toggles in and out; a collar just goes on.
+      setFlash(
+        isMultiSlot(item.slot)
+          ? wasOut
+            ? `${item.name} put away.`
+            : `${item.name} is out.`
+          : `${item.name} on.`,
+      );
       return;
     }
     setFlash(onBuy(item.id).line);
@@ -110,7 +120,8 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                   {rows.map(({ item, locked }) => {
                     const owned = wallet.owned.includes(item.id);
                     const held = wallet.pantry[item.id] ?? 0;
-                    const worn = wallet.equipped[item.slot] === item.id;
+                    const worn = isPlaced(wallet, item.id);
+                    const multi = isMultiSlot(item.slot);
                     const afford = wallet.coins >= item.price;
                     return (
                       <Pressable
@@ -138,9 +149,9 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                         {locked ? (
                           <Text style={styles.lockTag}>Lv {item.level}</Text>
                         ) : worn ? (
-                          <Text style={styles.wornTag}>worn</Text>
+                          <Text style={styles.wornTag}>{multi ? 'out' : 'worn'}</Text>
                         ) : owned && !item.consumable ? (
-                          <Text style={styles.ownedTag}>owned</Text>
+                          <Text style={styles.ownedTag}>{multi ? 'put away' : 'owned'}</Text>
                         ) : (
                           <Text style={[styles.price, !afford && !devMode && styles.priceShort]}>
                             {devMode ? 'free' : `${item.price}c`}
@@ -153,6 +164,10 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
               );
             })}
 
+            <Text style={styles.note}>
+              His place holds everything at once — a bed AND a rug AND a window. Collars and toys
+              are one at a time. Tap anything you own to put it on, out, or away.
+            </Text>
             <Text style={styles.note}>
               Coins come from looking after him — feeding him when he is hungry, playing when he has
               the energy, fetch, digging, and turning up each day. There is nothing to buy with real

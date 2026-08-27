@@ -1,14 +1,22 @@
 /**
  * Barkly's voice, server side.
  *
- * Same reasoning as the dialogue route: the ElevenLabs key is a real secret,
- * so it lives here and the app asks for audio by text. The app never sees a
- * voice id it can change either — WHICH voice is Barkly is a product decision
- * held in server config, not a field a modified client can swap for someone
- * else's cloned voice.
+ * TWO ENGINES, and the default one costs nothing:
  *
- * Billing here is per CHARACTER, not per token, so it has its own caps. A
- * runaway loop reciting the dictionary is the failure mode to stop.
+ * - LOCAL (default). `tts/say.py` shells out to neural TTS that needs no
+ *   account at all — edge-tts, with Kokoro and Gemini behind it. This is the
+ *   same ladder Shorts-pipeline already runs in production, reused rather
+ *   than reinvented, and it is why Barkly has a real voice today instead of
+ *   the device's screen-reader.
+ * - ELEVENLABS. A paid, higher-fidelity option for a designed voice later.
+ *
+ * Either way the app sends TEXT and gets AUDIO, and never names a voice —
+ * WHICH voice is Barkly is a product decision held in server config, not a
+ * field a modified client can swap for someone else's.
+ *
+ * ElevenLabs bills per CHARACTER, so the caps below exist for it. They apply
+ * to the local engine too, which costs nothing, purely so a runaway loop
+ * cannot pin a CPU forever.
  */
 
 import { ValidationError } from './validate.mjs';
@@ -25,8 +33,19 @@ function stripControlChars(s) {
 
 export function loadVoiceConfig(env = process.env) {
   const apiKey = env.ELEVENLABS_API_KEY || '';
+  // Explicit choice wins; otherwise ElevenLabs only when it is fully
+  // configured, and the free local engine the rest of the time.
+  const requested = (env.BARKLY_VOICE_ENGINE || '').toLowerCase();
+  const elevenReady = Boolean(apiKey && env.BARKLY_VOICE_ID);
+  const engine = requested || (elevenReady ? 'elevenlabs' : 'local');
   return {
-    enabled: Boolean(apiKey && env.BARKLY_VOICE_ID),
+    engine,
+    // The local engine needs nothing, so the voice is on by default.
+    enabled: engine === 'local' ? true : elevenReady,
+    /** Path to the synthesis helper and how long to let it run. */
+    localBin: env.BARKLY_TTS_PYTHON || 'python3',
+    localScript: env.BARKLY_TTS_SCRIPT || '',
+    localVoice: env.BARKLY_TTS_VOICE || 'en-GB-RyanNeural',
     apiKey,
     voiceId: env.BARKLY_VOICE_ID || '',
     modelId: env.BARKLY_VOICE_MODEL || 'eleven_turbo_v2_5',
@@ -58,6 +77,68 @@ export function validateVoiceRequest(raw, voice) {
     throw new ValidationError(`text too long (max ${voice.maxChars} chars)`, 413);
   }
   return { text };
+}
+
+/**
+ * Run the local synthesis helper.
+ *
+ * The line goes in on STDIN, never in argv — it is a child's sentence, and
+ * stdin has no quoting rules to get wrong. Audio comes back on stdout as
+ * binary; the helper keeps every diagnostic on stderr so it cannot corrupt
+ * the stream.
+ *
+ * @returns {Promise<{ ok: boolean, audio?: Buffer, error?: string }>}
+ */
+export function synthesizeLocal(text, voice, { spawnImpl, scriptPath } = {}) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawnImpl(voice.localBin, [scriptPath || voice.localScript], {
+        shell: false,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, BARKLY_TTS_VOICE: voice.localVoice },
+      });
+    } catch (err) {
+      return resolve({ ok: false, error: String(err?.message || err) });
+    }
+
+    const chunks = [];
+    let err = '';
+    let done = false;
+    const finish = (result) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const timer = setTimeout(() => {
+      try {
+        child.kill('SIGKILL');
+      } catch {
+        /* already gone */
+      }
+      finish({ ok: false, error: 'timeout' });
+    }, voice.timeoutMs);
+
+    child.stdout?.on('data', (c) => chunks.push(c));
+    child.stderr?.on('data', (c) => {
+      err += c;
+    });
+    child.on('error', (e) => finish({ ok: false, error: String(e?.message || e) }));
+    child.on('close', (code) => {
+      const audio = Buffer.concat(chunks);
+      if (code !== 0 || audio.length === 0) {
+        return finish({ ok: false, error: err.slice(0, 200) || `exit ${code}` });
+      }
+      finish({ ok: true, audio });
+    });
+
+    try {
+      child.stdin.end(text);
+    } catch (e) {
+      finish({ ok: false, error: String(e?.message || e) });
+    }
+  });
 }
 
 export function voiceUrl(voice) {

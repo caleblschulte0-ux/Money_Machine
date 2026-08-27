@@ -27,7 +27,15 @@ import { AREA_UNLOCKS, levelProgress } from '../game/progression';
 import BarklyView from './BarklyView';
 import SettingsSheet from './SettingsSheet';
 import { Ball, FoodBowl } from './StageProps';
-import { DogBedBack, DogBedFront, HomeScene, NightOverlay, ParkScene, TownScene } from './scenes/Scenes';
+import {
+  BeachScene,
+  DogBedBack,
+  DogBedFront,
+  HomeScene,
+  NightOverlay,
+  ParkScene,
+  TownScene,
+} from './scenes/Scenes';
 import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import { NPCS, NpcId } from '../world/npcs';
@@ -208,6 +216,8 @@ export default function BarklyRoom() {
   const [typed, setTyped] = useState('');
   const [heartBurst, setHeartBurst] = useState(0);
   const [fetching, setFetching] = useState(false);
+  const [tugging, setTugging] = useState(false);
+  const tugX = useRef(new Animated.Value(0)).current;
   const [digging, setDigging] = useState(false);
   const [variant, setVariant] = useState<'runRight' | 'carryLeft' | null>(null);
 
@@ -247,8 +257,8 @@ export default function BarklyRoom() {
   // --- fetch minigame (park): throw → chase → return ---
   const chaseX = useRef(new Animated.Value(0)).current;
   const ballFlight = useRef(new Animated.Value(0)).current;
-  const runFetch = () => {
-    if (fetching || busy || digging) return;
+  /** Throw, chase, grab, carry back. Used by fetch AND by ball play. */
+  const runChase = (onDone: () => void) => {
     setFetching(true);
     ballFlight.setValue(0);
     Animated.timing(ballFlight, { toValue: 1, duration: 620, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
@@ -263,10 +273,42 @@ export default function BarklyRoom() {
       setVariant('carryLeft'); // ball in mouth, heading home
       Animated.timing(chaseX, { toValue: 0, duration: 560, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start(() => {
         setVariant(null);
-        barkly.play(); // stats + the playing beat
         setFetching(false);
+        onDone();
       });
     });
+  };
+
+  /**
+   * The play button. It used to speak one line wherever you stood, which felt
+   * like a button that did nothing. Now it runs the routine for the toy he is
+   * actually holding: a ball gets thrown and chased, a rope gets a tug, and
+   * with nothing he improvises. Fetch at the park is the same chase.
+   */
+  const runPlay = async () => {
+    if (fetching || busy || digging) return;
+    const routine = await barkly.play();
+    if (routine === 'ball') {
+      runChase(() => {});
+    } else if (routine === 'tug') {
+      setTugging(true);
+      Animated.sequence([
+        ...Array.from({ length: 5 }, (_, i) =>
+          Animated.timing(tugX, {
+            toValue: i % 2 === 0 ? -14 : 12,
+            duration: 150,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ),
+        Animated.spring(tugX, { toValue: 0, friction: 5, useNativeDriver: true }),
+      ]).start(() => setTugging(false));
+    }
+  };
+
+  const runFetch = () => {
+    if (fetching || busy || digging) return;
+    runChase(() => void barkly.play());
   };
   const ballX = ballFlight.interpolate({ inputRange: [0, 1], outputRange: [0, 118] });
   const ballY = ballFlight.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -120, -8] });
@@ -304,7 +346,16 @@ export default function BarklyRoom() {
     ? `“${partialTranscript}”`
     : lastExchange?.barklyText;
 
-  const playLabel = location === 'park' ? (fetching ? 'fetching…' : 'fetch') : 'play';
+  const playLabel =
+    location === 'park'
+      ? fetching
+        ? 'fetching…'
+        : 'fetch'
+      : fetching || tugging
+        ? 'playing…'
+        : barkly.toy
+          ? barkly.toy.name.toLowerCase().split(' ').slice(-1)[0] // "ball", "rope"
+          : 'play';
 
   // Storage has not answered yet. Rendering the room now and swapping to the
   // meeting a frame later is worse than one quiet beat of nothing.
@@ -325,9 +376,10 @@ export default function BarklyRoom() {
     <View style={styles.room}>
       {/* the world */}
       <Animated.View style={[styles.sceneLayer, { opacity: sceneFade }]}>
-        {location === 'home' && <HomeScene hour={hour} />}
+        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} />}
         {location === 'park' && <ParkScene hour={hour} />}
         {location === 'town' && <TownScene hour={hour} />}
+        {location === 'beach' && <BeachScene hour={hour} />}
       </Animated.View>
       {asleep && <NightOverlay />}
 
@@ -452,7 +504,7 @@ export default function BarklyRoom() {
         {/* the stage: Barkly + neighbors + props */}
         <View style={styles.stageArea}>
           {!asleep && <View style={styles.shadow} />}
-          {asleep && location === 'home' && <DogBedBack />}
+          {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
           {npcsHere.map((id) => (
             <NpcDog
               key={id}
@@ -464,7 +516,7 @@ export default function BarklyRoom() {
           <Animated.View
             style={{
               transform: [
-                { translateX: Animated.add(chaseX, walkX) },
+                { translateX: Animated.add(Animated.add(chaseX, walkX), tugX) },
                 { translateY: hopY },
                 { rotate: digRotate.interpolate({ inputRange: [-1, 1], outputRange: ['-7deg', '7deg'] }) },
               ],
@@ -480,7 +532,7 @@ export default function BarklyRoom() {
             </Pressable>
           </Animated.View>
           {/* After the dog, so the near rim overlaps his lower body. */}
-          {asleep && location === 'home' && <DogBedFront />}
+          {asleep && location === 'home' && <DogBedFront upgraded={barkly.hasHome('home_bed')} />}
           {fetching && variant !== 'carryLeft' && (
             <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
               <Svg width={30} height={30} viewBox="0 0 30 30">
@@ -505,6 +557,31 @@ export default function BarklyRoom() {
               <Text style={styles.thoughtText}>{barkly.thought}</Text>
               <View style={styles.thoughtDot1} />
               <View style={styles.thoughtDot2} />
+            </View>
+          )}
+          {/* A bought toy is IN THE ROOM, not a line on a receipt. It sits
+              off to the side when idle and vanishes while it is in play. */}
+          {barkly.toy && !fetching && !asleep && (
+            <View style={styles.toyProp} pointerEvents="none">
+              {barkly.toy.id === 'toy_ball' ? (
+                <Svg width={34} height={34} viewBox="0 0 30 30">
+                  <Circle cx={15} cy={15} r={13} fill="#B3402E" />
+                  <Path d="M3 13 C11 9 19 9 27 13" stroke="#8E2F20" strokeWidth={2.5} fill="none" />
+                  <Circle cx={10} cy={9} r={3.5} fill="#FFFFFF" opacity={0.35} />
+                </Svg>
+              ) : (
+                <Svg width={58} height={26} viewBox="0 0 58 26">
+                  <Path
+                    d="M8 13 q 10 -8 20 0 q 10 8 22 0"
+                    stroke="#C9A46A"
+                    strokeWidth={9}
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                  <Path d="M4 13 l -2 -6 M4 13 l -2 6 M54 13 l 2 -6 M54 13 l 2 6"
+                    stroke="#B08E58" strokeWidth={3} strokeLinecap="round" />
+                </Svg>
+              )}
             </View>
           )}
           {snapshot.state === 'eating' && <FoodBowl />}
@@ -558,7 +635,11 @@ export default function BarklyRoom() {
           )}
 
           <View style={styles.actionsRow}>
-            <ActionButton label={playLabel} onPress={location === 'park' ? runFetch : barkly.play} disabled={busy || fetching} />
+            <ActionButton
+              label={playLabel}
+              onPress={location === 'park' ? runFetch : runPlay}
+              disabled={busy || fetching || tugging}
+            />
             <ActionButton label="feed" onPress={barkly.feed} disabled={busy || fetching} />
             <ActionButton
               label={asleep ? 'wake' : 'sleep'}
@@ -662,6 +743,7 @@ const styles = StyleSheet.create({
   },
   gearDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INK_SOFT },
   headerButtons: { flexDirection: 'row', gap: 8 },
+  toyProp: { position: 'absolute', bottom: 16, right: 24 },
   walletTap: { flex: 1, marginHorizontal: 10 },
   tabLocked: { opacity: 0.5 },
   tabLock: { fontSize: 10, fontWeight: '800', color: '#9A8F7A', marginTop: 1 },

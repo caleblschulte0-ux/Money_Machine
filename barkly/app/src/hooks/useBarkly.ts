@@ -32,6 +32,8 @@ import {
   EarnKind,
   equip as equipItem,
   equippedItem,
+  isPlaced,
+  placedIn,
   freshWallet,
   grantCoins,
   grantEverything,
@@ -46,7 +48,16 @@ import {
   OnboardingState,
   openingLine,
 } from '../barkly/onboarding';
-import { FEED_LINES, FULL_LINES, PLAY_LINES, pickLine, TIRED_LINES, WAKE_LINES } from '../barkly/lines';
+import {
+  BALL_LINES,
+  FEED_LINES,
+  FULL_LINES,
+  PLAY_LINES,
+  pickLine,
+  TIRED_LINES,
+  TUG_LINES,
+  WAKE_LINES,
+} from '../barkly/lines';
 import { BarklyMemory, MemoryState } from '../barkly/memory';
 import {
   ambientActions,
@@ -76,6 +87,9 @@ const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
 const ONBOARDING_KEY = profileKey(DEFAULT_PROFILE, 'onboarding-v1');
 const WALLET_KEY = profileKey(DEFAULT_PROFILE, 'wallet-v1');
 const DEV_KEY = profileKey(DEFAULT_PROFILE, 'dev-v1');
+
+/** Which play routine ran, so the stage can animate the matching one. */
+export type PlayRoutine = 'ball' | 'tug' | 'none';
 
 export interface Exchange {
   userText: string;
@@ -112,6 +126,11 @@ export interface BarklyController {
   isUnlocked(area: string): boolean;
   /** Tint of the collar he is wearing, or null for the canon brown leather. */
   collarColor: string | null;
+  /** Home items currently out in the room — several at once, by design. */
+  placedHome: string[];
+  hasHome(itemId: string): boolean;
+  /** The toy he is holding, if any — it drives what "play" actually does. */
+  toy: { id: string; name: string; icon: string } | null;
   /** Every level gate open. Off by default; never fabricates progress. */
   devMode: boolean;
   setDevMode(on: boolean): void;
@@ -136,7 +155,7 @@ export interface BarklyController {
 
   /** All of these route through the one speaking lifecycle; they no-op while busy. */
   feed(): Promise<void>;
-  play(): Promise<void>;
+  play(): Promise<PlayRoutine>;
   sleepToggle(): Promise<void>;
   /** User tapped Barkly — a pet/stroke. */
   pet(): void;
@@ -195,6 +214,12 @@ export function useBarkly(): BarklyController {
    * or playing with an exhausted one pays nothing, because tapping a button
    * at a bored animal is not care.
    */
+  /** Whether he may go somewhere. The tab and the handler both ask this. */
+  const canGo = useCallback(
+    (area: string) => areaUnlocked(area, walletRef.current.xp, devRef.current),
+    [],
+  );
+
   const credit = useCallback((kind: EarnKind, useful = true) => {
     setWallet((w) => {
       const result = earn(w, kind, useful);
@@ -711,14 +736,15 @@ export function useBarkly(): BarklyController {
   );
 
   const goTo = useCallback((loc: LocationId) => {
-    // A locked place is a goal, not an error: he says why, and the level says
-    // how far off it is.
-    if (!areaUnlocked(loc, walletRef.current.xp)) return;
+    // ONE source of truth for "can he go there". This used to re-check
+    // without the dev flag, so in dev mode the tab rendered open and then
+    // silently refused to move him — the same soft-lock in a new disguise.
+    if (!canGo(loc)) return;
     setLocation(loc);
     setNpcBubble(null);
     setLastExchange(null); // conversations don't follow him down the street
     asyncStorageStore.set(LOCATION_KEY, loc).catch(() => {});
-  }, []);
+  }, [canGo]);
 
   const npcTalk = useCallback(
     (id: NpcId): boolean => {
@@ -781,14 +807,40 @@ export function useBarkly(): BarklyController {
     credit('feed', !full); // feeding a full dog is farming, not care
   }, [busy, credit, speak]);
 
-  const play = useCallback(async () => {
-    if (busy || isBusy(snapshotRef.current.state)) return;
+  /**
+   * Play, with whatever he actually owns.
+   *
+   * It used to be one canned line and a stat bump wherever you were, which
+   * read as a button that did nothing. Now it depends on the TOY: a ball is
+   * thrown and chased, a rope is a tug he intends to win, and with nothing at
+   * all he improvises and complains about it. The routine name goes back to
+   * the caller so the room can animate the right one.
+   */
+  const play = useCallback(async (): Promise<PlayRoutine> => {
+    if (busy || isBusy(snapshotRef.current.state)) return 'none';
     const tired = snapshotRef.current.stats.energy < 15;
-    await speak(pickLine(tired ? TIRED_LINES : PLAY_LINES), {
-      actions: tired ? ['SLEEP'] : ['MOUTH_MOVE', 'EXCITED'],
+    if (tired) {
+      await speak(pickLine(TIRED_LINES), { actions: ['SLEEP'], after: { type: 'PLAY' } });
+      credit('play', false);
+      return 'none';
+    }
+
+    const toy = equippedItem(walletRef.current, 'toy');
+    const routine: PlayRoutine =
+      toy?.id === 'toy_ball' ? 'ball' : toy?.id === 'toy_rope' ? 'tug' : 'none';
+    const line =
+      routine === 'ball'
+        ? pickLine(BALL_LINES)
+        : routine === 'tug'
+          ? pickLine(TUG_LINES)
+          : pickLine(PLAY_LINES);
+
+    await speak(line, {
+      actions: routine === 'tug' ? ['MOUTH_MOVE', 'HEAD_TILT'] : ['MOUTH_MOVE', 'EXCITED'],
       after: { type: 'PLAY' },
     });
-    credit('play', !tired);
+    credit('play', true);
+    return routine;
   }, [busy, credit, speak]);
 
   const sleepToggle = useCallback(async () => {
@@ -889,8 +941,14 @@ export function useBarkly(): BarklyController {
       setWallet(next);
       walletRef.current = next;
     },
-    isUnlocked: (area: string) => areaUnlocked(area, wallet.xp, devMode),
+    isUnlocked: canGo,
     collarColor: equippedItem(wallet, 'collar')?.color ?? null,
+    placedHome: placedIn(wallet, 'home').map((i) => i.id),
+    hasHome: (itemId: string) => isPlaced(wallet, itemId),
+    toy: (() => {
+      const t = equippedItem(wallet, 'toy');
+      return t ? { id: t.id, name: t.name, icon: t.icon } : null;
+    })(),
     devMode,
     setDevMode: setDevModeState,
     devGrantCoins: (n: number) => {

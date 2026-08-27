@@ -32,8 +32,15 @@ const SKY: Record<SkyBand, [string, string]> = {
 
 // ---------------------------------------------------------------- home
 
-export function HomeScene({ hour }: { hour: number }) {
+/**
+ * Home, plus whatever has been bought for it. `upgrades` is the set of placed
+ * home item ids — a bought rug is ON THE FLOOR, not a line in a receipt. They
+ * stack: bed and rug and window are not alternatives to each other.
+ */
+export function HomeScene({ hour, upgrades = [] }: { hour: number; upgrades?: string[] }) {
   const band = skyBand(hour);
+  const has = (id: string) => upgrades.includes(id);
+  const bigWindow = has('home_window');
   return (
     <View style={styles.fill} pointerEvents="none">
       {/* wall */}
@@ -49,8 +56,8 @@ export function HomeScene({ hour }: { hour: number }) {
       </View>
       {/* baseboard */}
       <View style={styles.baseboard} />
-      {/* window with live sky */}
-      <View style={styles.window}>
+      {/* window with live sky — bought bigger, if he owns the upgrade */}
+      <View style={[styles.window, bigWindow && styles.windowBig]}>
         <LinearGradient colors={SKY[band]} style={styles.windowSky}>
           {band === 'night' && (
             <Svg width="100%" height="100%">
@@ -78,6 +85,18 @@ export function HomeScene({ hour }: { hour: number }) {
       </View>
       {/* rug */}
       <View style={styles.homeRug} />
+
+      {/* A bought rug is a real rug, not a receipt line. */}
+      {has('home_rug') && (
+        <View style={styles.rugWrap}>
+          <Svg width="100%" height="100%" viewBox="0 0 300 76" preserveAspectRatio="none">
+            <Ellipse cx={150} cy={38} rx={148} ry={36} fill="#9C5B4A" />
+            <Ellipse cx={150} cy={38} rx={132} ry={29} fill="#B87860" />
+            <Ellipse cx={150} cy={38} rx={104} ry={21} fill="#D8A487" />
+            <Ellipse cx={150} cy={38} rx={72} ry={13} fill="#B87860" />
+          </Svg>
+        </View>
+      )}
     </View>
   );
 }
@@ -193,6 +212,57 @@ export function NightOverlay() {
 }
 
 /** Barkly's bed — appears under him while he sleeps at home. */
+// ---------------------------------------------------------------- beach
+
+/**
+ * The beach — the place you work towards. It is deliberately the most open
+ * scene: a horizon rather than a wall, because "somewhere bigger" is the
+ * whole reason to want it.
+ */
+export function BeachScene({ hour }: { hour: number }) {
+  const band = skyBand(hour);
+  const night = band === 'night';
+  const dim = (day: string, nite: string) => (night ? nite : day);
+  return (
+    <View style={styles.fill} pointerEvents="none">
+      <LinearGradient colors={SKY[band]} style={styles.fill} />
+      <Svg width="100%" height={560} viewBox="0 0 420 560" preserveAspectRatio="none" style={styles.ground}>
+        {/* far sea */}
+        <Rect x={0} y={196} width={420} height={92} fill={dim('#5E93A8', '#243E52')} />
+        <Rect x={0} y={196} width={420} height={5} fill={dim('#8FBACB', '#3A5B72')} />
+        {/* nearer water, lighter */}
+        <Rect x={0} y={272} width={420} height={54} fill={dim('#7FB4C4', '#2E4C63')} />
+        {/* foam lines */}
+        {[232, 258, 286, 308].map((y, i) => (
+          <Path
+            key={y}
+            d={`M-20 ${y} q 60 ${i % 2 ? -7 : 7} 120 0 t 120 0 t 120 0 t 120 0`}
+            stroke={dim('#EAF4F7', '#8FA9BC')}
+            strokeWidth={3}
+            fill="none"
+            opacity={0.75}
+          />
+        ))}
+        {/* wet sand, then dry sand */}
+        <Path d="M0 320 q 105 -14 210 0 t 210 0 L420 560 L0 560 Z" fill={dim('#CDB489', '#8B7A5E')} />
+        <Path d="M0 356 q 105 -12 210 0 t 210 0 L420 560 L0 560 Z" fill={dim('#E6D2A8', '#9E8C6B')} />
+        {/* shells and a bit of seaweed, so it is not an empty gradient */}
+        <Ellipse cx={72} cy={432} rx={11} ry={7} fill={dim('#F4E7CE', '#AC9C7C')} />
+        <Ellipse cx={318} cy={470} rx={9} ry={6} fill={dim('#F0DCC0', '#A89873')} />
+        <Path d="M336 398 q 14 -12 26 -2 q -10 12 -26 2 Z" fill={dim('#5C7A52', '#3C5236')} />
+        <Path d="M96 500 q 18 -10 30 2 q -14 10 -30 -2 Z" fill={dim('#5C7A52', '#3C5236')} />
+        {/* gulls, because he has opinions about them */}
+        {!night && (
+          <>
+            <Path d="M120 150 q 10 -8 20 0 q 10 -8 20 0" stroke="#7A6A55" strokeWidth={2.5} fill="none" />
+            <Path d="M268 122 q 8 -6 16 0 q 8 -6 16 0" stroke="#7A6A55" strokeWidth={2} fill="none" />
+          </>
+        )}
+      </Svg>
+    </View>
+  );
+}
+
 /**
  * The bed comes in two halves and the dog goes BETWEEN them.
  *
@@ -201,25 +271,32 @@ export function NightOverlay() {
  * IN the bed rather than parked on it — and it hides the stub of leg the
  * lying-down frame still has. Neither half works alone.
  */
-export function DogBedBack() {
+export function DogBedBack({ upgraded = false }: { upgraded?: boolean }) {
+  // The bought bed is plusher and a different material, so the upgrade is
+  // visible at a glance rather than a number in a menu.
+  const rim = upgraded ? '#4E3D63' : '#6E5133';
+  const wall = upgraded ? '#6B558A' : '#8A6844';
+  const cushion = upgraded ? '#EFE3F2' : '#E3D2AC';
   return (
     <View style={styles.bedBack} pointerEvents="none">
       <Svg width={348} height={104} viewBox="0 0 348 104">
-        <Ellipse cx={174} cy={52} rx={170} ry={46} fill="#6E5133" />
-        <Ellipse cx={174} cy={47} rx={152} ry={37} fill="#8A6844" />
-        <Ellipse cx={174} cy={54} rx={132} ry={29} fill="#E3D2AC" />
+        <Ellipse cx={174} cy={52} rx={170} ry={46} fill={rim} />
+        <Ellipse cx={174} cy={47} rx={152} ry={37} fill={wall} />
+        <Ellipse cx={174} cy={54} rx={132} ry={29} fill={cushion} />
       </Svg>
     </View>
   );
 }
 
-export function DogBedFront() {
+export function DogBedFront({ upgraded = false }: { upgraded?: boolean }) {
+  const rim = upgraded ? '#584673' : '#7A5A38';
+  const wall = upgraded ? '#6B558A' : '#8A6844';
   return (
     <View style={styles.bedFront} pointerEvents="none">
       <Svg width={348} height={56} viewBox="0 0 348 56">
         {/* Only the near lip of the rim: a half-ellipse clipped by the viewBox. */}
-        <Ellipse cx={174} cy={6} rx={170} ry={46} fill="#7A5A38" />
-        <Ellipse cx={174} cy={0} rx={152} ry={38} fill="#8A6844" />
+        <Ellipse cx={174} cy={6} rx={170} ry={46} fill={rim} />
+        <Ellipse cx={174} cy={0} rx={152} ry={38} fill={wall} />
       </Svg>
     </View>
   );
@@ -256,6 +333,10 @@ const styles = StyleSheet.create({
   bedBack: { position: 'absolute', bottom: 10, alignSelf: 'center' },
   bedFront: { position: 'absolute', bottom: -6, alignSelf: 'center' },
 
+  // Grows down and wider. Growing upward just hid it behind the tab bar.
+  windowBig: { width: 172, height: 150, borderWidth: 9, top: '23%' },
+  // Under his feet. At 8% the input bar covered the front half of it.
+  rugWrap: { position: 'absolute', bottom: '17%', alignSelf: 'center', width: 286, height: 68 },
   homeRug: {
     position: 'absolute', bottom: '15%', alignSelf: 'center', width: 300, height: 64,
     borderRadius: 150, backgroundColor: '#C77C52', opacity: 0.3,

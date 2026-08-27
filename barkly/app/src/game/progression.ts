@@ -30,8 +30,16 @@ export interface Wallet {
   xp: number;
   /** Item ids bought, so a purchase is permanent. */
   owned: string[];
-  /** Which item is currently worn / placed, per slot. */
+  /**
+   * Single-slot wear: one collar, one toy. Keyed by slot.
+   */
   equipped: Record<string, string>;
+  /**
+   * MULTI-slot items — the house. A bed, a rug and a window are not
+   * alternatives to each other; a room has all three at once. Anything in
+   * here is out and visible in the world.
+   */
+  placed: string[];
   /** UTC day key of the last daily bonus, so it pays once. */
   lastDailyBonus?: string;
   /** Consumables he has in the cupboard: item id -> count. */
@@ -39,7 +47,31 @@ export interface Wallet {
 }
 
 export function freshWallet(): Wallet {
-  return { coins: 40, xp: 0, owned: [], equipped: {}, pantry: {} };
+  return { coins: 40, xp: 0, owned: [], equipped: {}, placed: [], pantry: {} };
+}
+
+/**
+ * Slots where owning several things at once is the whole point. He wears ONE
+ * collar; his room has a bed AND a rug AND a window.
+ */
+export const MULTI_SLOTS: ItemSlot[] = ['home'];
+
+export function isMultiSlot(slot: ItemSlot): boolean {
+  return MULTI_SLOTS.includes(slot);
+}
+
+/** Is this item out in the world right now? */
+export function isPlaced(wallet: Wallet, itemId: string): boolean {
+  const item = STORE.find((i) => i.id === itemId);
+  if (!item) return false;
+  return isMultiSlot(item.slot)
+    ? (wallet.placed ?? []).includes(itemId)
+    : wallet.equipped[item.slot] === itemId;
+}
+
+/** Every placed item in a slot — one entry for single slots, many for multi. */
+export function placedIn(wallet: Wallet, slot: ItemSlot): StoreItem[] {
+  return STORE.filter((i) => i.slot === slot && isPlaced(wallet, i.id));
 }
 
 // ------------------------------------------------------------------ levels
@@ -157,7 +189,7 @@ export const STORE: StoreItem[] = [
   // --- collars: the visible flex, and the cheapest thing to want ---
   { id: 'collar_red', name: 'Red collar', blurb: 'Loud. He likes loud.', slot: 'collar', price: 60, level: 1, color: '#B3402E', icon: '🔴' },
   { id: 'collar_blue', name: 'Blue collar', blurb: 'Calmer. He is not calmer.', slot: 'collar', price: 60, level: 1, color: '#3E6E9C', icon: '🔵' },
-  { id: 'collar_green', name: 'Green collar', blurb: 'The colour of grass, which he approves of.', slot: 'collar', price: 90, level: 3, color: '#4E7A46', icon: '🟢' },
+  { id: 'collar_green', name: 'Green collar', blurb: 'The colour of grass, which he approves of.', slot: 'collar', price: 90, level: 2, color: '#4E7A46', icon: '🟢' },
   { id: 'collar_gold', name: 'Gold collar', blurb: 'Absurd. He is thrilled.', slot: 'collar', price: 400, level: 6, color: '#C9A227', icon: '🟡' },
 
   // --- food: consumable, and the thing he will nag you about ---
@@ -166,11 +198,11 @@ export const STORE: StoreItem[] = [
   { id: 'treat_steak', name: 'Steak', blurb: 'A birthday-level event.', slot: 'treat', price: 150, level: 5, consumable: true, icon: '🥩' },
 
   // --- toys ---
-  { id: 'toy_ball', name: 'Squeaky ball', blurb: 'Squeaks. That is the entire feature.', slot: 'toy', price: 70, level: 2, icon: '⚽' },
-  { id: 'toy_rope', name: 'Rope', blurb: 'For arguments he intends to win.', slot: 'toy', price: 110, level: 4, icon: '🪢' },
+  { id: 'toy_ball', name: 'Squeaky ball', blurb: 'Squeaks. That is the entire feature.', slot: 'toy', price: 70, level: 1, icon: '⚽' },
+  { id: 'toy_rope', name: 'Rope', blurb: 'For arguments he intends to win.', slot: 'toy', price: 110, level: 3, icon: '🪢' },
 
   // --- home upgrades: the big-ticket goal ---
-  { id: 'home_bed', name: 'Proper bed', blurb: 'Deeper. Softer. He will not shut up about it.', slot: 'home', price: 220, level: 3, icon: '🛏️' },
+  { id: 'home_bed', name: 'Proper bed', blurb: 'Deeper. Softer. He will not shut up about it.', slot: 'home', price: 220, level: 2, icon: '🛏️' },
   { id: 'home_rug', name: 'Nice rug', blurb: 'Ties the room together, apparently.', slot: 'home', price: 300, level: 5, icon: '🟫' },
   { id: 'home_window', name: 'Bigger window', blurb: 'More birds to be furious about.', slot: 'home', price: 500, level: 7, icon: '🪟' },
 ];
@@ -221,9 +253,13 @@ export function buy(wallet: Wallet, itemId: string, dev = false): BuyResult {
     next.pantry = { ...wallet.pantry, [item.id]: (wallet.pantry[item.id] ?? 0) + 1 };
   } else {
     next.owned = [...wallet.owned, item.id];
-    // Buying something wearable puts it on immediately. Nobody buys a collar
-    // to leave it in a drawer.
-    next.equipped = { ...wallet.equipped, [item.slot]: item.id };
+    // Buying something puts it into play immediately. Nobody buys a collar to
+    // leave it in a drawer, or a rug to leave it rolled up.
+    if (isMultiSlot(item.slot)) {
+      next.placed = Array.from(new Set([...(wallet.placed ?? []), item.id]));
+    } else {
+      next.equipped = { ...wallet.equipped, [item.slot]: item.id };
+    }
   }
   return { wallet: next, ok: true, line: buyLine(item) };
 }
@@ -241,10 +277,23 @@ function buyLine(item: StoreItem): string {
   }
 }
 
+/**
+ * Put something on, or — for the house — toggle it in and out of the room.
+ * A single slot swaps; a multi slot accumulates.
+ */
 export function equip(wallet: Wallet, itemId: string): Wallet {
   const item = STORE.find((i) => i.id === itemId);
   if (!item || item.consumable || !wallet.owned.includes(itemId)) return wallet;
-  return { ...wallet, equipped: { ...wallet.equipped, [item.slot]: itemId } };
+  if (!isMultiSlot(item.slot)) {
+    return { ...wallet, equipped: { ...wallet.equipped, [item.slot]: itemId } };
+  }
+  const placed = wallet.placed ?? [];
+  return {
+    ...wallet,
+    placed: placed.includes(itemId)
+      ? placed.filter((id) => id !== itemId)
+      : [...placed, itemId],
+  };
 }
 
 export function equippedItem(wallet: Wallet, slot: ItemSlot): StoreItem | undefined {
@@ -270,11 +319,23 @@ export interface Unlock {
   line: string;
 }
 
-/** Places, not percentages. A new place is a reason to open the app. */
+/**
+ * Places, not percentages. A new place is a reason to open the app.
+ *
+ * Everything that already exists is OPEN from the start. Gating the park and
+ * the town behind a level meant a new player spent their first session
+ * looking at one room and a shop full of grey rows, which is not a hook, it
+ * is a wall. The thing to work towards is somewhere NEW.
+ */
 export const AREA_UNLOCKS: Record<string, Unlock> = {
   home: { id: 'home', level: 1, line: 'Home. Obviously.' },
-  park: { id: 'park', level: 2, line: "The park's open to us now. There are BIRDS there." },
-  town: { id: 'town', level: 4, line: "Town. Loads of people. Loads of them have food." },
+  park: { id: 'park', level: 1, line: "The park. There are BIRDS there." },
+  town: { id: 'town', level: 1, line: 'Town. Loads of people. Loads of them have food.' },
+  beach: {
+    id: 'beach',
+    level: 4,
+    line: "The BEACH. There's a whole sea. I'm going to bark at all of it.",
+  },
 };
 
 export function areaUnlocked(area: string, xp: number, dev = false): boolean {
@@ -303,7 +364,23 @@ export function grantEverything(wallet: Wallet): Wallet {
   for (const item of STORE.filter((i) => i.consumable)) {
     pantry[item.id] = Math.max(pantry[item.id] ?? 0, 5);
   }
-  return { ...wallet, owned: Array.from(new Set([...wallet.owned, ...owned])), pantry };
+  const placed = STORE.filter((i) => !i.consumable && isMultiSlot(i.slot)).map((i) => i.id);
+
+  // Also PUT ONE ON. Owning a ball he is not holding leaves the play button
+  // behaving exactly as it did before, which makes the grant look broken.
+  const equipped = { ...wallet.equipped };
+  for (const item of STORE) {
+    if (item.consumable || isMultiSlot(item.slot)) continue;
+    if (!equipped[item.slot]) equipped[item.slot] = item.id;
+  }
+
+  return {
+    ...wallet,
+    owned: Array.from(new Set([...wallet.owned, ...owned])),
+    placed: Array.from(new Set([...(wallet.placed ?? []), ...placed])),
+    equipped,
+    pantry,
+  };
 }
 
 /** Everything that just became available crossing into this level. */

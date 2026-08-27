@@ -15,7 +15,19 @@ import { createRateLimiter } from './ratelimit.mjs';
 import { callUpstream } from './upstream.mjs';
 import { validateMessagesRequest, ValidationError } from './validate.mjs';
 import { loadCliConfig, runCli } from './cli.mjs';
-import { loadVoiceConfig, validateVoiceRequest, voiceBody, voiceUrl } from './voice.mjs';
+import {
+  loadVoiceConfig,
+  synthesizeLocal,
+  validateVoiceRequest,
+  voiceBody,
+  voiceUrl,
+} from './voice.mjs';
+import { spawn } from 'node:child_process';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** The helper lives next to this file, so it moves with the server. */
+const SAY_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), '..', 'tts', 'say.py');
 
 /** Client hint that the failure is permanent-ish, so fall back to scripted Barkly. */
 const FALLBACK_HEADER = 'x-barkly-fallback';
@@ -93,6 +105,39 @@ export function createHandler(config, deps = {}) {
     }
 
     const startedAt = now();
+
+    // The free local engine: neural TTS with nothing to sign up for.
+    if (voice.engine === 'local') {
+      const result = await synthesizeLocal(text, voice, {
+        spawnImpl: deps.spawnImpl || spawn,
+        scriptPath: voice.localScript || SAY_SCRIPT,
+      });
+      if (!result.ok) {
+        log.warn('voice.local_failed', { requestId, device, error: String(result.error) });
+        return send(
+          502,
+          { error: { type: 'voice_failed', message: 'voice unavailable' } },
+          { [FALLBACK_HEADER]: '1' },
+        );
+      }
+      ledger.recordVoice(device, text.length);
+      log.info('voice.completed', {
+        requestId,
+        device,
+        provider: 'local',
+        chars: text.length, // length only, never the line itself
+        bytes: result.audio.length,
+        latencyMs: now() - startedAt,
+      });
+      res.writeHead(200, {
+        ...cors,
+        'content-type': 'audio/mpeg',
+        'content-length': String(result.audio.length),
+        'cache-control': 'private, max-age=86400',
+      });
+      return res.end(result.audio);
+    }
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), voice.timeoutMs);
     try {
@@ -164,7 +209,7 @@ export function createHandler(config, deps = {}) {
         ok: true,
         env: config.env,
         model: config.defaultModel,
-        voice: voice.enabled ? 'configured' : 'unconfigured',
+        voice: voice.enabled ? voice.engine : 'unconfigured',
         brain: cli.enabled ? `cli:${cli.model}` : config.apiKey ? 'api' : 'unconfigured',
       });
     }
@@ -186,6 +231,7 @@ export function createHandler(config, deps = {}) {
         rateLimiterEntries: limiter.size,
         voice: {
           enabled: voice.enabled,
+          engine: voice.engine,
           charsToday: ledger.voiceCharsToday(),
           dailyCharCap: voice.dailyCharCap,
           perDeviceDailyCharCap: voice.perDeviceDailyCharCap,

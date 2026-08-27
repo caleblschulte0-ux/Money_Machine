@@ -5,7 +5,7 @@
 
 import { NpcId } from './npcs';
 
-export type LocationId = 'home' | 'park' | 'town';
+export type LocationId = 'home' | 'park' | 'town' | 'beach';
 
 export interface Location {
   id: LocationId;
@@ -34,6 +34,13 @@ export const LOCATIONS: Record<LocationId, Location> = {
     description: 'in the town square, near the bakery and the shops',
     npcIds: ['pepper'],
   },
+  beach: {
+    id: 'beach',
+    name: 'Beach',
+    description:
+      'at the beach - wet sand, the sea making its ridiculous noise, gulls to be furious about',
+    npcIds: ['biscuit'],
+  },
 };
 
-export const LOCATION_ORDER: LocationId[] = ['home', 'park', 'town'];
+export const LOCATION_ORDER: LocationId[] = ['home', 'park', 'town', 'beach'];

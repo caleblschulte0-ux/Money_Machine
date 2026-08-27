@@ -33,6 +33,13 @@ const BY_LOCATION: Record<LocationId, string[]> = {
     'that lamppost and i have an understanding.',
     'someone dropped a crumb here in 2019. i remember.',
   ],
+  beach: [
+    'the sea keeps coming at me. i keep letting it.',
+    'sand gets in everything. i respect the commitment.',
+    'that gull looked at me. we both know what happened.',
+    'i dug a hole and the sea filled it in. rude.',
+    'seaweed: a snack? a foe? research ongoing.',
+  ],
 };
 
 const NIGHT = [

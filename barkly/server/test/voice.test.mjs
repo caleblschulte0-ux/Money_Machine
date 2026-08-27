@@ -4,6 +4,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import test from 'node:test';
 import { loadConfig } from '../lib/config.mjs';
 import { createLedger } from '../lib/cost.mjs';
@@ -84,19 +85,95 @@ function harness(envOver = {}, deps = {}) {
 
 const say = (text) => JSON.stringify({ text });
 
-test('voice is off unless BOTH a key and a voice id are configured', () => {
-  assert.equal(loadVoiceConfig({}).enabled, false);
-  assert.equal(loadVoiceConfig({ ELEVENLABS_API_KEY: 'k' }).enabled, false);
-  assert.equal(loadVoiceConfig({ BARKLY_VOICE_ID: 'v' }).enabled, false);
-  assert.equal(loadVoiceConfig(VOICE_ENV).enabled, true);
+/** A fake `say.py`: writes `audio` to stdout, or exits 1 when audio is null. */
+function fakeSay(audio, seen = {}) {
+  return (bin, args, opts) => {
+    seen.bin = bin;
+    seen.args = args;
+    seen.opts = opts;
+    const child = new EventEmitter();
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.kill = () => {};
+    child.stdin = {
+      end: (text) => {
+        seen.stdin = text;
+        queueMicrotask(() => {
+          if (audio) child.stdout.emit('data', audio);
+          child.emit('close', audio ? 0 : 1);
+        });
+      },
+    };
+    return child;
+  };
+}
+
+test('with nothing configured the FREE local engine is the voice', () => {
+  // The whole point: a real voice with no account, no key, no signup.
+  const bare = loadVoiceConfig({});
+  assert.equal(bare.engine, 'local');
+  assert.equal(bare.enabled, true);
 });
 
-test('an unconfigured voice is a fallback, not an error a child hears', async () => {
-  const { call } = harness();
+test('ElevenLabs takes over only when it is fully configured', () => {
+  assert.equal(loadVoiceConfig({ ELEVENLABS_API_KEY: 'k' }).engine, 'local'); // half is not enough
+  assert.equal(loadVoiceConfig({ BARKLY_VOICE_ID: 'v' }).engine, 'local');
+  const both = loadVoiceConfig(VOICE_ENV);
+  assert.equal(both.engine, 'elevenlabs');
+  assert.equal(both.enabled, true);
+});
+
+test('the engine can be forced either way', () => {
+  assert.equal(loadVoiceConfig({ ...VOICE_ENV, BARKLY_VOICE_ENGINE: 'local' }).engine, 'local');
+  const forced = loadVoiceConfig({ BARKLY_VOICE_ENGINE: 'elevenlabs' });
+  assert.equal(forced.engine, 'elevenlabs');
+  // Forced but unconfigured is honestly off rather than pretending.
+  assert.equal(forced.enabled, false);
+});
+
+test('an engine that is forced on but unconfigured falls back rather than erroring', async () => {
+  const { call } = harness({ BARKLY_VOICE_ENGINE: 'elevenlabs' });
   const res = await call({ body: say('hello') });
   assert.equal(res.status, 503);
   assert.equal(res.headers['x-barkly-fallback'], '1');
   assert.equal(res.json().error.type, 'voice_not_configured');
+});
+
+test('the local engine returns audio bytes and bills nothing', async () => {
+  const { call, ledger } = harness(
+    { BARKLY_VOICE_ENGINE: 'local' },
+    { spawnImpl: fakeSay(AUDIO) },
+  );
+  const res = await call({ body: say('Good dog. Obviously.') });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers['content-type'], 'audio/mpeg');
+  assert.ok(Buffer.isBuffer(res.body));
+  // Chars are still metered, purely so a runaway loop cannot pin a CPU.
+  assert.equal(ledger.voiceCharsToday(), 'Good dog. Obviously.'.length);
+});
+
+test('the line goes in on STDIN, never in argv', async () => {
+  const seen = {};
+  const { call } = harness(
+    { BARKLY_VOICE_ENGINE: 'local' },
+    { spawnImpl: fakeSay(AUDIO, seen) },
+  );
+  const secret = '`rm -rf /` my mum is called Josephine';
+  await call({ body: say(secret) });
+  // argv carries the script path and nothing else a child typed.
+  assert.ok(!JSON.stringify(seen.args).includes('Josephine'));
+  assert.equal(seen.stdin, secret);
+  assert.equal(seen.opts.shell, false);
+});
+
+test('a broken local engine falls back to the device voice', async () => {
+  const { call } = harness(
+    { BARKLY_VOICE_ENGINE: 'local' },
+    { spawnImpl: fakeSay(null) },
+  );
+  const res = await call({ body: say('hi') });
+  assert.equal(res.status, 502);
+  assert.equal(res.headers['x-barkly-fallback'], '1');
 });
 
 test('returns audio bytes, not JSON', async () => {
