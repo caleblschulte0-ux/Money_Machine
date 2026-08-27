@@ -12,6 +12,11 @@ sys.path.insert(0, os.path.abspath("../finish"))
 import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont
 from spec1 import BEATS, ANCHORS, W, H, FPS
+
+# The last beat that has a clip -- the one whose final frame the end
+# card holds. Derived, never typed: renaming or reordering beats in
+# spec1 must not silently move the release to the wrong beat.
+LAST_BEAT = [b[0] for b in BEATS if b[1] is not None][-1]
 import arlabel as AR
 import labelkit as LK
 import shotqc
@@ -151,7 +156,25 @@ def compose(beat, dur, frames):
             d.rectangle([x0,y0,x1,y1], fill=(255,255,255,c))
         ov = np.array(img).astype(np.float32)
         a = ov[..., 3:4]/255.0
-        yield np.clip(base*(1-a) + ov[..., :3][..., ::-1]*a, 0, 255).astype(np.uint8)
+        out = np.clip(base*(1-a) + ov[..., :3][..., ::-1]*a, 0, 255)
+        # ---- r74 END-CARD RELEASE, same as the other four.
+        # This film already released each LABEL's alpha (r69/r70) and its
+        # end card looked clean, so it was the one I trusted. But per-element
+        # release is what let the same bug survive in the other four films at
+        # once, and it leaves this film's frame cue and scan outline still
+        # drawn on the held frame. Releasing the whole composite back to the
+        # untouched plate is the invariant all five now share, and it is the
+        # only version that can be asserted rather than eyeballed.
+        if beat == LAST_BEAT:
+            rel = min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
+            if rel < 1.0:
+                out = out * rel + f.astype(np.float32) * (1.0 - rel)
+            if i == len(frames) - 1:
+                assert rel == 0.0 and np.array_equal(out.astype(np.uint8), f), (
+                    f"{beat}: the final frame still carries overlay (rel={rel:.4f}). "
+                    "The end card holds this frame, so it would be baked in "
+                    "behind the wordmark.")
+        yield out.astype(np.uint8)
 
 
 def encode(frames, dst, crf=13):

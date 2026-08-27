@@ -32,6 +32,11 @@ import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 from spec3 import BEATS, PAST, PICK, LABELS, seam_x, W, H, FPS
+
+# The last beat that has a clip -- the one whose final frame the end
+# card holds. Derived, never typed: renaming or reordering beats in
+# spec3 must not silently move the release to the wrong beat.
+LAST_BEAT = [b[0] for b in BEATS if b[1] is not None][-1]
 import arlabel as AR
 import labelkit as LK
 import holo
@@ -261,7 +266,42 @@ def compose(beat, dur, frames):
         frame_cue(d, t, dur)
         ov = np.array(img).astype(np.float32)
         a = ov[..., 3:4] / 255.0
-        yield np.clip(base * (1 - a) + ov[..., :3][..., ::-1] * a, 0, 255).astype(np.uint8)
+        out = np.clip(base * (1 - a) + ov[..., :3][..., ::-1] * a, 0, 255)
+        # ---- r74 END-CARD RELEASE.
+        # The end card is a HELD FRAME of the last beat's final frame, so
+        # anything still drawn at that instant is BAKED INTO the brand card.
+        # Demo 1 got this fix at r69/r70 and the other four never did: at
+        # delivery, Demos 2, 3, 4 and 5 all ended with "OPEN RANGE
+        # INTERACTIVE" running straight through a full-strength AR label.
+        # ChatGPT saw it on Demo 5 only -- a 4x4 contact sheet does not
+        # reliably sample inside a 2.5s end card -- and approved Demo 4
+        # as-is while Demo 4 was broken.
+        # Releasing the whole COMPOSITE back toward the untouched plate,
+        # rather than each element's own alpha, is what makes this
+        # complete: it takes the effects blended into `base` (the
+        # reconstruction, the depth shells, the class contours) along with
+        # the drawn overlay. Per-element release is what let this survive
+        # in four films at once.
+        # Last beat only. Doing it at every join would fade each beat back
+        # to raw footage and change the film.
+        if beat == LAST_BEAT:
+            rel = min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
+            if rel < 1.0:
+                out = out * rel + f.astype(np.float32) * (1.0 - rel)
+            # SELF-CHECK, at the one place that can actually prove it.
+            # Two attempts to verify this from the finished MP4 both failed
+            # and both failed CONFIDENTLY: diffing the end card against the
+            # last live frame reports a baked-in overlay as "clean" (nothing
+            # changes -- that IS the bug), and the panel scrim is too soft
+            # for edge detection to find. Here the untouched plate is in
+            # hand, so the invariant is exact rather than inferred: the
+            # frame the end card will hold must BE the plate.
+            if i == len(frames) - 1:
+                assert rel == 0.0 and np.array_equal(out.astype(np.uint8), f), (
+                    f"{beat}: the final frame still carries overlay (rel={rel:.4f}). "
+                    "The end card holds this frame, so it would be baked in "
+                    "behind the wordmark.")
+        yield out.astype(np.uint8)
 
 
 def encode(frames, dst, crf=13):

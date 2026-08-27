@@ -28,6 +28,11 @@ import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 from spec5 import BEATS, MARKS, HANDOFF, LABELS, PROFILES, W, H, FPS
+
+# The last beat that has a clip -- the one whose final frame the end
+# card holds. Derived, never typed: renaming or reordering beats in
+# spec5 must not silently move the release to the wrong beat.
+LAST_BEAT = [b[0] for b in BEATS if b[1] is not None][-1]
 import arlabel as AR
 import labelkit as LK
 import shotqc
@@ -106,11 +111,16 @@ def seg(t, a, b):
     return ease((t - a) / (b - a)) if b > a else 0.0
 
 
-def tag_label(d, anchor, box_xy, title, sub, k, col, tag=None):
+def tag_label(d, anchor, box_xy, title, sub, k, col, tag=None, dim=1.0):
     """Delegates to the shared labelkit. r67's cold-viewer review found
     every film's label too quiet against sky, water and pale stone; the
-    fix lives in one place so the five demos cannot drift apart."""
-    LK.block(d, anchor, box_xy, title, sub, k, col, W, H, tag=tag)
+    fix lives in one place so the five demos cannot drift apart.
+
+    `dim` was in labelkit from the start and was NOT passed through here
+    until r74, which is why this film ran two equal-weight labels through
+    every two-anchor beat and read as cluttered for three rounds.
+    """
+    LK.block(d, anchor, box_xy, title, sub, k, col, W, H, tag=tag, dim=dim)
 
 
 def pin(d, xy, k, col, size=22):
@@ -204,6 +214,8 @@ def compose(beat, dur, frames):
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
         seen = []
+        # appear time of the LAST mark in this beat -- the one still active
+        last_t0 = max((m[4] for m in marks), default=0.0)
 
         for (prof, pt, title, sub, t0, off), path in zip(marks, tracks):
             P = PROFILES[prof]
@@ -225,8 +237,23 @@ def compose(beat, dur, frames):
             AR.reticle(d, (cx, cy), 1.0, dur=0.55, col=col, a=200)
             k = ease(min(1.0, (lt - 0.30) / 0.5))
             if k > 0:
+                # r74: THE SETTLED LABEL STEPS BACK.
+                # ChatGPT asked three rounds running (r69 Q3, r72, r73) for
+                # the held profile to collapse during the clutter peak. The
+                # mechanism already existed and this film never used it:
+                # labelkit.block() takes `dim` precisely so "the two-anchor
+                # beat has an active label and a settled one instead of two
+                # labels competing" -- r67's words, implemented, then left
+                # unwired here. Same species as everything else this round.
+                # In any beat with two marks, whichever appeared FIRST steps
+                # back to 0.62 once the second one is up. The active
+                # recognition stays full strength, so the eye is told where
+                # to look instead of being handed two equals.
+                dim = 1.0
+                if len(marks) > 1 and t0 < last_t0 and t >= last_t0:
+                    dim = 0.62
                 tag_label(d, (cx, cy), (cx + off[0], cy + off[1]), title, sub, k,
-                          col, tag=f"{P['name']} · {P['track']}")
+                          col, tag=f"{P['name']} · {P['track']}", dim=dim)
                 if (P["name"], col) not in seen:
                     seen.append((P["name"], col))
 
@@ -293,7 +320,42 @@ def compose(beat, dur, frames):
         frame_cue(d, t, dur)
         ov = np.array(img).astype(np.float32)
         a = ov[..., 3:4] / 255.0
-        yield np.clip(base * (1 - a) + ov[..., :3][..., ::-1] * a, 0, 255).astype(np.uint8)
+        out = np.clip(base * (1 - a) + ov[..., :3][..., ::-1] * a, 0, 255)
+        # ---- r74 END-CARD RELEASE.
+        # The end card is a HELD FRAME of the last beat's final frame, so
+        # anything still drawn at that instant is BAKED INTO the brand card.
+        # Demo 1 got this fix at r69/r70 and the other four never did: at
+        # delivery, Demos 2, 3, 4 and 5 all ended with "OPEN RANGE
+        # INTERACTIVE" running straight through a full-strength AR label.
+        # ChatGPT saw it on Demo 5 only -- a 4x4 contact sheet does not
+        # reliably sample inside a 2.5s end card -- and approved Demo 4
+        # as-is while Demo 4 was broken.
+        # Releasing the whole COMPOSITE back toward the untouched plate,
+        # rather than each element's own alpha, is what makes this
+        # complete: it takes the effects blended into `base` (the
+        # reconstruction, the depth shells, the class contours) along with
+        # the drawn overlay. Per-element release is what let this survive
+        # in four films at once.
+        # Last beat only. Doing it at every join would fade each beat back
+        # to raw footage and change the film.
+        if beat == LAST_BEAT:
+            rel = min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
+            if rel < 1.0:
+                out = out * rel + f.astype(np.float32) * (1.0 - rel)
+            # SELF-CHECK, at the one place that can actually prove it.
+            # Two attempts to verify this from the finished MP4 both failed
+            # and both failed CONFIDENTLY: diffing the end card against the
+            # last live frame reports a baked-in overlay as "clean" (nothing
+            # changes -- that IS the bug), and the panel scrim is too soft
+            # for edge detection to find. Here the untouched plate is in
+            # hand, so the invariant is exact rather than inferred: the
+            # frame the end card will hold must BE the plate.
+            if i == len(frames) - 1:
+                assert rel == 0.0 and np.array_equal(out.astype(np.uint8), f), (
+                    f"{beat}: the final frame still carries overlay (rel={rel:.4f}). "
+                    "The end card holds this frame, so it would be baked in "
+                    "behind the wordmark.")
+        yield out.astype(np.uint8)
 
 
 def encode(frames, dst, crf=13):

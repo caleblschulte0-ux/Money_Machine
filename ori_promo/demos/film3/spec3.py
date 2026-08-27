@@ -62,7 +62,23 @@ SEAM = {
  "b2": [(0.0, 1.05), (1.0, 1.05), (2.6, 0.42), (3.4, 0.42),
         (4.3, 0.72), (5.1, 0.24), (5.9, 0.55), (7.0, 0.55)],
  "b3": [(0.0, 1.05), (1.3, 1.05), (5.4, -0.05), (8.5, -0.05)],
- "b4": [(0.0, 0.55), (1.4, 0.55), (3.6, 1.05), (4.5, 1.05)],
+ # r74: DIRECTION INVERTED, 1.05 -> -0.05. This beat is titled RETURN TO
+ # NOW / THE PRESENT VIEW and its own note says "the seam runs off the
+ # frame and it is now again" -- and it did the exact opposite. seam_x is
+ # the right edge of the PAST region (render3: base*(1-left) +
+ # past_grade(base)*left), so sweeping to 1.05 grows the desaturated past
+ # across the WHOLE frame. Measured on the shipped master: right-side mean
+ # saturation fell 83.4 -> 38.0 over the beat, converging on the left's
+ # 41.7. The film ended fully in the past treatment while the label said
+ # THE PRESENT VIEW.
+ # Sweeping to -0.05 retreats the past off the left edge and ends in full
+ # colour, which is what the title claims. It also answers ChatGPT's r73
+ # Q1 properly: it asked for a "TIME MODE VISUALISATION" qualifier because
+ # it saw an EARLIER treatment over present-day pixels at the release. The
+ # right fix is not a label explaining a backwards beat, it is running the
+ # beat forwards -- after this there is no past treatment on screen at the
+ # end to qualify.
+ "b4": [(0.0, 0.55), (1.4, 0.55), (3.6, -0.05), (4.5, -0.05)],
 }
 
 # beat: (anchor_xy, title, subtitle, appear_t, offset_xy)
