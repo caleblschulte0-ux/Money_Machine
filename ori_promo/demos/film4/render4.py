@@ -158,12 +158,15 @@ def frame_cue(d, t, dur):
 # is that these three readings look and behave differently from each other.
 
 SCHED = {
-  # beat: (shells_in, shells_out, sweep_a, sweep_b, class_in, ap_in)
-  "b1": dict(shells=(0.30, 2.20), sweep=(2.60, 6.40), classes=None, ap=None),
+  # r69: b1 is now 4.5s and carries ONE decisive sweep rather than a slow
+  # contour build. b3 is 11.0s so the aperture -- the film's clearest proof --
+  # has room to open, fill and be read. b4 drops the aperture entirely and
+  # runs two systems, because three fully active at once read as clutter.
+  "b1": dict(shells=(0.10, 0.80), sweep=(1.00, 3.90), classes=None, ap=None),
   "b2": dict(shells=(0.10, 1.10), sweep=None, classes=(0.20, 2.00), ap=None),
-  "b3": dict(shells=(0.20, 1.20), sweep=None, classes=None, ap=(1.60, 3.00)),
+  "b3": dict(shells=(0.20, 1.20), sweep=None, classes=None, ap=(1.60, 3.40)),
   "b4": dict(shells=(0.10, 0.90), sweep=(1.20, 4.40), classes=(0.40, 1.90),
-             ap=(2.20, 3.40)),
+             ap=None),
 }
 
 

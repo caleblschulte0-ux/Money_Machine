@@ -21,11 +21,21 @@ TOTAL = 33.5
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
+ # r69 REALLOCATION. ChatGPT: "I agree it is the weakest beat... the contour
+ # evidence is faint enough that the label does more work than the
+ # visualization. After two strengthening attempts, another small opacity
+ # pass is unlikely to change the basic read. Cut the terrain beat to roughly
+ # 4-5 seconds and give the recovered 2-3 seconds to the subsurface
+ # aperture... One unmistakable depth event is better than several soft
+ # contour lines."
+ # Terrain 7.5 -> 4.5, subsurface 8.0 -> 11.0. Both re-gated at the new
+ # durations before the change was made: 6791@4.5 over 4.5s and 6794@10.5
+ # over 11.0s both PASS.
  ("open", "6798",  6.5,  0.0, 3.5, "the walkway. system comes up, nothing claimed yet"),
- ("b1",   "6791",  4.5,  3.5, 7.5, "TERRAIN: depth shells, then a range sweep near->far"),
- ("b2",   "6805",  4.5, 11.0, 7.0, "MATERIALS: sky / vegetation / stone, outlined and named"),
- ("b3",   "6794", 10.5, 18.0, 8.0, "SUBSURFACE: an aperture opens in the stone"),
- ("b4",   "6796",  8.5, 26.0, 5.0, "ALL THREE AT ONCE -- the density beat"),
+ ("b1",   "6791",  4.5,  3.5, 4.5, "TERRAIN: ONE decisive near->far sweep, not a field of contours"),
+ ("b2",   "6805",  4.5,  8.0, 7.0, "MATERIALS: sky / vegetation / stone, outlined and named"),
+ ("b3",   "6794", 10.5, 15.0,11.0, "SUBSURFACE: the hero. the ground opens and stays open"),
+ ("b4",   "6796",  8.5, 26.0, 5.0, "TWO systems at once, not three -- r69 called three cluttered"),
  ("end",   None,   0.0, 31.0, 2.5, "held from b4's last frame"),
 ]
 
@@ -46,8 +56,11 @@ LABELS = {
 # depth map's gradient there, so the bands lie along the real ground plane
 # instead of across the screen.
 APERTURE = {
+ # b4's aperture was REMOVED with the r69 retime. The density beat now runs
+ # two systems, not three. This table and render4.SCHED must agree: compose()
+ # reads the anchor from here and the schedule from there, so leaving a b4
+ # entry with SCHED["b4"]["ap"] set to None raises on the unpack.
  "b3": ((560, 930), 250, 1.6),      # (anchor, radius px, open at t)
- "b4": ((900, 860), 150, 2.2),
 }
 
 

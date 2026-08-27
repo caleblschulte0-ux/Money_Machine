@@ -49,6 +49,18 @@ PLACES = {
 # Which generated frame backs each reconstruction. Two seeds were made of
 # every subject and the one that actually shows the subject was kept; the
 # rejects are still in ai/gen so the choice can be argued with.
+# SOURCE PROVENANCE — OPERATOR RULING 2026-08-27.
+# r00 hard rule 1 and r08 both say "NO newly generated AI images". ChatGPT
+# raised that against this film in r69 and it was RIGHT about the rule; both
+# citations were verified before anything was decided. The operator resolved
+# it: his 2026-08-26 instruction ("I need tk see ai images overlays... ask
+# chatgpt for the images") SUPERSEDES the earlier written rule, and this film
+# ships.
+#
+# These sources are therefore PROVISIONAL, not final. They stand in for the
+# approved A1..A5 set until ORI_AI_HANDOFF is reachable. Swapping them is a
+# one-line change here -- ai/holo.py treats any source image identically, so
+# the edit, timing, treatment and labels are untouched by the swap.
 PICK = {"A1": "A1_s11", "A9": "A9_s11", "A10": "A10_s11", "A3": "A3_s27",
         "A6": "A6_s11", "A2": "A2_s11", "A4": "A4_s27"}
 

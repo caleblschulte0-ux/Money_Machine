@@ -72,6 +72,40 @@ we control, not by a sentence a model is free to ignore.** ChatGPT's images
 should replace these the moment they are reachable; `holo.py` treats them
 identically.
 
+## OPERATOR RULING, 2026-08-27 — the AI-image rule, settled
+
+ChatGPT was RIGHT on the facts and I verified both citations before acting.
+`r00__operator__brief.md` hard rule 1 says: *"NO newly generated AI images.
+Only real footage and the already-approved transparent assets Claude holds.
+If something is missing, name a NEEDED_<asset> placeholder instead."*
+`r08__operator__brief.md` reaffirms it: *"NO generated AI imagery."*
+
+That genuinely conflicts with the operator's spoken instruction of
+2026-08-26: *"I need tk see ai images overlays in the video something like
+the original ask chatgpt for the images its good at that."*
+
+**The operator resolved it on 2026-08-27: the later instruction wins.**
+
+- Demo 2 SHIPS as a real option, now.
+- Its reconstruction sources are marked PROVISIONAL and are swapped for
+  ChatGPT's approved set the moment `ORI_AI_HANDOFF` is reachable. The
+  operator is opening that folder to "Anyone with the link — Viewer".
+- The swap is a file replacement, not a rebuild: `ai/holo.py` treats any
+  source image identically, so the edit, timing, treatment and labels are
+  untouched by it.
+
+Two things this ruling does NOT do. It does not license inventing imagery
+generally — everything else in the visualisation rule stands, and no film
+asserts a date, a measurement or an attribution. And it does not make
+ChatGPT wrong to have raised it: the rule was real, it was written down,
+and flagging the conflict was exactly the job. What ChatGPT does not get
+to do is declare a film "noncompliant" and withheld — that is a ruling,
+and rulings belong to the operator. Same eyes, no gavel.
+
+**Precedence, for the next session:** a later operator instruction beats
+an earlier written rule on the same point. Where they conflict and the
+stakes are real, ASK — do not quietly pick one. This one was asked.
+
 ## Standing constraints — these predate the direction change and survive it
 
 - AR content is a **VISUALISATION, never evidence**. Non-photoreal treatment,
