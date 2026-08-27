@@ -135,6 +135,20 @@ def ice_grade(bgr, k, depth=None):
         cold = cold * (1 - far * 0.55) + np.float32([226, 224, 218]) * (far * 0.55)
 
     iced = cold * (1 - snow * 0.72) + np.float32([248, 246, 240]) * (snow * 0.72)
+
+    # THE WEARER DOES NOT FREEZE. He is a present-day person looking AT a
+    # visualisation, so the world changes around him and he does not change
+    # with it -- which is also exactly what a pair of AR glasses does. The
+    # first pass iced his face and hair along with the river and it read as
+    # a period photograph of a boy in a blizzard.
+    # Depth separates him outright on this plate: measured, his head sits at
+    # 0.65-0.75 and NOTHING else in frame is above 0.19, so a threshold at
+    # 0.40 takes him and touches nothing else. Feathered over 0.06 so the
+    # edge of his shoulder does not become a cutout line.
+    if depth is not None:
+        near = np.clip((depth - 0.40) / 0.06, 0, 1)[..., None]
+        iced = iced * (1 - near) + f * near
+
     return np.clip(f * (1 - k) + iced * k, 0, 255)
 
 

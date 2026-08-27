@@ -87,6 +87,21 @@ SHOTS = {
         "standing at the edge of a shallow rocky river, one filling a hide "
         "container with water, everyday work, dignified, no headdress, "
         + LIGHT),
+    # THE ONE THAT WORKED was "dak": a standing group of mixed age, full
+    # length, plain garments, everyone's feet visible. The operator picked
+    # that frame out of the whole film and rejected the rest. "fam" failed
+    # in the same film at a larger size -- a seated man whose lower body is
+    # one shapeless mass of coat, next to two half-seated girls. So this is
+    # the settler family rebuilt to dak's composition exactly: standing,
+    # full length, feet down, nobody seated.
+    "fam3": ("SUBJECT",
+        "a frontier settler family of four standing together on flat rock "
+        "beside a river in the 1870s, the father in a plain waistcoat, shirt "
+        "sleeves and a wide brimmed hat, the mother in a long plain working "
+        "dress and bonnet, two children standing beside them, all four "
+        "standing upright and full length with their feet visible, calm and "
+        "dignified, natural posture, looking out to the right of frame, "
+        + LIGHT),
     "mam": ("SUBJECT",
         "a single woolly mammoth standing in deep snow, full body side view, "
         "long shaggy brown fur, curved tusks, overcast winter daylight"),

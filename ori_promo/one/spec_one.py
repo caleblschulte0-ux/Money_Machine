@@ -1,79 +1,79 @@
-# ORI — "WHAT THIS PLACE WAS". One film, replacing the five-demo set.
+# ORI — "WHAT THIS PLACE WAS". v2, rebuilt around the one shot that worked.
 #
-# OPERATOR RULING, 2026-08-27, which is why this file exists:
-#   "all your videos suck. They have very good parts of them, like you're
-#    anchoring things well. Why the hell is there not, like, an image of a
-#    fucking... an old pioneer family beside the river? ... you just made it
-#    a little fucking dot, not, like, make it a whole family."
+# OPERATOR RULING, 2026-08-27, on v1:
+#   "Ok your getting closer now but I only liked one scsense out of the
+#    whole thing everything else was bad ai or poorly sized or had
+#    somthing else wrong with it"
 #
-# He is right, and the diagnosis is exact. The five films had good anchoring
-# and nothing worth anchoring TO. Every generated image was run through
-# holo.py and came out as cyan linework -- a wireframe outline of a mill
-# does not show anyone what stood here. This film keeps the anchoring and
-# puts real, full-scale, lit FIGURES on the real rock.
+# He screenshotted b3: the Dakota family on the rock shelf, seen over the
+# wearer's shoulder. So that beat is not one good beat among six, it is
+# THE RECIPE, and this version applies it to everything:
 #
-# THREE THINGS ARE REQUIREMENTS, named by the operator:
-#   a pioneer family sitting on the modern-day rocks of Falls Park   -> b4
-#   Falls Park as it looked in the ice age                           -> b5
-#   Native Americans at the falls                                    -> b3
+#   ONE PLATE.        IMG_6804 is 50.4s long and holds to drift 1.4% over
+#                     38 of them. The whole spine is cut from it, in
+#                     CONSECUTIVE segments, so the joins are invisible and
+#                     the film plays as a single unbroken take in which
+#                     time changes around a man who does not move.
+#   ONE VIEWPOINT.    Over the wearer's shoulder, every era. That framing
+#                     is what makes it read as something he is SEEING
+#                     rather than a composite someone assembled.
+#   ONE SCALE BAND.   300-390px. This matters more than it sounds: at
+#                     450px+ the generator's faces and hands start showing
+#                     their seams, which is most of what "bad ai" meant.
+#                     Small is not a compromise here, it is the fix.
+#   ONE LEDGE.        Every figure stands on the same flat shelf, so the
+#                     eye learns where to look and the era is the only
+#                     thing that changes.
 #
-# WHAT WAS KEPT from the five, and from where:
-#   the tracked reticle + label, on a real named thing               Demo 1
-#   a reconstruction standing where the ruin still is                Demo 2
-#   returning to the present as a deliberate release                 Demo 3
-#   the footage gate: no plate is cut that the gate refuses          all
-#
-# EVERY PLATE IS GATED. b5 was first cut at 6791@18.0 for 10.0s and shotqc
-# refused it -- tail 4.31 against a 0.83 middle, ratio 5.18, the camera
-# leaving the shot exactly as the operator described it. Moved to 14.0.
+# WHAT WAS CUT FROM v1 AND WHY
+#   the mill reconstruction  a generic stone building, floating, and the
+#                            light match pulled it green. It was the worst
+#                            beat and its job -- naming the place -- is
+#                            done better by the real marker in `open`.
+#   the wide 6791 plates     they pan 16% and carried figures off frame
+#   the seated settler group a seated man whose lower body is one
+#                            shapeless mass. Replaced by fam3_s3: standing,
+#                            full length, feet down, matching dak's build.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 57.0
+TOTAL = 44.0
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
- ("open", "6790", 12.0,  0.0, 4.0, "at the rail. the system comes up, nothing claimed"),
- ("b1",   "6796", 48.0,  4.0, 7.0, "RECOGNISE: the Queen Bee Mill marker, a real sign the camera saw"),
- ("b2",   "6805", 60.0, 11.0, 8.0, "THE MILL: the building stands again above its own ruin"),
- ("b3",   "6804", 15.0, 19.0, 9.0, "BEFORE THE MILL: a Dakota family on the rock shelf"),
- ("b4",   "6791",  4.5, 28.0, 9.0, "THE SETTLERS: a family sitting on the quartzite, present-day rock"),
- ("b5",   "6791", 14.0, 37.0,10.0, "ICE: the same shelf under the last glaciation, and a mammoth"),
- ("b6",   "6794", 10.5, 47.0, 6.0, "RETURN: back to now, the falls as they are"),
- ("end",   None,   0.0, 53.0, 4.0, "held from b6's last frame"),
+ ("open", "6796", 48.0,  0.0, 6.0, "RECOGNISE: the Queen Bee Mill marker, a real sign the camera saw"),
+ ("b1",   "6804",  8.0,  6.0, 4.0, "the view. the system is up and has placed nothing"),
+ ("b2",   "6804", 12.0, 10.0, 8.0, "BEFORE THE MILL: a Dakota family on the shelf"),
+ ("b3",   "6804", 20.0, 18.0, 8.0, "THE SETTLERS: standing on the same rock, a lifetime later"),
+ ("b4",   "6804", 28.0, 26.0, 9.0, "THE LAST ICE: the same view frozen, and a mammoth on the shelf"),
+ ("b5",   "6804", 37.0, 35.0, 5.0, "RETURN: the ice lifts and it is now again"),
+ ("end",   None,   0.0, 40.0, 4.0, "held from b5's last frame"),
 ]
 
 # beat: (image, foot_xy, height_px, appear_t, build_seconds, subj_depth, match)
-# foot_xy is where the figure's FEET meet the ground, chosen by placing it
-# and looking (era/_place2.png). height_px is set against the real people in
-# the plates, not by eye -- an adult at that depth is that many pixels tall.
+# Every foot point is on the SAME shelf and every height is inside the
+# 300-390 band. Chosen by placing and looking (era/_spine_test.png).
 FIGURES = {
- # THE MILL. 300px read as a garden shed against a seven-storey claim, and
- # its base floated above the falls. 520px with the base dropped ONTO the
- # ruin line at y=505, and subj_depth 0.62 so the standing masonry and the
- # falls in front of it occlude the bottom edge -- a generated building has
- # a hard straight base, and the only thing that hides it is real geometry
- # crossing in front. match=0.22 because at the default 0.55 the light
- # match pulled seven storeys of stone green off the lawn behind it.
- "b2": [("ai/gen/A1_s11.jpg",      (985, 505), 520, 1.4, 2.0, 0.62, 0.22)],
- "b3": [("ai/era/dak_s17.jpg",     (1150, 745), 385, 1.5, 1.8, 0.55, 0.55)],
- # THE SETTLERS. This plate pans right-to-left by about 400px over the beat,
- # and a foot point that looks right on frame 1 rides the pan off the left
- # edge -- at 8.5s the family was half out of frame. Placed right of centre
- # so the pan carries it TOWARD the middle instead of out.
- "b4": [("ai/era/fam_s17.jpg",     (1220, 905), 450, 1.4, 1.8, 0.62, 0.55)],
- "b5": [("ai/era/mam_s17.jpg",     (1330, 835), 330, 2.6, 2.2, 0.55, 0.45)],
+ "b2": [("ai/era/dak_s17.jpg",  (1150, 745), 385, 1.5, 1.8, 0.30, 0.55)],
+ "b3": [("ai/era/fam3_s3.jpg",  (1180, 700), 360, 1.5, 1.8, 0.30, 0.55)],
+ "b4": [("ai/era/mam_s17.jpg",  (1330, 690), 300, 2.4, 2.2, 0.30, 0.45)],
 }
 
 # beat: (anchor_xy, title, subtitle, appear_t, offset_xy)
+# Labels sit UPPER RIGHT, over sky and treeline. The wearer's head fills
+# the left third of every frame in this plate and a label there fights him.
 LABELS = {
- "b1": ((1000, 300), "QUEEN BEE MILL",  "ON THIS SITE",      1.6, (-620, 200)),
- "b2": ((985, 420),  "THE MILL",        "RECONSTRUCTION",    3.0, (-620, 150)),
- "b3": ((1150, 745), "BEFORE THE MILL", "VISUALISATION",     3.0, (-620, -300)),
- "b4": ((1220, 905), "THE SETTLERS",    "VISUALISATION",     3.0, (-660, -430)),
- "b5": ((1330, 835), "THE LAST ICE",    "VISUALISATION",     4.0, (-680, -330)),
+ "open": ((1000, 300), "QUEEN BEE MILL",  "ON THIS SITE",   1.8, (-560, 210)),
+ # The leader anchors at the group's LEFT EDGE, not at its feet. Anchored
+ # centre, the line dropped straight down THROUGH the middle figure in
+ # all three beats -- a yellow rule through a face is the sort of thing
+ # that reads as unfinished no matter how good the composite is. Offset
+ # ~-40 so the line falls just outside the group and runs nearly vertical.
+ "b2":   ((1032, 752), "BEFORE THE MILL", "VISUALISATION",  3.2, (-40, -410)),
+ "b3":   ((1072, 707), "THE SETTLERS",    "VISUALISATION",  3.2, (-40, -390)),
+ "b4":   ((1222, 700), "THE LAST ICE",    "VISUALISATION",  4.2, (-40, -380)),
 }
 
-# The ice grade ramps in over b5 and is never applied anywhere else.
-ICE = {"beat": "b5", "in": (0.2, 2.2)}
+# The ice grade ramps in over b4 and is never applied anywhere else.
+ICE = {"beat": "b4", "in": (0.3, 2.5)}
 
 
 def timeline():
