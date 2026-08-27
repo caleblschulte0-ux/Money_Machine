@@ -154,6 +154,10 @@ export interface BarklyReply {
   newUserFacts: string[];
   /** New shared experiences Barkly believes he had with his person. */
   newBarklyMemories: string[];
-  /** Explicitly taught reusable cues, accepted only behind an app-side gate. */
-  learnedTraining: LearnedTrainingRule[];
+  /**
+   * Explicitly taught reusable cues, accepted only behind an app-side gate.
+   * Optional at the boundary so older/fallback providers remain compatible;
+   * parseReply supplies [] for the current contract.
+   */
+  learnedTraining?: LearnedTrainingRule[];
 }
