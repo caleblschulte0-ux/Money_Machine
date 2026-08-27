@@ -36,6 +36,8 @@ const FRONT_MOUTH_OPEN = require('../../assets/barkly/renders/front_mouth_open.p
 const FRONT_BLINK = require('../../assets/barkly/renders/front_blink.png');
 const FRONT_WIDE = require('../../assets/barkly/renders/front_wide.png');   // listening
 const FRONT_SMILE = require('../../assets/barkly/renders/front_smile.png'); // happy
+const FRONT_SQUINT = require('../../assets/barkly/renders/front_squint.png'); // annoyed
+const FRONT_HALF = require('../../assets/barkly/renders/front_half.png');     // mid-blink / heavy-lidded
 
 type Pose = keyof typeof RENDERS;
 
@@ -47,8 +49,10 @@ function poseFor(state: BarklyState): Pose {
     case 'sleepy':
       return 'sideSleep';
     case 'thinking':
-    case 'annoyed':
       return 'face'; // the sheet's EXPRESSION closeup — a dramatic zoom beat
+    // 'annoyed' deliberately stays on the front pose: he has a real squint
+    // now, and a squint on HIM lands better than cutting to a closeup every
+    // time he is unimpressed, which is often.
     default:
       return 'front';
   }
@@ -124,6 +128,40 @@ function SleepZs() {
   );
 }
 
+/**
+ * Which face he is wearing, in precedence order. Speaking wins over
+ * everything (a mouth that stops moving mid-sentence is the one thing that
+ * breaks the illusion outright), then the eyelid, then the emotion.
+ */
+export function faceFrame({
+  talking,
+  jawOpen,
+  lid,
+  state,
+}: {
+  talking: boolean;
+  jawOpen: boolean;
+  lid: 0 | 1 | 2;
+  state: BarklyState;
+}) {
+  if (talking && jawOpen) return FRONT_MOUTH_OPEN;
+  if (lid === 2) return FRONT_BLINK;
+  if (lid === 1) return FRONT_HALF;
+  switch (state) {
+    case 'listening':
+      return FRONT_WIDE;
+    case 'happy':
+      return FRONT_SMILE;
+    case 'annoyed':
+      return FRONT_SQUINT;
+    case 'hungry':
+      // Heavy-lidded and unimpressed with the current food situation.
+      return FRONT_HALF;
+    default:
+      return RENDERS.front;
+  }
+}
+
 export default function BarklyPhotoView({ state, actions, variant }: BarklyRenderProps) {
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
@@ -146,25 +184,31 @@ export default function BarklyPhotoView({ state, actions, variant }: BarklyRende
   }, [talking]);
 
   // Occasional deadpan blink (front pose only — the others hold their look).
-  const [blinking, setBlinking] = useState(false);
+  //
+  // Three phases, not two. An eye that snaps shut and back open reads as a
+  // dropped frame; going through the half-lidded frame on the way down AND
+  // the way up is what makes it look like an eyelid.
+  const [lid, setLid] = useState<0 | 1 | 2>(0); // 0 open, 1 half, 2 shut
   useEffect(() => {
     if (asleep) return;
     let alive = true;
-    let timer: ReturnType<typeof setTimeout>;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const at = (ms: number, fn: () => void) => timers.push(setTimeout(() => alive && fn(), ms));
     const schedule = () => {
-      timer = setTimeout(() => {
-        if (!alive) return;
-        setBlinking(true);
-        setTimeout(() => {
-          if (alive) setBlinking(false);
+      at(2600 + Math.random() * 3000, () => {
+        setLid(1);
+        at(45, () => setLid(2));
+        at(150, () => setLid(1));
+        at(205, () => {
+          setLid(0);
           schedule();
-        }, 130);
-      }, 2600 + Math.random() * 3000);
+        });
+      });
     };
     schedule();
     return () => {
       alive = false;
-      clearTimeout(timer);
+      timers.forEach(clearTimeout);
     };
   }, [asleep]);
 
@@ -269,19 +313,7 @@ export default function BarklyPhotoView({ state, actions, variant }: BarklyRende
             />
           )}
           <Animated.Image
-            source={
-              shown.current === 'front'
-                ? talking && jawOpen
-                  ? FRONT_MOUTH_OPEN
-                  : blinking
-                    ? FRONT_BLINK
-                    : state === 'listening'
-                      ? FRONT_WIDE
-                      : state === 'happy'
-                        ? FRONT_SMILE
-                        : RENDERS.front
-                : RENDERS[shown.current]
-            }
+            source={shown.current === 'front' ? faceFrame({ talking, jawOpen, lid, state }) : RENDERS[shown.current]}
             style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
             resizeMode="contain"
           />
@@ -293,6 +325,8 @@ export default function BarklyPhotoView({ state, actions, variant }: BarklyRende
       <Image source={FRONT_BLINK} style={styles.preload} />
       <Image source={FRONT_WIDE} style={styles.preload} />
       <Image source={FRONT_SMILE} style={styles.preload} />
+      <Image source={FRONT_SQUINT} style={styles.preload} />
+      <Image source={FRONT_HALF} style={styles.preload} />
 
       {asleep && <SleepZs />}
     </View>
