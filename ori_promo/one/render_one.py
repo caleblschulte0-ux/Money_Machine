@@ -175,24 +175,25 @@ def compose(beat, dur, frames):
     # Depth once, from the first frame. The camera pans but the SCENE does
     # not change, so a per-frame depth pass would cost minutes and buy a
     # difference no viewer can see.
-    dep0 = DT.depth(frames[0]) if (figs or beat == ICE["beat"]) else None
+    dep0 = DT.depth(frames[0]) if (figs or beat in ICE) else None
 
     # track every figure's foot point and the label anchor with the plate
     fpaths = [AR.track_anchor(gray, f[1]) for f in figs]
     lpath = AR.track_anchor(gray, lab[0]) if lab else None
     cuts = [PL.matte(asset(f[0])) for f in figs]
 
-    icebeat = (beat == ICE["beat"])
+    icespec = ICE.get(beat)
 
     for i, f in enumerate(frames):
         t = i / FPS
         base = f.astype(np.float32)
 
-        if icebeat:
-            a0, a1 = ICE["in"]
-            base = ice_grade(base.astype(np.uint8),
-                             AR.ease(min(1.0, max(0.0, (t - a0) / (a1 - a0)))),
-                             depth=dep0)
+        if icespec:
+            direction, a0, a1 = icespec
+            r = AR.ease(min(1.0, max(0.0, (t - a0) / (a1 - a0))))
+            k_ice = r if direction == "in" else (1.0 - r)
+            if k_ice > 0.002:
+                base = ice_grade(base.astype(np.uint8), k_ice, depth=dep0)
 
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)

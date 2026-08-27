@@ -34,7 +34,17 @@ def track(d, xy, text, font, fill, sp, anchor="ls"):
 
 def end_card(d_sec):
     """Held from b4's last frame, darkened, with the mark over it."""
-    last = subprocess.run(["ffmpeg","-v","error","-sseof","-0.1","-i",f"{OUT}/b4_t.mp4",
+    # DERIVED, NOT TYPED. This was hardcoded to b4_t.mp4, inherited from the
+    # five-film assembler where b4 happened to be the last beat. Here the
+    # last beat is b5, so the end card was holding the ICE beat's final
+    # frame: the film ended frozen, with the mammoth still standing in it,
+    # and the "return to now" beat never paid off on screen.
+    # The render-time assertion could not catch this. It lives in the
+    # RENDERER and correctly proves b5's last frame is clean; the bug was
+    # in the ASSEMBLER, reading a different file entirely. An invariant
+    # only covers the stage it runs in.
+    _last_beat = [b[0] for b in BEATS if b[1] is not None][-1]
+    last = subprocess.run(["ffmpeg","-v","error","-sseof","-0.1","-i",f"{OUT}/{_last_beat}_t.mp4",
         "-frames:v","1","-f","rawvideo","-pix_fmt","bgr24","-"], capture_output=True).stdout
     base = np.frombuffer(last[:W*H*3], np.uint8).reshape(H, W, 3).astype(np.float32)
     n = int(round(d_sec*FPS))
@@ -125,17 +135,23 @@ def master(dst):
     subprocess.run(["ffmpeg","-v","error","-y","-f","concat","-safe","0","-i","concat_one.txt",
         "-r",str(FPS),"-fps_mode","cfr","-c:v","libx264","-crf","14",
         "-pix_fmt","yuv420p",f"{OUT}/_picture.mp4"], check=True)
-    mix = ("[1:a][2:a]amix=inputs=2:normalize=0,"
+    # THREE sources now, not two: the location bed, the confirmation ticks,
+    # and the score. The bed is ducked under the score rather than summed
+    # flat -- at equal weight the river's broadband hiss ate the pad and
+    # the result sounded like neither. weights are bed / ticks / score.
+    mix = ("[1:a][2:a][3:a]amix=inputs=3:normalize=0:weights=0.62 1.0 1.0,"
            "alimiter=limit=0.80:attack=4:release=90:level=disabled")
     p = subprocess.run(["ffmpeg","-hide_banner","-nostats","-i",f"{OUT}/_picture.mp4",
-        "-i",f"{OUT}/_bed.wav","-i",f"{OUT}/_marks.wav","-filter_complex",
+        "-i",f"{OUT}/_bed.wav","-i",f"{OUT}/_marks.wav",
+        "-i",f"{OUT}/_music.wav","-filter_complex",
         mix+",loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json[a]",
         "-map","[a]","-f","null","-"], capture_output=True, text=True)
     m = re.findall(r"\{[^{}]*input_i[^{}]*\}", p.stderr, re.S)
     if not m: sys.exit(p.stderr[-2000:])
     j = json.loads(m[-1]); print("  measured", j["input_i"], j["input_tp"])
     subprocess.run(["ffmpeg","-v","error","-y","-i",f"{OUT}/_picture.mp4",
-        "-i",f"{OUT}/_bed.wav","-i",f"{OUT}/_marks.wav","-filter_complex",
+        "-i",f"{OUT}/_bed.wav","-i",f"{OUT}/_marks.wav",
+        "-i",f"{OUT}/_music.wav","-filter_complex",
         mix+(f",loudnorm=I=-16:TP=-1.5:LRA=11:linear=true:measured_I={j['input_i']}:"
              f"measured_TP={j['input_tp']}:measured_LRA={j['input_lra']}:"
              f"measured_thresh={j['input_thresh']},aresample={SR}[a]"),
@@ -145,5 +161,7 @@ def master(dst):
 
 if __name__ == "__main__":
     end_card([b for b in BEATS if b[1] is None][0][4]); print("  end card")
-    bed(); marks(); print("  sound")
+    bed(); marks()
+    import score_one; score_one.main()
+    print("  sound")
     master("../out/ORI_What_This_Place_Was_master.mp4"); print("  mastered")
