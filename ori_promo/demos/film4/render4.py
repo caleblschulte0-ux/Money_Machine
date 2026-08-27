@@ -167,6 +167,15 @@ SCHED = {
 }
 
 
+# MEMORY. compose() is a GENERATOR and encode() consumes it frame by frame.
+# It used to build a full list of finished frames and return it, which meant
+# every beat held TWO complete 1920x1080 frame lists at once -- the normalized
+# plate and the composed output. A 255-frame beat is 1.58 GB per list, so a
+# single render peaked near 3.5 GB and three concurrent renders were killed by
+# the cgroup OOM at 7.2 GB RSS (Demo 3, 2026-08-27, silently: the process
+# vanished mid-beat and the log just stopped). Streaming halves the peak and
+# the input list is dropped as soon as the generator owns it.
+
 def compose(beat, dur, frames):
     gray = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
     cum = global_track(gray)
@@ -190,7 +199,6 @@ def compose(beat, dur, frames):
     apath = AR.track_anchor(gray, ap[0]) if ap else None
     ap_ang = None
 
-    out = []
     for i, f in enumerate(frames):
         t = i / FPS
         base = f.astype(np.float32)
@@ -348,8 +356,7 @@ def compose(beat, dur, frames):
         frame_cue(d, t, dur)
         ov = np.array(img).astype(np.float32)
         a = ov[..., 3:4]/255.0
-        out.append(np.clip(base*(1-a) + ov[..., :3][..., ::-1]*a, 0, 255).astype(np.uint8))
-    return out
+        yield np.clip(base*(1-a) + ov[..., :3][..., ::-1]*a, 0, 255).astype(np.uint8)
 
 
 def encode(frames, dst, crf=13):
@@ -385,10 +392,10 @@ if __name__ == "__main__":
         fr = read_frames(f"{OUT}/{b}_raw.mp4")
         nf = [(np.clip(SN.apply(f.astype(np.float32)/255.0, p), 0, 1)*255).astype(np.uint8)
               for f in fr]
-        ov = compose(b, d, nf)
-        encode(ov, f"{OUT}/{b}_t.mp4")
+        encode(compose(b, d, nf), f"{OUT}/{b}_t.mp4")
+        del fr, nf
         lines.append(f"  {b}  IMG_{clip} @{tin:.1f}s  {SN.describe(p)}")
-        print(f"  {b} normalized + AR ({len(ov)} frames)", flush=True)
+        print(f"  {b} normalized + AR", flush=True)
     open(f"{OUT}/norm.txt","w").write("\n".join(lines)+"\n")
     # No filmfinish, for the reason recorded in Demo 1: measured on a plate it
     # cost contrast std 0.271 -> 0.205 and highlights p99 0.916 -> 0.771.
