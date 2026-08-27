@@ -25,6 +25,7 @@ import Onboarding from './Onboarding';
 import PackBookSheet from './PackBookSheet';
 import StoreSheet, { CoinPill } from './StoreSheet';
 import FoodSheet from './FoodSheet';
+import ContestSheet from './ContestSheet';
 import { AREA_UNLOCKS, levelProgress } from '../game/progression';
 import BarklyView from './BarklyView';
 import SettingsSheet from './SettingsSheet';
@@ -598,6 +599,12 @@ export default function BarklyRoom() {
         </View>
       </KeyboardAvoidingView>
 
+      <ContestSheet
+        visible={barkly.pendingContest !== null}
+        rules={barkly.pendingContest}
+        onDone={(result) => void barkly.finishContest(result)}
+        onClose={() => void barkly.finishContest(null)}
+      />
       <FoodSheet
         visible={foodOpen}
         onClose={() => setFoodOpen(false)}

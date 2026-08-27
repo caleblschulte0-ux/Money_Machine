@@ -31,6 +31,8 @@ export interface WorldContext {
   locationDescription: string;
   npcs: { name: string; relationship: 'friend' | 'rival'; personality: string }[];
   stashItems?: string[];
+  /** The toy he is holding right now, if any. */
+  toy?: string;
 }
 
 export interface PromptContext {

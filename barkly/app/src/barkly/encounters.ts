@@ -30,6 +30,19 @@ export interface EncounterChoice {
   actions: BodyAction[];
   /** If present, Barkly performs this learned routine after his reply. */
   routineCue?: string;
+  /**
+   * If present, this choice is not a line — it is a CONTEST. Picking it
+   * opens the duel and the outcome, not a script, decides what happened.
+   * "Challenge him" used to print two sentences and bump a counter, which is
+   * an announcement rather than a challenge.
+   */
+  contest?: { kind: 'fetch' | 'race' | 'dig'; opponent: string };
+  /** Said instead of barklyReply when a contest was won / lost. */
+  wonReply?: string;
+  lostReply?: string;
+  /** Durable memory variants for the two outcomes. */
+  wonMemory?: string;
+  lostMemory?: string;
 }
 
 export interface SocialEncounter {
@@ -169,10 +182,15 @@ function dukeEncounter(character: CharacterState, memory: MemoryState): SocialEn
       {
         id: 'challenge',
         label: 'Challenge him',
-        hint: 'make the rivalry official',
+        hint: 'settle it properly',
         npcReply: 'Finally. A serious competitor.',
         barklyReply: 'Serious? No. Competitor? Unfortunately yes.',
         memory: 'Accepted Duke’s dramatic fetch challenge. The rivalry intensified.',
+        contest: { kind: 'fetch', opponent: duke.name },
+        wonReply: 'Beat him. In front of everyone. I would like that noted.',
+        lostReply: 'He won. Once. In specific conditions I intend to dispute.',
+        wonMemory: 'Beat Duke in a real fetch duel. Duke has not recovered.',
+        lostMemory: 'Lost a fetch duel to Duke and has been drafting excuses since.',
         bondDelta: 2,
         reaction: 'excited',
         actions: ['EXCITED', 'TAIL_WAG'],
@@ -421,6 +439,11 @@ function pepperEncounter(character: CharacterState, memory: MemoryState): Social
         npcReply: 'That is the exact opposite of patrol.',
         barklyReply: 'Then why did you say “lap,” Pepper?',
         memory: 'Turned Pepper’s dignified town patrol into an unauthorized race.',
+        contest: { kind: 'race', opponent: 'Pepper' },
+        wonReply: 'Won the lap. It was a patrol. I patrolled fastest.',
+        lostReply: 'Pepper won. Pepper is built like a rumour and moves like one.',
+        wonMemory: 'Beat Pepper in an unauthorized race around the town square.',
+        lostMemory: 'Lost an unauthorized race to Pepper and called it a warm-up.',
         bondDelta: 1,
         reaction: 'excited',
         actions: ['EXCITED', 'TAIL_WAG'],

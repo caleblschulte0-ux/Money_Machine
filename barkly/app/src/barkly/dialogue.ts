@@ -105,10 +105,25 @@ export class DialogueEngine {
       character,
     });
 
+    // The situation as DATA as well as prose. A model reads the prompt; the
+    // offline brain cannot, and without this it repeats itself forever.
+    const context = {
+      state: snapshot.state,
+      stats: snapshot.stats,
+      location: world?.locationDescription,
+      npcsPresent: world?.npcs.map((n) => n.name),
+      personName: this.memory.getFact('name')?.value,
+      treasures: world?.stashItems,
+      cues: memState.trainingRules.map((r) => r.cue),
+      hour: new Date().getHours(),
+      toy: world?.toy,
+    };
+
     const raw = await this.provider.complete({
       systemPrompt,
       turns: memState.turns,
       userText: text,
+      context,
     });
 
     const reply = parseReply(raw);

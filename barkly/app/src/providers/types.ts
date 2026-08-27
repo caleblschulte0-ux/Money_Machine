@@ -25,12 +25,41 @@ export interface SpeechToTextProvider {
   cancel(): Promise<void>;
 }
 
+/**
+ * Structured situation, for a provider that cannot read a system prompt.
+ *
+ * The real model gets all of this as prose inside `systemPrompt`. The OFFLINE
+ * brain cannot parse prose, and without this it answered the same six ways
+ * forever regardless of where he was, how hungry he was, or who you are —
+ * which is exactly what "he still has the same basic four lines" means.
+ */
+export interface DialogueContext {
+  state: string;
+  stats: { mood: number; energy: number; hunger: number; affection: number; curiosity: number };
+  /** Where he is, e.g. "park". */
+  location?: string;
+  /** Display names of dogs present right now. */
+  npcsPresent?: string[];
+  /** What your person is called, if he knows. */
+  personName?: string;
+  /** The toy he is holding, e.g. "Squeaky ball". */
+  toy?: string;
+  /** Things he has dug up, newest first. */
+  treasures?: string[];
+  /** Local hour 0-23, so he can be sleepy at night. */
+  hour?: number;
+  /** Cues you taught him, so an offline Barkly can still perform one. */
+  cues?: string[];
+}
+
 export interface DialogueRequest {
   systemPrompt: string;
   /** Recent turns, oldest first. The summary of older turns is already in systemPrompt. */
   turns: ChatTurn[];
   /** The user's newest utterance. */
   userText: string;
+  /** Situation as data. Optional: a model-backed provider ignores it. */
+  context?: DialogueContext;
 }
 
 export interface DialogueProvider {

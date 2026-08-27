@@ -33,6 +33,7 @@ import {
   PLAN_REWARD,
   progressAdventure,
 } from '../game/adventure';
+import { contestReward, CONTEST_ROUNDS, ContestRules, ContestState } from '../game/contest';
 import {
   areaUnlocked,
   buy as buyItem,
@@ -172,6 +173,13 @@ export interface BarklyController {
   /** A choice moment generated from the relationship history, when one is active. */
   activeEncounter: SocialEncounter | null;
   resolveEncounter(choiceId: string): Promise<void>;
+  /**
+   * Set while a challenge is being SETTLED rather than announced. The room
+   * opens the duel; finishContest reports how it went and the outcome — not a
+   * fixed script — decides what Barkly says and what gets remembered.
+   */
+  pendingContest: ContestRules | null;
+  finishContest(state: ContestState | null): Promise<void>;
   dismissEncounter(): void;
   dig(): Promise<Treasure | null>;
   stashItems: Treasure[];
@@ -227,6 +235,11 @@ export function useBarkly(): BarklyController {
   const [location, setLocation] = useState<LocationId>('home');
   const [npcBubble, setNpcBubble] = useState<{ id: NpcId; line: string } | null>(null);
   const [activeEncounter, setActiveEncounter] = useState<SocialEncounter | null>(null);
+  const [pendingContest, setPendingContest] = useState<ContestRules | null>(null);
+  /** The choice that opened the duel, held until we know how it went. */
+  const contestChoice = useRef<{ encounter: SocialEncounter; choiceId: string } | null>(null);
+  /** Won or lost, read once by the resolution that follows. */
+  const contestOutcome = useRef<boolean | undefined>(undefined);
   const npcLineCounter = useRef(0);
   const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNpcCredit = useRef<Partial<Record<NpcId, number>>>({});
@@ -600,6 +613,7 @@ export function useBarkly(): BarklyController {
         personality: NPCS[id].personality,
       })),
       stashItems: stash.list().slice(-5).map((t) => t.name),
+      toy: equippedItem(walletRef.current, 'toy')?.name,
     };
   }, [stash]);
 
@@ -842,6 +856,15 @@ export function useBarkly(): BarklyController {
       const choice = encounter.choices.find((candidate) => candidate.id === choiceId);
       if (!choice) return;
 
+      // A contest choice is not answered here — it is PLAYED. Hold it, open
+      // the duel, and let finishContest resolve it with the real outcome.
+      if (choice.contest && !contestChoice.current) {
+        contestChoice.current = { encounter, choiceId };
+        setActiveEncounter(null);
+        setPendingContest({ ...choice.contest, rounds: CONTEST_ROUNDS });
+        return;
+      }
+
       const npc = NPCS[encounter.npcId];
       const now = Date.now();
       setActiveEncounter(null);
@@ -867,13 +890,26 @@ export function useBarkly(): BarklyController {
       });
 
       try {
-        await memory.remember([], [choice.memory], {
+        // A settled challenge remembers what actually happened, not the
+        // intention. Everything else uses the written line.
+        const outcome = contestOutcome.current;
+        const memoryLine =
+          outcome === undefined
+            ? choice.memory
+            : (outcome ? choice.wonMemory : choice.lostMemory) ?? choice.memory;
+        const replyLine =
+          outcome === undefined
+            ? choice.barklyReply
+            : (outcome ? choice.wonReply : choice.lostReply) ?? choice.barklyReply;
+        contestOutcome.current = undefined;
+
+        await memory.remember([], [memoryLine], {
           where: LOCATIONS[locationRef.current].name,
           withWhom: [npc.name],
         });
         setMemoryVersion((v) => v + 1);
 
-        await speak(choice.barklyReply, {
+        await speak(replyLine, {
           actions: choice.actions,
           after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
         });
@@ -1035,6 +1071,42 @@ export function useBarkly(): BarklyController {
     [memory, providers],
   );
 
+  /**
+   * The duel is over. Pay for it, say the line the OUTCOME earned, and then
+   * resolve the encounter that opened it — so a challenge ends in a result
+   * rather than an announcement.
+   */
+  const finishContest = useCallback(
+    async (result: ContestState | null): Promise<void> => {
+      const held = contestChoice.current;
+      contestChoice.current = null;
+      setPendingContest(null);
+      if (!held) return;
+
+      // Backing out of a duel is allowed and costs nothing; the encounter
+      // simply resolves on its written line.
+      if (result?.done) {
+        contestOutcome.current = Boolean(result.won);
+        const prize = contestReward(result);
+        if (prize.coins > 0) {
+          setWallet((w) => {
+            const next = grantCoins({ ...w, xp: w.xp + prize.xp }, prize.coins);
+            walletRef.current = next;
+            return next;
+          });
+          setReward({ ...prize, note: result.won ? 'won the duel' : 'good effort' });
+        }
+      }
+
+      setActiveEncounter(held.encounter);
+      // The encounter is back on screen for a frame; resolve it immediately
+      // with the choice that started the duel.
+      await pause(0);
+      await resolveEncounter(held.choiceId);
+    },
+    [resolveEncounter],
+  );
+
   const actions = useMemo<BodyAction[]>(() => {
     const ambient = ambientActions(snapshot.state);
     const merged =
@@ -1076,6 +1148,8 @@ export function useBarkly(): BarklyController {
     voiceRoute: voiceEngine.lastRoute,
     onboarding,
     advanceOnboarding: handleOnboarding,
+    pendingContest,
+    finishContest,
     wallet,
     level: levelFor(wallet.xp),
     reward,
