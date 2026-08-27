@@ -53,3 +53,10 @@ export const LEAF = {
   dark: '#53623A',
   grey: '#71805C',
 } as const;
+
+/** His ball. A red rubber ball with a seam, not a themed UI accent. */
+export const BALL = {
+  body: '#B3402E',
+  seam: '#8E2F20',
+  gloss: '#FFFFFF',
+} as const;

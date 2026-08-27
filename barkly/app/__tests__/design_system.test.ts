@@ -113,3 +113,23 @@ describe('one elevation ramp', () => {
     });
   }
 });
+
+/**
+ * A token reference that got quoted.
+ *
+ * The palette pass rewrote `fill="#B3402E"` to `fill="color.brand"` — a STRING,
+ * not the token — in both copies of his ball. SVG cannot parse that, so the
+ * ball rendered as a black disc, and nothing failed: it is a valid string in a
+ * prop that takes strings. Type-checking cannot see it and the hex rule was
+ * satisfied, which is precisely why it survived.
+ */
+describe('tokens are referenced, not quoted', () => {
+  const TOKEN = /["'](?:color|space|radius|type|elevation|glyph|BALL|BRASS|DIRT|SAND|GROUND|LEAF)\.[A-Za-z]/;
+  for (const file of uiFiles(UI)) {
+    const short = file.slice(file.indexOf('src/'));
+    it(`${short}: no token path inside quotes`, () => {
+      const hit = code(file).match(new RegExp(TOKEN.source, 'g'));
+      expect(hit ?? []).toEqual([]);
+    });
+  }
+});

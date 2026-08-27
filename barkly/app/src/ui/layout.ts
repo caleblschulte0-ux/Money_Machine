@@ -1,110 +1,112 @@
 /**
- * Where things are allowed to be on screen.
+ * The shape of the screen.
  *
- * The brief was exact: "pretend that everything that could ever pop up on the
- * screen popped up at once — things need to be positioned so they don't
- * interact." That is a layout CONTRACT, not a set of nudges, so it lives in
- * one file with numbers you can read, and there is a stress mode that turns
- * every overlay on at once plus a browser check that measures the boxes and
- * fails on any overlap.
+ * THE REDESIGN. The previous version stacked chrome down the top of the
+ * screen — a wordmark row, then four location tabs, then a plan pill — and
+ * floated his speech ABOVE HIS HEAD, which meant the bubble was forever
+ * negotiating for space with his face and with every notice. That is why it
+ * read as cluttered no matter how many collisions got fixed: the layout was
+ * asking three things to share one region.
  *
- * What was wrong:
+ * The fix is not more collision rules. It is giving each thing its own band:
  *
- * - Notices STACKED. A coin reward, a rivalry promotion and a degraded-service
- *   banner were three siblings in one column with a 6px gap. Earn coins during
- *   a promotion and you got two cards deep; add a backend warning and it was
- *   three, reaching down into the speech bubble.
- * - The speech bubble's zone STARTED ABOVE THE NOTICE ZONE. Its anchor began
- *   at the top of the stage (~181px) while notices sat at 190px, so a
- *   four-line reply grew straight up through them.
- * - Nothing declared its space. Every overlay picked its own offset, so any
- *   new one was a guess.
+ *     ┌──────────────────────────────┐
+ *     │ [c 65 Lv1]      [pack][🔊][⋯] │  STATUS   one row, nothing else
+ *     │  home  park  town  beach  [›] │  PLACES   slim, with the plan chip
+ *     │                              │
+ *     │                              │
+ *     │             🐕                │  STAGE    his, entirely. Nothing
+ *     │                              │           is ever drawn over him.
+ *     ├──────────────────────────────┤
+ *     │ BARKLY                       │  DIALOGUE fixed panel. Everything
+ *     │ "the line he just said"      │           anyone says appears here.
+ *     ├──────────────────────────────┤
+ *     │ [say something…      ] [talk] │  ACTIONS
+ *     │ [ play ] [ feed ] [ sleep ]  │
+ *     └──────────────────────────────┘
  *
- * The bands below are measured from the top of the content view (which already
- * carries the safe-area padding). They are exclusive: nothing in one band may
- * enter another.
+ * Moving dialogue to a panel at the bottom is what makes "speech must never
+ * cover anyone's face" true BY CONSTRUCTION rather than by measurement: the
+ * stage and the dialogue band do not overlap, so nothing in one can land on
+ * anything in the other. It also collapses four separate floating things —
+ * his bubble, his thought, the NPC's bubble, the idle hint — into one panel
+ * that is always in the same place, which is most of the decluttering.
  */
 
 /**
- * Everything above this is fixed chrome (header, location tabs, plan pill).
- * Measured with all three present, which is the normal case.
+ * The inset above the status row — notch, status bar, breathing room.
+ *
+ * It lives here rather than as a `paddingTop` literal in the screen because
+ * the notice layer is positioned ABSOLUTELY, and absolute `top` in React
+ * Native measures from the border box, ignoring that padding. When the two
+ * numbers lived apart, the notice was placed 54px too high and printed
+ * straight through the places row at every screen size.
  */
-export const CHROME_BOTTOM = 186;
+export const CONTENT_TOP = 54;
+
+/** Status row: coins, level, pack, mute, settings. */
+export const STATUS_HEIGHT = 44;
+
+/** Places row, directly under it. */
+export const PLACES_HEIGHT = 40;
+
+/** Everything above this is chrome. Measured from the top of the content view. */
+export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 12;
 
 /**
- * ONE notice at a time, in its own reserved strip. The height is capped at
- * the tallest notice (the promotion card, three lines) so the band below can
- * be positioned against a constant rather than against whatever happens to be
- * showing.
+ * ONE notice at a time, floating over the empty upper sky. Fixed height so
+ * the stage below never reflows when a reward appears.
  */
-export const NOTICE_TOP = CHROME_BOTTOM + 8;
+export const NOTICE_TOP = CONTENT_TOP + CHROME_BOTTOM + 10;
 export const NOTICE_MAX_HEIGHT = 86;
-export const NOTICE_BOTTOM = NOTICE_TOP + NOTICE_MAX_HEIGHT;
 
 /**
- * His speech bubble and thought bubble share one anchor above his head. It
- * may grow upward, and it stops here — clear of the notice strip, whether or
- * not a notice is showing.
+ * The dialogue panel. Fixed height so the stage above it is a constant, and
+ * tall enough for three lines plus a speaker name.
  */
-export const SPEECH_TOP = NOTICE_BOTTOM + 8;
-
-/** Roughly how tall the sprite is, standing on the stage floor. */
-export const SPRITE_HEIGHT = 305;
+export const DIALOGUE_HEIGHT = 108;
 
 /** Text field + the three action buttons + the padding under them. */
-export const CONTROLS_HEIGHT = 150;
+export const CONTROLS_HEIGHT = 128;
 
-/** A bubble needs at least this much room to be worth showing. */
-export const SPEECH_MIN_HEIGHT = 132;
-
-/**
- * Hard cap on how many lines of him fit in a bubble. Four lines at a 360px
- * width is taller than the speech band, and a `flex-end` box overflows
- * UPWARD — straight back through the notice strip that the band exists to
- * stay clear of. Three lines fit at every size we check.
- */
+/** Hard cap on lines of dialogue. Three fits the panel at every size. */
 export const SPEECH_MAX_LINES = 3;
 
 /**
- * Where his speech bubble's tail sits, measured from the TOP of the content
- * view — just over his head.
- *
- * This has to be computed from the real screen height, which is the thing the
- * first version got wrong: it was a flat 470px from the bottom, and on a
- * 780px screen that put the band's floor ABOVE its own ceiling, so a four-line
- * reply spilled straight up through the notice strip and the plan pill. The
- * clamp is the important half — when there genuinely isn't room the bubble
- * grows DOWN over the top of his head (which looks like a speech bubble) and
- * never up into the chrome (which looks broken).
+ * How much room the stage gets, given the screen. Everything else is fixed,
+ * so the character absorbs the difference — a taller phone means a bigger
+ * dog, not a bigger gap.
  */
-export function speechTail(screenHeight: number): number {
-  const headLine = screenHeight - CONTROLS_HEIGHT - SPRITE_HEIGHT;
-  return Math.max(SPEECH_TOP + SPEECH_MIN_HEIGHT, headLine);
+export function stageHeight(screenHeight: number): number {
+  return Math.max(220, screenHeight - CHROME_BOTTOM - DIALOGUE_HEIGHT - CONTROLS_HEIGHT - 24);
 }
 
 /**
- * Where an NPC's bubble sits: its own horizontal band, just under his.
+ * How big he is drawn, given the screen — and the reason it is a FUNCTION.
  *
- * These used to float directly above each NPC sprite, which meant their
- * position depended on that dog's size and offset — and on a short screen,
- * where his own bubble gets pushed down toward his head, the two met. Giving
- * them a band derived from the SAME function makes the separation structural
- * rather than a coincidence of three sprite offsets.
+ * He used to be scaled to the stage alone, which is wrong: the notice band
+ * floats over the top of the stage, so the stage is not all his. At 360×780
+ * that put a rivalry card 31px into the top of his sprite — the exact thing
+ * "speech must never cover anyone's face" rules out. Scaling him to the room
+ * he ACTUALLY has makes it impossible instead of unlikely.
+ *
+ * Measured, not guessed: at scale 1 the sprite box is 322 tall and its feet
+ * sit 54px above the bottom of the stage.
  */
-export const NPC_BUBBLE_GAP = 12;
-export function npcBubbleTop(screenHeight: number): number {
-  return speechTail(screenHeight) + NPC_BUBBLE_GAP;
+export const SPRITE_HEIGHT = 322;
+export const SPRITE_FOOT = 54;
+/** How far the notice band reaches down into the stage from its top. */
+export const NOTICE_BAND = 10 + NOTICE_MAX_HEIGHT;
+
+export function spriteScale(screenHeight: number): number {
+  const room = stageHeight(screenHeight) - SPRITE_FOOT - NOTICE_BAND - 8;
+  return Math.max(0.62, Math.min(1, room / SPRITE_HEIGHT));
 }
 
 /**
  * Notices are mutually exclusive and this is the order they win in: a hard
  * error outranks a degraded service, which outranks a story beat, which
  * outranks a coin receipt.
- *
- * The error used to live at the bottom of the speech anchor, as if it were
- * something he said — which put it at head height, straight through the NPC's
- * bubble. An error is a notice, so it goes in the notice slot with the rest
- * and inherits the reservation that keeps that slot clear.
  */
 export type NoticeKind = 'error' | 'degraded' | 'promotion' | 'reward';
 export const NOTICE_PRIORITY: NoticeKind[] = ['error', 'degraded', 'promotion', 'reward'];

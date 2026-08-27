@@ -22,6 +22,14 @@ export interface BarklyRenderProps {
    */
   variant?: 'runRight' | 'carryLeft' | null;
   /**
+   * How much of his natural size to draw, 0..1.
+   *
+   * The stage is a fixed band now, so on a short phone he has to fit it
+   * rather than be cropped by the dialogue panel underneath. The screen
+   * decides; the renderer just draws smaller.
+   */
+  scale?: number;
+  /**
    * Tint for a bought collar. The concept sheet's brown leather is the
    * default and stays canon; this recolours it, it never redraws him. A
    * renderer with no collar layer may ignore it.

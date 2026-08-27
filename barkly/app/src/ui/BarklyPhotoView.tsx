@@ -163,7 +163,7 @@ export function faceFrame({
   }
 }
 
-export default function BarklyPhotoView({ state, actions, variant, collarId }: BarklyRenderProps) {
+export default function BarklyPhotoView({ state, actions, variant, collarId, scale = 1 }: BarklyRenderProps) {
   const collarArt = collarId ? COLLAR_ART[collarId] : undefined;
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
@@ -287,12 +287,20 @@ export default function BarklyPhotoView({ state, actions, variant, collarId }: B
 
   const prevSize = shown.prev ? POSE_SIZE[shown.prev] : size;
 
+  /**
+   * He is drawn to fit the stage he was given.
+   *
+   * The sprite used to be a fixed 300x322 box, so on a short phone the
+   * dialogue panel below simply cropped his paws off. The screen owns the
+   * band; the renderer draws to it.
+   */
   return (
-    <View style={styles.stage}>
+    <View style={[styles.stage, { width: 300 * scale, height: 322 * scale }]}>
       <Animated.View
         style={{
           opacity: enter,
           transform: [
+            { scale },
             { translateY: Animated.add(talkBob, bounceLift) },
             { translateX: lookShift },
             { rotate: driftRotate },
@@ -386,7 +394,7 @@ const FRONT_POSES = new Set<Pose>(['front']);
 
 const styles = StyleSheet.create({
   collarArt: { position: 'absolute', bottom: 0 },
-  stage: { width: 300, height: 322, alignItems: 'center', justifyContent: 'flex-end' },
+  stage: { alignItems: 'center', justifyContent: 'flex-end' },
   preload: { position: 'absolute', width: 1, height: 1, opacity: 0 },
   zzzWrap: { position: 'absolute', top: 8, right: 34, width: 60, height: 60 },
   zzz: { position: 'absolute', bottom: 0, color: color.inkFaint, fontWeight: '800' },

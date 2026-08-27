@@ -172,6 +172,15 @@ function shadow(y: number, blur: number, alpha: number): ViewStyle {
 }
 
 export const elevation = {
+  /**
+   * Explicitly NO shadow. Needed because a style that conditionally drops out
+   * of a card has to unset every prop the ramp set, on both platforms — the
+   * one place that knows web uses `boxShadow` and native uses four props.
+   */
+  flat: Platform.select({
+    web: { boxShadow: 'none' } as ViewStyle,
+    default: { shadowOpacity: 0, shadowRadius: 0, elevation: 0 } as ViewStyle,
+  }) as ViewStyle,
   /** Chips and rows resting on a surface. */
   low: shadow(2, 6, 0.08),
   /** Cards, bubbles, the header pills. */

@@ -357,6 +357,24 @@ export const AREA_UNLOCKS: Record<string, Unlock> = {
   },
 };
 
+/**
+ * What he says when you tap a place he cannot go to yet.
+ *
+ * A locked tab used to be `disabled`, which means tapping it did literally
+ * nothing — no sound, no line, no explanation. A door that does not open is
+ * fine; a door that does not even rattle reads as a broken button. He answers
+ * instead, in his own voice, and the answer contains the actual requirement.
+ */
+export function lockedAreaLine(area: string, level: number): string {
+  const lines: Record<string, string> = {
+    beach: `The beach! Not yet though. They only let good dogs on the sand and I'm level ${level} good, apparently.`,
+  };
+  return (
+    lines[area] ??
+    `Can't go there yet. Something about being level ${level}. I don't make the rules, I just sit near them.`
+  );
+}
+
 export function areaUnlocked(area: string, xp: number, dev = false): boolean {
   if (dev) return true;
   const unlock = AREA_UNLOCKS[area];

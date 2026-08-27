@@ -37,7 +37,9 @@ import {
 import { contestReward, CONTEST_ROUNDS, ContestRules, ContestState } from '../game/contest';
 import { Promotion } from '../barkly/escalation';
 import {
+  AREA_UNLOCKS,
   areaUnlocked,
+  lockedAreaLine,
   buy as buyItem,
   claimDaily,
   consume as consumeItem,
@@ -931,16 +933,28 @@ export function useBarkly(): BarklyController {
     // ONE source of truth for "can he go there". This used to re-check
     // without the dev flag, so in dev mode the tab rendered open and then
     // silently refused to move him — the same soft-lock in a new disguise.
-    if (!canGo(loc)) return;
+    if (!canGo(loc)) {
+      // Not a silent refusal. He tells you what the lock wants — same
+      // speaking lifecycle as any other line, so the voice and the mouth
+      // animation come along with it.
+      const need = AREA_UNLOCKS[loc]?.level ?? 1;
+      speak(lockedAreaLine(loc, need), { actions: ['MOUTH_MOVE'] }).catch(() => {});
+      return;
+    }
     const moved = loc !== locationRef.current;
     setLocation(loc);
     locationRef.current = loc;
     setNpcBubble(null);
     setActiveEncounter(null);
     setLastExchange(null);
+    // ...and the thought he was having. It lingers for 5.2s, so walking to the
+    // park within that window left him standing on the grass thinking "the
+    // window shows outside" — a location-aware line, shown in the wrong
+    // location, which reads as the character not knowing where he is.
+    setThought(null);
     gate.write(LOCATION_KEY, loc).catch(() => {});
     if (moved) progressPlan({ kind: 'travel', target: loc });
-  }, [canGo, progressPlan]);
+  }, [canGo, progressPlan, speak]);
 
   const npcTalk = useCallback(
     (id: NpcId): boolean => {

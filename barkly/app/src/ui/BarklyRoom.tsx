@@ -4,8 +4,9 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { color, elevation } from './theme';
-import { BRASS, DIRT, GROUND, LEAF, SAND } from './scenes/artPalette';
+import { color, elevation, radius, space, type } from './theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BALL, BRASS, DIRT, GROUND, LEAF, SAND } from './scenes/artPalette';
 import {
   Animated,
   Easing,
@@ -31,6 +32,7 @@ import FoodSheet from './FoodSheet';
 import ContestSheet from './ContestSheet';
 import { AREA_UNLOCKS, levelProgress } from '../game/progression';
 import BarklyView from './BarklyView';
+import DialoguePanel from './DialoguePanel';
 import SettingsSheet from './SettingsSheet';
 import { Ball, FoodBowl } from './StageProps';
 import {
@@ -45,14 +47,20 @@ import {
 import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import {
-  npcBubbleTop,
+  CHROME_BOTTOM,
+  CONTROLS_HEIGHT,
+  DIALOGUE_HEIGHT,
+  PLACES_HEIGHT,
+  STATUS_HEIGHT,
   NOTICE_MAX_HEIGHT,
   NOTICE_PRIORITY,
+  CONTENT_TOP,
   NOTICE_TOP,
   NoticeKind,
-  speechTail,
   SPEECH_MAX_LINES,
-  SPEECH_TOP,
+  SPRITE_FOOT,
+  stageHeight,
+  spriteScale as scaleForScreen,
 } from './layout';
 import { NPCS, NpcId } from '../world/npcs';
 
@@ -64,10 +72,23 @@ const NPC_ART: Record<NpcId, ReturnType<typeof require>> = {
   duke: require('../../assets/barkly/renders/npcs/duke_front.png'),
 };
 
+/**
+ * Where the other dogs stand — and how far BACK they stand.
+ *
+ * They used to be drawn at roughly 45% of Barkly's height with their feet
+ * barely above his, which is not a dog in the middle distance: it is a small
+ * dog standing next to him. The scene read as three cut-outs pasted on a
+ * green rectangle, because the only depth cue in it was overlap.
+ *
+ * Two cues, applied together, are what make it a space: things further away
+ * are SMALLER and their feet are HIGHER up the ground plane. `bottom` is that
+ * second cue, so it scales with the sprite — moving the horizon must not
+ * leave a dog hovering.
+ */
 const NPC_SPOTS: Partial<Record<NpcId, { left?: number; right?: number; bottom: number; size: number }>> = {
-  biscuit: { left: 6, bottom: 96, size: 108 },
-  duke: { right: 2, bottom: 118, size: 124 },
-  pepper: { right: 8, bottom: 100, size: 114 },
+  biscuit: { left: 4, bottom: 136, size: 82 },
+  duke: { right: 0, bottom: 152, size: 88 },
+  pepper: { right: 6, bottom: 140, size: 84 },
 };
 
 const STATE_LABEL: Partial<Record<BarklyState, string>> = {
@@ -172,35 +193,56 @@ const GROUND_SHADOW: Record<LocationId, string> = {
   beach: GROUND.beach,
 };
 
+/**
+ * The shadow he casts.
+ *
+ * Two flat stadiums stacked on each other, which is what this was, read as a
+ * green pill lying on the grass — hard-edged, obviously a shape rather than an
+ * absence of light. There is no radial gradient in React Native, so the
+ * falloff is faked the way it is faked in sprite work: several ellipses,
+ * each smaller and each slightly darker, so the edge dissolves over four steps
+ * instead of one.
+ */
+const SHADOW_LAYERS = [
+  { w: 1.24, h: 0.215, o: 0.05 },
+  { w: 1.02, h: 0.175, o: 0.06 },
+  { w: 0.8, h: 0.14, o: 0.08 },
+  { w: 0.56, h: 0.1, o: 0.1 },
+];
+
 function GroundShadow({ location, width, style }: { location: LocationId; width: number; style?: object }) {
   const tint = GROUND_SHADOW[location];
   return (
     <View style={[{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }, style]} pointerEvents="none">
-      <View
-        style={{
-          position: 'absolute',
-          width: width * 1.18,
-          height: width * 0.2,
-          borderRadius: width,
-          backgroundColor: tint,
-          opacity: 0.1,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          width: width * 0.74,
-          height: width * 0.125,
-          borderRadius: width,
-          backgroundColor: tint,
-          opacity: 0.17,
-        }}
-      />
+      {SHADOW_LAYERS.map((layer) => (
+        <View
+          key={layer.w}
+          style={{
+            position: 'absolute',
+            width: width * layer.w,
+            height: width * layer.h,
+            borderRadius: width,
+            backgroundColor: tint,
+            opacity: layer.o,
+          }}
+        />
+      ))}
     </View>
   );
 }
 
-function NpcDog({ id, onPress, location }: { id: NpcId; onPress: () => void; location: LocationId }) {
+function NpcDog({
+  id,
+  onPress,
+  location,
+  scale,
+}: {
+  id: NpcId;
+  onPress: () => void;
+  location: LocationId;
+  /** Same scale Barkly gets, so the three of them stay in proportion. */
+  scale: number;
+}) {
   const spot = NPC_SPOTS[id]!;
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -213,10 +255,10 @@ function NpcDog({ id, onPress, location }: { id: NpcId; onPress: () => void; loc
     loop.start();
     return () => loop.stop();
   }, [breathe]);
-  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
+  const breathScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
   return (
-    <View style={[styles.npc, { left: spot.left, right: spot.right, bottom: spot.bottom }]}>
-      <GroundShadow location={location} width={spot.size * 0.92} style={{ bottom: 16 }} />
+    <View style={[styles.npc, { left: spot.left, right: spot.right, bottom: spot.bottom * scale }]}>
+      <GroundShadow location={location} width={spot.size * 0.92 * scale} style={{ bottom: 16 * scale }} />
       <Pressable
         onPress={onPress}
         hitSlop={8}
@@ -224,12 +266,34 @@ function NpcDog({ id, onPress, location }: { id: NpcId; onPress: () => void; loc
         accessibilityLabel={`Talk to ${NPCS[id].name}`}
         accessibilityHint={NPCS[id].relationship === 'rival' ? 'Barkly has opinions about this one.' : 'One of the good ones.'}
       >
-        <Animated.View style={{ transform: [{ scale }] }}>
-          <Image source={NPC_ART[id]} style={{ width: spot.size, height: spot.size * 1.25 }} resizeMode="contain" />
+        <Animated.View style={{ transform: [{ scale: breathScale }] }}>
+          <Image source={NPC_ART[id]} style={{ width: spot.size * scale, height: spot.size * 1.25 * scale }} resizeMode="contain" />
         </Animated.View>
       </Pressable>
-      <Text style={styles.npcName}>{NPCS[id].name}</Text>
+      {/* On the GROUND, under his feet — not a sticker across his chest. A
+          name tag pasted over the art is the single loudest "this is a web
+          page" tell in the whole scene. */}
+      <Text style={styles.npcName}>{NPCS[id].name.toUpperCase()}</Text>
     </View>
+  );
+}
+
+/**
+ * His ball, in one place.
+ *
+ * It was written out twice — once for the ball in flight during fetch, once
+ * for the toy sitting in the room — and a palette pass turned BOTH copies into
+ * the literal strings `fill="color.brand"`, which SVG cannot parse, so the
+ * ball rendered as a black disc. Two copies is how one edit misses one of
+ * them; now there is one copy, and its colours are art, not tokens.
+ */
+function RubberBall({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 30 30">
+      <Circle cx={15} cy={15} r={13} fill={BALL.body} />
+      <Path d="M3 13 C11 9 19 9 27 13" stroke={BALL.seam} strokeWidth={2.5} fill="none" />
+      <Circle cx={10} cy={9} r={3.5} fill={BALL.gloss} opacity={0.35} />
+    </Svg>
   );
 }
 
@@ -243,7 +307,7 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
           <Path d="M15.4 5.2a7 7 0 0 1 0 9.6" stroke={color.inkSoft} strokeWidth={1.6} strokeLinecap="round" fill="none" />
         </>
       )}
-      {muted && <Path d="M13 6.5l5 7M18 6.5l-5 7" stroke="color.brand" strokeWidth={1.8} strokeLinecap="round" />}
+      {muted && <Path d="M13 6.5l5 7M18 6.5l-5 7" stroke={color.brand} strokeWidth={1.8} strokeLinecap="round" />}
     </Svg>
   );
 }
@@ -283,6 +347,21 @@ export default function BarklyRoom() {
   const listening = snapshot.state === 'listening';
   const asleep = snapshot.state === 'sleepy';
   const { height: screenH, width: screenW } = useWindowDimensions();
+  /**
+   * How big he is drawn. The stage is a fixed band between the chrome and the
+   * dialogue panel, and he has to live inside it — cropping his paws to make
+   * room for a text panel is the kind of thing that makes an app feel like a
+   * web page. Capped at 1 so a tall phone gives him air, not a poster.
+   */
+  const spriteScale = scaleForScreen(screenH);
+  /** How tall the world is: everything above the dialogue panel. */
+  const sceneBand = screenH - DIALOGUE_HEIGHT - CONTROLS_HEIGHT + 8;
+  /**
+   * Where his feet meet the ground, measured from the top of the scene layer.
+   * Interior scenes are built around this line rather than around percentages
+   * of a rectangle — see Scenes.HomeScene.
+   */
+  const groundY = CONTENT_TOP + CHROME_BOTTOM + stageHeight(screenH) - SPRITE_FOOT;
   const stateLabel = STATE_LABEL[snapshot.state];
 
   /**
@@ -469,21 +548,60 @@ export default function BarklyRoom() {
 
   return (
     <View style={styles.room}>
-      <Animated.View style={[styles.sceneLayer, { opacity: sceneFade }]}>
-        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} />}
-        {location === 'park' && <ParkScene hour={hour} />}
-        {location === 'town' && <TownScene hour={hour} />}
-        {location === 'beach' && <BeachScene hour={hour} />}
+      {/*
+        The world ends where the stage does.
+
+        It used to be full-bleed behind everything, so once the stage became a
+        fixed band the horizon and his feet stopped agreeing: he stood in front
+        of the ground rather than on it, and the fence cut him at the knee.
+        Bounding the scene to the same floor puts the two back in one space.
+      */}
+      <Animated.View
+        style={[styles.sceneLayer, { opacity: sceneFade }]}
+      >
+        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={CONTENT_TOP + CHROME_BOTTOM} />}
+        {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} />}
+        {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} />}
+        {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} />}
       </Animated.View>
       {asleep && <NightOverlay />}
 
+      {/* A soft wash under the chrome. Pills floating directly on artwork is
+          most of what reads as "a web page over a picture"; giving them
+          something to sit on is most of what reads as an app. */}
+      <LinearGradient
+        colors={['rgba(255,249,236,0.55)', 'rgba(255,249,236,0.22)', 'rgba(255,249,236,0)']}
+        style={styles.chromeScrim}
+        pointerEvents="none"
+      />
+
+      {/*
+        The horizon.
+
+        The scene used to end at a hard horizontal line where the cream UI
+        began — grass, then an edge, then a form. Nothing in the world has an
+        edge like that, and it is the clearest "two things bolted together"
+        tell in the whole composition. A short fade from the ground into the
+        paper makes the panel read as part of the same picture.
+      */}
+      <LinearGradient
+        colors={['rgba(255,249,236,0)', 'rgba(255,249,236,0.72)', 'rgba(255,249,236,1)']}
+        locations={[0, 0.55, 1]}
+        style={styles.horizon}
+        pointerEvents="none"
+      />
+
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/*
+          ONE status row.
+
+          It used to open with a "Barkly" wordmark chip taking a third of the
+          width — an app telling you its own name, every second, on the screen
+          where the name is written on the dog's collar. Dropping it gives the
+          coins and the level room to breathe at 360px instead of printing
+          through each other.
+        */}
         <View style={styles.header}>
-          <View style={styles.wordmarkChip}>
-            <Text style={[styles.wordmark, screenW < 380 && styles.wordmarkTight]} numberOfLines={1}>
-              Barkly
-            </Text>
-          </View>
           <Pressable
             style={styles.walletTap}
             onPress={() => openOnly(setStoreOpen)}
@@ -590,103 +708,56 @@ export default function BarklyRoom() {
           </View>
         )}
 
-        <View style={styles.tabs}>
+        <View style={styles.places}>
+          <View style={styles.tabs}>
           {LOCATION_ORDER.map((loc: LocationId) => {
             const areaLocked = !barkly.isUnlocked(loc);
             return (
               <Pressable
                 key={loc}
                 style={[styles.tab, location === loc && styles.tabActive, areaLocked && styles.tabLocked]}
-                disabled={locked || fetching || areaLocked}
+                disabled={locked || fetching}
                 onPress={() => barkly.goTo(loc)}
                 accessibilityRole="tab"
-                accessibilityState={{ selected: location === loc, disabled: areaLocked }}
-                accessibilityLabel={areaLocked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}` : LOCATIONS[loc].name}
+                accessibilityState={{ selected: location === loc }}
+                accessibilityLabel={areaLocked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}. Tap and he will say so.` : LOCATIONS[loc].name}
               >
-                <Text style={[styles.tabText, location === loc && styles.tabTextActive]}>{LOCATIONS[loc].name.toLowerCase()}</Text>
-                {areaLocked && <Text style={styles.tabLock}>Lv {AREA_UNLOCKS[loc]?.level}</Text>}
+                {/* A locked place stays TAPPABLE and he answers — see
+                    progression.lockedAreaLine. The level requirement used to
+                    be a second line of text inside the tab, which made that
+                    one tab taller than its neighbours and pushed the whole
+                    row past the edge of a 360px screen. */}
+                <Text style={[styles.tabText, location === loc && styles.tabTextActive]} numberOfLines={1}>
+                  {areaLocked ? '\u{1F512} ' : ''}{LOCATIONS[loc].name.toLowerCase()}
+                </Text>
               </Pressable>
             );
           })}
-        </View>
+          </View>
 
-        {barkly.adventure && (
-          <Pressable
-            style={[styles.planPill, planComplete && styles.planPillDone]}
-            onPress={() => openOnly(setPlanOpen)}
-            accessibilityRole="button"
-            accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete.`}
-          >
-            <Text style={[styles.planLabel, planComplete && styles.planLabelDone]}>PLAN</Text>
-            <View style={[styles.planDot, planComplete && styles.planDotDone]} />
-            <Text style={[styles.planProgress, planComplete && styles.planProgressDone]}>{planDone}/{planTotal}</Text>
-            <Text style={[styles.planTease, planComplete && styles.planTeaseDone]} numberOfLines={1}>
-              {planComplete ? 'disturbingly productive' : barkly.adventure.goals.find((goal) => !goal.done)?.label ?? 'see the plan'}
-            </Text>
-            <Text style={[styles.planArrow, planComplete && styles.planProgressDone]}>›</Text>
-          </Pressable>
-        )}
-
-        {/*
-          His voice, anchored to HIM and bounded by the layout contract.
-
-          It lives against the content view rather than inside the stage, so
-          its ceiling is a CONSTANT (SPEECH_TOP, below the notice strip) rather
-          than "the top of the stage, wherever that lands today". A four-line
-          reply grows upward and stops there; it can no longer climb through a
-          reward pill or a promotion banner.
-        */}
-      <View style={styles.speechAnchor} pointerEvents="box-none">
-          {bubbleText ? (
-            <AnimatedBubble changeKey={bubbleText}>
-              {lastExchange && !listening && lastExchange.userText !== '' && (
-                <Text style={styles.bubbleYou} numberOfLines={1}>you said “{lastExchange.userText}”</Text>
-              )}
-              <Text style={styles.bubbleText} numberOfLines={SPEECH_MAX_LINES}>{bubbleText}</Text>
-              <View style={styles.bubbleTail} />
-            </AnimatedBubble>
-          ) : barkly.thought ? (
-            /* His inner voice belongs where his voice is, not floating at
-               the top of the stage disconnected from him. */
-            <View style={styles.thought} pointerEvents="none">
-              <Text style={styles.thoughtText}>{barkly.thought}</Text>
-              <View style={styles.thoughtDot1} />
-              <View style={styles.thoughtDot2} />
-            </View>
-          ) : (
-            <Text style={[styles.hint, asleep && styles.hintNight]}>
-              {asleep ? 'shh — he’s sleeping' : sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
-            </Text>
+          {/* The plan joins the places row as a compact chip. It had a whole
+              row to itself for a progress fraction and a teaser sentence. */}
+          {barkly.adventure && (
+            <Pressable
+              style={[styles.planChip, planComplete && styles.planChipDone]}
+              onPress={() => openOnly(setPlanOpen)}
+              accessibilityRole="button"
+              accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete. ${
+                planComplete ? 'All done.' : barkly.adventure.goals.find((g) => !g.done)?.label ?? ''
+              }`}
+            >
+              <Text style={[styles.planChipText, planComplete && styles.planChipTextDone]}>
+                {planDone}/{planTotal}
+              </Text>
+            </Pressable>
           )}
         </View>
 
-        {/*
-          The NPC's line, in a band of its own directly under his.
-
-          It used to float above each NPC sprite, so its position depended on
-          that dog's size and offset — and on a short screen, where his own
-          bubble is pushed down toward his head, the two met. Deriving both
-          bands from one function makes the separation structural.
-        */}
-        {npcBubble && (
-          <View style={[styles.npcBubbleBand, { top: npcBubbleTop(screenH) }]} pointerEvents="none">
-            <View
-              style={[
-                styles.npcBubble,
-                NPC_SPOTS[npcBubble.id]?.right !== undefined ? styles.npcBubbleRight : styles.npcBubbleLeft,
-              ]}
-            >
-              <Text style={styles.npcBubbleWho}>{NPCS[npcBubble.id].name}</Text>
-              <Text style={styles.npcBubbleText} numberOfLines={3}>{npcBubble.line}</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.stageArea}>
-          {!asleep && <GroundShadow location={location} width={230} style={{ bottom: 18 }} />}
+        <View style={[styles.stageArea, { height: stageHeight(screenH) }]}>
+          {!asleep && <GroundShadow location={location} width={230 * spriteScale} style={{ bottom: 18 }} />}
           {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
           {npcsHere.map((id) => (
-            <NpcDog key={id} id={id} location={location} onPress={() => barkly.npcTalk(id)} />
+            <NpcDog key={id} id={id} location={location} scale={spriteScale} onPress={() => barkly.npcTalk(id)} />
           ))}
           <Animated.View
             style={{
@@ -702,20 +773,17 @@ export default function BarklyRoom() {
               disabled={locked}
               accessibilityRole="button"
               accessibilityLabel={`Barkly. ${stateLabel || snapshot.state}.`}
+              testID="barkly-sprite"
               accessibilityHint="Tap to pet him."
             >
-              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} />
+              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} scale={spriteScale} />
             </Pressable>
           </Animated.View>
           {/* After the dog, so the near rim overlaps his lower body. */}
           {asleep && location === 'home' && <DogBedFront upgraded={barkly.hasHome('home_bed')} />}
           {fetching && location !== 'beach' && variant !== 'carryLeft' && (
             <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
-              <Svg width={30} height={30} viewBox="0 0 30 30">
-                <Circle cx={15} cy={15} r={13} fill="color.brand" />
-                <Path d="M3 13 C11 9 19 9 27 13" stroke="color.danger" strokeWidth={2.5} fill="none" />
-                <Circle cx={10} cy={9} r={3.5} fill="color.card" opacity={0.35} />
-              </Svg>
+              <RubberBall size={30} />
             </Animated.View>
           )}
           {/* Somewhere to dig, at both sites that have anything buried. The
@@ -744,7 +812,7 @@ export default function BarklyRoom() {
                 </Svg>
               )}
               <Text style={styles.digHint}>
-                {digging ? '…' : location === 'beach' ? 'sift?' : 'dig?'}
+                {digging ? '…' : location === 'beach' ? 'SIFT' : 'DIG'}
               </Text>
             </Pressable>
           )}
@@ -753,11 +821,7 @@ export default function BarklyRoom() {
           {barkly.toy && !fetching && !asleep && (
             <View style={styles.toyProp} pointerEvents="none">
               {barkly.toy.id === 'toy_ball' ? (
-                <Svg width={34} height={34} viewBox="0 0 30 30">
-                  <Circle cx={15} cy={15} r={13} fill="color.brand" />
-                  <Path d="M3 13 C11 9 19 9 27 13" stroke="color.danger" strokeWidth={2.5} fill="none" />
-                  <Circle cx={10} cy={9} r={3.5} fill="color.card" opacity={0.35} />
-                </Svg>
+                <RubberBall size={34} />
               ) : (
                 <Svg width={58} height={26} viewBox="0 0 58 26">
                   <Path
@@ -783,6 +847,28 @@ export default function BarklyRoom() {
             </View>
           )}
         </View>
+
+        {/*
+          Everything anyone says, in one panel, below the stage.
+
+          This is what makes "speech never covers his face" true by
+          construction rather than by measurement: the stage ends where the
+          panel begins, so nothing in one can land on anything in the other.
+        */}
+        <DialoguePanel
+          speaker={
+            npcBubble
+              ? { name: NPCS[npcBubble.id].name, kind: 'npc' }
+              : bubbleText
+                ? { name: 'Barkly', kind: 'barkly' }
+                : null
+          }
+          line={npcBubble ? npcBubble.line : bubbleText ?? null}
+          youSaid={!npcBubble && lastExchange && !listening && lastExchange.userText !== '' ? lastExchange.userText : null}
+          thought={barkly.thought}
+          hint={sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
+          asleep={asleep}
+        />
 
         <View style={styles.controls}>
           {sttAvailable ? (
@@ -813,14 +899,14 @@ export default function BarklyRoom() {
                 accessibilityHint="Type a message, then press talk."
               />
               <Pressable
-                style={({ pressed }) => [styles.send, pressed && styles.pressed, (locked || !typed.trim()) && styles.disabled]}
+                style={({ pressed }) => [styles.send, pressed && styles.pressed, (locked || !typed.trim()) && styles.sendIdle]}
                 disabled={locked || !typed.trim()}
                 onPress={sendTyped}
                 accessibilityRole="button"
                 accessibilityLabel="Talk to Barkly"
                 accessibilityState={{ disabled: locked || !typed.trim() }}
               >
-                <Text style={styles.sendText}>talk</Text>
+                <Text style={[styles.sendText, (locked || !typed.trim()) && styles.sendTextIdle]}>talk</Text>
               </Pressable>
             </View>
           )}
@@ -965,20 +1051,52 @@ function ActionButton({
 
 const styles = StyleSheet.create({
   room: { flex: 1, backgroundColor: color.well },
+  /**
+   * The scene runs the FULL height now and the horizon gradient fades it into
+   * the paper. It used to stop at the top of the dialogue panel, which left a
+   * ruler-straight edge across the screen — see Scenes.Apron. Scenes still
+   * COMPOSE into `sceneBand`; only the ground continues past it.
+   */
   sceneLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  content: { flex: 1, paddingTop: 54, paddingBottom: 26, paddingHorizontal: 22 },
-
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  wordmarkChip: {
-    flexShrink: 1,
-    backgroundColor: 'rgba(255,253,247,0.85)',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    ...elevation.card,
+  chromeScrim: { position: 'absolute', left: 0, right: 0, top: 0, height: CHROME_BOTTOM + 92 },
+  horizon: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    // Starts above the dialogue panel and lands on the paper the controls sit
+    // on, so the ground dissolves rather than stopping.
+    height: DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 56,
   },
-  wordmark: { fontSize: 20, fontWeight: '800', color: color.ink, letterSpacing: 0.3 },
-  wordmarkTight: { fontSize: 15, letterSpacing: 0 },
+  content: { flex: 1, paddingTop: CONTENT_TOP, paddingBottom: 26, paddingHorizontal: 22 },
+
+  /* -------- chrome: one status row, one places row -------- */
+  header: {
+    height: STATUS_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+  },
+  places: {
+    height: PLACES_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: space.sm,
+  },
+  planChip: {
+    minWidth: 46,
+    height: 32,
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.low,
+  },
+  planChipDone: { backgroundColor: color.goodWell },
+  planChipText: { ...type.caption, fontWeight: '900', color: color.inkSoft },
+  planChipTextDone: { color: color.good },
   gear: {
     width: 38,
     height: 38,
@@ -1007,7 +1125,6 @@ const styles = StyleSheet.create({
   packLabel: { fontSize: 10, lineHeight: 8, fontWeight: '900', letterSpacing: 1.1, color: color.goldSoft },
   packLevel: { marginTop: 1, fontSize: 15, lineHeight: 16, fontWeight: '900', color: color.paper },
   tabLocked: { opacity: 0.5 },
-  tabLock: { fontSize: 10, fontWeight: '800', color: color.inkSoft, marginTop: 1 },
   /**
    * The notice overlay. Sits above the location tabs, out of the flow, so a
    * reward or a promotion banner never reflows the screen underneath it.
@@ -1048,56 +1165,18 @@ const styles = StyleSheet.create({
   degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
   gearMuted: { backgroundColor: color.fill },
 
-  tabs: { flexDirection: 'row', alignSelf: 'center', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 4, ...elevation.card },
-  tab: { paddingVertical: 7, paddingHorizontal: 18, borderRadius: 999 },
+  tabs: { flex: 1, flexDirection: 'row', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 2, ...elevation.card },
+  tab: { flex: 1, paddingVertical: 7, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   tabActive: { backgroundColor: color.ink },
-  tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.4 },
+  tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 },
   tabTextActive: { color: color.paper },
-
-  planPill: {
-    alignSelf: 'center',
-    maxWidth: '94%',
-    marginTop: 7,
-    minHeight: 30,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,253,247,0.92)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...elevation.card,
-  },
-  planPillDone: { backgroundColor: 'rgba(232,238,217,0.96)' },
-  planLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.1, color: BRASS.dark },
-  planLabelDone: { color: LEAF.mid },
-  planDot: { width: 5, height: 5, borderRadius: 8, backgroundColor: BRASS.warm, marginHorizontal: 7 },
-  planDotDone: { backgroundColor: LEAF.light },
-  planProgress: { fontSize: 12, fontWeight: '900', color: color.ink },
-  planProgressDone: { color: LEAF.dark },
-  planTease: { flexShrink: 1, maxWidth: 190, marginLeft: 8, fontSize: 12, color: color.inkSoft },
-  planTeaseDone: { color: LEAF.grey },
-  planArrow: { marginLeft: 7, fontSize: 17, lineHeight: 18, color: BRASS.shade },
 
   /**
    * Anchored just over his head, inside the stage. `top: 0` plus flex-end
    * means a long line grows UPWARD from the anchor and simply stops at the top
    * of the stage instead of climbing into the location tabs.
    */
-  speechAnchor: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: SPEECH_TOP,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    zIndex: 6,
-  },
-  hint: { fontSize: 15, color: color.inkSoft, marginBottom: 14 },
-  hintNight: { color: color.fill },
   bubble: { maxWidth: '92%', backgroundColor: color.card, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...elevation.card },
-  bubbleYou: { fontSize: 12, color: color.inkSoft, marginBottom: 5 },
-  bubbleText: { fontSize: 17, fontWeight: '600', color: color.ink, lineHeight: 24 },
-  bubbleTail: { position: 'absolute', bottom: -7, left: '48%', width: 16, height: 16, backgroundColor: color.card, borderRadius: 8, transform: [{ rotate: '45deg' }] },
   errorNotice: {
     alignSelf: 'center',
     maxWidth: '100%',
@@ -1116,24 +1195,21 @@ const styles = StyleSheet.create({
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
   digSpot: { position: 'absolute', left: 18, bottom: 26, alignItems: 'center', zIndex: 2 },
-  digHint: { marginTop: 2, fontSize: 12, fontWeight: '800', color: color.inkSoft, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
-  thought: { alignSelf: 'center', maxWidth: 250, marginBottom: 10, backgroundColor: 'rgba(255,253,247,0.92)', borderRadius: 18, paddingVertical: 9, paddingHorizontal: 14, ...elevation.card },
-  thoughtText: { fontSize: 13, fontStyle: 'italic', color: color.inkSoft, lineHeight: 18 },
-  thoughtDot1: { position: 'absolute', bottom: -8, left: '46%', width: 9, height: 9, borderRadius: 8, backgroundColor: 'rgba(255,253,247,0.92)' },
-  thoughtDot2: { position: 'absolute', bottom: -15, left: '52%', width: 5, height: 5, borderRadius: 8, backgroundColor: 'rgba(255,253,247,0.85)' },
-  npcBubbleBand: { position: 'absolute', left: 18, right: 18, zIndex: 5 },
-  npcBubbleLeft: { alignSelf: 'flex-start' },
-  npcBubbleRight: { alignSelf: 'flex-end' },
-  npcBubbleWho: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, color: color.inkFaint, marginBottom: 2 },
-  npcName: { marginTop: -4, fontSize: 12, fontWeight: '800', color: color.inkSoft, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
-  npcBubble: { maxWidth: '68%', backgroundColor: color.card, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 6, ...elevation.card },
-  npcBubbleText: { fontSize: 12, fontWeight: '600', color: color.ink, lineHeight: 17 },
+  /**
+   * Labels that live IN the world — a dog's name, "dig?" — share one
+   * treatment: dark, translucent, small caps, sitting on the ground under the
+   * thing they name. They used to be white pills, identical to the app's
+   * chrome, which made them read as interface stickers pasted on the
+   * illustration. Chrome is light on the world; the world labels itself dark.
+   */
+  digHint: { marginTop: 2, ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
+  npcName: { marginTop: 3, ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
 
   chip: { position: 'absolute', bottom: 8, zIndex: 3, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
 
-  controls: { gap: 10 },
+  controls: { gap: 9 },
   talk: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.ink, borderRadius: 999, paddingVertical: 18, ...elevation.card },
   talkActive: { backgroundColor: color.brand },
   micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT },
@@ -1141,14 +1217,30 @@ const styles = StyleSheet.create({
   talkText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
   typeRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 20, paddingVertical: 15, fontSize: 15, color: color.ink, ...elevation.card },
+  input: { flex: 1, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13, fontSize: 15, color: color.ink, ...elevation.low },
   send: { backgroundColor: color.ink, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', ...elevation.card },
   sendText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
+  /**
+   * "Nothing typed yet" is a RESTING state, not a broken one. Fading the dark
+   * fill to 45% produced a muddy grey slab sitting where the app's primary
+   * action lives; a quiet fill with quiet text says the same thing and stops
+   * the bottom of the screen looking switched off.
+   */
+  sendIdle: { backgroundColor: color.fill, ...elevation.flat },
+  sendTextIdle: { color: color.inkFaint },
 
   actionsRow: { flexDirection: 'row', gap: 10 },
   actionWrap: { flex: 1 },
-  action: { backgroundColor: color.card, borderRadius: 999, paddingVertical: 14, alignItems: 'center', ...elevation.card },
+  action: {
+    backgroundColor: color.card,
+    borderRadius: 999,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: color.line,
+    ...elevation.low,
+  },
   pressed: { transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },
-  actionText: { fontWeight: '800', color: color.ink, fontSize: 15, letterSpacing: 0.4 },
+  actionText: { fontWeight: '800', color: color.inkMid, fontSize: 15, letterSpacing: 0.4 },
 });

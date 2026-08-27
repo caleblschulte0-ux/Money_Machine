@@ -13,9 +13,25 @@
  * not a layout. The numbers it is checking live in src/ui/layout.ts.
  */
 
-import { chromium } from 'playwright-core';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+/**
+ * Playwright may be a devDependency here or installed globally on the machine.
+ * ESM ignores NODE_PATH, so a bare import of the global one throws — try the
+ * three real places rather than failing with a module-not-found that looks
+ * like the CHECK is broken when only the install location moved.
+ */
+async function loadChromium() {
+  for (const m of ['playwright-core', 'playwright', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
+    try {
+      return (await import(m)).chromium;
+    } catch {}
+  }
+  console.error('playwright is not installed — npm i -D playwright-core, or install it globally.');
+  process.exit(2);
+}
+const chromium = await loadChromium();
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(name);
@@ -41,7 +57,6 @@ const sizes = arg('--sizes', '360x780,390x844,430x932')
 const TARGETS = [
   // Header internals, not just the header as a block: the coin count printing
   // through "Lv 1" at 360px was invisible to a whole-header measurement.
-  ['wordmark', 'text=/^Barkly$/'],
   ['coin-pill', '[aria-label^="Shop."]'],
   ['pack', '[aria-label^="Pack Book"]'],
   ['mute', '[aria-label$="Barkly"][role="switch"]'],
@@ -49,12 +64,23 @@ const TARGETS = [
   ['tabs', '[aria-label="Park"]'],
   ['plan', '[aria-label^="Barkly\'s plan"]'],
   ['notice', '[aria-label*="official rival"]'],
-  ['speech', 'text=/tallest bubble this app can produce/'],
-  ['npc-bubble', 'text=/It might be THE stick/'],
+  ['dialogue', '[data-testid="dialogue-panel"]'],
   ['state-chip', 'text=/^listening$/'],
   ['input', 'input'],
   ['action-play', '[data-testid="play-action"]'],
 ];
+
+/**
+ * The rule that is not a heuristic: HIS FACE IS NEVER COVERED.
+ *
+ * The old layout floated his speech over his head and relied on measurement to
+ * keep it off him. Now the stage and the dialogue band are disjoint by
+ * construction — so this pair is checked explicitly, at every size, and a
+ * single pixel of intersection fails. If a future change floats something over
+ * the stage again, this is what says so.
+ */
+const NEVER_OVER_THE_DOG = ['dialogue', 'notice', 'input', 'action-play'];
+
 
 /**
  * Every target must be found. A green run with the speech bubble missing is
@@ -111,6 +137,15 @@ for (const size of sizes) {
   if (await park.count()) await park.click();
   await page.waitForTimeout(1600);
 
+  // Measured separately: he is not an "overlay", he is what the overlays must
+  // stay off. The stage is his and the check below proves it.
+  const dogEl = page.locator('[data-testid="barkly-sprite"]').first();
+  const dog = (await dogEl.count()) ? await dogEl.boundingBox() : null;
+  if (!dog) {
+    failures++;
+    console.log('  MISSING: barkly-sprite — cannot check that his face stays clear');
+  }
+
   const boxes = [];
   for (const [name, sel] of TARGETS) {
     const el = page.locator(sel).first();
@@ -137,6 +172,17 @@ for (const size of sizes) {
       }
     }
   }
+  // The rule: nothing lands on him.
+  if (dog) {
+    for (const b of boxes.filter((x) => NEVER_OVER_THE_DOG.includes(x.name))) {
+      const hit = overlap(b, dog);
+      if (hit) {
+        failures++;
+        console.log(`  ON HIS FACE: ${b.name} covers the dog (${hit.x}px × ${hit.y}px)`);
+      }
+    }
+  }
+
   // Nothing may run off the bottom or the top either.
   for (const b of boxes) {
     if (b.y < 0 || b.y + b.height > size.height) {
