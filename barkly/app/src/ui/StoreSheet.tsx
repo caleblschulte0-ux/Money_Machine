@@ -31,6 +31,8 @@ interface Props {
   wallet: Wallet;
   onBuy: (itemId: string) => { ok: boolean; line: string };
   onEquip: (itemId: string) => void;
+  /** Every gate open, and the shelf says so rather than pretending. */
+  devMode?: boolean;
 }
 
 const SLOT_ORDER: ItemSlot[] = ['collar', 'treat', 'toy', 'home'];
@@ -58,10 +60,10 @@ export function CoinPill({ coins, level, frac }: { coins: number; level: number;
   );
 }
 
-export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip }: Props) {
+export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, devMode }: Props) {
   const [flash, setFlash] = useState<string | null>(null);
   const progress = levelProgress(wallet.xp);
-  const shelf = storeFor(progress.level);
+  const shelf = storeFor(progress.level, devMode);
 
   const press = (item: StoreItem, locked: boolean, owned: boolean) => {
     if (locked) {
@@ -87,6 +89,10 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip }:
               <Text style={styles.close}>✕</Text>
             </Pressable>
           </View>
+
+          {devMode && (
+            <Text style={styles.devBanner}>Dev mode: everything unlocked and free.</Text>
+          )}
 
           {flash && (
             <Text style={styles.flash} accessibilityLiveRegion="polite">
@@ -136,7 +142,9 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip }:
                         ) : owned && !item.consumable ? (
                           <Text style={styles.ownedTag}>owned</Text>
                         ) : (
-                          <Text style={[styles.price, !afford && styles.priceShort]}>{item.price}c</Text>
+                          <Text style={[styles.price, !afford && !devMode && styles.priceShort]}>
+                            {devMode ? 'free' : `${item.price}c`}
+                          </Text>
                         )}
                       </Pressable>
                     );
@@ -212,6 +220,18 @@ const styles = StyleSheet.create({
   lockTag: { fontSize: 13, fontWeight: '700', color: INK_SOFT },
   ownedTag: { fontSize: 13, fontWeight: '700', color: '#4E7A46' },
   wornTag: { fontSize: 13, fontWeight: '800', color: '#8A6B1E' },
+  devBanner: {
+    marginHorizontal: 20,
+    marginBottom: 6,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#6B5310',
+    backgroundColor: '#F5E6BE',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    overflow: 'hidden',
+  },
   note: { marginTop: 20, fontSize: 12, lineHeight: 18, color: '#9A8F7A' },
 
   pill: {

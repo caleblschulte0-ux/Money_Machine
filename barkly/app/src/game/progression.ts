@@ -15,6 +15,13 @@
  *
  * Pure and platform-agnostic: no storage, no React, clock passed in. The hook
  * owns persistence.
+ *
+ * DEV MODE. Every gate below takes an optional `dev` flag that opens it. It
+ * exists because the person building this should never be locked out of the
+ * thing he built waiting to grind past his own level curve. It is a bypass on
+ * the GATES only — it never fabricates progress behind your back, and the
+ * wallet it returns is the real one, so turning it off leaves you exactly
+ * where you were.
  */
 
 export interface Wallet {
@@ -169,8 +176,8 @@ export const STORE: StoreItem[] = [
 ];
 
 /** What is on the shelves at this level — locked items are shown, not hidden. */
-export function storeFor(level: number): { item: StoreItem; locked: boolean }[] {
-  return STORE.map((item) => ({ item, locked: item.level > level }));
+export function storeFor(level: number, dev = false): { item: StoreItem; locked: boolean }[] {
+  return STORE.map((item) => ({ item, locked: !dev && item.level > level }));
 }
 
 export type BuyFailure = 'unknown_item' | 'locked' | 'too_expensive' | 'already_owned';
@@ -183,12 +190,12 @@ export interface BuyResult {
   line: string;
 }
 
-export function buy(wallet: Wallet, itemId: string, now = 0): BuyResult {
+export function buy(wallet: Wallet, itemId: string, dev = false): BuyResult {
   const item = STORE.find((i) => i.id === itemId);
   if (!item) return { wallet, ok: false, reason: 'unknown_item', line: "That isn't a thing." };
 
   const level = levelFor(wallet.xp);
-  if (item.level > level) {
+  if (!dev && item.level > level) {
     return {
       wallet,
       ok: false,
@@ -199,7 +206,7 @@ export function buy(wallet: Wallet, itemId: string, now = 0): BuyResult {
   if (!item.consumable && wallet.owned.includes(item.id)) {
     return { wallet, ok: false, reason: 'already_owned', line: 'We already have that one.' };
   }
-  if (wallet.coins < item.price) {
+  if (!dev && wallet.coins < item.price) {
     return {
       wallet,
       ok: false,
@@ -208,7 +215,8 @@ export function buy(wallet: Wallet, itemId: string, now = 0): BuyResult {
     };
   }
 
-  const next: Wallet = { ...wallet, coins: wallet.coins - item.price };
+  // In dev mode the item is free rather than pushing the wallet negative.
+  const next: Wallet = { ...wallet, coins: Math.max(0, wallet.coins - (dev ? 0 : item.price)) };
   if (item.consumable) {
     next.pantry = { ...wallet.pantry, [item.id]: (wallet.pantry[item.id] ?? 0) + 1 };
   } else {
@@ -269,9 +277,33 @@ export const AREA_UNLOCKS: Record<string, Unlock> = {
   town: { id: 'town', level: 4, line: "Town. Loads of people. Loads of them have food." },
 };
 
-export function areaUnlocked(area: string, xp: number): boolean {
+export function areaUnlocked(area: string, xp: number, dev = false): boolean {
+  if (dev) return true;
   const unlock = AREA_UNLOCKS[area];
   return !unlock || levelFor(xp) >= unlock.level;
+}
+
+// ------------------------------------------------------------------- dev
+
+/** Top up coins. A grant, not a cheat — it says so on the tin. */
+export function grantCoins(wallet: Wallet, coins: number): Wallet {
+  return { ...wallet, coins: Math.max(0, wallet.coins + coins) };
+}
+
+/** Jump to the start of a level, so a gated feature can actually be seen. */
+export function grantLevel(wallet: Wallet, level: number): Wallet {
+  const target = Math.max(1, Math.min(level, LEVEL_XP.length));
+  return { ...wallet, xp: Math.max(wallet.xp, LEVEL_XP[target - 1] ?? 0) };
+}
+
+/** Hand over one of everything, for looking at the art. */
+export function grantEverything(wallet: Wallet): Wallet {
+  const owned = STORE.filter((i) => !i.consumable).map((i) => i.id);
+  const pantry = { ...wallet.pantry };
+  for (const item of STORE.filter((i) => i.consumable)) {
+    pantry[item.id] = Math.max(pantry[item.id] ?? 0, 5);
+  }
+  return { ...wallet, owned: Array.from(new Set([...wallet.owned, ...owned])), pantry };
 }
 
 /** Everything that just became available crossing into this level. */

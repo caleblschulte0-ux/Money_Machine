@@ -26,6 +26,12 @@ interface Props {
   sttAvailable: boolean;
   /** Remove one thing he knows, without wiping everything. */
   onForgetFact?: (id: string) => Promise<void>;
+  /** Dev mode: every level gate open, plus grants. */
+  devMode: boolean;
+  onSetDevMode: (on: boolean) => void;
+  onGrantCoins: (n: number) => void;
+  onGrantLevel: (n: number) => void;
+  onGrantEverything: () => void;
   onForgetEverything: () => Promise<void>;
 }
 
@@ -57,6 +63,11 @@ export default function SettingsSheet(props: Props) {
     sttAvailable,
     onForgetFact,
     onForgetEverything,
+    devMode,
+    onSetDevMode,
+    onGrantCoins,
+    onGrantLevel,
+    onGrantEverything,
   } = props;
   const [wiping, setWiping] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
@@ -135,6 +146,47 @@ export default function SettingsSheet(props: Props) {
                       ? 'silent — no speech engine here'
                       : 'not used yet'}
             </Text>
+
+            <Text style={styles.section}>Developer</Text>
+            <Pressable
+              style={[styles.devRow, devMode && styles.devRowOn]}
+              onPress={() => onSetDevMode(!devMode)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: devMode }}
+              accessibilityLabel="Dev mode: unlock every area and shop item"
+            >
+              <View style={styles.devRowText}>
+                <Text style={styles.devTitle}>Dev mode</Text>
+                <Text style={styles.devBlurb}>
+                  Every area and shop item open, and everything free. Your real coins and level are
+                  untouched — turning it off puts you back exactly where you were.
+                </Text>
+              </View>
+              {/* Never colour alone: the state is a word, not just a tint. */}
+              <Text style={styles.devState}>{devMode ? 'ON' : 'off'}</Text>
+            </Pressable>
+
+            {devMode && (
+              <View style={styles.devGrants}>
+                <Pressable
+                  style={styles.grant}
+                  onPress={() => onGrantCoins(1000)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.grantText}>+1000 coins</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.grant}
+                  onPress={() => onGrantLevel(7)}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.grantText}>Level 7</Text>
+                </Pressable>
+                <Pressable style={styles.grant} onPress={onGrantEverything} accessibilityRole="button">
+                  <Text style={styles.grantText}>Give me everything</Text>
+                </Pressable>
+              </View>
+            )}
 
             <Text style={styles.section}>What Barkly knows about you</Text>
             {memory.facts.length === 0 && <Text style={styles.empty}>Nothing yet. Tell him your name.</Text>}
@@ -245,6 +297,29 @@ const styles = StyleSheet.create({
   factRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   factText: { flex: 1, fontSize: 14, color: '#5C4F3E', lineHeight: 21 },
   factForget: { fontSize: 12, color: '#B3402E', paddingVertical: 3 },
+  devRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#FFFDF7',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  devRowOn: { borderColor: '#C9A227' },
+  devRowText: { flex: 1 },
+  devTitle: { fontSize: 16, fontWeight: '700', color: '#3E332A' },
+  devBlurb: { fontSize: 13, lineHeight: 19, color: '#7A6A55', marginTop: 3 },
+  devState: { fontSize: 13, fontWeight: '800', color: '#8A6B1E' },
+  devGrants: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  grant: {
+    backgroundColor: '#EDE1C8',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  grantText: { fontSize: 13, fontWeight: '700', color: '#5C4F3E' },
   parents: {
     marginTop: 10,
     borderRadius: 999,

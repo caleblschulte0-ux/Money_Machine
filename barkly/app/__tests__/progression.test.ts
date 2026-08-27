@@ -6,6 +6,9 @@
 
 import {
   areaUnlocked,
+  grantCoins,
+  grantEverything,
+  grantLevel,
   buy,
   claimDaily,
   consume,
@@ -192,5 +195,59 @@ describe('unlocks are places, not percentages', () => {
   it('what unlocks is announced in his voice', () => {
     const park = unlockedAt(2).find((u) => u.id === 'park');
     expect(park?.line).toMatch(/BIRDS/);
+  });
+});
+
+describe('dev mode never locks the builder out of his own app', () => {
+  it('opens every area regardless of level', () => {
+    expect(areaUnlocked('town', 0)).toBe(false);
+    expect(areaUnlocked('town', 0, true)).toBe(true);
+  });
+
+  it('unlocks the whole shelf', () => {
+    expect(storeFor(1).some((s) => s.locked)).toBe(true);
+    expect(storeFor(1, true).every((s) => !s.locked)).toBe(true);
+  });
+
+  it('buys a level-gated item you could not otherwise touch', () => {
+    const broke = { ...freshWallet(), coins: 0 };
+    expect(buy(broke, 'collar_gold').ok).toBe(false);
+    const dev = buy(broke, 'collar_gold', true);
+    expect(dev.ok).toBe(true);
+    expect(dev.wallet.owned).toContain('collar_gold');
+  });
+
+  it('never pushes the wallet negative', () => {
+    const broke = { ...freshWallet(), coins: 0 };
+    expect(buy(broke, 'collar_gold', true).wallet.coins).toBe(0);
+  });
+
+  it('is a bypass on the GATES, not fabricated progress', () => {
+    // The XP is untouched, so switching dev mode off leaves you exactly where
+    // you were rather than stranding you at a level you did not earn.
+    const before = freshWallet();
+    const after = buy(before, 'collar_gold', true).wallet;
+    expect(after.xp).toBe(before.xp);
+    expect(levelFor(after.xp)).toBe(levelFor(before.xp));
+  });
+
+  it('grants top up rather than overwrite', () => {
+    const w = grantCoins({ ...freshWallet(), coins: 10 }, 1000);
+    expect(w.coins).toBe(1010);
+    expect(grantCoins(w, -99999).coins).toBe(0); // never negative
+  });
+
+  it('a level grant only ever moves you forward', () => {
+    const high = { ...freshWallet(), xp: LEVEL_XP[8] };
+    expect(grantLevel(high, 2).xp).toBe(high.xp);
+    expect(levelFor(grantLevel(freshWallet(), 7).xp)).toBe(7);
+  });
+
+  it('give-me-everything hands over one of each, keeping what you had', () => {
+    const w = grantEverything({ ...freshWallet(), pantry: { treat_biscuit: 9 } });
+    expect(w.owned).toContain('home_window');
+    expect(w.owned).toContain('collar_gold');
+    expect(w.pantry.treat_biscuit).toBe(9); // not clobbered down to the default
+    expect(w.pantry.treat_steak).toBeGreaterThan(0);
   });
 });

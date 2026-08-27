@@ -33,6 +33,9 @@ import {
   equip as equipItem,
   equippedItem,
   freshWallet,
+  grantCoins,
+  grantEverything,
+  grantLevel,
   levelFor,
   unlockedAt,
   Wallet,
@@ -72,6 +75,7 @@ const CHARACTER_KEY = profileKey(DEFAULT_PROFILE, 'character-v1');
 const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
 const ONBOARDING_KEY = profileKey(DEFAULT_PROFILE, 'onboarding-v1');
 const WALLET_KEY = profileKey(DEFAULT_PROFILE, 'wallet-v1');
+const DEV_KEY = profileKey(DEFAULT_PROFILE, 'dev-v1');
 
 export interface Exchange {
   userText: string;
@@ -108,6 +112,13 @@ export interface BarklyController {
   isUnlocked(area: string): boolean;
   /** Tint of the collar he is wearing, or null for the canon brown leather. */
   collarColor: string | null;
+  /** Every level gate open. Off by default; never fabricates progress. */
+  devMode: boolean;
+  setDevMode(on: boolean): void;
+  /** Dev grants: top up, jump a level, hand over one of everything. */
+  devGrantCoins(n: number): void;
+  devGrantLevel(n: number): void;
+  devGrantEverything(): void;
   /** Muted Barkly still takes the right amount of time — quiet, not broken. */
   muted: boolean;
   toggleMuted(): void;
@@ -225,6 +236,14 @@ export function useBarkly(): BarklyController {
   const walletRef = useRef(wallet);
   /** Toast for a level-up or an unlock — a moment, not a number changing. */
   const [reward, setReward] = useState<{ coins: number; xp: number; note?: string } | null>(null);
+  /**
+   * Dev mode. Off by default, persisted, and it opens every level gate — the
+   * person building this should never be locked out of his own app waiting to
+   * grind past his own curve. Can also be forced on for a build with
+   * EXPO_PUBLIC_BARKLY_DEV=1.
+   */
+  const [devMode, setDevModeState] = useState(process.env.EXPO_PUBLIC_BARKLY_DEV === '1');
+  const devRef = useRef(devMode);
   const voiceEngine = useMemo(
     () => createVoiceEngine({ voice: providers.voice, device: providers.tts }),
     [providers],
@@ -317,6 +336,15 @@ export function useBarkly(): BarklyController {
         // them do the introduction again on every launch.
         if (!cancelled) setOnboarding({ step: 'done', micOffered: true });
       }
+      try {
+        const rawDev = await asyncStorageStore.get(DEV_KEY);
+        if (!cancelled && rawDev === '1') {
+          setDevModeState(true);
+          devRef.current = true;
+        }
+      } catch {
+        // stays off
+      }
       // Coins and levels, plus the once-a-day bonus for showing up.
       try {
         const rawWallet = await asyncStorageStore.get(WALLET_KEY);
@@ -402,6 +430,11 @@ export function useBarkly(): BarklyController {
     walletRef.current = wallet;
     asyncStorageStore.set(WALLET_KEY, JSON.stringify(wallet)).catch(() => {});
   }, [wallet]);
+
+  useEffect(() => {
+    devRef.current = devMode;
+    asyncStorageStore.set(DEV_KEY, devMode ? '1' : '0').catch(() => {});
+  }, [devMode]);
 
   // The reward toast is a beat, not a banner.
   useEffect(() => {
@@ -842,7 +875,7 @@ export function useBarkly(): BarklyController {
     level: levelFor(wallet.xp),
     reward,
     buy: (itemId: string) => {
-      const result = buyItem(walletRef.current, itemId);
+      const result = buyItem(walletRef.current, itemId, devRef.current);
       if (result.ok) {
         setWallet(result.wallet);
         walletRef.current = result.wallet;
@@ -856,8 +889,29 @@ export function useBarkly(): BarklyController {
       setWallet(next);
       walletRef.current = next;
     },
-    isUnlocked: (area: string) => areaUnlocked(area, wallet.xp),
+    isUnlocked: (area: string) => areaUnlocked(area, wallet.xp, devMode),
     collarColor: equippedItem(wallet, 'collar')?.color ?? null,
+    devMode,
+    setDevMode: setDevModeState,
+    devGrantCoins: (n: number) => {
+      const next = grantCoins(walletRef.current, n);
+      setWallet(next);
+      walletRef.current = next;
+      setReward({ coins: n, xp: 0, note: 'dev' });
+    },
+    devGrantLevel: (n: number) => {
+      const before = walletRef.current.xp;
+      const next = grantLevel(walletRef.current, n);
+      setWallet(next);
+      walletRef.current = next;
+      setReward({ coins: 0, xp: next.xp - before, note: `dev · level ${n}` });
+    },
+    devGrantEverything: () => {
+      const next = grantEverything(walletRef.current);
+      setWallet(next);
+      walletRef.current = next;
+      setReward({ coins: 0, xp: 0, note: 'dev · everything' });
+    },
     startTalk,
     stopTalk,
     cancelTalk,

@@ -575,6 +575,7 @@ export default function BarklyRoom() {
         wallet={barkly.wallet}
         onBuy={barkly.buy}
         onEquip={barkly.equip}
+        devMode={barkly.devMode}
       />
       <SettingsSheet
         visible={settingsOpen}
@@ -592,6 +593,11 @@ export default function BarklyRoom() {
         voice={{ route: barkly.voiceRoute, muted: barkly.muted }}
         sttAvailable={sttAvailable}
         onForgetFact={barkly.forgetFact}
+        devMode={barkly.devMode}
+        onSetDevMode={barkly.setDevMode}
+        onGrantCoins={barkly.devGrantCoins}
+        onGrantLevel={barkly.devGrantLevel}
+        onGrantEverything={barkly.devGrantEverything}
         onForgetEverything={barkly.forgetEverything}
       />
     </View>
