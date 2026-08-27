@@ -16,10 +16,11 @@ function base() {
 }
 
 describe('Relationship DNA', () => {
-  it('starts as a fresh relationship rather than assigning random personality', () => {
+  it('starts as a blank relationship rather than assigning fake personality', () => {
     const profile = buildRelationshipProfile(base());
     expect(profile.stage.label).toBe('Just Met');
     expect(profile.archetype).toBe('Fresh Pack');
+    expect(profile.traits).toHaveLength(0);
     expect(profile.rituals).toHaveLength(0);
     expect(profile.lore).toHaveLength(0);
   });
@@ -81,10 +82,10 @@ describe('Relationship DNA', () => {
   });
 
   it('relationship context is prompt-ready texture, not raw score narration', () => {
-    const input = base();
-    const profile = buildRelationshipProfile(input);
+    const profile = buildRelationshipProfile(base());
     const lines = describeRelationship(profile).join(' ');
     expect(lines).toContain('Relationship stage: Just Met');
+    expect(lines).not.toContain('Emergent traits:');
     expect(lines).toContain('Do not recite scores');
   });
 });
