@@ -37,6 +37,7 @@ import {
   areaUnlocked,
   buy as buyItem,
   claimDaily,
+  consume as consumeItem,
   earn,
   EarnKind,
   equip as equipItem,
@@ -46,6 +47,7 @@ import {
   grantEverything,
   grantLevel,
   levelFor,
+  STORE,
   unlockedAt,
   Wallet,
 } from '../game/progression';
@@ -136,7 +138,8 @@ export interface BarklyController {
   cancelTalk(): Promise<void>;
   submitText(text: string): Promise<void>;
 
-  feed(): Promise<void>;
+  /** Optional item id means use a purchased pantry treat instead of the bowl. */
+  feed(itemId?: string): Promise<void>;
   play(): Promise<void>;
   sleepToggle(): Promise<void>;
   pet(): void;
@@ -159,6 +162,19 @@ export interface BarklyController {
 }
 
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function treatLine(itemId: string): string {
+  switch (itemId) {
+    case 'treat_steak':
+      return 'STEAK? Okay. Nobody move. I need to experience this correctly.';
+    case 'treat_cheese':
+      return 'Cheese. See, this is why I keep you around.';
+    case 'treat_biscuit':
+      return 'Biscuit. Classic. Hand it over.';
+    default:
+      return 'Correct. Food.';
+  }
+}
 
 export function useBarkly(): BarklyController {
   const [degraded, setDegraded] = useState<string | null>(null);
@@ -246,7 +262,6 @@ export function useBarkly(): BarklyController {
     });
   }, []);
 
-  /** Generate a plan from the relationship that exists RIGHT NOW. */
   const makePlan = useCallback((now: number): AdventureState =>
     createAdventure({
       character: characterRef.current,
@@ -255,10 +270,6 @@ export function useBarkly(): BarklyController {
       now,
     }), [memory]);
 
-  /**
-   * Advance today's three-goal plan from normal play. Completing it pays once;
-   * there is no streak, no penalty and no separate "claim" button to farm.
-   */
   const progressPlan = useCallback((event: AdventureEvent) => {
     const current = adventureRef.current;
     if (!current) return;
@@ -400,7 +411,6 @@ export function useBarkly(): BarklyController {
     };
   }, [memory, providers, sayMishap, stash, voiceEngine]);
 
-  /** Load today's plan, or make a fresh one from the fully restored Barkly. */
   useEffect(() => {
     if (!bootReady) return;
     let cancelled = false;
@@ -529,11 +539,6 @@ export function useBarkly(): BarklyController {
     [dispatch, voiceEngine],
   );
 
-  /**
-   * A learned routine is a little performance, not a JSON payload. Each beat
-   * gets its own voice/action moment in the order the person taught. This same
-   * ordered contract is the path to future servo choreography in the toy.
-   */
   const performRoutine = useCallback(
     async (opening: string, userText: string, beats: RoutineBeat[]): Promise<void> => {
       await speak(opening, { userText, actions: ['EAR_PERK', 'TAIL_WAG'] });
@@ -749,11 +754,6 @@ export function useBarkly(): BarklyController {
     if (moved) progressPlan({ kind: 'travel', target: loc });
   }, [progressPlan]);
 
-  /**
-   * Every few meaningful run-ins, ordinary NPC banter upgrades into a player
-   * choice. Chapters are tracked separately from bond strength, so choosing to
-   * cool a feud never causes the same scene to repeat immediately.
-   */
   const npcTalk = useCallback(
     (id: NpcId): boolean => {
       if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return false;
@@ -889,25 +889,70 @@ export function useBarkly(): BarklyController {
     return found;
   }, [activeEncounter, busy, credit, memory, progressPlan, speak, stash]);
 
-  const feed = useCallback(async () => {
+  const feed = useCallback(async (itemId?: string) => {
     if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
     const full = snapshotRef.current.stats.hunger < 12;
+
+    if (itemId) {
+      const item = STORE.find((candidate) => candidate.id === itemId && candidate.slot === 'treat');
+      if (!item) return;
+      if (full) {
+        await speak(`Save the ${item.name.toLowerCase()}. I am full enough to make a responsible decision, apparently.`, {
+          actions: ['HEAD_TILT'],
+        });
+        return;
+      }
+      const nextWallet = consumeItem(walletRef.current, item.id);
+      if (!nextWallet) {
+        await speak(`We're out of ${item.name.toLowerCase()}. This cupboard has betrayed me.`, { actions: ['LOOK_LEFT'] });
+        return;
+      }
+      walletRef.current = nextWallet;
+      setWallet(nextWallet);
+      await speak(treatLine(item.id), {
+        actions: ['MOUTH_MOVE', 'TAIL_WAG'],
+        after: { type: 'FEED' },
+      });
+      memory
+        .remember([], [`You gave Barkly ${item.name}. He considered this an important event.`], {
+          where: LOCATIONS[locationRef.current].name,
+        })
+        .then(() => setMemoryVersion((v) => v + 1))
+        .catch(() => {});
+      credit('feed', true, item.name.toLowerCase());
+      progressPlan({ kind: 'feed' });
+      return;
+    }
+
     await speak(pickLine(full ? FULL_LINES : FEED_LINES), {
       actions: ['MOUTH_MOVE'],
       after: { type: 'FEED' },
     });
     credit('feed', !full);
     if (!full) progressPlan({ kind: 'feed' });
-  }, [activeEncounter, busy, credit, progressPlan, speak]);
+  }, [activeEncounter, busy, credit, memory, progressPlan, speak]);
 
   const play = useCallback(async () => {
     if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
     const tired = snapshotRef.current.stats.energy < 15;
-    await speak(pickLine(tired ? TIRED_LINES : PLAY_LINES), {
-      actions: tired ? ['SLEEP'] : ['MOUTH_MOVE', 'EXCITED'],
+    const toyId = walletRef.current.equipped.toy;
+    const line = tired
+      ? pickLine(TIRED_LINES)
+      : toyId === 'toy_rope'
+        ? 'You pull. I win. Those are the rules of rope.'
+        : toyId === 'toy_ball'
+          ? 'SQUEAK. Again. Again. I have made this your problem.'
+          : pickLine(PLAY_LINES);
+    const toyActions: BodyAction[] = toyId === 'toy_rope'
+      ? ['EXCITED', 'HEAD_TILT']
+      : toyId === 'toy_ball'
+        ? ['EXCITED', 'TAIL_WAG']
+        : ['MOUTH_MOVE', 'EXCITED'];
+    await speak(line, {
+      actions: tired ? ['SLEEP'] : toyActions,
       after: { type: 'PLAY' },
     });
-    credit('play', !tired);
+    credit('play', !tired, !tired && toyId ? 'favorite toy time' : undefined);
     if (!tired) progressPlan({ kind: 'play' });
   }, [activeEncounter, busy, credit, progressPlan, speak]);
 
@@ -957,8 +1002,6 @@ export function useBarkly(): BarklyController {
     return Array.from(new Set(merged));
   }, [snapshot.state, replyActions, idleAction]);
 
-  // `memoryVersion` is intentionally read so memory-only updates (a learned
-  // trick, new core memory) refresh the Pack Book even when no other UI state moves.
   void memoryVersion;
   const relationship = buildRelationshipProfile({
     memory: memory.snapshot(),
