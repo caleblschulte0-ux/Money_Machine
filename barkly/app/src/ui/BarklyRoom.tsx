@@ -1,8 +1,6 @@
 /**
- * The home screen — Barkly's world. Three scenes (home, park, town), the
- * dogs who live in them, and Barkly front and center. Controls stay minimal:
- * TALK, and context actions (play/fetch, feed, sleep). No currencies, no
- * popups, no banners.
+ * Barkly's world: home, park, town — plus the Pack Book that makes the
+ * relationship itself a first-class part of the product.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -22,6 +20,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { useBarkly } from '../hooks/useBarkly';
 import BarklyPhotoView from './BarklyPhotoView';
 import Onboarding from './Onboarding';
+import PackBookSheet from './PackBookSheet';
 import StoreSheet, { CoinPill } from './StoreSheet';
 import { AREA_UNLOCKS, levelProgress } from '../game/progression';
 import BarklyView from './BarklyView';
@@ -32,8 +31,7 @@ import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import { NPCS, NpcId } from '../world/npcs';
 
-const Renderer =
-  process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyView : BarklyPhotoView;
+const Renderer = process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyView : BarklyPhotoView;
 
 const NPC_ART: Record<NpcId, ReturnType<typeof require>> = {
   biscuit: require('../../assets/barkly/renders/npcs/biscuit_front.png'),
@@ -41,7 +39,6 @@ const NPC_ART: Record<NpcId, ReturnType<typeof require>> = {
   duke: require('../../assets/barkly/renders/npcs/duke_front.png'),
 };
 
-/** Where each NPC stands per scene. */
 const NPC_SPOTS: Partial<Record<NpcId, { left?: number; right?: number; bottom: number; size: number }>> = {
   biscuit: { left: 6, bottom: 96, size: 108 },
   duke: { right: 2, bottom: 118, size: 124 },
@@ -63,7 +60,6 @@ const INK_SOFT = '#8A7A5F';
 const CARD = '#FFFDF7';
 const ACCENT = '#D99A2B';
 
-/** Speech bubble that springs in whenever its text changes. */
 function AnimatedBubble({ children, changeKey }: { children: React.ReactNode; changeKey: string }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -88,7 +84,6 @@ function AnimatedBubble({ children, changeKey }: { children: React.ReactNode; ch
   );
 }
 
-/** Little hearts that float up from Barkly when he's petted. */
 function HeartBurst({ burst }: { burst: number }) {
   const [hearts, setHearts] = useState<{ id: number; x: number; v: Animated.Value }[]>([]);
   const nextId = useRef(0);
@@ -135,7 +130,6 @@ function HeartBurst({ burst }: { burst: number }) {
   );
 }
 
-/** Another dog, standing in the scene. Breathes; tappable to say hi. */
 function NpcDog({ id, onPress, bubble }: { id: NpcId; onPress: () => void; bubble: string | null }) {
   const spot = NPC_SPOTS[id]!;
   const breathe = useRef(new Animated.Value(0)).current;
@@ -167,36 +161,17 @@ function NpcDog({ id, onPress, bubble }: { id: NpcId; onPress: () => void; bubbl
   );
 }
 
-/** Speaker glyph. A slash through it when muted — never colour alone. */
 function SpeakerIcon({ muted }: { muted: boolean }) {
   return (
     <Svg width={20} height={20} viewBox="0 0 20 20">
-      {/* body + cone as one path: driver box on the left, cone flaring right */}
-      <Path
-        d="M3 7.5h3.2L10.5 4v12L6.2 12.5H3z"
-        fill={muted ? '#9A8C76' : INK_SOFT}
-      />
+      <Path d="M3 7.5h3.2L10.5 4v12L6.2 12.5H3z" fill={muted ? '#9A8C76' : INK_SOFT} />
       {!muted && (
         <>
-          <Path
-            d="M13 7.2a4 4 0 0 1 0 5.6"
-            stroke={INK_SOFT}
-            strokeWidth={1.6}
-            strokeLinecap="round"
-            fill="none"
-          />
-          <Path
-            d="M15.4 5.2a7 7 0 0 1 0 9.6"
-            stroke={INK_SOFT}
-            strokeWidth={1.6}
-            strokeLinecap="round"
-            fill="none"
-          />
+          <Path d="M13 7.2a4 4 0 0 1 0 5.6" stroke={INK_SOFT} strokeWidth={1.6} strokeLinecap="round" fill="none" />
+          <Path d="M15.4 5.2a7 7 0 0 1 0 9.6" stroke={INK_SOFT} strokeWidth={1.6} strokeLinecap="round" fill="none" />
         </>
       )}
-      {muted && (
-        <Path d="M13 6.5l5 7M18 6.5l-5 7" stroke="#B3402E" strokeWidth={1.8} strokeLinecap="round" />
-      )}
+      {muted && <Path d="M13 6.5l5 7M18 6.5l-5 7" stroke="#B3402E" strokeWidth={1.8} strokeLinecap="round" />}
     </Svg>
   );
 }
@@ -205,6 +180,7 @@ export default function BarklyRoom() {
   const barkly = useBarkly();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [storeOpen, setStoreOpen] = useState(false);
+  const [packOpen, setPackOpen] = useState(false);
   const [typed, setTyped] = useState('');
   const [heartBurst, setHeartBurst] = useState(0);
   const [fetching, setFetching] = useState(false);
@@ -218,7 +194,6 @@ export default function BarklyRoom() {
   const hour = new Date().getHours();
   const npcsHere = LOCATIONS[location].npcIds;
 
-  // --- scene change: fade the world, walk Barkly in from the side ---
   const sceneFade = useRef(new Animated.Value(1)).current;
   const walkX = useRef(new Animated.Value(0)).current;
   const hopY = useRef(new Animated.Value(0)).current;
@@ -244,7 +219,6 @@ export default function BarklyRoom() {
     ]).start();
   }, [location, sceneFade, walkX, hopY]);
 
-  // --- fetch minigame (park): throw → chase → return ---
   const chaseX = useRef(new Animated.Value(0)).current;
   const ballFlight = useRef(new Animated.Value(0)).current;
   const runFetch = () => {
@@ -256,14 +230,13 @@ export default function BarklyRoom() {
     Animated.sequence([
       Animated.delay(560),
       Animated.timing(chaseX, { toValue: 88, duration: 480, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      // the grab: a quick nose-down dip
       Animated.timing(hopY, { toValue: 12, duration: 130, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(hopY, { toValue: 0, duration: 150, easing: Easing.in(Easing.quad), useNativeDriver: true }),
     ]).start(() => {
-      setVariant('carryLeft'); // ball in mouth, heading home
+      setVariant('carryLeft');
       Animated.timing(chaseX, { toValue: 0, duration: 560, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start(() => {
         setVariant(null);
-        barkly.play(); // stats + the playing beat
+        barkly.play();
         setFetching(false);
       });
     });
@@ -281,7 +254,6 @@ export default function BarklyRoom() {
   const runDig = () => {
     if (digging || fetching || busy) return;
     setDigging(true);
-    // fast little digging wiggle
     Animated.loop(
       Animated.sequence([
         Animated.timing(digRotate, { toValue: 1, duration: 90, useNativeDriver: true }),
@@ -300,30 +272,16 @@ export default function BarklyRoom() {
     if (snapshot.state !== 'sleepy') setHeartBurst((b) => b + 1);
   };
 
-  const bubbleText = listening && partialTranscript
-    ? `“${partialTranscript}”`
-    : lastExchange?.barklyText;
-
+  const bubbleText = listening && partialTranscript ? `“${partialTranscript}”` : lastExchange?.barklyText;
   const playLabel = location === 'park' ? (fetching ? 'fetching…' : 'fetch') : 'play';
 
-  // Storage has not answered yet. Rendering the room now and swapping to the
-  // meeting a frame later is worse than one quiet beat of nothing.
   if (barkly.onboarding === undefined) return <View style={styles.room} />;
-
   if (barkly.onboarding.step !== 'done') {
-    return (
-      <Onboarding
-        state={barkly.onboarding}
-        micAvailable={sttAvailable}
-        onAdvance={barkly.advanceOnboarding}
-        Renderer={Renderer}
-      />
-    );
+    return <Onboarding state={barkly.onboarding} micAvailable={sttAvailable} onAdvance={barkly.advanceOnboarding} Renderer={Renderer} />;
   }
 
   return (
     <View style={styles.room}>
-      {/* the world */}
       <Animated.View style={[styles.sceneLayer, { opacity: sceneFade }]}>
         {location === 'home' && <HomeScene hour={hour} />}
         {location === 'park' && <ParkScene hour={hour} />}
@@ -332,7 +290,6 @@ export default function BarklyRoom() {
       {asleep && <NightOverlay />}
 
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {/* header: name + settings */}
         <View style={styles.header}>
           <View style={styles.wordmarkChip}>
             <Text style={styles.wordmark}>Barkly</Text>
@@ -343,13 +300,19 @@ export default function BarklyRoom() {
             accessibilityRole="button"
             accessibilityLabel={`Shop. ${barkly.wallet.coins} coins, level ${barkly.level}.`}
           >
-            <CoinPill
-              coins={barkly.wallet.coins}
-              level={barkly.level}
-              frac={levelProgress(barkly.wallet.xp).frac}
-            />
+            <CoinPill coins={barkly.wallet.coins} level={barkly.level} frac={levelProgress(barkly.wallet.xp).frac} />
           </Pressable>
           <View style={styles.headerButtons}>
+            <Pressable
+              style={styles.packButton}
+              hitSlop={8}
+              onPress={() => setPackOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Pack Book. ${barkly.relationship.archetype}. ${barkly.relationship.stage.label}.`}
+            >
+              <Text style={styles.packLabel}>PACK</Text>
+              <Text style={styles.packLevel}>{barkly.relationship.stage.level}</Text>
+            </Pressable>
             <Pressable
               style={[styles.gear, barkly.muted && styles.gearMuted]}
               hitSlop={10}
@@ -358,17 +321,9 @@ export default function BarklyRoom() {
               accessibilityState={{ checked: barkly.muted }}
               accessibilityLabel={barkly.muted ? 'Unmute Barkly' : 'Mute Barkly'}
             >
-              {/* Drawn, not emoji, so it matches the art and never renders as
-                  a system glyph that varies by platform. */}
               <SpeakerIcon muted={barkly.muted} />
             </Pressable>
-            <Pressable
-              style={styles.gear}
-              hitSlop={10}
-              onPress={() => setSettingsOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Settings"
-            >
+            <Pressable style={styles.gear} hitSlop={10} onPress={() => setSettingsOpen(true)} accessibilityRole="button" accessibilityLabel="Settings">
               <View style={styles.gearDot} />
               <View style={styles.gearDot} />
               <View style={styles.gearDot} />
@@ -376,7 +331,6 @@ export default function BarklyRoom() {
           </View>
         </View>
 
-        {/* Earning something is a beat, not a banner. */}
         {barkly.reward && (
           <View style={styles.reward} pointerEvents="none" accessibilityLiveRegion="polite">
             <Text style={styles.rewardText}>
@@ -386,48 +340,33 @@ export default function BarklyRoom() {
           </View>
         )}
 
-        {/* He is on his offline brain: say so once, quietly, in his words. */}
         {barkly.degraded && (
-          <Pressable
-            style={styles.degraded}
-            onPress={barkly.dismissDegraded}
-            accessibilityRole="button"
-            accessibilityLabel={`${barkly.degraded}. Tap to dismiss.`}
-          >
+          <Pressable style={styles.degraded} onPress={barkly.dismissDegraded} accessibilityRole="button" accessibilityLabel={`${barkly.degraded}. Tap to dismiss.`}>
             <View style={styles.degradedDot} />
             <Text style={styles.degradedText}>{barkly.degraded}</Text>
           </Pressable>
         )}
 
-        {/* where-to tabs */}
         <View style={styles.tabs}>
           {LOCATION_ORDER.map((loc: LocationId) => {
             const locked = !barkly.isUnlocked(loc);
             return (
-            <Pressable
-              key={loc}
-              style={[styles.tab, location === loc && styles.tabActive, locked && styles.tabLocked]}
-              disabled={busy || fetching || locked}
-              onPress={() => barkly.goTo(loc)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: location === loc, disabled: locked }}
-              accessibilityLabel={
-                locked
-                  ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}`
-                  : LOCATIONS[loc].name
-              }
-            >
-              <Text style={[styles.tabText, location === loc && styles.tabTextActive]}>
-                {LOCATIONS[loc].name.toLowerCase()}
-              </Text>
-              {/* The lock is the goal, so it shows the level rather than hiding. */}
-              {locked && <Text style={styles.tabLock}>Lv {AREA_UNLOCKS[loc]?.level}</Text>}
-            </Pressable>
+              <Pressable
+                key={loc}
+                style={[styles.tab, location === loc && styles.tabActive, locked && styles.tabLocked]}
+                disabled={busy || fetching || locked}
+                onPress={() => barkly.goTo(loc)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: location === loc, disabled: locked }}
+                accessibilityLabel={locked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}` : LOCATIONS[loc].name}
+              >
+                <Text style={[styles.tabText, location === loc && styles.tabTextActive]}>{LOCATIONS[loc].name.toLowerCase()}</Text>
+                {locked && <Text style={styles.tabLock}>Lv {AREA_UNLOCKS[loc]?.level}</Text>}
+              </Pressable>
             );
           })}
         </View>
 
-        {/* speech bubble */}
         <View style={styles.bubbleZone}>
           {bubbleText ? (
             <AnimatedBubble changeKey={bubbleText}>
@@ -442,24 +381,14 @@ export default function BarklyRoom() {
               {asleep ? 'shh — he’s sleeping' : sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
             </Text>
           )}
-          {error && (
-            <Text style={styles.error} accessibilityLiveRegion="polite">
-              {error}
-            </Text>
-          )}
+          {error && <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text>}
         </View>
 
-        {/* the stage: Barkly + neighbors + props */}
         <View style={styles.stageArea}>
           {!asleep && <View style={styles.shadow} />}
           {asleep && location === 'home' && <DogBedBack />}
           {npcsHere.map((id) => (
-            <NpcDog
-              key={id}
-              id={id}
-              bubble={barkly.npcBubble?.id === id ? barkly.npcBubble.line : null}
-              onPress={() => barkly.npcTalk(id)}
-            />
+            <NpcDog key={id} id={id} bubble={barkly.npcBubble?.id === id ? barkly.npcBubble.line : null} onPress={() => barkly.npcTalk(id)} />
           ))}
           <Animated.View
             style={{
@@ -471,15 +400,9 @@ export default function BarklyRoom() {
             }}
           >
             <Pressable onPress={pet} disabled={busy}>
-              <Renderer
-                state={snapshot.state}
-                actions={actions}
-                variant={variant}
-                collarColor={barkly.collarColor}
-              />
+              <Renderer state={snapshot.state} actions={actions} variant={variant} collarColor={barkly.collarColor} />
             </Pressable>
           </Animated.View>
-          {/* After the dog, so the near rim overlaps his lower body. */}
           {asleep && location === 'home' && <DogBedFront />}
           {fetching && variant !== 'carryLeft' && (
             <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
@@ -518,16 +441,10 @@ export default function BarklyRoom() {
           )}
         </View>
 
-        {/* controls */}
         <View style={styles.controls}>
           {sttAvailable ? (
             <Pressable
-              style={({ pressed }) => [
-                styles.talk,
-                listening && styles.talkActive,
-                (busy || pressed) && styles.pressed,
-                busy && styles.disabled,
-              ]}
+              style={({ pressed }) => [styles.talk, listening && styles.talkActive, (busy || pressed) && styles.pressed, busy && styles.disabled]}
               disabled={busy}
               onPressIn={barkly.startTalk}
               onPressOut={barkly.stopTalk}
@@ -547,11 +464,7 @@ export default function BarklyRoom() {
                 onSubmitEditing={sendTyped}
                 returnKeyType="send"
               />
-              <Pressable
-                style={({ pressed }) => [styles.send, pressed && styles.pressed, (busy || !typed.trim()) && styles.disabled]}
-                disabled={busy || !typed.trim()}
-                onPress={sendTyped}
-              >
+              <Pressable style={({ pressed }) => [styles.send, pressed && styles.pressed, (busy || !typed.trim()) && styles.disabled]} disabled={busy || !typed.trim()} onPress={sendTyped}>
                 <Text style={styles.sendText}>talk</Text>
               </Pressable>
             </View>
@@ -560,23 +473,13 @@ export default function BarklyRoom() {
           <View style={styles.actionsRow}>
             <ActionButton label={playLabel} onPress={location === 'park' ? runFetch : barkly.play} disabled={busy || fetching} />
             <ActionButton label="feed" onPress={barkly.feed} disabled={busy || fetching} />
-            <ActionButton
-              label={asleep ? 'wake' : 'sleep'}
-              onPress={barkly.sleepToggle}
-              disabled={busy || fetching}
-            />
+            <ActionButton label={asleep ? 'wake' : 'sleep'} onPress={barkly.sleepToggle} disabled={busy || fetching} />
           </View>
         </View>
       </KeyboardAvoidingView>
 
-      <StoreSheet
-        visible={storeOpen}
-        onClose={() => setStoreOpen(false)}
-        wallet={barkly.wallet}
-        onBuy={barkly.buy}
-        onEquip={barkly.equip}
-        devMode={barkly.devMode}
-      />
+      <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={barkly.buy} onEquip={barkly.equip} devMode={barkly.devMode} />
+      <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} />
       <SettingsSheet
         visible={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -606,16 +509,9 @@ export default function BarklyRoom() {
 
 function ActionButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const springTo = (v: number) =>
-    Animated.spring(scale, { toValue: v, friction: 5, tension: 300, useNativeDriver: true }).start();
+  const springTo = (v: number) => Animated.spring(scale, { toValue: v, friction: 5, tension: 300, useNativeDriver: true }).start();
   return (
-    <Pressable
-      style={styles.actionWrap}
-      onPressIn={() => springTo(0.94)}
-      onPressOut={() => springTo(1)}
-      onPress={onPress}
-      disabled={disabled}
-    >
+    <Pressable style={styles.actionWrap} onPressIn={() => springTo(0.94)} onPressOut={() => springTo(1)} onPress={onPress} disabled={disabled}>
       <Animated.View style={[styles.action, disabled && styles.disabled, { transform: [{ scale }] }]}>
         <Text style={styles.actionText}>{label}</Text>
       </Animated.View>
@@ -637,7 +533,6 @@ const shadowCard = Platform.select({
 const styles = StyleSheet.create({
   room: { flex: 1, backgroundColor: '#F7F1E2' },
   sceneLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-
   content: { flex: 1, paddingTop: 54, paddingBottom: 26, paddingHorizontal: 22 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -661,45 +556,30 @@ const styles = StyleSheet.create({
     ...(shadowCard as object),
   },
   gearDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INK_SOFT },
-  headerButtons: { flexDirection: 'row', gap: 8 },
-  walletTap: { flex: 1, marginHorizontal: 10 },
+  headerButtons: { flexDirection: 'row', gap: 7 },
+  walletTap: { flex: 1, marginHorizontal: 8 },
+  packButton: {
+    minWidth: 43,
+    height: 38,
+    borderRadius: 13,
+    paddingHorizontal: 7,
+    backgroundColor: INK,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(shadowCard as object),
+  },
+  packLabel: { fontSize: 7, lineHeight: 8, fontWeight: '900', letterSpacing: 1.1, color: '#E2C471' },
+  packLevel: { marginTop: 1, fontSize: 15, lineHeight: 16, fontWeight: '900', color: '#FFF9EC' },
   tabLocked: { opacity: 0.5 },
   tabLock: { fontSize: 10, fontWeight: '800', color: '#9A8F7A', marginTop: 1 },
-  reward: {
-    alignSelf: 'center',
-    marginTop: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#F5E6BE',
-  },
+  reward: { alignSelf: 'center', marginTop: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F5E6BE' },
   rewardText: { fontSize: 13, fontWeight: '800', color: '#6B5310' },
-  degraded: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    alignSelf: 'center',
-    marginTop: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#F0E4CC',
-  },
-  // Status is never colour alone: the dot has a shape and the text says it.
+  degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F0E4CC' },
   degradedDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#B98F3E' },
   degradedText: { fontSize: 12, color: INK_SOFT, flexShrink: 1 },
   gearMuted: { backgroundColor: '#E6DCC8' },
 
-  tabs: {
-    flexDirection: 'row',
-    alignSelf: 'center',
-    marginTop: 10,
-    backgroundColor: 'rgba(255,253,247,0.85)',
-    borderRadius: 999,
-    padding: 4,
-    gap: 4,
-    ...(shadowCard as object),
-  },
+  tabs: { flexDirection: 'row', alignSelf: 'center', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 4, ...(shadowCard as object) },
   tab: { paddingVertical: 7, paddingHorizontal: 18, borderRadius: 999 },
   tabActive: { backgroundColor: INK },
   tabText: { fontSize: 13, fontWeight: '800', color: INK_SOFT, letterSpacing: 0.4 },
@@ -708,148 +588,47 @@ const styles = StyleSheet.create({
   bubbleZone: { minHeight: 92, justifyContent: 'flex-end', alignItems: 'center', marginTop: 6 },
   hint: { fontSize: 15, color: INK_SOFT, marginBottom: 14 },
   hintNight: { color: '#E8DFC8' },
-  bubble: {
-    maxWidth: '92%',
-    backgroundColor: CARD,
-    borderRadius: 22,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    ...(shadowCard as object),
-  },
+  bubble: { maxWidth: '92%', backgroundColor: CARD, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...(shadowCard as object) },
   bubbleYou: { fontSize: 12, color: INK_SOFT, marginBottom: 5 },
   bubbleText: { fontSize: 17, fontWeight: '600', color: INK, lineHeight: 24 },
-  bubbleTail: {
-    position: 'absolute',
-    bottom: -7,
-    left: '48%',
-    width: 16,
-    height: 16,
-    backgroundColor: CARD,
-    borderRadius: 3,
-    transform: [{ rotate: '45deg' }],
-  },
+  bubbleTail: { position: 'absolute', bottom: -7, left: '48%', width: 16, height: 16, backgroundColor: CARD, borderRadius: 3, transform: [{ rotate: '45deg' }] },
   error: { marginTop: 8, fontSize: 13, color: '#B3402E', textAlign: 'center' },
 
   stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 },
-  shadow: {
-    position: 'absolute',
-    bottom: 18,
-    width: 230,
-    height: 30,
-    borderRadius: 115,
-    backgroundColor: '#4A3B2A',
-    opacity: 0.15,
-  },
+  shadow: { position: 'absolute', bottom: 18, width: 230, height: 30, borderRadius: 115, backgroundColor: '#4A3B2A', opacity: 0.15 },
   heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
   heart: { position: 'absolute', fontSize: 24, color: '#D46A5A' },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
-
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
   digSpot: { position: 'absolute', left: 18, bottom: 26, alignItems: 'center', zIndex: 2 },
-  digHint: {
-    marginTop: 2, fontSize: 11, fontWeight: '800', color: INK_SOFT,
-    backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 999, overflow: 'hidden',
-  },
-  thought: {
-    position: 'absolute', top: 0, alignSelf: 'center', maxWidth: 250,
-    backgroundColor: 'rgba(255,253,247,0.92)', borderRadius: 18,
-    paddingVertical: 9, paddingHorizontal: 14,
-    ...(shadowCard as object),
-  },
+  digHint: { marginTop: 2, fontSize: 11, fontWeight: '800', color: INK_SOFT, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
+  thought: { position: 'absolute', top: 0, alignSelf: 'center', maxWidth: 250, backgroundColor: 'rgba(255,253,247,0.92)', borderRadius: 18, paddingVertical: 9, paddingHorizontal: 14, ...(shadowCard as object) },
   thoughtText: { fontSize: 13, fontStyle: 'italic', color: INK_SOFT, lineHeight: 18 },
-  thoughtDot1: {
-    position: 'absolute', bottom: -8, left: '46%', width: 9, height: 9, borderRadius: 5,
-    backgroundColor: 'rgba(255,253,247,0.92)',
-  },
-  thoughtDot2: {
-    position: 'absolute', bottom: -15, left: '52%', width: 5, height: 5, borderRadius: 3,
-    backgroundColor: 'rgba(255,253,247,0.85)',
-  },
-  npcName: {
-    marginTop: -4,
-    fontSize: 11,
-    fontWeight: '800',
-    color: INK_SOFT,
-    backgroundColor: 'rgba(255,253,247,0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  npcBubble: {
-    maxWidth: 170,
-    backgroundColor: CARD,
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginBottom: 6,
-    ...(shadowCard as object),
-  },
+  thoughtDot1: { position: 'absolute', bottom: -8, left: '46%', width: 9, height: 9, borderRadius: 5, backgroundColor: 'rgba(255,253,247,0.92)' },
+  thoughtDot2: { position: 'absolute', bottom: -15, left: '52%', width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,253,247,0.85)' },
+  npcName: { marginTop: -4, fontSize: 11, fontWeight: '800', color: INK_SOFT, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
+  npcBubble: { maxWidth: 170, backgroundColor: CARD, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 6, ...(shadowCard as object) },
   npcBubbleText: { fontSize: 12.5, fontWeight: '600', color: INK, lineHeight: 17 },
 
-  chip: {
-    position: 'absolute',
-    // Was -6, which put "napping" underneath the input bar and clipped it.
-    bottom: 8,
-    zIndex: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: CARD,
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 13,
-    ...(shadowCard as object),
-  },
+  chip: { position: 'absolute', bottom: 8, zIndex: 3, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: CARD, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...(shadowCard as object) },
   chipDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: INK_SOFT },
 
   controls: { gap: 10 },
-  talk: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: INK,
-    borderRadius: 999,
-    paddingVertical: 18,
-    ...(shadowCard as object),
-  },
+  talk: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: INK, borderRadius: 999, paddingVertical: 18, ...(shadowCard as object) },
   talkActive: { backgroundColor: '#B3402E' },
   micDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: ACCENT },
   micDotLive: { backgroundColor: '#FFD9CF' },
   talkText: { color: '#FBF6EA', fontWeight: '800', fontSize: 16, letterSpacing: 0.4 },
 
   typeRow: { flexDirection: 'row', gap: 10 },
-  input: {
-    flex: 1,
-    backgroundColor: CARD,
-    borderRadius: 999,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    fontSize: 15,
-    color: INK,
-    ...(shadowCard as object),
-  },
-  send: {
-    backgroundColor: INK,
-    borderRadius: 999,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    ...(shadowCard as object),
-  },
+  input: { flex: 1, backgroundColor: CARD, borderRadius: 999, paddingHorizontal: 20, paddingVertical: 15, fontSize: 15, color: INK, ...(shadowCard as object) },
+  send: { backgroundColor: INK, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', ...(shadowCard as object) },
   sendText: { color: '#FBF6EA', fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
   actionsRow: { flexDirection: 'row', gap: 10 },
   actionWrap: { flex: 1 },
-  action: {
-    backgroundColor: CARD,
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: 'center',
-    ...(shadowCard as object),
-  },
+  action: { backgroundColor: CARD, borderRadius: 999, paddingVertical: 14, alignItems: 'center', ...(shadowCard as object) },
   pressed: { transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },
   actionText: { fontWeight: '800', color: INK, fontSize: 15, letterSpacing: 0.4 },
