@@ -179,11 +179,15 @@ def shadow(plate, foot, w, h, sun=(-0.55, 0.35), strength=0.62, alpha=None):
         if dx1 > dx0 and dy1 > dy0:
             m[dy0:dy1, dx0:dx1] = np.maximum(
                 m[dy0:dy1, dx0:dx1],
-                proj[sy0:sy0 + (dy1 - dy0), sx0:sx0 + (dx1 - dx0)] * 0.95)
-        # hard light -> a defined edge. Blur proportional to how far the
-        # shadow has travelled, not a fixed radius: the far end of a cast
-        # shadow is always softer than the contact end.
-        m = cv2.GaussianBlur(m, (0, 0), max(2.0, h * 0.012))
+                proj[sy0:sy0 + (dy1 - dy0), sx0:sx0 + (dx1 - dx0)] * 1.00)
+        # r82: "too faint and too broadly softened to retain a useful
+        # figure silhouette". Direction passed, density did not. The blur
+        # halved (h*0.012 -> h*0.007) and the POOL weight cut hardest
+        # (0.55 -> 0.32): the pool is an 18px-blurred ellipse and it was
+        # what dissolved the legs into one grey patch, not the cast blur.
+        # Hard midday light still wants SOME penumbra, so this softens
+        # rather than sharpens to a cutout.
+        m = cv2.GaussianBlur(m, (0, 0), max(1.5, h * 0.007))
 
     ex, ey = int(w * 0.46), max(5, int(h * 0.045))
     cx = int(foot[0] + sun[0] * ex * 0.55)
@@ -191,7 +195,7 @@ def shadow(plate, foot, w, h, sun=(-0.55, 0.35), strength=0.62, alpha=None):
     pool = np.zeros((H, W), np.float32)
     cv2.ellipse(pool, (cx, cy), (ex, ey), 0, 0, 360, 0.80, -1)
     pool = cv2.GaussianBlur(pool, (0, 0), max(3.0, ex * 0.11))
-    m = np.maximum(m, pool * (0.55 if alpha is not None else 1.0))
+    m = np.maximum(m, pool * (0.32 if alpha is not None else 1.0))
 
     core = np.zeros((H, W), np.float32)
     cex, cey = max(4, int(w * 0.30)), max(3, int(h * 0.016))
@@ -234,7 +238,7 @@ def place(plate, rgba, foot, height_px, k=1.0, sun=(-0.55, 0.35),
         return plate
     fig = fig[sy0:sy0 + (dy1 - dy0), sx0:sx0 + (dx1 - dx0)]
 
-    out = shadow(plate, foot, nw, nh, sun, strength=0.52 * min(1.0, k * 1.4),
+    out = shadow(plate, foot, nw, nh, sun, strength=0.62 * min(1.0, k * 1.4),
                  alpha=full_alpha)
 
     patch = out[dy0:dy1, dx0:dx1]

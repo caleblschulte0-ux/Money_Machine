@@ -362,6 +362,7 @@ def compose(beat, dur, frames):
     if icespec:
         ice_dep = [DT.depth(f) for f in frames]
 
+    tag_a = 0.0
     for i, f in enumerate(frames):
         t = i / FPS
         base = f.astype(np.float32)
@@ -381,6 +382,7 @@ def compose(beat, dur, frames):
 
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
+        showing = False       # is any generated figure on screen right now?
 
         for (src, _fx, hpx, t0, build, sdep, mtch, toff), path, cut in zip(
                 figs, fpaths, cuts):
@@ -389,6 +391,7 @@ def compose(beat, dur, frames):
             if lt < -0.55:
                 continue
             if lt < 0:
+                showing = True
                 AR.reticle(d, (foot[0], foot[1] - hpx * 0.5), t - (t0 - 0.55),
                            dur=0.55, col=CYAN, a=235)
                 continue
@@ -412,6 +415,7 @@ def compose(beat, dur, frames):
             # the first cut of the new ending looked like. A figure with
             # an out-time is a RECALL of something already revealed, so
             # it just appears.
+            showing = True
             base = PL.place(base, cut, foot, hpx, k=k,
                             depth=dep0, subj_depth=sdep,
                             reveal=(toff is None and k < 1.0), match=mtch)
@@ -425,9 +429,20 @@ def compose(beat, dur, frames):
                 if k > 0:
                     draw_label(d, (cx, cy), (cx + off[0], cy + off[1]), title, sub, k)
 
-        # the standing honesty tag, on any beat that puts a figure in frame
-        if figs:
-            tg = AR.ease(min(1.0, max(0.0, (t - 0.8) / 0.6)))
+        # THE HONESTY TAG FOLLOWS THE FIGURES, NOT THE BEAT.
+        # It used to be drawn whenever the BEAT contained figures, which on
+        # the rebuilt closer meant it stayed up for the last two seconds
+        # after every era had gone -- r82: "the frame is now the present-day
+        # plate, and the persistent banner suggests a generated element
+        # still exists". That is not just distracting, it is inaccurate in
+        # the direction that matters: a label reading NOT A PHOTOGRAPH over
+        # unmodified photography. It now tracks whether anything generated
+        # is actually on screen, reticle included, and follows it with a
+        # 0.35s ramp so it does not blink between flashes.
+        step = 1.0 / (0.35 * FPS)
+        tag_a = min(1.0, tag_a + step) if showing else max(0.0, tag_a - step)
+        if tag_a > 0.004:
+            tg = AR.ease(tag_a)
             tg *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
             if tg > 0:
                 fn = mono(28)
