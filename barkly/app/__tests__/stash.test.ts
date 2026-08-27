@@ -1,5 +1,5 @@
 import { reduce, freshSnapshot } from '../src/barkly/state';
-import { Stash, TREASURES } from '../src/world/stash';
+import { Stash, TREASURES, treasuresAt } from '../src/world/stash';
 import { pickThought } from '../src/world/thoughts';
 import { createInMemoryStore } from '../src/storage/inMemoryStore';
 
@@ -16,14 +16,37 @@ describe('the stash', () => {
     expect(items.map((t) => t.id)).toContain(found.id);
   });
 
-  it('prefers treasures he does not own yet', async () => {
+  it('prefers treasures he does not own yet, per site', async () => {
+    for (const site of ['park', 'beach'] as const) {
+      const stash = new Stash(createInMemoryStore(), 'default');
+      await stash.load();
+      const pool = treasuresAt(site);
+      const seen = new Set<string>();
+      for (let i = 0; i < pool.length; i++) seen.add((await stash.dig(site)).id);
+      expect(seen.size).toBe(pool.length);
+    }
+  });
+
+  it('never turns up a seashell in a park hole', async () => {
     const stash = new Stash(createInMemoryStore(), 'default');
     await stash.load();
-    const seen = new Set<string>();
-    for (let i = 0; i < TREASURES.length; i++) {
-      seen.add((await stash.dig()).id);
+    const beachIds = new Set(treasuresAt('beach').map((t) => t.id));
+    for (let i = 0; i < 40; i++) {
+      expect(beachIds.has((await stash.dig('park')).id)).toBe(false);
     }
-    expect(seen.size).toBe(TREASURES.length);
+  });
+
+  it('the two sites do not overlap and together are everything', () => {
+    const park = treasuresAt('park').map((t) => t.id);
+    const beach = treasuresAt('beach').map((t) => t.id);
+    expect(park.filter((id) => beach.includes(id))).toEqual([]);
+    expect(park.length + beach.length).toBe(TREASURES.length);
+    // A new place has to bring its own finds or it is a new background.
+    expect(beach.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('every treasure id is unique', () => {
+    expect(new Set(TREASURES.map((t) => t.id)).size).toBe(TREASURES.length);
   });
 
   it('clear() wipes it (privacy rule)', async () => {

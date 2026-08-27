@@ -298,6 +298,16 @@ export default function BarklyRoom() {
     if (fetching || busy || digging) return;
     runChase(() => void barkly.play());
   };
+
+  /**
+   * The beach's own verb. Same chase animation, no ball: he runs at the water,
+   * the water leaves, he claims victory. Beaches are for chasing something
+   * that cannot be caught, which suits him.
+   */
+  const runWaves = () => {
+    if (fetching || busy || digging) return;
+    runChase(() => void barkly.chaseWaves());
+  };
   const ballX = ballFlight.interpolate({ inputRange: [0, 1], outputRange: [0, 118] });
   const ballY = ballFlight.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -120, -8] });
 
@@ -338,6 +348,10 @@ export default function BarklyRoom() {
       ? fetching
         ? 'fetching…'
         : 'fetch'
+      : location === 'beach'
+      ? fetching
+        ? 'chasing…'
+        : 'waves'
       : fetching || tugging
         ? 'playing…'
         : barkly.toy
@@ -509,7 +523,7 @@ export default function BarklyRoom() {
           </Animated.View>
           {/* After the dog, so the near rim overlaps his lower body. */}
           {asleep && location === 'home' && <DogBedFront upgraded={barkly.hasHome('home_bed')} />}
-          {fetching && variant !== 'carryLeft' && (
+          {fetching && location !== 'beach' && variant !== 'carryLeft' && (
             <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
               <Svg width={30} height={30} viewBox="0 0 30 30">
                 <Circle cx={15} cy={15} r={13} fill="#B3402E" />
@@ -518,14 +532,34 @@ export default function BarklyRoom() {
               </Svg>
             </Animated.View>
           )}
-          {location === 'park' && !asleep && (
-            <Pressable style={styles.digSpot} onPress={runDig} disabled={digging || fetching || busy} hitSlop={8}>
-              <Svg width={86} height={44} viewBox="0 0 86 44">
-                <Path d="M6 38 Q43 2 80 38 Z" fill="#8A6B3A" />
-                <Path d="M18 38 Q43 14 68 38 Z" fill="#75592F" />
-                <Circle cx={43} cy={34} r={7} fill="#5C4426" />
-              </Svg>
-              <Text style={styles.digHint}>{digging ? '…' : 'dig?'}</Text>
+          {/* Somewhere to dig, at both sites that have anything buried. The
+              beach turns up its OWN finds — a place that hands you the park's
+              fourteen objects is a background, not a place. */}
+          {(location === 'park' || location === 'beach') && !asleep && (
+            <Pressable
+              style={styles.digSpot}
+              onPress={runDig}
+              disabled={digging || fetching || busy}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={location === 'beach' ? 'Search the wet sand' : 'Dig here'}
+            >
+              {location === 'beach' ? (
+                <Svg width={86} height={44} viewBox="0 0 86 44">
+                  <Path d="M4 38 Q43 12 82 38 Z" fill="#D3BA92" />
+                  <Path d="M18 38 Q43 22 68 38 Z" fill="#C2A87E" />
+                  <Path d="M34 33 q5 -6 10 0 q5 -6 10 0" stroke="#9C8560" strokeWidth={2} fill="none" />
+                </Svg>
+              ) : (
+                <Svg width={86} height={44} viewBox="0 0 86 44">
+                  <Path d="M6 38 Q43 2 80 38 Z" fill="#8A6B3A" />
+                  <Path d="M18 38 Q43 14 68 38 Z" fill="#75592F" />
+                  <Circle cx={43} cy={34} r={7} fill="#5C4426" />
+                </Svg>
+              )}
+              <Text style={styles.digHint}>
+                {digging ? '…' : location === 'beach' ? 'sift?' : 'dig?'}
+              </Text>
             </Pressable>
           )}
           {barkly.thought && !bubbleText && (
@@ -603,7 +637,7 @@ export default function BarklyRoom() {
           <View style={styles.actionsRow}>
             <ActionButton
               label={playLabel}
-              onPress={location === 'park' ? runFetch : runPlay}
+              onPress={location === 'park' ? runFetch : location === 'beach' ? runWaves : runPlay}
               disabled={busy || fetching || tugging}
             />
             <ActionButton

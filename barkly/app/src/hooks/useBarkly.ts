@@ -90,7 +90,7 @@ import { asyncStorageStore } from '../storage/asyncStorageStore';
 import { DEFAULT_PROFILE, profileKey } from '../storage/types';
 import { LOCATIONS, LocationId } from '../world/locations';
 import { NPCS, NpcId } from '../world/npcs';
-import { Stash, Treasure } from '../world/stash';
+import { DigSite, Stash, Treasure } from '../world/stash';
 import { pickThought } from '../world/thoughts';
 
 const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
@@ -185,6 +185,8 @@ export interface BarklyController {
   finishContest(state: ContestState | null): Promise<void>;
   dismissEncounter(): void;
   dig(): Promise<Treasure | null>;
+  /** The beach's own verb: run at the sea, lose, claim the win. */
+  chaseWaves(): Promise<void>;
   stashItems: Treasure[];
   thought: string | null;
 
@@ -244,6 +246,7 @@ export function useBarkly(): BarklyController {
   /** Won or lost, read once by the resolution that follows. */
   const contestOutcome = useRef<boolean | undefined>(undefined);
   const npcLineCounter = useRef(0);
+  const waveLineCounter = useRef(0);
   const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNpcCredit = useRef<Partial<Record<NpcId, number>>>({});
   const stash = useMemo(() => new Stash(asyncStorageStore, DEFAULT_PROFILE), []);
@@ -997,23 +1000,56 @@ export function useBarkly(): BarklyController {
     [activeEncounter, busy, resolveWith],
   );
 
+  /**
+   * Dig, at whichever site he is standing on. The beach has its own pool of
+   * finds — unlocking a place that hands you the same fourteen park objects
+   * is a new background, not a new place.
+   */
   const dig = useCallback(async (): Promise<Treasure | null> => {
     if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return null;
-    const found = await stash.dig();
+    const site: DigSite = locationRef.current === 'beach' ? 'beach' : 'park';
+    const found = await stash.dig(site);
     setStashItems(stash.list());
     setCharacter((c) => withTreasure(c, found.name, Date.now()));
-    await speak(`${found.name}?! MINE. This goes in the stash.`, {
-      actions: ['MOUTH_MOVE', 'EXCITED'],
-      after: { type: 'TREASURE' },
-    });
+    await speak(
+      site === 'beach'
+        ? `${found.name}. The sea just gives these away. Amateur.`
+        : `${found.name}?! MINE. This goes in the stash.`,
+      { actions: ['MOUTH_MOVE', 'EXCITED'], after: { type: 'TREASURE' } },
+    );
+    const where = site === 'beach' ? 'the beach' : 'the park';
     memory
-      .remember([], [`Dug up ${found.name} at the park.`], { where: 'the park' })
+      .remember([], [site === 'beach' ? `Found ${found.name} in the wet sand at the beach.` : `Dug up ${found.name} at the park.`], { where })
       .then(() => setMemoryVersion((v) => v + 1))
       .catch(() => {});
     credit('dig');
     progressPlan({ kind: 'dig' });
     return found;
   }, [activeEncounter, busy, credit, memory, progressPlan, speak, stash]);
+
+  /**
+   * Chasing the sea. It cannot be caught, which is the joke and also the
+   * point: the beach needed a verb of its own, and "fetch, but wetter" would
+   * have been a reskin. Pays the same as a round of play.
+   */
+  const chaseWaves = useCallback(async (): Promise<void> => {
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
+    const lines = [
+      'It ran away. It always runs away. I am UNDEFEATED and also soaked.',
+      'I have chased that water back into the sea. You are welcome, everyone.',
+      'Every time I get close it leaves. This is the most interesting thing here.',
+      'I bit the sea. The sea did nothing. Cowardly.',
+      'Wave: retreated. Barkly: victorious. Paws: regrettably wet.',
+    ];
+    const line = lines[waveLineCounter.current++ % lines.length];
+    await speak(line, { actions: ['EXCITED', 'TAIL_WAG'], after: { type: 'PLAY' } });
+    memory
+      .remember([], ['Chased the waves at the beach and declared it a win.'], { where: 'the beach' })
+      .then(() => setMemoryVersion((v) => v + 1))
+      .catch(() => {});
+    credit('play');
+    progressPlan({ kind: 'play' });
+  }, [activeEncounter, busy, credit, memory, progressPlan, speak]);
 
   const feed = useCallback(async (itemId?: string) => {
     if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
@@ -1274,6 +1310,7 @@ export function useBarkly(): BarklyController {
     resolveEncounter,
     dismissEncounter: () => setActiveEncounter(null),
     dig,
+    chaseWaves,
     stashItems,
     thought,
     memorySnapshot: () => memory.snapshot(),
