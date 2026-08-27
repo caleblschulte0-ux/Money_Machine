@@ -71,7 +71,15 @@ HANDOFF = {
 # free while everything else tracked, it would be the one element that gives
 # the game away.
 LABELS = {
- "b1": ((1560, 620), "TWO VIEWERS", "ONE PLACE",        4.0, (-620, -240)),
+ # r72: dy -240 -> -140. At -240 this panel intersected VIEWER B's MILL
+ # HOUSE label over 442x42px -- two large translucent panels crossing at the
+ # top of frame, which is what ChatGPT's r69 "still dense" note was seeing
+ # without a name for it. The specs hold anchors and offsets, not boxes, so
+ # the clash is invisible here and only appears once the type is measured.
+ # labelfit.py measures it now. The clear band is dy -160..-80 (MILL HOUSE
+ # ends at y=338, SIOUX QUARTZITE starts at y=602); -140 sits in the middle
+ # of it, 58px clear above and 64px below.
+ "b1": ((1560, 620), "TWO VIEWERS", "ONE PLACE",        4.0, (-620, -140)),
  "b2": ((700, 860),  "SHARED MARK", "A HANDS IT TO B",  5.4, (300, -170)),
  "b3": ((900, 900),  "SAME ANCHOR", "DIFFERENT DEPTH",  4.3, (330, -300)),
  "b4": ((860, 820),  "THE TOUR",    "TWO CONNECTED",    2.7, (330, -300)),
