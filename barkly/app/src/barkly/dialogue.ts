@@ -9,6 +9,7 @@
  * testable and so audio is never triggered from two places.
  */
 
+import { CharacterState } from './character';
 import { BarklyMemory } from './memory';
 import { buildSystemPrompt, parseReply, WorldContext } from './prompts';
 import { BarklyReply, BarklySnapshot } from './types';
@@ -34,6 +35,7 @@ export class DialogueEngine {
     userText: string,
     snapshot: BarklySnapshot,
     world?: WorldContext,
+    character?: CharacterState,
   ): Promise<ConverseResult> {
     const empty: BarklyReply = {
       speech: '',
@@ -51,6 +53,7 @@ export class DialogueEngine {
       memory: memState,
       world,
       relevant,
+      character,
     });
 
     const raw = await this.provider.complete({

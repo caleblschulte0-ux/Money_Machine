@@ -11,6 +11,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { DialogueEngine } from '../barkly/dialogue';
+import {
+  CharacterState,
+  expireCharacter,
+  freshCharacter,
+  INITIATIVE_COOLDOWN_MS,
+  noteInitiative,
+  pickInitiative,
+  withFriend,
+  withGrievance,
+  withTreasure,
+} from '../barkly/character';
 import { nameFromFacts, welcomeBack } from '../barkly/greetings';
 import { FEED_LINES, FULL_LINES, PLAY_LINES, pickLine, TIRED_LINES, WAKE_LINES } from '../barkly/lines';
 import { BarklyMemory, MemoryState } from '../barkly/memory';
@@ -32,6 +43,7 @@ import { pickThought } from '../world/thoughts';
 
 const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
 const LOCATION_KEY = profileKey(DEFAULT_PROFILE, 'location-v1');
+const CHARACTER_KEY = profileKey(DEFAULT_PROFILE, 'character-v1');
 
 export interface Exchange {
   userText: string;
@@ -102,6 +114,9 @@ export function useBarkly(): BarklyController {
   const [stashItems, setStashItems] = useState<Treasure[]>([]);
   const [thought, setThought] = useState<string | null>(null);
   const [pendingGreeting, setPendingGreeting] = useState<string | null>(null);
+  const [character, setCharacter] = useState<CharacterState>(() => freshCharacter());
+  const characterRef = useRef(character);
+  characterRef.current = character;
   const thoughtSeed = useRef(Math.floor(Math.random() * 1000));
 
   const snapshotRef = useRef(snapshot);
@@ -153,6 +168,14 @@ export function useBarkly(): BarklyController {
       }
       const items = await stash.load();
       if (!cancelled) setStashItems(items);
+      try {
+        const rawChar = await asyncStorageStore.get(CHARACTER_KEY);
+        if (!cancelled && rawChar) {
+          setCharacter(expireCharacter(JSON.parse(rawChar) as CharacterState, Date.now()));
+        }
+      } catch {
+        // keep a fresh character
+      }
       const available = await providers.stt.isAvailable();
       if (!cancelled) setSttAvailable(available);
     })();
@@ -185,10 +208,14 @@ export function useBarkly(): BarklyController {
     };
   }, []);
 
-  // --- Persist snapshot on change ---
+  // --- Persist snapshot and character on change ---
   useEffect(() => {
     asyncStorageStore.set(SNAPSHOT_KEY, JSON.stringify(snapshot)).catch(() => {});
   }, [snapshot]);
+
+  useEffect(() => {
+    asyncStorageStore.set(CHARACTER_KEY, JSON.stringify(character)).catch(() => {});
+  }, [character]);
 
   // --- Wall-clock decay when app returns to foreground ---
   useEffect(() => {
@@ -298,6 +325,48 @@ export function useBarkly(): BarklyController {
     };
   }, []);
 
+  // --- Initiative: Barkly starts conversations, not just answers them ---
+  //
+  // Driven entirely by his drives, memory and character state (see
+  // character.ts) — never a random popup table. Cooldowned, skipped while he
+  // is busy or asleep, and routed through the same speaking lifecycle.
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (!alive) return;
+        const snap = snapshotRef.current;
+        const quiet = !isBusy(snap.state) && snap.state !== 'sleepy' && snap.state !== 'eating';
+        if (quiet) {
+          const mem = memory.snapshot();
+          const relevant = memory.relevant();
+          const loc = LOCATIONS[locationRef.current];
+          const initiative = pickInitiative({
+            snapshot: snap,
+            facts: relevant.facts,
+            experiences: relevant.experiences,
+            openThreads: mem.openThreads,
+            character: characterRef.current,
+            location: loc.name,
+            npcsPresent: loc.npcIds.map((id) => NPCS[id].name),
+            now: Date.now(),
+          });
+          if (initiative) {
+            setCharacter((c) => noteInitiative(c, initiative.kind, Date.now()));
+            speak(initiative.line, { actions: ['MOUTH_MOVE', 'EAR_PERK'] }).catch(() => {});
+          }
+        }
+        schedule();
+      }, INITIATIVE_COOLDOWN_MS / 3 + Math.random() * 20000);
+    };
+    schedule();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [memory, speak]);
+
   // --- The core exchange: text in → Barkly speaks + reacts ---
   const runExchange = useCallback(
     async (userText: string) => {
@@ -305,7 +374,12 @@ export function useBarkly(): BarklyController {
       setError(null);
       dispatch({ type: 'TALK_CAPTURED' }); // thinking
       try {
-        const { reply } = await engine.converse(userText, snapshotRef.current, worldContext());
+        const { reply } = await engine.converse(
+          userText,
+          snapshotRef.current,
+          worldContext(),
+          characterRef.current,
+        );
         if (!reply.speech) {
           dispatch({ type: 'TALK_FAILED' });
           return;
@@ -395,6 +469,12 @@ export function useBarkly(): BarklyController {
         after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
       }).catch(() => {});
 
+      setCharacter((c) =>
+        npc.relationship === 'rival'
+          ? withGrievance(c, npc.name, 'was being insufferable at the park', Date.now())
+          : withFriend(c, npc.name),
+      );
+
       if (Math.random() < 0.3) {
         const mem = npc.memories[Math.floor(Math.random() * npc.memories.length)];
         memory
@@ -410,6 +490,7 @@ export function useBarkly(): BarklyController {
     if (busy || isBusy(snapshotRef.current.state)) return null;
     const found = await stash.dig();
     setStashItems(stash.list());
+    setCharacter((c) => withTreasure(c, found.name, Date.now()));
     await speak(`${found.name}?! MINE. This goes in the stash.`, {
       actions: ['MOUTH_MOVE', 'EXCITED'],
       after: { type: 'TREASURE' },
@@ -487,6 +568,8 @@ export function useBarkly(): BarklyController {
       await memory.forgetAll();
       await stash.clear();
       setStashItems([]);
+      setCharacter(freshCharacter());
+      await asyncStorageStore.remove(CHARACTER_KEY);
       setLastExchange(null);
     },
   };

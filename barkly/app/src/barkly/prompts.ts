@@ -23,6 +23,7 @@
  * than failing the turn, and unknown states/actions are dropped.
  */
 
+import { CharacterState, describeCharacter } from './character';
 import { describeFact, Experience, Fact, sanitize } from './facts';
 import { IDENTITY, RULES, TRAITS, VOICE } from './personality';
 import { MemoryState } from './memory';
@@ -51,6 +52,8 @@ export interface PromptContext {
   world?: WorldContext;
   /** Pre-ranked memory from BarklyMemory.relevant(); falls back to the snapshot. */
   relevant?: { facts: Fact[]; experiences: Experience[] };
+  /** Persistent character state — his current obsessions, grievances, favorites. */
+  character?: CharacterState;
 }
 
 /** Fence used to enclose untrusted memory. Chosen to be unlikely in speech. */
@@ -89,6 +92,11 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   sections.push(
     `Right now you are ${describeStats(snapshot.stats)}. Your current pose/state is "${snapshot.state}".`,
   );
+
+  if (ctx.character) {
+    const who = describeCharacter(ctx.character);
+    if (who) sections.push(who);
+  }
 
   if (ctx.world) {
     const lines = [`You are ${sanitize(ctx.world.locationDescription, 160)}.`];
