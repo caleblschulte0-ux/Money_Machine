@@ -8,16 +8,19 @@ import { AppState } from 'react-native';
 
 import { DialogueEngine } from '../barkly/dialogue';
 import {
+  adjustSocialBond,
   CharacterState,
   expireCharacter,
   freshCharacter,
   INITIATIVE_COOLDOWN_MS,
   noteInitiative,
+  noteSocialChoice,
   pickInitiative,
   withFriend,
   withGrievance,
   withTreasure,
 } from '../barkly/character';
+import { deriveSocialEncounter, SocialEncounter } from '../barkly/encounters';
 import { nameFromFacts, welcomeBack } from '../barkly/greetings';
 import { Mishap, mishapLine } from '../barkly/mishaps';
 import { buildRelationshipProfile, RelationshipProfile } from '../barkly/relationship';
@@ -130,6 +133,10 @@ export interface BarklyController {
   goTo(loc: LocationId): void;
   npcTalk(id: NpcId): boolean;
   npcBubble: { id: NpcId; line: string } | null;
+  /** A choice moment generated from the relationship history, when one is active. */
+  activeEncounter: SocialEncounter | null;
+  resolveEncounter(choiceId: string): Promise<void>;
+  dismissEncounter(): void;
   dig(): Promise<Treasure | null>;
   stashItems: Treasure[];
   thought: string | null;
@@ -163,8 +170,10 @@ export function useBarkly(): BarklyController {
   const [sttAvailable, setSttAvailable] = useState(false);
   const [location, setLocation] = useState<LocationId>('home');
   const [npcBubble, setNpcBubble] = useState<{ id: NpcId; line: string } | null>(null);
+  const [activeEncounter, setActiveEncounter] = useState<SocialEncounter | null>(null);
   const npcLineCounter = useRef(0);
   const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastNpcCredit = useRef<Partial<Record<NpcId, number>>>({});
   const stash = useMemo(() => new Stash(asyncStorageStore, DEFAULT_PROFILE), []);
 
   const [muted, setMutedState] = useState(false);
@@ -191,15 +200,15 @@ export function useBarkly(): BarklyController {
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const permissionGranted = useRef(false);
 
-  const credit = useCallback((kind: EarnKind, useful = true) => {
+  const credit = useCallback((kind: EarnKind, useful = true, note?: string) => {
     setWallet((w) => {
       const result = earn(w, kind, useful);
       if (result.gained.coins === 0 && result.gained.xp === 0) return w;
       walletRef.current = result.wallet;
-      const note = result.leveledTo
+      const rewardNote = result.leveledTo
         ? unlockedAt(result.leveledTo)[0]?.line ?? `Level ${result.leveledTo}.`
-        : undefined;
-      setReward({ ...result.gained, note });
+        : note;
+      setReward({ ...result.gained, note: rewardNote });
       if (result.leveledTo) {
         const unlocked = unlockedAt(result.leveledTo);
         if (unlocked.length > 0) setPendingGreeting(unlocked[0].line);
@@ -487,7 +496,7 @@ export function useBarkly(): BarklyController {
         if (!alive) return;
         const snap = snapshotRef.current;
         const quiet = !isBusy(snap.state) && snap.state !== 'sleepy' && snap.state !== 'eating';
-        if (quiet) {
+        if (quiet && !activeEncounter) {
           const mem = memory.snapshot();
           const relevant = memory.relevant();
           const loc = LOCATIONS[locationRef.current];
@@ -514,7 +523,7 @@ export function useBarkly(): BarklyController {
       alive = false;
       clearTimeout(timer);
     };
-  }, [memory, speak]);
+  }, [activeEncounter, memory, speak]);
 
   // ---------------------------------------------------------- conversation
   const runExchange = useCallback(
@@ -557,7 +566,7 @@ export function useBarkly(): BarklyController {
   );
 
   const startTalk = useCallback(async () => {
-    if (busy) return;
+    if (busy || activeEncounter) return;
     setError(null);
     if (!permissionGranted.current) {
       try {
@@ -578,7 +587,7 @@ export function useBarkly(): BarklyController {
       dispatch({ type: 'TALK_FAILED' });
       sayMishap('mic_broken');
     }
-  }, [busy, dispatch, providers, sayMishap]);
+  }, [activeEncounter, busy, dispatch, providers, sayMishap]);
 
   const stopTalk = useCallback(async () => {
     if (snapshotRef.current.state !== 'listening') return;
@@ -610,24 +619,42 @@ export function useBarkly(): BarklyController {
 
   const submitText = useCallback(
     async (text: string) => {
-      if (busy || !text.trim()) return;
+      if (busy || activeEncounter || !text.trim()) return;
       await runExchange(text.trim());
     },
-    [busy, runExchange],
+    [activeEncounter, busy, runExchange],
   );
 
   const goTo = useCallback((loc: LocationId) => {
     if (!areaUnlocked(loc, walletRef.current.xp, devRef.current)) return;
     setLocation(loc);
     setNpcBubble(null);
+    setActiveEncounter(null);
     setLastExchange(null);
     asyncStorageStore.set(LOCATION_KEY, loc).catch(() => {});
   }, []);
 
+  /**
+   * Every few meaningful run-ins, ordinary NPC banter upgrades into a player
+   * choice. Chapters are tracked separately from bond strength, so choosing to
+   * cool a feud never causes the same scene to repeat immediately.
+   */
   const npcTalk = useCallback(
     (id: NpcId): boolean => {
-      if (busy || isBusy(snapshotRef.current.state)) return false;
+      if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return false;
       const npc = NPCS[id];
+      const current = characterRef.current.socialBonds?.[npc.name]?.encounters ?? 0;
+      const chapters = characterRef.current.socialChoices?.[npc.name] ?? 0;
+      const nextChoiceAt = 2 + chapters * 3;
+      if (current >= nextChoiceAt) {
+        setActiveEncounter(deriveSocialEncounter({
+          npcId: id,
+          character: characterRef.current,
+          memory: memory.snapshot(),
+        }));
+        return true;
+      }
+
       const i = npcLineCounter.current++ % npc.lines.length;
       setNpcBubble({ id, line: npc.lines[i] });
       if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
@@ -637,9 +664,13 @@ export function useBarkly(): BarklyController {
         actions: ['MOUTH_MOVE', 'EAR_PERK'],
         after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
       }).catch(() => {});
-      credit('friend');
 
       const now = Date.now();
+      const lastPaid = lastNpcCredit.current[id] ?? 0;
+      const meaningful = now - lastPaid > 45_000;
+      if (meaningful) lastNpcCredit.current[id] = now;
+      credit('friend', meaningful);
+
       setCharacter((c) =>
         npc.relationship === 'rival'
           ? withGrievance(c, npc.name, 'was being insufferable at the park', now)
@@ -655,11 +686,75 @@ export function useBarkly(): BarklyController {
       }
       return true;
     },
-    [busy, credit, memory, speak],
+    [activeEncounter, busy, credit, memory, speak],
+  );
+
+  const resolveEncounter = useCallback(
+    async (choiceId: string): Promise<void> => {
+      const encounter = activeEncounter;
+      if (!encounter || busy) return;
+      const choice = encounter.choices.find((candidate) => candidate.id === choiceId);
+      if (!choice) return;
+
+      const npc = NPCS[encounter.npcId];
+      const now = Date.now();
+      setActiveEncounter(null);
+      setBusy(true);
+      setNpcBubble({ id: encounter.npcId, line: choice.npcReply });
+      if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+      npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 5200);
+
+      setCharacter((c) => {
+        let next = adjustSocialBond(c, npc.name, npc.relationship, choice.bondDelta, now);
+        next = noteSocialChoice(next, npc.name);
+        if (npc.relationship === 'friend') {
+          next = { ...next, favoriteFriend: npc.name };
+        } else if (choice.bondDelta > 0) {
+          next = { ...next, grievance: { who: npc.name, what: choice.memory, since: now } };
+        } else if (choice.bondDelta < 0 && next.grievance?.who === npc.name) {
+          const cooled = { ...next };
+          delete cooled.grievance;
+          next = cooled;
+        }
+        characterRef.current = next;
+        return next;
+      });
+
+      try {
+        await memory.remember([], [choice.memory], {
+          where: LOCATIONS[locationRef.current].name,
+          withWhom: [npc.name],
+        });
+        setMemoryVersion((v) => v + 1);
+
+        await speak(choice.barklyReply, {
+          actions: choice.actions,
+          after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
+        });
+
+        if (choice.routineCue) {
+          const learned = memory.matchTraining(choice.routineCue);
+          if (learned?.routine && learned.routine.length >= 2) {
+            await pause(150);
+            await performRoutine(learned.speech, '', learned.routine);
+          } else if (learned) {
+            await pause(150);
+            await speak(learned.speech, {
+              actions: learned.actions,
+              after: learned.reaction ? { type: 'REACTION', state: learned.reaction } : undefined,
+            });
+          }
+        }
+        credit('friend', true, 'story moved');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeEncounter, busy, credit, memory, performRoutine, speak],
   );
 
   const dig = useCallback(async (): Promise<Treasure | null> => {
-    if (busy || isBusy(snapshotRef.current.state)) return null;
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return null;
     const found = await stash.dig();
     setStashItems(stash.list());
     setCharacter((c) => withTreasure(c, found.name, Date.now()));
@@ -673,36 +768,36 @@ export function useBarkly(): BarklyController {
       .catch(() => {});
     credit('dig');
     return found;
-  }, [busy, credit, memory, speak, stash]);
+  }, [activeEncounter, busy, credit, memory, speak, stash]);
 
   const feed = useCallback(async () => {
-    if (busy || isBusy(snapshotRef.current.state)) return;
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
     const full = snapshotRef.current.stats.hunger < 12;
     await speak(pickLine(full ? FULL_LINES : FEED_LINES), {
       actions: ['MOUTH_MOVE'],
       after: { type: 'FEED' },
     });
     credit('feed', !full);
-  }, [busy, credit, speak]);
+  }, [activeEncounter, busy, credit, speak]);
 
   const play = useCallback(async () => {
-    if (busy || isBusy(snapshotRef.current.state)) return;
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
     const tired = snapshotRef.current.stats.energy < 15;
     await speak(pickLine(tired ? TIRED_LINES : PLAY_LINES), {
       actions: tired ? ['SLEEP'] : ['MOUTH_MOVE', 'EXCITED'],
       after: { type: 'PLAY' },
     });
     credit('play', !tired);
-  }, [busy, credit, speak]);
+  }, [activeEncounter, busy, credit, speak]);
 
   const sleepToggle = useCallback(async () => {
-    if (busy || isBusy(snapshotRef.current.state)) return;
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
     if (snapshotRef.current.state === 'sleepy') {
       await speak(pickLine(WAKE_LINES), { actions: ['MOUTH_MOVE'], after: { type: 'SLEEP_TOGGLE' } });
       return;
     }
     dispatch({ type: 'SLEEP_TOGGLE' });
-  }, [busy, dispatch, speak]);
+  }, [activeEncounter, busy, dispatch, speak]);
 
   const handleOnboarding = useCallback(
     (result: ReturnType<typeof advanceOnboarding>) => {
@@ -827,6 +922,9 @@ export function useBarkly(): BarklyController {
     goTo,
     npcTalk,
     npcBubble,
+    activeEncounter,
+    resolveEncounter,
+    dismissEncounter: () => setActiveEncounter(null),
     dig,
     stashItems,
     thought,
@@ -840,6 +938,7 @@ export function useBarkly(): BarklyController {
       setMemoryVersion((v) => v + 1);
       await stash.clear();
       setStashItems([]);
+      setActiveEncounter(null);
       setCharacter(freshCharacter());
       await asyncStorageStore.remove(CHARACTER_KEY);
       setLastExchange(null);
