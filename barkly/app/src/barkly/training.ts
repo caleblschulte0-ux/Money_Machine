@@ -6,12 +6,13 @@
  * Barkly's future behavior when an explicit cue is heard.
  *
  * The important production property is that a learned cue can execute without
- * another model call. The model helps translate an explicit teaching moment
- * into a small, validated rule once; after that the app owns the behavior.
+ * another model call. The model can translate complex teaching moments into a
+ * small validated rule once; a conservative local parser also handles a few
+ * simple physical tricks so the feature remains demonstrable offline.
  */
 
 import { sanitize } from './facts';
-import { LearnedTrainingRule } from './types';
+import { BodyAction, LearnedTrainingRule, ReactionState } from './types';
 
 export interface TrainingRule extends LearnedTrainingRule {
   id: string;
@@ -51,6 +52,81 @@ export function normalizeCue(input: string): string {
     .replace(/[^a-z0-9\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Offline fast path for a deliberately SMALL set of tricks that map cleanly to
+ * body actions Barkly already owns. If the instruction is ambiguous or asks
+ * for behavior the renderer cannot express, return null and let the dialogue
+ * model interpret it instead of pretending we understood.
+ */
+export function parseLocalTrainingInstruction(text: string): LearnedTrainingRule | null {
+  const clean = sanitize(text, 360).trim();
+  const patterns = [
+    /(?:when|whenever|if)\s+i\s+say\s+["“']?(.{2,64}?)["”']?\s*(?:,|\bthen\b)\s*(?:you\s+)?(.{2,220})$/i,
+    /when\s+you\s+hear\s+(?:me\s+)?say\s+["“']?(.{2,64}?)["”']?\s*(?:,|\bthen\b)\s*(?:you\s+)?(.{2,220})$/i,
+  ];
+  const match = patterns.map((re) => clean.match(re)).find(Boolean);
+  if (!match) return null;
+
+  const cue = sanitize(match[1], 64).replace(/^[\s"'“”]+|[\s"'“”,.!?]+$/g, '').trim();
+  const instruction = sanitize(match[2], 220).replace(/[.!?]+$/g, '').trim();
+  if (normalizeCue(cue).length < 2 || !instruction) return null;
+
+  const performance = inferLocalPerformance(instruction);
+  if (!performance) return null;
+  return { cue, instruction, ...performance };
+}
+
+function inferLocalPerformance(
+  instruction: string,
+): Pick<LearnedTrainingRule, 'speech' | 'reaction' | 'actions'> | null {
+  const lower = instruction.toLowerCase();
+  let reaction: ReactionState | undefined;
+  let actions: BodyAction[] = [];
+  let speech = 'Right. I remember this one.';
+
+  // Keep this intentionally conservative. Compound choreography belongs in a
+  // future sequenced-action contract, not a pile of simultaneous booleans.
+  const compound = /\b(?:and then|then|after that|followed by)\b/i.test(instruction);
+  if (compound) return null;
+
+  if (/\b(?:play dead|pretend (?:you(?:'re| are)|to be) dead|lie down|go to sleep|fall asleep)\b/i.test(instruction)) {
+    actions = ['SLEEP'];
+    reaction = 'sleepy';
+    speech = 'I have tragically passed away.';
+  } else if (/\b(?:terrified|scared|afraid|panic|freak out)\b/i.test(instruction)) {
+    actions = ['LOOK_LEFT', 'LOOK_RIGHT', 'EAR_PERK'];
+    reaction = 'excited';
+    speech = 'NOPE. Absolutely not. You deal with it.';
+  } else if (/\b(?:spin|dance|zoom|run around|run in circles|jump|hop)\b/i.test(instruction)) {
+    actions = ['EXCITED', 'TAIL_WAG'];
+    reaction = 'excited';
+    speech = 'This was your idea.';
+  } else if (/\bwag\b/i.test(instruction)) {
+    actions = ['TAIL_WAG'];
+    reaction = 'happy';
+    speech = 'Look at that. Trained.';
+  } else if (/\b(?:tilt|cock)\b.*\bhead\b|\bhead tilt\b/i.test(instruction)) {
+    actions = ['HEAD_TILT'];
+    reaction = 'happy';
+  } else if (/\blook left\b/i.test(instruction)) {
+    actions = ['LOOK_LEFT'];
+  } else if (/\blook right\b/i.test(instruction)) {
+    actions = ['LOOK_RIGHT'];
+  } else if (/\b(?:perk|raise)\b.*\bears?\b/i.test(instruction)) {
+    actions = ['EAR_PERK'];
+    reaction = 'happy';
+  } else if (/\bblink\b/i.test(instruction)) {
+    actions = ['BLINK'];
+  } else if (/\bsit\b/i.test(instruction)) {
+    actions = ['SIT'];
+    speech = 'Fine. Sitting.';
+  } else {
+    return null;
+  }
+
+  return { speech, reaction, actions };
 }
 
 function hashCue(cue: string): string {

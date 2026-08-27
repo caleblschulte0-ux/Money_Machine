@@ -6,6 +6,7 @@ import {
   matchTrainingRule,
   mergeTrainingRules,
   normalizeCue,
+  parseLocalTrainingInstruction,
 } from '../src/barkly/training';
 import { createInMemoryStore } from '../src/storage/inMemoryStore';
 
@@ -23,6 +24,14 @@ describe('Barkly training', () => {
     expect(looksLikeTrainingInstruction('Learn this trick: when I say freeze, stop.')).toBe(true);
     expect(looksLikeTrainingInstruction('What is an intruder alert?')).toBe(false);
     expect(looksLikeTrainingInstruction('Tell me something funny.')).toBe(false);
+  });
+
+  it('locally understands simple tricks but refuses choreography it cannot represent', () => {
+    const local = parseLocalTrainingInstruction('When I say intruder alert, act terrified.');
+    expect(local?.cue).toBe('intruder alert');
+    expect(local?.actions).toEqual(['LOOK_LEFT', 'LOOK_RIGHT', 'EAR_PERK']);
+    expect(parseLocalTrainingInstruction('When I say combo, spin and then play dead.')).toBeNull();
+    expect(parseLocalTrainingInstruction('When I say homework, solve my maths.')).toBeNull();
   });
 
   it('normalizes punctuation without making substring matches', () => {
@@ -94,6 +103,34 @@ describe('Barkly training', () => {
     const result = await engine.converse('Barkly, intruder alert!', freshSnapshot(100));
     expect(calls).toBe(0);
     expect(result.reply.speech).toBe('INTRUDER. I was not prepared for this.');
+    expect(memory.snapshot().trainingRules[0].timesTriggered).toBe(1);
+  });
+
+  it('can teach and trigger a simple physical trick with zero model calls', async () => {
+    const memory = new BarklyMemory(createInMemoryStore(), 'default', () => 100);
+    await memory.load();
+    let calls = 0;
+    const provider = {
+      name: 'offline-proof',
+      isAvailable: () => true,
+      complete: async () => {
+        calls += 1;
+        return '{"speech":"provider should not be needed","actions":[]}';
+      },
+    };
+    const engine = new DialogueEngine(provider, memory);
+
+    const taught = await engine.converse(
+      'When I say intruder alert, act terrified.',
+      freshSnapshot(100),
+    );
+    expect(calls).toBe(0);
+    expect(taught.reply.speech).toContain('intruder alert');
+    expect(memory.snapshot().trainingRules).toHaveLength(1);
+
+    const triggered = await engine.converse('intruder alert', freshSnapshot(200));
+    expect(calls).toBe(0);
+    expect(triggered.reply.actions).toEqual(['LOOK_LEFT', 'LOOK_RIGHT', 'EAR_PERK']);
     expect(memory.snapshot().trainingRules[0].timesTriggered).toBe(1);
   });
 });

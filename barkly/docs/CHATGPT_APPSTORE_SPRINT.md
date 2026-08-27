@@ -23,17 +23,19 @@ Example teaching turn:
 
 > "When I say intruder alert, act terrified."
 
-The model may return a validated `teach` candidate containing:
+The model may return a validated `teach` candidate containing the exact cue, human-readable instruction, Barkly speech for the future trigger, optional allowed reaction, and allowed device-agnostic body actions.
 
-- exact cue
-- human-readable instruction
-- Barkly speech for the future trigger
-- optional allowed emotional reaction
-- allowed device-agnostic body actions
+The application only persists model-proposed training when the **user's own text** clearly looks like explicit teaching. A model hallucination on an ordinary turn cannot silently install behavior.
 
-The application will only persist that candidate when the **user's own text** clearly looks like explicit teaching. A model hallucination on an ordinary turn therefore cannot silently install a behavior.
+### 2. Simple teaching works without a model
 
-### 2. Learned cues run locally
+For a deliberately small set of physical tricks that map cleanly to Barkly's existing body-action vocabulary, `training.ts` can parse an explicit form such as:
+
+> "When I say intruder alert, act terrified."
+
+That teaching turn and every later trigger can therefore work with zero dialogue-provider calls. This is intentionally conservative: ambiguous instructions, arbitrary speech, and compound choreography return `null` and fall through to the live model rather than being fake-understood.
+
+### 3. Learned cues run locally
 
 Before making an AI request, `DialogueEngine` checks the learned-rule store. If a cue matches, Barkly executes the stored response/actions directly.
 
@@ -47,22 +49,20 @@ Consequences:
 
 A sentence that is itself teaching/reteaching never fires the old trick while it is being edited.
 
-### 3. Training is visible and deletable
+### 4. Training is visible and deletable
 
-Learned rules live alongside memory persistence but remain a distinct category because they change behavior rather than merely describe the user.
+Settings shows **Tricks you taught Barkly**, including cue, instruction and times used. The same individual-delete path used for facts can remove one trick. `Forget everything` also deletes training.
 
-Settings now shows **Tricks you taught Barkly**, including cue, instruction and times used. The same individual-delete path used for facts can remove one trick. `Forget everything` also deletes training.
+### 5. Prompt contract extended safely
 
-### 4. Prompt contract extended safely
-
-`prompts.ts` now has a `teach` section in the strict JSON reply contract. Existing learned tricks are shown to the model only as fenced reference data so Barkly can answer questions like "what tricks did I teach you?"; the model is explicitly told it does **not** decide when those cues fire.
+`prompts.ts` has a `teach` section in the strict JSON reply contract. Existing learned tricks are shown to the model only as fenced reference data so Barkly can answer questions like "what tricks did I teach you?"; the model is explicitly told it does **not** decide when those cues fire.
 
 The new reply field is optional at the TypeScript boundary so old/fallback providers remain compatible; the current parser always supplies an array.
 
 ## Release hardening added in the same branch
 
 - Developer controls in Settings are hidden unless the build explicitly has `EXPO_PUBLIC_BARKLY_DEV=1`.
-- `.env.example` now documents that flag as development-only.
+- `.env.example` documents that flag as development-only.
 - Offline scripted Barkly no longer emits the forbidden app-owned `playing` reaction.
 - App/package marketing version aligned to `1.0.0`, iOS build number and Android version code established.
 - Initial native iPad support disabled until it has actually been tested.
@@ -73,34 +73,21 @@ The preflight intentionally fails until final iOS/Android identifiers and real p
 
 ## Tests added
 
-`app/__tests__/training.test.ts` covers:
-
-- explicit-teaching detection;
-- punctuation normalization;
-- no substring trigger (`sit` must not fire inside `situation`);
-- reteaching replaces rather than duplicates;
-- longest matching cue wins;
-- persistence and individual deletion;
-- learned cue bypasses the dialogue provider entirely.
+`app/__tests__/training.test.ts` covers explicit-teaching detection, local simple-trick parsing, refusal to fake-understand compound/unsupported choreography, cue normalization, no substring trigger, reteaching, longest-cue preference, persistence/deletion, local execution, and teach+trigger with zero provider calls.
 
 **Important:** GitHub has no workflow run attached to this draft PR, and this environment cannot clone GitHub over the network. These new tests have therefore been authored but **not executed by ChatGPT**. Claude should run the full suite/typecheck before accepting anything.
 
 ## Claude review checklist
 
 1. Run `npm run test:all` and `npm run typecheck`.
-2. Review `training.ts` trigger matching. Decide whether v1 should require exact cue, allow surrounding words as implemented, or add a user-selectable trigger mode.
-3. Try live examples through the configured brain:
-   - "When I say intruder alert, act terrified."
-   - close/reopen app;
-   - "intruder alert";
-   - reteach the same cue with a different behavior;
-   - verify Settings shows one updated rule.
+2. Review `training.ts` trigger matching and local teaching parser.
+3. Try teach → relaunch → trigger → reteach both offline and through the configured live brain.
 4. Run `npm run release:check` with a production-like environment and leave it red until identifiers/backend are real.
 5. Fix the dev-only `goTo()` mismatch noted in `APP_STORE_RELEASE.md` when touching `useBarkly.ts`.
 6. Decide whether to add a dedicated **Teach** surface later. This branch deliberately uses natural conversation first so Barkly does not become a menu-driven toy.
 7. Expand `BodyAction` only when the renderer/physical contract can support the new action. Do not let training invent device-specific motor commands.
 8. Consider future trigger kinds — `seen_object`, `seen_person`, `location`, `gesture` — as siblings of voice cues, not string hacks in this store.
 
-## Known limitation, intentionally left for the next pass
+## Known limitation
 
-A learned trick currently stores one short Barkly response plus the body actions available today. That makes the cue reliable, but not infinitely generative. The next evolution should support safe trigger kinds such as `voice_phrase`, `seen_object`, `seen_person`, `location`, and `gesture`, with the same principle: **the model may interpret a teaching moment, but the application owns what was learned and when it fires.**
+A learned trick currently stores one short Barkly response plus simultaneous body actions available today. Compound choreography is intentionally rejected by the local parser because the renderer has no action-sequence contract yet. The next evolution should add explicit sequences and safe trigger kinds such as `seen_object`, `seen_person`, `location`, and `gesture`, preserving the rule: **the model may interpret a teaching moment, but the application owns what was learned and when it fires.**

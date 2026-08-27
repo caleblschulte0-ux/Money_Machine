@@ -3,13 +3,14 @@
  *
  * User-taught cues are checked BEFORE the provider. Once Barkly learns a trick,
  * saying its cue does not need another AI request and still works when the live
- * model is unavailable.
+ * model is unavailable. A small set of unambiguous physical tricks can also be
+ * taught locally; complex teaching falls through to the model.
  */
 
 import { CharacterState } from './character';
 import { BarklyMemory } from './memory';
 import { buildSystemPrompt, parseReply, WorldContext } from './prompts';
-import { looksLikeTrainingInstruction } from './training';
+import { looksLikeTrainingInstruction, parseLocalTrainingInstruction } from './training';
 import { BarklyReply, BarklySnapshot } from './types';
 import { DialogueProvider } from '../providers/types';
 
@@ -64,6 +65,29 @@ export class DialogueEngine {
         await this.memory.noteTrainingTriggered(trained.id);
         await this.memory.addTurn({ role: 'user', text, at: now });
         await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
+        return { reply, corrections: [] };
+      }
+    }
+
+    // Offline-capable teaching for simple, representable physical tricks. The
+    // parser returns null rather than bluffing when it cannot faithfully map
+    // the instruction to Barkly's current body-action vocabulary.
+    if (isTeaching) {
+      const local = parseLocalTrainingInstruction(text);
+      if (local) {
+        await this.memory.learnTraining([local]);
+        const reply: BarklyReply = {
+          speech: `Oh, I know this one now. Say “${local.cue}” and see what happens.`,
+          reaction: 'happy',
+          actions: ['EAR_PERK', 'TAIL_WAG'],
+          newUserFacts: [],
+          newBarklyMemories: [`You taught me the cue “${local.cue}”.`],
+          learnedTraining: [local],
+        };
+        const now = Date.now();
+        await this.memory.addTurn({ role: 'user', text, at: now });
+        await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
+        await this.memory.remember([], reply.newBarklyMemories, { where: world?.locationDescription });
         return { reply, corrections: [] };
       }
     }
