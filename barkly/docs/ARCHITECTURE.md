@@ -44,9 +44,13 @@ Interfaces in `app/src/providers/types.ts`:
 - `SpeechToTextProvider` — implemented by `expoSpeechRecognitionStt` (on-device,
   no API key, requires a dev build). When unavailable (Expo Go), the UI falls
   back to typed input so the full loop is still exercisable.
-- `DialogueProvider` — implemented by `anthropicDialogue` (official
-  `@anthropic-ai/sdk`) and `scriptedDialogue` (offline, in-character,
-  zero-credential fallback so the app always runs).
+- `DialogueProvider` — implemented by `anthropicDialogue` (a small `fetch`
+  client, not the vendor SDK: it needs response headers, its own timeout, and
+  a bundle that does not drag Node builtins into React Native) and
+  `scriptedDialogue` (offline, in-character, zero-credential fallback so the
+  app always runs). The app is handed neither directly — `registry.ts` wraps
+  them in `resilientDialogue`, which is the real model with the offline dog
+  standing behind it. See "Talking to the model" below.
 - `TextToSpeechProvider` — implemented by `expoSpeechTts` (on-device, free,
   works everywhere) and an `elevenLabsTts` stub for a real recorded-quality
   Barkly voice later.
@@ -59,9 +63,40 @@ Swapping a vendor = writing one adapter + one registry line.
 Production secrets never ship in the mobile binary. The Anthropic adapter's
 direct-from-device mode is **development only** (`EXPO_PUBLIC_*` env vars are
 bundled into the app and are not secret). For production the adapter's
-`baseURL` points at **`../server`** — a zero-dependency Node proxy that holds
-the real key, forwards only `POST /v1/messages`, and rate-limits per IP (its
-README has run/deploy instructions). `.env.example` documents every variable.
+`baseURL` points at **`../server`**, a zero-dependency Node proxy that holds
+the real key. `.env.example` documents every variable.
+
+## Talking to the model
+
+The path from a child's sentence to Barkly's answer crosses a trust boundary,
+and both sides of it assume the other can be tampered with.
+
+**The proxy (`server/`)** re-decides everything the app could have lied about.
+It does not forward the request body — it REBUILDS it from the fields it
+recognises, so a `tools` array or a 64k `max_tokens` from a modified build
+never reaches Anthropic on our key. It enforces a model allowlist, a token
+bucket per install, and daily token/dollar caps. Its logs are content-free by
+construction: the logger takes an event name plus scalars, and a string field
+is written only if its NAME is on an allowlist — `speech` is not, so it is
+dropped rather than truncated. Production refuses to boot without a key, an
+app token and an explicit CORS allowlist. `server/README.md` is the operator
+guide; `server/test/` runs on `node --test` with a fake clock and fake fetch.
+
+**The app** never lets a backend failure become a dead pet. Every failure is a
+`DialogueError` carrying `barklyLine` — what the dog says about it, in his
+voice, with no status code in it. `resilientDialogue` then splits failures in
+two: a recoverable blip ("say that again?") is raised so the child retries,
+while a terminal one (budget gone, provider down, bad credentials) is answered
+by the scripted Barkly for that turn. Repeated terminal failures open a
+circuit breaker so the next turns skip the doomed call instead of making a
+child wait out the timeout again; it closes on its own. Settings always says
+which brain answered — a degraded Barkly is visible, never silent.
+
+**Identity** is `providers/device.ts`: a random per-install id, stored locally,
+hashed again server-side before it touches a log, and replaced by "Forget
+Everything" exactly as a reinstall would. It exists so one leaked build can be
+throttled without throttling a whole shared network. It is not a user id and
+cannot be joined to anything.
 
 ## The Barkly state machine
 

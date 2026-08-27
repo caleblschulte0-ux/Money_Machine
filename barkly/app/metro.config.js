@@ -1,22 +1,10 @@
-// Expo Metro config with one addition: resolve Node builtin imports
-// (node:fs etc., pulled in by @anthropic-ai/sdk's credential-profile code,
-// which never runs in this app) to an empty shim so bundling succeeds.
+// Standard Expo Metro config.
+//
+// This file used to shim `node:*` imports to an empty module because
+// @anthropic-ai/sdk dragged Node builtins into the bundle. The dialogue
+// adapter is written against fetch now, that dependency is gone, and so is
+// the shim — a workaround nothing needs is just a place for a future bug to
+// hide.
 const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
 
-const config = getDefaultConfig(__dirname);
-
-const emptyShim = path.resolve(__dirname, 'src/shims/nodeEmpty.js');
-const defaultResolveRequest = config.resolver.resolveRequest;
-
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName.startsWith('node:')) {
-    return { type: 'sourceFile', filePath: emptyShim };
-  }
-  if (defaultResolveRequest) {
-    return defaultResolveRequest(context, moduleName, platform);
-  }
-  return context.resolveRequest(context, moduleName, platform);
-};
-
-module.exports = config;
+module.exports = getDefaultConfig(__dirname);

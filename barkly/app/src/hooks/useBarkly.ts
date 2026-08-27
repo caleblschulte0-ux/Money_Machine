@@ -33,6 +33,9 @@ import {
   reduce,
 } from '../barkly/state';
 import { BarklyEvent, BarklySnapshot, BodyAction, isBusy } from '../barkly/types';
+import { loadDeviceId, resetDeviceId } from '../providers/device';
+import { DialogueStatus } from '../providers/dialogue/resilient';
+import { barklyLineFor, DialogueError } from '../providers/errors';
 import { createProviders } from '../providers/registry';
 import { asyncStorageStore } from '../storage/asyncStorageStore';
 import { DEFAULT_PROFILE, profileKey } from '../storage/types';
@@ -61,6 +64,13 @@ export interface BarklyController {
   busy: boolean; // capturing/thinking/speaking — talk button disabled
   sttAvailable: boolean;
   dialogueProviderName: string;
+  /** Which brain answered last, and why — surfaced in Settings. */
+  dialogueStatus: () => DialogueStatus;
+  /** False in a build with no model configured at all (scripted-only demo). */
+  modelConfigured: boolean;
+  /** Set when Barkly has dropped to his offline brain; his own words for it. */
+  degraded: string | null;
+  dismissDegraded(): void;
 
   startTalk(): Promise<void>;
   stopTalk(): Promise<void>;
@@ -95,7 +105,13 @@ export interface BarklyController {
 }
 
 export function useBarkly(): BarklyController {
-  const providers = useMemo(() => createProviders(), []);
+  // The resilient dialogue provider reports when it drops to the offline
+  // Barkly; the UI says so once, in his voice, rather than silently degrading.
+  const [degraded, setDegraded] = useState<string | null>(null);
+  const providers = useMemo(
+    () => createProviders({ onDialogueFallback: (err) => setDegraded(err.barklyLine) }),
+    [],
+  );
   const memory = useMemo(() => new BarklyMemory(asyncStorageStore, DEFAULT_PROFILE), []);
   const engine = useMemo(() => new DialogueEngine(providers.dialogue, memory), [providers, memory]);
 
@@ -176,6 +192,8 @@ export function useBarkly(): BarklyController {
       } catch {
         // keep a fresh character
       }
+      // Anonymous per-install id so the backend can rate-limit and budget.
+      await loadDeviceId(asyncStorageStore);
       const available = await providers.stt.isAvailable();
       if (!cancelled) setSttAvailable(available);
     })();
@@ -392,7 +410,10 @@ export function useBarkly(): BarklyController {
         });
       } catch (e) {
         dispatch({ type: 'TALK_FAILED' });
-        setError(e instanceof Error ? e.message : 'Barkly got distracted. Try again.');
+        // Never an HTTP status, never a stack trace. A child gets a dog who
+        // did not quite catch that.
+        setError(barklyLineFor(e));
+        if (e instanceof DialogueError && !e.recoverable) setDegraded(e.barklyLine);
       } finally {
         setBusy(false);
         setPartialTranscript('');
@@ -548,6 +569,10 @@ export function useBarkly(): BarklyController {
     busy,
     sttAvailable,
     dialogueProviderName: engine.providerName,
+    dialogueStatus: providers.dialogueStatus,
+    modelConfigured: providers.modelConfigured,
+    degraded,
+    dismissDegraded: () => setDegraded(null),
     startTalk,
     stopTalk,
     cancelTalk,
@@ -571,6 +596,10 @@ export function useBarkly(): BarklyController {
       setCharacter(freshCharacter());
       await asyncStorageStore.remove(CHARACTER_KEY);
       setLastExchange(null);
+      // A fresh install identity too - forgetting everything should not leave
+      // a stable id behind that the backend can still recognise.
+      await resetDeviceId(asyncStorageStore);
+      await loadDeviceId(asyncStorageStore);
     },
   };
 }

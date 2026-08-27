@@ -16,6 +16,9 @@ interface Props {
   stats: BarklyStats;
   stash: Treasure[];
   dialogueProviderName: string;
+  /** Which brain answered last, so an outage is visible rather than mysterious. */
+  brain: { using: 'primary' | 'fallback'; breakerOpen: boolean; lastFailure?: string };
+  modelConfigured: boolean;
   sttAvailable: boolean;
   onForgetEverything: () => Promise<void>;
 }
@@ -35,7 +38,18 @@ function StatBar({ label, value, invert }: { label: string; value: number; inver
 }
 
 export default function SettingsSheet(props: Props) {
-  const { visible, onClose, memory, stats, stash, dialogueProviderName, sttAvailable, onForgetEverything } = props;
+  const {
+    visible,
+    onClose,
+    memory,
+    stats,
+    stash,
+    dialogueProviderName,
+    brain,
+    modelConfigured,
+    sttAvailable,
+    onForgetEverything,
+  } = props;
   const [wiping, setWiping] = useState(false);
 
   const confirmForget = () => {
@@ -83,6 +97,17 @@ export default function SettingsSheet(props: Props) {
 
             <Text style={styles.section}>Providers</Text>
             <Text style={styles.row}>Dialogue: {dialogueProviderName}</Text>
+            <Text style={styles.row}>
+              Brain:{' '}
+              {!modelConfigured
+                ? 'offline Barkly (no model configured in this build)'
+                : brain.using === 'primary'
+                  ? 'live model'
+                  : brain.breakerOpen
+                    ? 'offline Barkly (resting after a few failures)'
+                    : 'offline Barkly (last answer)'}
+            </Text>
+            {brain.lastFailure && <Text style={styles.empty}>Last hiccup: {brain.lastFailure}</Text>}
             <Text style={styles.row}>
               Speech input: {sttAvailable ? 'on-device recognition' : 'keyboard (mic needs a dev build)'}
             </Text>

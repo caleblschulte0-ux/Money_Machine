@@ -445,6 +445,12 @@ export default function BarklyRoom() {
         stats={snapshot.stats}
         stash={barkly.stashItems}
         dialogueProviderName={barkly.dialogueProviderName}
+        brain={{
+          using: barkly.dialogueStatus().using,
+          breakerOpen: barkly.dialogueStatus().breakerOpen,
+          lastFailure: barkly.dialogueStatus().lastFailure?.barklyLine,
+        }}
+        modelConfigured={barkly.modelConfigured}
         sttAvailable={sttAvailable}
         onForgetEverything={barkly.forgetEverything}
       />

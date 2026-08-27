@@ -2,42 +2,76 @@
  * Provider selection — the ONE place vendors are chosen.
  *
  * Env vars (see .env.example; all EXPO_PUBLIC_, i.e. bundled and non-secret):
+ *   EXPO_PUBLIC_BARKLY_BACKEND_URL  production proxy base URL (preferred)
+ *   EXPO_PUBLIC_BARKLY_APP_TOKEN    sent to the proxy; obfuscation, not a secret
  *   EXPO_PUBLIC_ANTHROPIC_API_KEY   dev-only direct Anthropic access
- *   EXPO_PUBLIC_BARKLY_BACKEND_URL production proxy base URL (preferred)
- *   EXPO_PUBLIC_BARKLY_MODEL       override dialogue model id
+ *   EXPO_PUBLIC_BARKLY_MODEL        override dialogue model id
  *   EXPO_PUBLIC_BARKLY_FORCE_KEYBOARD=1  report STT unavailable so the UI uses
- *                                  typed input (browser demos, sandboxed pages)
+ *                                   typed input (browser demos, sandboxed pages)
  *
- * With no configuration at all the app still runs: scripted dialogue +
- * on-device TTS + (native STT if dev-built, else typed input in the UI).
+ * The dialogue provider handed out is always the RESILIENT one: the real model
+ * with the scripted Barkly behind it. With no configuration at all that
+ * degrades cleanly to scripted-only, so the app still runs with zero
+ * credentials — but a configured build is talking to the actual model, which
+ * is the point.
  */
 
 import { DialogueProvider, SpeechToTextProvider, TextToSpeechProvider } from './types';
 import { createAnthropicDialogue } from './dialogue/anthropic';
+import { createResilientDialogue, DialogueStatus } from './dialogue/resilient';
 import { createScriptedDialogue } from './dialogue/scripted';
 import { createExpoSpeechRecognitionStt } from './stt/expoSpeechRecognitionStt';
 import { createExpoSpeechTts } from './tts/expoSpeechTts';
+import { currentDeviceId } from './device';
+import { DialogueError } from './errors';
 
 export interface ProviderSet {
   stt: SpeechToTextProvider;
   dialogue: DialogueProvider;
   tts: TextToSpeechProvider;
+  /** Which brain answered last, and why — for the settings screen and error copy. */
+  dialogueStatus(): DialogueStatus;
+  /** True when a real model is configured at all (vs. scripted-only build). */
+  modelConfigured: boolean;
 }
 
-export function createProviders(): ProviderSet {
+export interface ProviderOptions {
+  onDialogueFallback?: (err: DialogueError) => void;
+}
+
+export function createProviders(opts: ProviderOptions = {}): ProviderSet {
   const apiKey = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
   const baseURL = process.env.EXPO_PUBLIC_BARKLY_BACKEND_URL;
   const model = process.env.EXPO_PUBLIC_BARKLY_MODEL;
+  const appToken = process.env.EXPO_PUBLIC_BARKLY_APP_TOKEN;
 
-  const anthropic = createAnthropicDialogue({ apiKey, baseURL, model });
-  const dialogue: DialogueProvider = anthropic.isAvailable()
-    ? anthropic
-    : createScriptedDialogue();
+  const anthropic = createAnthropicDialogue({
+    apiKey,
+    baseURL,
+    model,
+    appToken,
+    // Read at call time: the id is loaded from storage during boot, which may
+    // finish after the providers are constructed.
+    get deviceId() {
+      return currentDeviceId();
+    },
+  });
+
+  const scripted = createScriptedDialogue();
+  const dialogue = createResilientDialogue(anthropic, scripted, {
+    onFallback: opts.onDialogueFallback,
+  });
 
   const stt = createExpoSpeechRecognitionStt();
   if (process.env.EXPO_PUBLIC_BARKLY_FORCE_KEYBOARD === '1') {
     stt.isAvailable = async () => false;
   }
 
-  return { stt, dialogue, tts: createExpoSpeechTts() };
+  return {
+    stt,
+    dialogue,
+    tts: createExpoSpeechTts(),
+    dialogueStatus: () => dialogue.status(),
+    modelConfigured: anthropic.isAvailable(),
+  };
 }
