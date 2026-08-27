@@ -19,6 +19,7 @@ import {
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useBarkly } from '../hooks/useBarkly';
 import BarklyPhotoView from './BarklyPhotoView';
+import EncounterSheet from './EncounterSheet';
 import Onboarding from './Onboarding';
 import PackBookSheet from './PackBookSheet';
 import StoreSheet, { CoinPill } from './StoreSheet';
@@ -480,6 +481,12 @@ export default function BarklyRoom() {
 
       <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={barkly.buy} onEquip={barkly.equip} devMode={barkly.devMode} />
       <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} />
+      <EncounterSheet
+        encounter={barkly.activeEncounter}
+        busy={busy}
+        onClose={barkly.dismissEncounter}
+        onChoose={(choiceId) => void barkly.resolveEncounter(choiceId)}
+      />
       <SettingsSheet
         visible={settingsOpen}
         onClose={() => setSettingsOpen(false)}
