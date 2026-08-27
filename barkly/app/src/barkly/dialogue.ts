@@ -100,8 +100,9 @@ export class DialogueEngine {
 
     // Defense in depth: the model is not trusted to decide that an ordinary
     // sentence was a training moment. The user's own wording must pass the gate.
-    if (isTeaching && reply.learnedTraining.length > 0) {
-      await this.memory.learnTraining(reply.learnedTraining);
+    const learned = reply.learnedTraining ?? [];
+    if (isTeaching && learned.length > 0) {
+      await this.memory.learnTraining(learned);
     }
 
     await this.memory.touch(relevant.facts.map((f) => f.id));
