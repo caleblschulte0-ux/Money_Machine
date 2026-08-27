@@ -27,11 +27,7 @@ export const ALL_STATES: BarklyState[] = [
 
 /**
  * The ONLY states the dialogue model may ask for.
- *
- * Conversation lifecycle states (listening/thinking/speaking) and activity
- * states (eating/playing) are owned by application logic — a model reply can
- * never put Barkly's body into them, because the app is the thing that knows
- * whether audio is playing or a bowl is on screen. See docs/ARCHITECTURE.md.
+ * Conversation lifecycle/activity states remain app-owned.
  */
 export type ReactionState = 'idle' | 'happy' | 'excited' | 'annoyed' | 'sleepy' | 'hungry';
 
@@ -39,19 +35,15 @@ export const ALL_REACTIONS: ReactionState[] = [
   'idle', 'happy', 'excited', 'annoyed', 'sleepy', 'hungry',
 ];
 
-/** States that mean a conversation turn is in flight. Nothing may interrupt these. */
 export const CONVERSATION_STATES: BarklyState[] = ['listening', 'thinking', 'speaking'];
 
-/** True while a conversation turn owns Barkly's body. */
 export function isBusy(state: BarklyState): boolean {
   return CONVERSATION_STATES.includes(state);
 }
 
 /**
- * High-level body commands emitted by the brain.
- * The mobile app maps these to animation; a physical Barkly maps the exact
- * same commands to servos. Keep them device-agnostic: "TAIL_WAG", never
- * "rotate tail View 20deg".
+ * High-level body commands emitted by the brain. The same commands can drive
+ * today's renderer and tomorrow's motors.
  */
 export type BodyAction =
   | 'LOOK_LEFT'
@@ -70,68 +62,62 @@ export const ALL_BODY_ACTIONS: BodyAction[] = [
   'BLINK', 'MOUTH_MOVE', 'SIT', 'EXCITED', 'SLEEP',
 ];
 
-/**
- * One reusable trick/rule Barkly may learn when his person EXPLICITLY teaches
- * him a cue. This is only a candidate until training.ts validates and stores it.
- */
-export interface LearnedTrainingRule {
-  /** Exact phrase the person can say again later, e.g. "intruder alert". */
-  cue: string;
-  /** Human-readable description of what Barkly was taught to do. */
-  instruction: string;
-  /** What Barkly says when the cue fires. */
+/** One beat in a custom routine. Beats run IN ORDER, never simultaneously. */
+export interface RoutineBeat {
+  /** What Barkly says during this beat. Short on purpose; the action is the point. */
   speech: string;
   reaction?: ReactionState;
   actions: BodyAction[];
 }
 
-/** Internal drives, each 0–100. These vary Barkly's behavior; they are not a Tamagotchi sim. */
+/**
+ * One reusable trick/rule Barkly may learn when his person explicitly teaches
+ * him a cue. `routine` is the differentiator: a cue can trigger choreography,
+ * not merely a static reaction.
+ */
+export interface LearnedTrainingRule {
+  cue: string;
+  instruction: string;
+  /** Opening line when the cue fires. */
+  speech: string;
+  reaction?: ReactionState;
+  actions: BodyAction[];
+  /** Optional ordered performance. Limited/validated by training.ts. */
+  routine?: RoutineBeat[];
+}
+
+/** Internal drives, each 0–100. */
 export interface BarklyStats {
-  mood: number;       // 0 grumpy … 100 delighted
-  energy: number;     // 0 exhausted … 100 zoomies
-  hunger: number;     // 0 full … 100 starving (higher = hungrier)
-  affection: number;  // bond with his person
-  curiosity: number;  // appetite for new things
+  mood: number;
+  energy: number;
+  hunger: number;
+  affection: number;
+  curiosity: number;
 }
 
 export interface BarklySnapshot {
   state: BarklyState;
   stats: BarklyStats;
-  /** ms since epoch when stats were last updated — used for offline decay. */
   updatedAt: number;
-  /**
-   * How long the current transient beat should hold before settling, when a
-   * caller asked for a specific duration. Null means "use the default for
-   * this state" (settleDelayMs). Cleared whenever the state changes.
-   */
   settleMs: number | null;
 }
 
-/**
- * Events the state machine understands. UI and engine dispatch these; nothing
- * else mutates state.
- *
- * Interaction events (FEED/PLAY/PET/SOCIAL/TREASURE/SLEEP_TOGGLE) are rejected
- * by the reducer while a conversation is in flight — the lock lives here, not
- * in whether a button happened to be disabled.
- */
 export type BarklyEvent =
-  | { type: 'TALK_START' }        // user pressed and holds TALK
-  | { type: 'TALK_CAPTURED' }     // speech captured, brain is working
-  | { type: 'TALK_FAILED' }       // STT/dialogue failed, back to idle
+  | { type: 'TALK_START' }
+  | { type: 'TALK_CAPTURED' }
+  | { type: 'TALK_FAILED' }
   | { type: 'SPEAK_START' }
   | { type: 'SPEAK_END' }
   | { type: 'FEED' }
-  | { type: 'PET' }               // user tapped/stroked Barkly
-  | { type: 'SOCIAL'; friendly: boolean } // greeted another dog (friend or rival)
-  | { type: 'TREASURE' }          // dug something up at the park
+  | { type: 'PET' }
+  | { type: 'SOCIAL'; friendly: boolean }
+  | { type: 'TREASURE' }
   | { type: 'PLAY' }
   | { type: 'SLEEP_TOGGLE' }
-  | { type: 'REACTION'; state: ReactionState; durationMs?: number } // emotional beat
-  | { type: 'SETTLE' }            // timed reaction over, return to baseline
-  | { type: 'TICK'; now: number }; // apply wall-clock stat decay
+  | { type: 'REACTION'; state: ReactionState; durationMs?: number }
+  | { type: 'SETTLE' }
+  | { type: 'TICK'; now: number };
 
-/** Interaction events the conversation lock applies to. */
 export const INTERRUPTIBLE_EVENTS: BarklyEvent['type'][] = [
   'FEED', 'PET', 'SOCIAL', 'TREASURE', 'PLAY', 'SLEEP_TOGGLE', 'REACTION',
 ];
@@ -144,20 +130,12 @@ export interface ChatTurn {
 
 /** What one round of dialogue produces. */
 export interface BarklyReply {
-  /** What Barkly says out loud (goes to TTS). */
   speech: string;
-  /** Emotional beat to display after speaking, if any. Model-chosen but restricted. */
   reaction?: ReactionState;
-  /** Body commands to perform while speaking. */
   actions: BodyAction[];
-  /** New durable facts the model extracted, as "key: value" style statements. */
+  /** Ordered beats when this reply is a learned multi-step routine. */
+  routine?: RoutineBeat[];
   newUserFacts: string[];
-  /** New shared experiences Barkly believes he had with his person. */
   newBarklyMemories: string[];
-  /**
-   * Explicitly taught reusable cues, accepted only behind an app-side gate.
-   * Optional at the boundary so older/fallback providers remain compatible;
-   * parseReply supplies [] for the current contract.
-   */
   learnedTraining?: LearnedTrainingRule[];
 }
