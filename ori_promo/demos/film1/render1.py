@@ -130,7 +130,12 @@ def compose(beat, dur, frames):
             # its beat, which also stops labels hard-cutting mid-word at every
             # other join.
             k = AR.ease(min(1.0, (lt - 0.35)/0.5))
-            k *= min(1.0, max(0.0, (dur - t) / 0.45))
+            # Release must reach EXACTLY zero before the last frame, not
+            # merely approach it. The end card holds b4's final frame, and at
+            # (dur - t)/0.45 that frame still carried 7.3% alpha -- a visible
+            # ghost of "SIOUX QUARTZITE" sitting behind the brand card. The
+            # -0.12 guarantees the last three or four frames are clean.
+            k *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
             if k > 0:
                 dim = 1.0
                 if len(tracks) > 1 and t0 < last_t0 and t >= last_t0:
