@@ -6,6 +6,7 @@
 import { CharacterState, friendshipStage, rivalryStage } from './character';
 import { sanitize } from './facts';
 import { MemoryState } from './memory';
+import { deriveStoryArc, describeStory, StoryArc } from './story';
 import { BarklyStats } from './types';
 
 export type BondTraitId = 'confidant' | 'trainer' | 'adventurer' | 'collector' | 'socialite' | 'velcro';
@@ -58,6 +59,8 @@ export interface RelationshipProfile {
   rituals: RelationshipRitual[];
   coreMemories: CoreMemory[];
   lore: RelationshipLore[];
+  /** The strongest multi-session story currently implied by shared history. */
+  story?: StoryArc;
 }
 
 interface RelationshipInput {
@@ -75,9 +78,7 @@ const STAGES: Array<Omit<BondStage, 'score' | 'progress' | 'nextAt'> & { at: num
   { at: 175, level: 5, label: 'Basically Family', blurb: 'At this point you share lore, rituals and a concerning amount of history.' },
 ];
 
-/** A trait must earn this much evidence before Barkly gets labeled with it. */
 export const TRAIT_EMERGENCE_SCORE = 20;
-
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 function socialEncounters(character?: CharacterState): number {
@@ -255,6 +256,7 @@ export function buildRelationshipProfile(input: RelationshipInput): Relationship
     rituals: ritualRows,
     coreMemories: coreMemories(input.memory),
     lore: loreFrom(input.character),
+    story: deriveStoryArc({ character: input.character, memory: input.memory }),
   };
 }
 
@@ -270,6 +272,7 @@ export function describeRelationship(profile: RelationshipProfile): string[] {
   if (profile.lore.length > 0) {
     lines.push(`Shared lore: ${profile.lore.slice(0, 3).map((lore) => `${lore.title} — ${lore.detail}`).join('; ')}.`);
   }
+  if (profile.story) lines.push(describeStory(profile.story));
   lines.push('Use this as relationship texture: callbacks, opinions and running bits are good. Do not recite scores or labels like a dashboard.');
   return lines;
 }
