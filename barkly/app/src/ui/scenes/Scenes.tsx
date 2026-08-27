@@ -37,7 +37,16 @@ const SKY: Record<SkyBand, [string, string]> = {
  * home item ids — a bought rug is ON THE FLOOR, not a line in a receipt. They
  * stack: bed and rug and window are not alternatives to each other.
  */
-export function HomeScene({ hour, upgrades = [] }: { hour: number; upgrades?: string[] }) {
+export function HomeScene({
+  hour,
+  upgrades = [],
+  asleep = false,
+}: {
+  hour: number;
+  upgrades?: string[];
+  /** He sleeps IN the bed, so the empty one must not also be sitting there. */
+  asleep?: boolean;
+}) {
   const band = skyBand(hour);
   const has = (id: string) => upgrades.includes(id);
   const bigWindow = has('home_window');
@@ -86,6 +95,9 @@ export function HomeScene({ hour, upgrades = [] }: { hour: number; upgrades?: st
       {/* rug */}
       <View style={styles.homeRug} />
 
+      {/* Bought furniture is IN THE ROOM. */}
+      {has('home_bed') && !asleep && <RoomBed upgraded />}
+
       {/* A bought rug is a real rug, not a receipt line. */}
       {has('home_rug') && (
         <View style={styles.rugWrap}>
@@ -97,6 +109,36 @@ export function HomeScene({ hour, upgrades = [] }: { hour: number; upgrades?: st
           </Svg>
         </View>
       )}
+    </View>
+  );
+}
+
+/**
+ * The dog bed AS FURNITURE, sitting in the room whether or not he is in it.
+ *
+ * This is the bug the shop had been hiding: `home_bed` is the first house
+ * item you can afford (level 2, 220 coins) and it was drawn ONLY while he was
+ * asleep. You bought it, the shop said "out", the room looked exactly the
+ * same, and the only way to see the thing you paid for was to put him to bed.
+ * The rug and the window were wired into the scene; the bed never was.
+ *
+ * The sleeping bed is still the big centred one he lies in — this is the same
+ * object seen from across the room, so buying it changes the room and using it
+ * still reads as him getting into it.
+ */
+export function RoomBed({ upgraded = false }: { upgraded?: boolean }) {
+  const rim = upgraded ? '#4E3D63' : '#6E5133';
+  const wall = upgraded ? '#6B558A' : '#8A6844';
+  const cushion = upgraded ? '#EFE3F2' : '#E3D2AC';
+  return (
+    <View style={styles.roomBed} pointerEvents="none">
+      <Svg width={116} height={56} viewBox="0 0 132 62">
+        <Ellipse cx={66} cy={34} rx={64} ry={22} fill={rim} />
+        <Ellipse cx={66} cy={31} rx={57} ry={18} fill={wall} />
+        <Ellipse cx={66} cy={35} rx={48} ry={13} fill={cushion} />
+        {/* the near lip, so it reads as a bowl rather than a mat */}
+        <Path d="M2 34 a64 22 0 0 0 128 0 a64 26 0 0 1 -128 0 Z" fill={rim} />
+      </Svg>
     </View>
   );
 }
@@ -390,6 +432,9 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '2.5deg' }],
   },
   framePhoto: { width: 56, height: 48 },
+  // Back and to the left, clear of the rug and of his shadow. Lower and it
+  // reads as a smear behind the rug; further right and he stands in it.
+  roomBed: { position: 'absolute', bottom: '28%', left: '2%' },
   bedBack: { position: 'absolute', bottom: 10, alignSelf: 'center' },
   bedFront: { position: 'absolute', bottom: -6, alignSelf: 'center' },
 

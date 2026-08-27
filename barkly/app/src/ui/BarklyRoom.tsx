@@ -471,7 +471,7 @@ export default function BarklyRoom() {
   return (
     <View style={styles.room}>
       <Animated.View style={[styles.sceneLayer, { opacity: sceneFade }]}>
-        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} />}
+        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} />}
         {location === 'park' && <ParkScene hour={hour} />}
         {location === 'town' && <TownScene hour={hour} />}
         {location === 'beach' && <BeachScene hour={hour} />}
