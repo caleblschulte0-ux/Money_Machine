@@ -14,6 +14,7 @@ import { createLogger, hashId } from './logging.mjs';
 import { createRateLimiter } from './ratelimit.mjs';
 import { callUpstream } from './upstream.mjs';
 import { validateMessagesRequest, ValidationError } from './validate.mjs';
+import { loadVoiceConfig, validateVoiceRequest, voiceBody, voiceUrl } from './voice.mjs';
 
 /** Client hint that the failure is permanent-ish, so fall back to scripted Barkly. */
 const FALLBACK_HEADER = 'x-barkly-fallback';
@@ -64,12 +65,82 @@ export function createHandler(config, deps = {}) {
   const rng = deps.rng || Math.random;
   const now = deps.now || (() => Date.now());
   const salt = config.appToken || config.env;
+  const voice = deps.voice || loadVoiceConfig(deps.env || process.env);
 
   let requestSeq = 0;
 
   const sweeper = deps.noSweep
     ? null
     : setInterval(() => limiter.sweep(), 5 * 60_000).unref?.() ?? null;
+
+  /**
+   * Synthesis. Returns audio bytes, never JSON on success — the app plays the
+   * body directly. Everything that can go wrong answers with the fallback
+   * header so Barkly drops to the device voice instead of going silent.
+   */
+  async function handleVoice({ raw, requestId, device, send, res, cors }) {
+    let text;
+    try {
+      ({ text } = validateVoiceRequest(raw, voice));
+    } catch (err) {
+      const status = err instanceof ValidationError ? err.status : 400;
+      log.warn('voice.invalid', { requestId, device, error: String(err.message) });
+      return send(status, { error: { type: 'invalid_request_error', message: err.message } });
+    }
+
+    const startedAt = now();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), voice.timeoutMs);
+    try {
+      const upstream = await fetchImpl(voiceUrl(voice), {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'audio/mpeg',
+          'xi-api-key': voice.apiKey,
+        },
+        body: voiceBody(text, voice),
+        signal: controller.signal,
+      });
+
+      if (!upstream.ok) {
+        log.warn('voice.upstream_failed', { requestId, device, status: upstream.status });
+        return send(
+          upstream.status >= 500 ? 502 : upstream.status,
+          { error: { type: 'voice_failed', message: 'voice unavailable' } },
+          { [FALLBACK_HEADER]: '1' },
+        );
+      }
+
+      const audio = Buffer.from(await upstream.arrayBuffer());
+      ledger.recordVoice(device, text.length);
+      log.info('voice.completed', {
+        requestId,
+        device,
+        chars: text.length, // length only, never the line itself
+        bytes: audio.length,
+        latencyMs: now() - startedAt,
+      });
+      res.writeHead(200, {
+        ...cors,
+        'content-type': 'audio/mpeg',
+        'content-length': String(audio.length),
+        // Clips are content-addressed by the client; let the platform cache too.
+        'cache-control': 'private, max-age=86400',
+      });
+      return res.end(audio);
+    } catch (err) {
+      const timedOut = err?.name === 'AbortError';
+      log.warn('voice.failed', { requestId, device, reason: timedOut ? 'timeout' : 'network' });
+      return send(
+        timedOut ? 504 : 502,
+        { error: { type: 'voice_failed', message: 'voice unavailable' } },
+        { [FALLBACK_HEADER]: '1' },
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
   async function handler(req, res) {
     const origin = req.headers.origin;
@@ -85,7 +156,12 @@ export function createHandler(config, deps = {}) {
     }
 
     if (req.method === 'GET' && req.url === '/healthz') {
-      return send(200, { ok: true, env: config.env, model: config.defaultModel });
+      return send(200, {
+        ok: true,
+        env: config.env,
+        model: config.defaultModel,
+        voice: voice.enabled ? 'configured' : 'unconfigured',
+      });
     }
 
     if (req.method === 'GET' && req.url === '/admin/usage') {
@@ -103,10 +179,18 @@ export function createHandler(config, deps = {}) {
           perDeviceDailyTokenCap: config.perDeviceDailyTokenCap,
         },
         rateLimiterEntries: limiter.size,
+        voice: {
+          enabled: voice.enabled,
+          charsToday: ledger.voiceCharsToday(),
+          dailyCharCap: voice.dailyCharCap,
+          perDeviceDailyCharCap: voice.perDeviceDailyCharCap,
+        },
       });
     }
 
-    if (req.method !== 'POST' || req.url !== '/v1/messages') {
+    const isDialogue = req.method === 'POST' && req.url === '/v1/messages';
+    const isVoice = req.method === 'POST' && req.url === '/v1/voice';
+    if (!isDialogue && !isVoice) {
       return send(404, { error: { type: 'not_found', message: 'not found' } });
     }
 
@@ -120,11 +204,20 @@ export function createHandler(config, deps = {}) {
       return send(401, { error: { type: 'unauthorized', message: 'unauthorized' } });
     }
 
-    if (!config.apiKey) {
+    if (isDialogue && !config.apiKey) {
       log.error('config.missing_key', { requestId });
       return send(
         503,
         { error: { type: 'not_configured', message: 'backend has no upstream credential' } },
+        { [FALLBACK_HEADER]: '1' },
+      );
+    }
+    if (isVoice && !voice.enabled) {
+      // Not an error: a deployment without a designed Barkly voice yet. The
+      // app hears "use the device voice" and does exactly that.
+      return send(
+        503,
+        { error: { type: 'voice_not_configured', message: 'no voice configured' } },
         { [FALLBACK_HEADER]: '1' },
       );
     }
@@ -139,7 +232,7 @@ export function createHandler(config, deps = {}) {
       );
     }
 
-    const capped = ledger.overCap(device, config);
+    const capped = isVoice ? ledger.overVoiceCap(device, voice) : ledger.overCap(device, config);
     if (capped) {
       log.warn('budget.capped', { requestId, device, reason: capped });
       return send(
@@ -158,6 +251,8 @@ export function createHandler(config, deps = {}) {
       if (!res.headersSent) send(status, { error: { type: 'invalid_request_error', message: err.message } });
       return;
     }
+
+    if (isVoice) return handleVoice({ raw, requestId, device, send, res, cors });
 
     let checked;
     try {

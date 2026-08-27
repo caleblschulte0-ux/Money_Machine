@@ -52,8 +52,9 @@ Interfaces in `app/src/providers/types.ts`:
   them in `resilientDialogue`, which is the real model with the offline dog
   standing behind it. See "Talking to the model" below.
 - `TextToSpeechProvider` — implemented by `expoSpeechTts` (on-device, free,
-  works everywhere) and an `elevenLabsTts` stub for a real recorded-quality
-  Barkly voice later.
+  works everywhere). It is the FALLBACK link, not what the UI calls: Barkly's
+  own voice is `barklyVoiceTts`, synthesized through the proxy, and both sit
+  behind the voice engine described under "How Barkly speaks".
 
 `app/src/providers/registry.ts` selects providers from environment/config.
 Swapping a vendor = writing one adapter + one registry line.
@@ -91,6 +92,30 @@ by the scripted Barkly for that turn. Repeated terminal failures open a
 circuit breaker so the next turns skip the doomed call instead of making a
 child wait out the timeout again; it closes on its own. Settings always says
 which brain answered — a degraded Barkly is visible, never silent.
+
+## How Barkly speaks
+
+`app/src/audio/voiceEngine.ts` is the ONE place the app makes a sound. That is
+not tidiness: two places starting audio is how you get two Barklys talking
+over each other, and a mouth flapping to a line that already finished.
+
+The chain is **real voice → device voice → silent-but-timed**. His own voice
+is synthesized server-side (`server/lib/voice.mjs`) because the vendor key is
+a real secret AND because *which* voice is Barkly is a product decision — the
+app sends text and gets audio, and never names a voice, so a modified build
+cannot make him someone else. Clips are cached by a hash of (voice, text), so
+his repeated lines cost nothing and play instantly. Voice is billed per
+character, so it carries its own daily caps, separate from the token ones.
+
+Every failure in that chain ends in a quieter Barkly, never a frozen one. If
+the vendor is down he uses the device voice; if that fails too he mimes for a
+plausible number of milliseconds while the caption reads. `speaking` is
+therefore a state the app cannot get stuck in.
+
+**Mute** is a parent's control and it persists. A muted Barkly still takes the
+right amount of TIME, because the mouth animation and the state machine are
+driven by how long he spoke — quiet, not broken. Backgrounding the app stops
+him mid-word; nobody wants a dog talking from a pocket.
 
 **Identity** is `providers/device.ts`: a random per-install id, stored locally,
 hashed again server-side before it touches a log, and replaced by "Forget

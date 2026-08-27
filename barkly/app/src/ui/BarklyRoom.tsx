@@ -284,11 +284,32 @@ export default function BarklyRoom() {
           <View style={styles.wordmarkChip}>
             <Text style={styles.wordmark}>Barkly</Text>
           </View>
-          <Pressable style={styles.gear} hitSlop={10} onPress={() => setSettingsOpen(true)}>
-            <View style={styles.gearDot} />
-            <View style={styles.gearDot} />
-            <View style={styles.gearDot} />
-          </Pressable>
+          <View style={styles.headerButtons}>
+            <Pressable
+              style={[styles.gear, barkly.muted && styles.gearMuted]}
+              hitSlop={10}
+              onPress={barkly.toggleMuted}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: barkly.muted }}
+              accessibilityLabel={barkly.muted ? 'Unmute Barkly' : 'Mute Barkly'}
+            >
+              {/* A speaker, drawn rather than emoji so it matches the art. */}
+              <View style={styles.speakerBody} />
+              <View style={styles.speakerCone} />
+              {barkly.muted && <View style={styles.muteSlash} />}
+            </Pressable>
+            <Pressable
+              style={styles.gear}
+              hitSlop={10}
+              onPress={() => setSettingsOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+            >
+              <View style={styles.gearDot} />
+              <View style={styles.gearDot} />
+              <View style={styles.gearDot} />
+            </Pressable>
+          </View>
         </View>
 
         {/* where-to tabs */}
@@ -451,6 +472,7 @@ export default function BarklyRoom() {
           lastFailure: barkly.dialogueStatus().lastFailure?.barklyLine,
         }}
         modelConfigured={barkly.modelConfigured}
+        voice={{ route: barkly.voiceRoute, muted: barkly.muted }}
         sttAvailable={sttAvailable}
         onForgetEverything={barkly.forgetEverything}
       />
@@ -515,6 +537,34 @@ const styles = StyleSheet.create({
     ...(shadowCard as object),
   },
   gearDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INK_SOFT },
+  headerButtons: { flexDirection: 'row', gap: 8 },
+  gearMuted: { backgroundColor: '#E6DCC8' },
+  speakerBody: {
+    width: 7,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: INK_SOFT,
+    marginRight: -1,
+  },
+  speakerCone: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftWidth: 9,
+    borderTopColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: INK_SOFT,
+    transform: [{ rotate: '180deg' }],
+  },
+  muteSlash: {
+    position: 'absolute',
+    width: 26,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#B3402E',
+    transform: [{ rotate: '-35deg' }],
+  },
 
   tabs: {
     flexDirection: 'row',

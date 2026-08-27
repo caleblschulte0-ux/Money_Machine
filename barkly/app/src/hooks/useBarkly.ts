@@ -33,6 +33,8 @@ import {
   reduce,
 } from '../barkly/state';
 import { BarklyEvent, BarklySnapshot, BodyAction, isBusy } from '../barkly/types';
+import { configureAudioSession } from '../providers/tts/barklyVoiceTts';
+import { createVoiceEngine } from '../audio/voiceEngine';
 import { loadDeviceId, resetDeviceId } from '../providers/device';
 import { DialogueStatus } from '../providers/dialogue/resilient';
 import { barklyLineFor, DialogueError } from '../providers/errors';
@@ -47,6 +49,7 @@ import { pickThought } from '../world/thoughts';
 const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
 const LOCATION_KEY = profileKey(DEFAULT_PROFILE, 'location-v1');
 const CHARACTER_KEY = profileKey(DEFAULT_PROFILE, 'character-v1');
+const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
 
 export interface Exchange {
   userText: string;
@@ -71,6 +74,11 @@ export interface BarklyController {
   /** Set when Barkly has dropped to his offline brain; his own words for it. */
   degraded: string | null;
   dismissDegraded(): void;
+  /** Muted Barkly still takes the right amount of time — quiet, not broken. */
+  muted: boolean;
+  toggleMuted(): void;
+  /** Which link of the voice chain last made the sound. */
+  voiceRoute: 'barkly' | 'device' | 'silent' | null;
 
   startTalk(): Promise<void>;
   stopTalk(): Promise<void>;
@@ -127,6 +135,13 @@ export function useBarkly(): BarklyController {
   const npcLineCounter = useRef(0);
   const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stash = useMemo(() => new Stash(asyncStorageStore, DEFAULT_PROFILE), []);
+
+  // The single audio lifecycle: real voice, device voice, silent-but-timed.
+  const [muted, setMutedState] = useState(false);
+  const voiceEngine = useMemo(
+    () => createVoiceEngine({ voice: providers.voice, device: providers.tts }),
+    [providers],
+  );
   const [stashItems, setStashItems] = useState<Treasure[]>([]);
   const [thought, setThought] = useState<string | null>(null);
   const [pendingGreeting, setPendingGreeting] = useState<string | null>(null);
@@ -192,6 +207,16 @@ export function useBarkly(): BarklyController {
       } catch {
         // keep a fresh character
       }
+      // Mute is a parent's setting: it survives a relaunch.
+      try {
+        const savedMute = await asyncStorageStore.get(MUTE_KEY);
+        if (!cancelled && savedMute === '1') {
+          setMutedState(true);
+          voiceEngine.setMuted(true);
+        }
+      } catch {
+        // keep him audible
+      }
       // Anonymous per-install id so the backend can rate-limit and budget.
       await loadDeviceId(asyncStorageStore);
       const available = await providers.stt.isAvailable();
@@ -200,7 +225,7 @@ export function useBarkly(): BarklyController {
     return () => {
       cancelled = true;
     };
-  }, [memory, providers]);
+  }, [memory, providers, voiceEngine]);
 
   // --- Idle life: occasional small gestures so he never feels frozen ---
   const [idleAction, setIdleAction] = useState<BodyAction | null>(null);
@@ -238,10 +263,21 @@ export function useBarkly(): BarklyController {
   // --- Wall-clock decay when app returns to foreground ---
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') dispatch({ type: 'TICK', now: Date.now() });
+      if (s === 'active') {
+        dispatch({ type: 'TICK', now: Date.now() });
+      } else {
+        // Nobody wants a dog talking from a pocket.
+        voiceEngine.onBackground();
+      }
     });
     return () => sub.remove();
-  }, [dispatch]);
+  }, [dispatch, voiceEngine]);
+
+  // --- Audio session, once ---
+  useEffect(() => {
+    void configureAudioSession();
+    return () => voiceEngine.stop();
+  }, [voiceEngine]);
 
   // --- Transient states settle back to baseline after their beat ---
   useEffect(() => {
@@ -264,8 +300,9 @@ export function useBarkly(): BarklyController {
    *
    *   caption + body actions -> SPEAK_START -> TTS -> SPEAK_END -> reaction
    *
-   * Nothing else may call providers.tts.speak(). That rule is what keeps
-   * audio and animation from ever disagreeing about what Barkly is doing.
+   * Nothing else may start audio. That rule, plus the voice engine owning
+   * one utterance at a time, is what keeps audio and animation from ever
+   * disagreeing about what Barkly is doing.
    */
   const speak = useCallback(
     async (
@@ -285,7 +322,9 @@ export function useBarkly(): BarklyController {
       setReplyActions(opts.actions ?? []);
       dispatch({ type: 'SPEAK_START' });
       try {
-        await providers.tts.speak(line);
+        // The engine never throws and always returns within a deadline, so
+        // SPEAK_END below cannot be stranded.
+        await voiceEngine.speak(line);
       } catch {
         // A silent Barkly beats a Barkly stuck mid-sentence.
       }
@@ -293,7 +332,7 @@ export function useBarkly(): BarklyController {
       setReplyActions([]);
       if (opts.after) dispatch(opts.after);
     },
-    [dispatch, providers],
+    [dispatch, voiceEngine],
   );
 
   // A welcome-back queued during load speaks once the hook is live, through
@@ -573,6 +612,14 @@ export function useBarkly(): BarklyController {
     modelConfigured: providers.modelConfigured,
     degraded,
     dismissDegraded: () => setDegraded(null),
+    muted,
+    toggleMuted: () => {
+      const next = !muted;
+      setMutedState(next);
+      voiceEngine.setMuted(next);
+      asyncStorageStore.set(MUTE_KEY, next ? '1' : '0').catch(() => {});
+    },
+    voiceRoute: voiceEngine.lastRoute,
     startTalk,
     stopTalk,
     cancelTalk,

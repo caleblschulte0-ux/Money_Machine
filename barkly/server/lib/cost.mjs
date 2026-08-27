@@ -28,7 +28,16 @@ export function createLedger({ pricing = null, keepDays = 7, now = () => Date.no
     const key = dayKey(ts);
     let d = days.get(key);
     if (!d) {
-      d = { requests: 0, inputTokens: 0, outputTokens: 0, usd: 0, devices: new Map() };
+      d = {
+        requests: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        usd: 0,
+        devices: new Map(),
+        // Voice bills per character, not per token, so it is tallied apart.
+        voiceChars: 0,
+        voiceDevices: new Map(),
+      };
       days.set(key, d);
       // Keep the map bounded without a cron.
       if (days.size > keepDays) {
@@ -53,6 +62,31 @@ export function createLedger({ pricing = null, keepDays = 7, now = () => Date.no
       return { input, output, usd };
     },
 
+    /** Characters sent to the voice vendor. Separate meter, separate caps. */
+    recordVoice(deviceId, chars) {
+      const d = dayFor(now());
+      d.voiceChars += chars;
+      d.voiceDevices.set(deviceId, (d.voiceDevices.get(deviceId) || 0) + chars);
+      return chars;
+    },
+
+    voiceCharsToday() {
+      return dayFor(now()).voiceChars;
+    },
+
+    deviceVoiceCharsToday(deviceId) {
+      return dayFor(now()).voiceDevices.get(deviceId) || 0;
+    },
+
+    /** Which voice cap (if any) this request would blow through. */
+    overVoiceCap(deviceId, { dailyCharCap, perDeviceDailyCharCap }) {
+      if (dailyCharCap && this.voiceCharsToday() >= dailyCharCap) return 'daily_voice_char_cap';
+      if (perDeviceDailyCharCap && this.deviceVoiceCharsToday(deviceId) >= perDeviceDailyCharCap) {
+        return 'device_daily_voice_char_cap';
+      }
+      return null;
+    },
+
     today() {
       const d = dayFor(now());
       return {
@@ -63,6 +97,7 @@ export function createLedger({ pricing = null, keepDays = 7, now = () => Date.no
         totalTokens: d.inputTokens + d.outputTokens,
         usd: pricing ? Number(d.usd.toFixed(4)) : null,
         devices: d.devices.size,
+        voiceChars: d.voiceChars,
       };
     },
 
@@ -93,6 +128,7 @@ export function createLedger({ pricing = null, keepDays = 7, now = () => Date.no
           outputTokens: d.outputTokens,
           usd: pricing ? Number(d.usd.toFixed(4)) : null,
           devices: d.devices.size,
+          voiceChars: d.voiceChars,
         }));
     },
   };

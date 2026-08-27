@@ -19,6 +19,8 @@ interface Props {
   /** Which brain answered last, so an outage is visible rather than mysterious. */
   brain: { using: 'primary' | 'fallback'; breakerOpen: boolean; lastFailure?: string };
   modelConfigured: boolean;
+  /** Which link of the voice chain last made a sound, and whether he is muted. */
+  voice: { route: 'barkly' | 'device' | 'silent' | null; muted: boolean };
   sttAvailable: boolean;
   onForgetEverything: () => Promise<void>;
 }
@@ -47,6 +49,7 @@ export default function SettingsSheet(props: Props) {
     dialogueProviderName,
     brain,
     modelConfigured,
+    voice,
     sttAvailable,
     onForgetEverything,
   } = props;
@@ -110,6 +113,18 @@ export default function SettingsSheet(props: Props) {
             {brain.lastFailure && <Text style={styles.empty}>Last hiccup: {brain.lastFailure}</Text>}
             <Text style={styles.row}>
               Speech input: {sttAvailable ? 'on-device recognition' : 'keyboard (mic needs a dev build)'}
+            </Text>
+            <Text style={styles.row}>
+              Voice:{' '}
+              {voice.muted
+                ? 'muted'
+                : voice.route === 'barkly'
+                  ? "Barkly's own voice"
+                  : voice.route === 'device'
+                    ? 'device voice (his own is unavailable)'
+                    : voice.route === 'silent'
+                      ? 'silent — no speech engine here'
+                      : 'not used yet'}
             </Text>
 
             <Text style={styles.section}>What Barkly knows about you</Text>

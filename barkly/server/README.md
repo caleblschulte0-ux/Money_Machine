@@ -89,6 +89,40 @@ number is worse than an honest token count.
 `GET /admin/usage` with `x-barkly-admin-token` returns today plus seven days.
 Without the header it 404s — an admin endpoint should not advertise itself.
 
+## Barkly's voice
+
+`POST /v1/voice` takes `{ "text": "..." }` and returns **audio bytes**. The
+ElevenLabs key lives here for the same reason the Anthropic one does — and so
+does the voice id, which matters just as much: *which voice is Barkly* is a
+product decision, so the app can never send one. A modified build cannot make
+him someone else.
+
+```bash
+ELEVENLABS_API_KEY=... BARKLY_VOICE_ID=<your designed voice> node index.mjs
+```
+
+Without BOTH of those the route answers 503 with `x-barkly-fallback: 1`, which
+the app reads as "use the device voice". That is a normal state, not an error
+— a deployment with no designed voice yet still ships a talking dog.
+
+Voice is billed per CHARACTER, so it has its own meter and its own caps, and
+the app caches clips by a hash of the line, so Barkly's repeated lines cost
+nothing after the first time.
+
+| var | default | what it does |
+|---|---|---|
+| `ELEVENLABS_API_KEY` | — | the vendor key; voice is off without it |
+| `BARKLY_VOICE_ID` | — | the designed Barkly voice; off without it |
+| `BARKLY_VOICE_MODEL` | `eleven_turbo_v2_5` | synthesis model |
+| `BARKLY_VOICE_FORMAT` | `mp3_44100_128` | output format |
+| `BARKLY_VOICE_STABILITY` | `0.45` | tune once against the real voice |
+| `BARKLY_VOICE_SIMILARITY` | `0.8` | " |
+| `BARKLY_VOICE_STYLE` | `0.35` | " |
+| `BARKLY_VOICE_MAX_CHARS` | `400` | Barkly says short sentences |
+| `BARKLY_VOICE_DAILY_CHAR_CAP` | `200000` | deployment-wide daily ceiling |
+| `BARKLY_VOICE_DEVICE_DAILY_CHAR_CAP` | `8000` | per-install daily ceiling |
+| `BARKLY_VOICE_TIMEOUT_MS` | `15000` | per-request deadline |
+
 ## Environments
 
 `BARKLY_ENV` picks how much the proxy is willing to assume.
