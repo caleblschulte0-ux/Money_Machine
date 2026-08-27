@@ -22,10 +22,12 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { useBarkly } from '../hooks/useBarkly';
 import BarklyPhotoView from './BarklyPhotoView';
 import Onboarding from './Onboarding';
+import StoreSheet, { CoinPill } from './StoreSheet';
+import { AREA_UNLOCKS, levelProgress } from '../game/progression';
 import BarklyView from './BarklyView';
 import SettingsSheet from './SettingsSheet';
 import { Ball, FoodBowl } from './StageProps';
-import { DogBed, HomeScene, NightOverlay, ParkScene, TownScene } from './scenes/Scenes';
+import { DogBedBack, DogBedFront, HomeScene, NightOverlay, ParkScene, TownScene } from './scenes/Scenes';
 import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import { NPCS, NpcId } from '../world/npcs';
@@ -202,6 +204,7 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
 export default function BarklyRoom() {
   const barkly = useBarkly();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [storeOpen, setStoreOpen] = useState(false);
   const [typed, setTyped] = useState('');
   const [heartBurst, setHeartBurst] = useState(0);
   const [fetching, setFetching] = useState(false);
@@ -334,6 +337,18 @@ export default function BarklyRoom() {
           <View style={styles.wordmarkChip}>
             <Text style={styles.wordmark}>Barkly</Text>
           </View>
+          <Pressable
+            style={styles.walletTap}
+            onPress={() => setStoreOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Shop. ${barkly.wallet.coins} coins, level ${barkly.level}.`}
+          >
+            <CoinPill
+              coins={barkly.wallet.coins}
+              level={barkly.level}
+              frac={levelProgress(barkly.wallet.xp).frac}
+            />
+          </Pressable>
           <View style={styles.headerButtons}>
             <Pressable
               style={[styles.gear, barkly.muted && styles.gearMuted]}
@@ -361,6 +376,16 @@ export default function BarklyRoom() {
           </View>
         </View>
 
+        {/* Earning something is a beat, not a banner. */}
+        {barkly.reward && (
+          <View style={styles.reward} pointerEvents="none" accessibilityLiveRegion="polite">
+            <Text style={styles.rewardText}>
+              +{barkly.reward.coins}c  +{barkly.reward.xp} xp
+              {barkly.reward.note ? `  ·  ${barkly.reward.note}` : ''}
+            </Text>
+          </View>
+        )}
+
         {/* He is on his offline brain: say so once, quietly, in his words. */}
         {barkly.degraded && (
           <Pressable
@@ -376,18 +401,30 @@ export default function BarklyRoom() {
 
         {/* where-to tabs */}
         <View style={styles.tabs}>
-          {LOCATION_ORDER.map((loc: LocationId) => (
+          {LOCATION_ORDER.map((loc: LocationId) => {
+            const locked = !barkly.isUnlocked(loc);
+            return (
             <Pressable
               key={loc}
-              style={[styles.tab, location === loc && styles.tabActive]}
-              disabled={busy || fetching}
+              style={[styles.tab, location === loc && styles.tabActive, locked && styles.tabLocked]}
+              disabled={busy || fetching || locked}
               onPress={() => barkly.goTo(loc)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: location === loc, disabled: locked }}
+              accessibilityLabel={
+                locked
+                  ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}`
+                  : LOCATIONS[loc].name
+              }
             >
               <Text style={[styles.tabText, location === loc && styles.tabTextActive]}>
                 {LOCATIONS[loc].name.toLowerCase()}
               </Text>
+              {/* The lock is the goal, so it shows the level rather than hiding. */}
+              {locked && <Text style={styles.tabLock}>Lv {AREA_UNLOCKS[loc]?.level}</Text>}
             </Pressable>
-          ))}
+            );
+          })}
         </View>
 
         {/* speech bubble */}
@@ -414,8 +451,8 @@ export default function BarklyRoom() {
 
         {/* the stage: Barkly + neighbors + props */}
         <View style={styles.stageArea}>
-          <View style={styles.shadow} />
-          {asleep && location === 'home' && <DogBed />}
+          {!asleep && <View style={styles.shadow} />}
+          {asleep && location === 'home' && <DogBedBack />}
           {npcsHere.map((id) => (
             <NpcDog
               key={id}
@@ -434,9 +471,16 @@ export default function BarklyRoom() {
             }}
           >
             <Pressable onPress={pet} disabled={busy}>
-              <Renderer state={snapshot.state} actions={actions} variant={variant} />
+              <Renderer
+                state={snapshot.state}
+                actions={actions}
+                variant={variant}
+                collarColor={barkly.collarColor}
+              />
             </Pressable>
           </Animated.View>
+          {/* After the dog, so the near rim overlaps his lower body. */}
+          {asleep && location === 'home' && <DogBedFront />}
           {fetching && variant !== 'carryLeft' && (
             <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
               <Svg width={30} height={30} viewBox="0 0 30 30">
@@ -525,6 +569,13 @@ export default function BarklyRoom() {
         </View>
       </KeyboardAvoidingView>
 
+      <StoreSheet
+        visible={storeOpen}
+        onClose={() => setStoreOpen(false)}
+        wallet={barkly.wallet}
+        onBuy={barkly.buy}
+        onEquip={barkly.equip}
+      />
       <SettingsSheet
         visible={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -605,6 +656,18 @@ const styles = StyleSheet.create({
   },
   gearDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INK_SOFT },
   headerButtons: { flexDirection: 'row', gap: 8 },
+  walletTap: { flex: 1, marginHorizontal: 10 },
+  tabLocked: { opacity: 0.5 },
+  tabLock: { fontSize: 10, fontWeight: '800', color: '#9A8F7A', marginTop: 1 },
+  reward: {
+    alignSelf: 'center',
+    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#F5E6BE',
+  },
+  rewardText: { fontSize: 13, fontWeight: '800', color: '#6B5310' },
   degraded: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -721,7 +784,9 @@ const styles = StyleSheet.create({
 
   chip: {
     position: 'absolute',
-    bottom: -6,
+    // Was -6, which put "napping" underneath the input bar and clipped it.
+    bottom: 8,
+    zIndex: 3,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,

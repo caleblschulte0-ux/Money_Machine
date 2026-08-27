@@ -11,6 +11,40 @@ mobile app ──POST /v1/messages──▶ this proxy ──(+ server-held key)
 Zero dependencies, plain Node 18+. One process, no build step, deploys
 anywhere Node runs (Fly.io, Railway, Render, a VPS).
 
+## The brain: subscription or API key
+
+`BARKLY_BRAIN` picks where Barkly's replies come from.
+
+**`cli` — your Claude subscription, no API key, no per-message cost.** The
+headless `claude` CLI runs the turn on the subscription token. This is the
+fastest way to hear a real Barkly:
+
+```bash
+# terminal 1 - the brain
+cd barkly/app && npm run brain
+
+# terminal 2 - the app, pointed at it
+cd barkly/app && npm run real
+```
+
+**`api` (default) — a metered Anthropic key.** What a shipped build uses.
+
+Both return the identical Anthropic message shape, so the app cannot tell
+which one answered and switching is one environment variable. The CLI path
+reports zero token usage rather than inventing numbers the budget ledger would
+then treat as real.
+
+| var | default | what it does |
+|---|---|---|
+| `BARKLY_BRAIN` | `api` | `cli` or `api` |
+| `BARKLY_CLI_BIN` | `claude` | path to the CLI |
+| `BARKLY_CLI_MODEL` | `haiku` | Barkly says three sentences; small is right, and faster |
+| `BARKLY_CLI_TIMEOUT_MS` | `25000` | per-turn deadline |
+
+A note on the published web artifact: it stays on the scripted Barkly no
+matter what, because a published page cannot reach a server on your laptop.
+Real replies need the two commands above.
+
 ## Run
 
 ```bash

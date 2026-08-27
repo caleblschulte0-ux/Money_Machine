@@ -193,13 +193,33 @@ export function NightOverlay() {
 }
 
 /** Barkly's bed — appears under him while he sleeps at home. */
-export function DogBed() {
+/**
+ * The bed comes in two halves and the dog goes BETWEEN them.
+ *
+ * A single ellipse behind him left him hovering over a mat like a hologram.
+ * Drawing the front rim over his lower body is what makes him look nestled
+ * IN the bed rather than parked on it — and it hides the stub of leg the
+ * lying-down frame still has. Neither half works alone.
+ */
+export function DogBedBack() {
   return (
-    <View style={styles.bed} pointerEvents="none">
-      <Svg width={300} height={92} viewBox="0 0 300 92">
-        <Ellipse cx={150} cy={50} rx={144} ry={40} fill="#7A5A38" />
-        <Ellipse cx={150} cy={44} rx={130} ry={33} fill="#8A6844" />
-        <Ellipse cx={150} cy={48} rx={112} ry={26} fill="#EFE0BC" />
+    <View style={styles.bedBack} pointerEvents="none">
+      <Svg width={348} height={104} viewBox="0 0 348 104">
+        <Ellipse cx={174} cy={52} rx={170} ry={46} fill="#6E5133" />
+        <Ellipse cx={174} cy={47} rx={152} ry={37} fill="#8A6844" />
+        <Ellipse cx={174} cy={54} rx={132} ry={29} fill="#E3D2AC" />
+      </Svg>
+    </View>
+  );
+}
+
+export function DogBedFront() {
+  return (
+    <View style={styles.bedFront} pointerEvents="none">
+      <Svg width={348} height={56} viewBox="0 0 348 56">
+        {/* Only the near lip of the rim: a half-ellipse clipped by the viewBox. */}
+        <Ellipse cx={174} cy={6} rx={170} ry={46} fill="#7A5A38" />
+        <Ellipse cx={174} cy={0} rx={152} ry={38} fill="#8A6844" />
       </Svg>
     </View>
   );
@@ -233,6 +253,9 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '2.5deg' }],
   },
   framePhoto: { width: 56, height: 48 },
+  bedBack: { position: 'absolute', bottom: 10, alignSelf: 'center' },
+  bedFront: { position: 'absolute', bottom: -6, alignSelf: 'center' },
+
   homeRug: {
     position: 'absolute', bottom: '15%', alignSelf: 'center', width: 300, height: 64,
     borderRadius: 150, backgroundColor: '#C77C52', opacity: 0.3,
@@ -240,5 +263,4 @@ const styles = StyleSheet.create({
   skyTop: { position: 'absolute', top: 0, left: 0 },
   ground: { position: 'absolute', bottom: 0, left: 0, right: 0 },
 
-  bed: { position: 'absolute', bottom: 6, alignSelf: 'center', zIndex: 1 },
 });

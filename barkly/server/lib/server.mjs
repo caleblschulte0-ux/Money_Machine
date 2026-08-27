@@ -14,6 +14,7 @@ import { createLogger, hashId } from './logging.mjs';
 import { createRateLimiter } from './ratelimit.mjs';
 import { callUpstream } from './upstream.mjs';
 import { validateMessagesRequest, ValidationError } from './validate.mjs';
+import { loadCliConfig, runCli } from './cli.mjs';
 import { loadVoiceConfig, validateVoiceRequest, voiceBody, voiceUrl } from './voice.mjs';
 
 /** Client hint that the failure is permanent-ish, so fall back to scripted Barkly. */
@@ -66,6 +67,9 @@ export function createHandler(config, deps = {}) {
   const now = deps.now || (() => Date.now());
   const salt = config.appToken || config.env;
   const voice = deps.voice || loadVoiceConfig(deps.env || process.env);
+  // The subscription brain. When it is on there is no API key and no
+  // per-message cost, and the app cannot tell the difference.
+  const cli = deps.cli || loadCliConfig(deps.env || process.env);
 
   let requestSeq = 0;
 
@@ -161,6 +165,7 @@ export function createHandler(config, deps = {}) {
         env: config.env,
         model: config.defaultModel,
         voice: voice.enabled ? 'configured' : 'unconfigured',
+        brain: cli.enabled ? `cli:${cli.model}` : config.apiKey ? 'api' : 'unconfigured',
       });
     }
 
@@ -204,7 +209,7 @@ export function createHandler(config, deps = {}) {
       return send(401, { error: { type: 'unauthorized', message: 'unauthorized' } });
     }
 
-    if (isDialogue && !config.apiKey) {
+    if (isDialogue && !cli.enabled && !config.apiKey) {
       log.error('config.missing_key', { requestId });
       return send(
         503,
@@ -264,22 +269,25 @@ export function createHandler(config, deps = {}) {
     }
 
     const startedAt = now();
-    const result = await callUpstream({
-      url: `${config.upstream}/v1/messages`,
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': config.apiKey,
-        'anthropic-version': config.anthropicVersion,
-      },
-      body: JSON.stringify(checked.body),
-      timeoutMs: config.timeoutMs,
-      retries: config.retries,
-      retryBaseMs: config.retryBaseMs,
-      fetchImpl,
-      rng,
-      onRetry: ({ attempt, status, waitMs }) =>
-        log.warn('upstream.retry', { requestId, device, attempt, status: String(status), waitMs }),
-    });
+    // Both brains return the same shape, so nothing below cares which ran.
+    const result = cli.enabled
+      ? await runCli(checked.body, cli, deps.cliDeps)
+      : await callUpstream({
+          url: `${config.upstream}/v1/messages`,
+          headers: {
+            'content-type': 'application/json',
+            'x-api-key': config.apiKey,
+            'anthropic-version': config.anthropicVersion,
+          },
+          body: JSON.stringify(checked.body),
+          timeoutMs: config.timeoutMs,
+          retries: config.retries,
+          retryBaseMs: config.retryBaseMs,
+          fetchImpl,
+          rng,
+          onRetry: ({ attempt, status, waitMs }) =>
+            log.warn('upstream.retry', { requestId, device, attempt, status: String(status), waitMs }),
+        });
 
     // Usage accounting. Parsing is best-effort: never fail a good reply
     // because the bookkeeping could not read it.
@@ -296,7 +304,7 @@ export function createHandler(config, deps = {}) {
     log[level]('dialogue.completed', {
       requestId,
       device,
-      model: checked.model,
+      model: cli.enabled ? `cli:${cli.model}` : checked.model,
       status: result.status,
       latencyMs,
       attempts: result.attempts,

@@ -21,4 +21,10 @@ export interface BarklyRenderProps {
    * back leftward. Renderers without matching art may ignore it.
    */
   variant?: 'runRight' | 'carryLeft' | null;
+  /**
+   * Tint for a bought collar. The concept sheet's brown leather is the
+   * default and stays canon; this recolours it, it never redraws him. A
+   * renderer with no collar layer may ignore it.
+   */
+  collarColor?: string | null;
 }

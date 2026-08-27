@@ -17,13 +17,13 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { BarklyRenderProps } from '../animation/renderer';
 import { BarklyState, BodyAction } from '../barkly/types';
 
 const RENDERS = {
   front: require('../../assets/barkly/renders/front.png'),
-  sideSleep: require('../../assets/barkly/renders/side_sleep.png'), // eyes closed
+  sideLie: require('../../assets/barkly/renders/side_lie.png'), // settled, lying down
   threeQuarter: require('../../assets/barkly/renders/three_quarter.png'),
   threeQuarterR: require('../../assets/barkly/renders/three_quarter_r.png'),      // mirrored: facing right
   threeQuarterBall: require('../../assets/barkly/renders/three_quarter_ball.png'), // carrying the ball, facing left
@@ -47,7 +47,7 @@ function poseFor(state: BarklyState): Pose {
     case 'excited':
       return 'threeQuarter';
     case 'sleepy':
-      return 'sideSleep';
+      return 'sideLie';
     case 'thinking':
       return 'face'; // the sheet's EXPRESSION closeup — a dramatic zoom beat
     // 'annoyed' deliberately stays on the front pose: he has a real squint
@@ -60,7 +60,7 @@ function poseFor(state: BarklyState): Pose {
 
 const POSE_SIZE: Record<Pose, { width: number; height: number }> = {
   front: { width: 244, height: 305 },
-  sideSleep: { width: 280, height: 313 },
+  sideLie: { width: 288, height: 232 },
   threeQuarter: { width: 260, height: 300 },
   threeQuarterR: { width: 260, height: 300 },
   threeQuarterBall: { width: 260, height: 300 },
@@ -162,7 +162,7 @@ export function faceFrame({
   }
 }
 
-export default function BarklyPhotoView({ state, actions, variant }: BarklyRenderProps) {
+export default function BarklyPhotoView({ state, actions, variant, collarColor }: BarklyRenderProps) {
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
   const talking = has('MOUTH_MOVE');
@@ -317,6 +317,19 @@ export default function BarklyPhotoView({ state, actions, variant }: BarklyRende
             style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
             resizeMode="contain"
           />
+          {/* A bought collar recolours the leather he already wears. It rides
+              inside the same transform stack, so it breathes and tilts with
+              him instead of sliding around on top. */}
+          {collarColor && COLLAR_BAND[shown.current] && (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.collar,
+                COLLAR_BAND[shown.current],
+                { backgroundColor: collarColor },
+              ]}
+            />
+          )}
         </View>
       </Animated.View>
 
@@ -333,7 +346,30 @@ export default function BarklyPhotoView({ state, actions, variant }: BarklyRende
   );
 }
 
+/**
+ * Where the collar sits, as a fraction of the rendered image — MEASURED off
+ * the render by scanning for the dark leather band, not eyeballed. The first
+ * attempt was eyeballed and put the collar on his chin.
+ *
+ * Only the front pose is listed. In the three-quarter and lying renders the
+ * dark-pixel scan cannot separate the collar from the tail and the striped
+ * legs at the same height, and a band painted across his back is worse than
+ * no tint. Those poses keep the canon brown leather until someone measures
+ * them properly or the art ships a separate collar layer.
+ */
+const COLLAR_BAND: Partial<Record<Pose, ViewStyle>> = {
+  front: {
+    bottom: '31%' as const,
+    left: '24%' as const,
+    right: '25%' as const,
+    height: '11%' as const,
+  },
+};
+
 const styles = StyleSheet.create({
+  // Translucent so it TINTS the leather that is already there rather than
+  // covering it: the buckle and the tag still read through.
+  collar: { position: 'absolute', opacity: 0.6, borderRadius: 5 },
   stage: { width: 300, height: 322, alignItems: 'center', justifyContent: 'flex-end' },
   preload: { position: 'absolute', width: 1, height: 1, opacity: 0 },
   zzzWrap: { position: 'absolute', top: 8, right: 34, width: 60, height: 60 },

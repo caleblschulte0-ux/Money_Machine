@@ -25,6 +25,19 @@ import {
 import { nameFromFacts, welcomeBack } from '../barkly/greetings';
 import { Mishap, mishapLine } from '../barkly/mishaps';
 import {
+  areaUnlocked,
+  buy as buyItem,
+  claimDaily,
+  earn,
+  EarnKind,
+  equip as equipItem,
+  equippedItem,
+  freshWallet,
+  levelFor,
+  unlockedAt,
+  Wallet,
+} from '../game/progression';
+import {
   advance as advanceOnboarding,
   freshOnboarding,
   OnboardingState,
@@ -58,6 +71,7 @@ const LOCATION_KEY = profileKey(DEFAULT_PROFILE, 'location-v1');
 const CHARACTER_KEY = profileKey(DEFAULT_PROFILE, 'character-v1');
 const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
 const ONBOARDING_KEY = profileKey(DEFAULT_PROFILE, 'onboarding-v1');
+const WALLET_KEY = profileKey(DEFAULT_PROFILE, 'wallet-v1');
 
 export interface Exchange {
   userText: string;
@@ -82,6 +96,18 @@ export interface BarklyController {
   /** Set when Barkly has dropped to his offline brain; his own words for it. */
   degraded: string | null;
   dismissDegraded(): void;
+  /** Coins, XP, what he owns and what he is wearing. */
+  wallet: Wallet;
+  level: number;
+  /** A short-lived toast after earning — a moment, not a banner. */
+  reward: { coins: number; xp: number; note?: string } | null;
+  /** Buy from the store; returns what he says about it either way. */
+  buy(itemId: string): { ok: boolean; line: string };
+  equip(itemId: string): void;
+  /** False for a place he has not earned yet. */
+  isUnlocked(area: string): boolean;
+  /** Tint of the collar he is wearing, or null for the canon brown leather. */
+  collarColor: string | null;
   /** Muted Barkly still takes the right amount of time — quiet, not broken. */
   muted: boolean;
   toggleMuted(): void;
@@ -153,6 +179,29 @@ export function useBarkly(): BarklyController {
   // memorySnapshot() during render and redraws the Settings list. Nothing
   // reads the number itself, so it is not on the public controller.
   const [, setMemoryVersion] = useState(0);
+  /**
+   * Credit an action. `useful` is the anti-farming rule: feeding a full dog
+   * or playing with an exhausted one pays nothing, because tapping a button
+   * at a bored animal is not care.
+   */
+  const credit = useCallback((kind: EarnKind, useful = true) => {
+    setWallet((w) => {
+      const result = earn(w, kind, useful);
+      if (result.gained.coins === 0 && result.gained.xp === 0) return w;
+      walletRef.current = result.wallet;
+      const note = result.leveledTo
+        ? unlockedAt(result.leveledTo)[0]?.line ?? `Level ${result.leveledTo}.`
+        : undefined;
+      setReward({ ...result.gained, note });
+      if (result.leveledTo) {
+        // He announces what just opened up, through the normal speaking path.
+        const unlocked = unlockedAt(result.leveledTo);
+        if (unlocked.length > 0) setPendingGreeting(unlocked[0].line);
+      }
+      return result.wallet;
+    });
+  }, []);
+
   const sayMishap = useCallback((kind: Mishap) => {
     const line = mishapLine(kind, lastMishap.current);
     lastMishap.current = line;
@@ -171,6 +220,11 @@ export function useBarkly(): BarklyController {
   // undefined = we have not read storage yet, so nothing renders and a
   // returning child never sees a flash of the first-launch screen.
   const [onboarding, setOnboarding] = useState<OnboardingState | undefined>(undefined);
+  // Coins, XP, the shop and what he is wearing.
+  const [wallet, setWallet] = useState<Wallet>(freshWallet);
+  const walletRef = useRef(wallet);
+  /** Toast for a level-up or an unlock — a moment, not a number changing. */
+  const [reward, setReward] = useState<{ coins: number; xp: number; note?: string } | null>(null);
   const voiceEngine = useMemo(
     () => createVoiceEngine({ voice: providers.voice, device: providers.tts }),
     [providers],
@@ -263,6 +317,19 @@ export function useBarkly(): BarklyController {
         // them do the introduction again on every launch.
         if (!cancelled) setOnboarding({ step: 'done', micOffered: true });
       }
+      // Coins and levels, plus the once-a-day bonus for showing up.
+      try {
+        const rawWallet = await asyncStorageStore.get(WALLET_KEY);
+        const loaded = rawWallet ? (JSON.parse(rawWallet) as Wallet) : freshWallet();
+        const daily = claimDaily(loaded, Date.now());
+        if (!cancelled) {
+          setWallet(daily.wallet);
+          walletRef.current = daily.wallet;
+          if (daily.claimed) setReward({ ...daily.gained, note: 'Daily visit' });
+        }
+      } catch {
+        lost = true;
+      }
       // Mute is a parent's setting: it survives a relaunch.
       try {
         const savedMute = await asyncStorageStore.get(MUTE_KEY);
@@ -330,6 +397,18 @@ export function useBarkly(): BarklyController {
   useEffect(() => {
     asyncStorageStore.set(CHARACTER_KEY, JSON.stringify(character)).catch(() => {});
   }, [character]);
+
+  useEffect(() => {
+    walletRef.current = wallet;
+    asyncStorageStore.set(WALLET_KEY, JSON.stringify(wallet)).catch(() => {});
+  }, [wallet]);
+
+  // The reward toast is a beat, not a banner.
+  useEffect(() => {
+    if (!reward) return;
+    const t = setTimeout(() => setReward(null), 2600);
+    return () => clearTimeout(t);
+  }, [reward]);
 
   // --- Wall-clock decay when app returns to foreground ---
   useEffect(() => {
@@ -518,6 +597,7 @@ export function useBarkly(): BarklyController {
           // A model-chosen reaction can only ever be a ReactionState.
           after: reply.reaction ? { type: 'REACTION', state: reply.reaction } : undefined,
         });
+        credit('talk');
       } catch (e) {
         dispatch({ type: 'TALK_FAILED' });
         // Never an HTTP status, never a stack trace. A child gets a dog who
@@ -529,7 +609,7 @@ export function useBarkly(): BarklyController {
         setPartialTranscript('');
       }
     },
-    [dispatch, engine, speak, worldContext],
+    [credit, dispatch, engine, speak, worldContext],
   );
 
   const startTalk = useCallback(async () => {
@@ -598,6 +678,9 @@ export function useBarkly(): BarklyController {
   );
 
   const goTo = useCallback((loc: LocationId) => {
+    // A locked place is a goal, not an error: he says why, and the level says
+    // how far off it is.
+    if (!areaUnlocked(loc, walletRef.current.xp)) return;
     setLocation(loc);
     setNpcBubble(null);
     setLastExchange(null); // conversations don't follow him down the street
@@ -619,6 +702,7 @@ export function useBarkly(): BarklyController {
         actions: ['MOUTH_MOVE', 'EAR_PERK'],
         after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
       }).catch(() => {});
+      credit('friend');
 
       setCharacter((c) =>
         npc.relationship === 'rival'
@@ -634,7 +718,7 @@ export function useBarkly(): BarklyController {
       }
       return true;
     },
-    [busy, memory, speak],
+    [busy, credit, memory, speak],
   );
 
   const dig = useCallback(async (): Promise<Treasure | null> => {
@@ -649,8 +733,9 @@ export function useBarkly(): BarklyController {
     memory
       .remember([], [`Dug up ${found.name} at the park.`], { where: 'the park' })
       .catch(() => {});
+    credit('dig');
     return found;
-  }, [busy, memory, speak, stash]);
+  }, [busy, credit, memory, speak, stash]);
 
   // --- feeding, playing and waking also speak, through the same lifecycle ---
   const feed = useCallback(async () => {
@@ -660,7 +745,8 @@ export function useBarkly(): BarklyController {
       actions: ['MOUTH_MOVE'],
       after: { type: 'FEED' },
     });
-  }, [busy, speak]);
+    credit('feed', !full); // feeding a full dog is farming, not care
+  }, [busy, credit, speak]);
 
   const play = useCallback(async () => {
     if (busy || isBusy(snapshotRef.current.state)) return;
@@ -669,7 +755,8 @@ export function useBarkly(): BarklyController {
       actions: tired ? ['SLEEP'] : ['MOUTH_MOVE', 'EXCITED'],
       after: { type: 'PLAY' },
     });
-  }, [busy, speak]);
+    credit('play', !tired);
+  }, [busy, credit, speak]);
 
   const sleepToggle = useCallback(async () => {
     if (busy || isBusy(snapshotRef.current.state)) return;
@@ -751,6 +838,26 @@ export function useBarkly(): BarklyController {
     voiceRoute: voiceEngine.lastRoute,
     onboarding,
     advanceOnboarding: handleOnboarding,
+    wallet,
+    level: levelFor(wallet.xp),
+    reward,
+    buy: (itemId: string) => {
+      const result = buyItem(walletRef.current, itemId);
+      if (result.ok) {
+        setWallet(result.wallet);
+        walletRef.current = result.wallet;
+      }
+      // Success or refusal, he says it out loud through the one lifecycle.
+      speak(result.line, { actions: ['MOUTH_MOVE'] }).catch(() => {});
+      return { ok: result.ok, line: result.line };
+    },
+    equip: (itemId: string) => {
+      const next = equipItem(walletRef.current, itemId);
+      setWallet(next);
+      walletRef.current = next;
+    },
+    isUnlocked: (area: string) => areaUnlocked(area, wallet.xp),
+    collarColor: equippedItem(wallet, 'collar')?.color ?? null,
     startTalk,
     stopTalk,
     cancelTalk,
@@ -785,6 +892,10 @@ export function useBarkly(): BarklyController {
       // He has forgotten who you are, so he introduces himself again.
       await asyncStorageStore.remove(ONBOARDING_KEY);
       setOnboarding(freshOnboarding());
+      const blank = freshWallet();
+      setWallet(blank);
+      walletRef.current = blank;
+      await asyncStorageStore.remove(WALLET_KEY);
     },
   };
 }

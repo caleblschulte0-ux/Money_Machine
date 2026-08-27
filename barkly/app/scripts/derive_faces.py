@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Derive Barkly's facial expression frames from the approved front render.
+"""Derive Barkly's expression and sleep frames from the approved renders.
 
 The concept sheet gives us one front-facing Barkly. Every other face the app
 shows -- blinking, half-lidded, squinting -- is derived from it here, so the
@@ -11,6 +11,13 @@ each eye is compressed into the top of the eye box, feathered at both edges
 so it melts into the existing brow rather than sitting on his face as a
 rectangle. That was the first attempt and it looked exactly like a pasted
 rectangle; the top feather is what fixed it.
+
+It also derives the LYING DOWN frame. The sheet only gives us a standing side
+view with the eyes shut, and shipping that as "asleep" looked exactly like
+what it was: a dog standing up with his eyes closed, hovering over a bed. The
+legs are found by scanning the alpha for the row where the silhouette splits
+into two separate runs -- measured, not guessed, because guessing at 0.66 ate
+his torso on the first attempt.
 
 Usage: python3 scripts/derive_faces.py
 Requires: pillow.
@@ -67,12 +74,53 @@ def close_lids(im: Image.Image, frac: float) -> Image.Image:
     return out
 
 
+def leg_top(im: Image.Image) -> int:
+    """The row where the silhouette splits into separate legs."""
+    w, h = im.size
+    px = im.getchannel("A").load()
+    for y in range(int(h * 0.7), h):
+        runs, inrun = 0, False
+        for x in range(w):
+            on = px[x, y] > 40
+            if on and not inrun:
+                runs += 1
+            inrun = on
+        if runs >= 2:
+            return y
+    return int(h * 0.86)
+
+
+def lie_down(im: Image.Image) -> Image.Image:
+    """Settle a standing side view into a lying pose.
+
+    Squash the legs so the belly reaches the ground, then spread the whole
+    body slightly -- a settled animal is wider and shorter than a standing
+    one. The remaining stub of leg is hidden by the bed rim, which the room
+    draws IN FRONT of him; that occlusion is the other half of the effect and
+    neither half works alone.
+    """
+    w, h = im.size
+    top = leg_top(im)
+    body, legs = im.crop((0, 0, w, top)), im.crop((0, top, w, h))
+    squashed = legs.resize((w, max(1, int(legs.height * 0.30))), Image.LANCZOS)
+    out = Image.new("RGBA", (w, body.height + squashed.height), (0, 0, 0, 0))
+    out.paste(body, (0, 0))
+    out.paste(squashed, (0, body.height))
+    return out.resize((int(out.width * 1.05), int(out.height * 0.94)), Image.LANCZOS)
+
+
 def main() -> int:
     im = Image.open(SRC).convert("RGBA")
     for name, frac in VARIANTS.items():
         dest = RENDERS / f"{name}.png"
         close_lids(im, frac).save(dest, optimize=True)
         print(f"{dest.name}: {dest.stat().st_size // 1024} KB")
+
+    sleeper = Image.open(RENDERS / "side_sleep.png").convert("RGBA")
+    dest = RENDERS / "side_lie.png"
+    lying = lie_down(sleeper)
+    lying.save(dest, optimize=True)
+    print(f"{dest.name}: {lying.size}, {dest.stat().st_size // 1024} KB")
     return 0
 
 
