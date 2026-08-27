@@ -10,6 +10,7 @@ the renderer reads, or it will eventually describe a film that does not exist.
     python3 timelines.py 2 > r68__claude__demo2__timeline.txt
 """
 import importlib
+import re
 import subprocess
 import sys
 
@@ -25,6 +26,46 @@ TITLES = {
 import os
 
 RAW = "raw" if os.path.isdir("raw") else "../raw"
+
+
+
+# The disclosure text is READ OUT OF THE RENDERER, not restated here.
+#
+# Until r72 this function did not exist and the block below was four
+# hardcoded lines claiming every film showed "VISUAL INTENTION ONLY --
+# RECONSTRUCTION, NOT A PHOTOGRAPH". By then Demo 4's tag said something
+# else entirely and Demo 5 had just grown its first one. So the file whose
+# entire purpose is "a reviewer must never be asked to check the film
+# against a hand-typed description of it" had a hand-typed description of
+# the most claim-sensitive text in the set, and it was already wrong for
+# two of the five.
+#
+# Reading the literal out of the source is blunt, and deliberately so: it
+# cannot drift, and if a renderer's wording changes shape enough that the
+# pattern stops matching, this RAISES rather than quietly printing a stale
+# tag. A silent fallback here would reintroduce the exact bug.
+_TAG_RE = re.compile(r'^\s*(?:s|s2|msg) = "([A-Z][^"]*)"\s*$', re.M)
+
+
+def disclosures(n):
+    """Every disclosure this film actually draws, in-film tag then end card.
+
+    Demo 1 legitimately has only the end card: it recognises and labels real
+    things and reconstructs nothing, so there is no in-film tag to find. That
+    is why an empty result from ONE file is fine and an empty result from BOTH
+    is a hard error.
+    """
+    tags = []
+    for f in (f"film{n}/render{n}.py", f"film{n}/assemble{n}.py"):
+        for t in _TAG_RE.findall(open(f).read()):
+            if t not in tags:
+                tags.append(t)
+    if not tags:
+        raise SystemExit(
+            f"film{n}: no disclosure literal matched in render{n}.py or "
+            f"assemble{n}.py. The tag was renamed or restructured -- fix this "
+            "pattern, do not print a guess.")
+    return tags
 
 
 def gate_row(clip, tin, dur):
@@ -93,9 +134,10 @@ def main(n):
         L.append(f"  {st:6.1f}s  past side of the seam carries {v[0]} at {v[1]}, {v[2]}px")
     L.append("")
     L.append("STANDING DISCLOSURE")
-    L.append("  Any beat carrying a reconstruction shows, for its whole length:")
-    L.append("    VISUAL INTENTION ONLY — RECONSTRUCTION, NOT A PHOTOGRAPH")
-    L.append("  and the end card carries VISUAL INTENTION ONLY.")
+    for tag in disclosures(n):
+        L.append(f"    {tag}")
+    L.append("  shown for the whole length of any beat it applies to, and the")
+    L.append("  end card carries VISUAL INTENTION ONLY.")
     L.append("  No date, no measurement, no attribution is asserted anywhere in")
     L.append("  any of the five films.")
     print("\n".join(L))
