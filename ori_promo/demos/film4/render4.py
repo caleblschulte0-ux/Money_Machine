@@ -370,10 +370,18 @@ def compose(beat, dur, frames):
                 # ground. The band ORDER is the published surface geology of
                 # this site; the aperture is an illustration of it. Say both.
                 s = "VISUALISATION FROM PUBLISHED GEOLOGY — NOT SENSED, NOT MEASURED"
+                # MOVED TO THE TOP at r72. At the foot of frame this plate cut
+                # a horizontal band straight across the lower third of the
+                # aperture -- the disclosure was covering the visualisation it
+                # exists to qualify, and the longer r72 wording (1138px against
+                # the old 921px) covered more of it. Top centre is empty sky on
+                # this plate for the whole beat, and the BELOW THE SURFACE
+                # label sits at top LEFT starting near y=300, so nothing
+                # collides. Same band Demo 3 uses.
                 tw2 = d.textlength(s, font=fn)
-                d.rectangle([W/2-tw2/2-22, H-116, W/2+tw2/2+22, H-70],
+                d.rectangle([W/2-tw2/2-22, 96, W/2+tw2/2+22, 142],
                             fill=(6, 9, 12, int(180*tg)))
-                d.text((W/2, H-93), s, font=fn, fill=AMBER+(int(246*tg),), anchor="mm")
+                d.text((W/2, 119), s, font=fn, fill=AMBER+(int(246*tg),), anchor="mm")
 
         frame_cue(d, t, dur)
         ov = np.array(img).astype(np.float32)
