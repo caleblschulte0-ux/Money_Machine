@@ -1,9 +1,10 @@
+import { freshCharacter, withFriend } from '../src/barkly/character';
 import { emptyMemory } from '../src/barkly/memory';
 import { buildSystemPrompt, parseReply } from '../src/barkly/prompts';
 import { freshSnapshot } from '../src/barkly/state';
 
 describe('buildSystemPrompt', () => {
-  it('includes identity, mood, and memories', () => {
+  it('includes identity, mood, memories, and relationship identity', () => {
     const prompt = buildSystemPrompt({
       snapshot: freshSnapshot(0),
       memory: {
@@ -19,6 +20,20 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain("Your person's name is Caleb.");
     expect(prompt).toContain('Caleb promised to play yesterday.');
     expect(prompt).toContain('talked about school');
+    expect(prompt).toContain('Relationship stage: Just Met');
+    expect(prompt).toContain('Fresh Pack');
+  });
+
+  it('feeds evolved recurring-dog lore into the conversation texture', () => {
+    let character = freshCharacter();
+    for (let i = 0; i < 6; i++) character = withFriend(character, 'Biscuit', i);
+    const prompt = buildSystemPrompt({
+      snapshot: freshSnapshot(10),
+      memory: emptyMemory(),
+      character,
+    });
+    expect(prompt).toContain('Biscuit');
+    expect(prompt).toContain('best friend');
   });
 
   it('reflects hunger in the mood line', () => {
@@ -44,13 +59,54 @@ describe('parseReply', () => {
     expect(reply.newBarklyMemories).toHaveLength(1);
   });
 
+  it('parses an ordered model-taught routine', () => {
+    const reply = parseReply(JSON.stringify({
+      speech: 'I learned showtime.',
+      actions: ['EAR_PERK'],
+      teach: [{
+        cue: 'showtime',
+        instruction: 'spin then sit then play dead',
+        speech: 'Showtime.',
+        actions: ['EXCITED'],
+        routine: [
+          { speech: 'Spin.', reaction: 'excited', actions: ['EXCITED', 'TAIL_WAG'] },
+          { speech: 'Sit.', actions: ['SIT'] },
+          { speech: 'Gone.', reaction: 'sleepy', actions: ['SLEEP'] },
+        ],
+      }],
+    }));
+    expect(reply.learnedTraining).toHaveLength(1);
+    expect(reply.learnedTraining?.[0].routine?.map((beat) => beat.actions)).toEqual([
+      ['EXCITED', 'TAIL_WAG'],
+      ['SIT'],
+      ['SLEEP'],
+    ]);
+  });
+
+  it('drops invalid routine beats rather than inventing choreography', () => {
+    const reply = parseReply(JSON.stringify({
+      speech: 'Okay.',
+      teach: [{
+        cue: 'broken',
+        instruction: 'do impossible stuff then sit',
+        speech: 'Broken.',
+        actions: ['SIT'],
+        routine: [
+          { speech: 'Nope.', actions: ['BACKFLIP'] },
+          { speech: 'Sit.', actions: ['SIT'] },
+        ],
+      }],
+    }));
+    expect(reply.learnedTraining?.[0].routine).toBeUndefined();
+  });
+
   it('handles JSON wrapped in a markdown fence', () => {
     const reply = parseReply('```json\n{"speech": "Hey.", "actions": ["TAIL_WAG"]}\n```');
     expect(reply.speech).toBe('Hey.');
     expect(reply.actions).toEqual(['TAIL_WAG']);
   });
 
-  it('falls back to treating plain prose as speech (never fails the turn)', () => {
+  it('falls back to treating plain prose as speech', () => {
     const reply = parseReply('Hey. I chewed a sock. No regrets.');
     expect(reply.speech).toBe('Hey. I chewed a sock. No regrets.');
     expect(reply.actions).toEqual([]);
