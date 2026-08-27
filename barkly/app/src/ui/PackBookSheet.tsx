@@ -60,10 +60,36 @@ export default function PackBookSheet({ visible, onClose, profile }: Props) {
               train, explore and cause problems together.
             </Text>
 
+            {profile.story && (
+              <>
+                <Text style={styles.section}>Current saga</Text>
+                <View style={styles.storyCard}>
+                  <View style={styles.storyTop}>
+                    <Text style={styles.storyKicker}>ONGOING</Text>
+                    <Text style={styles.storyIntensity}>{'●'.repeat(profile.story.intensity)}</Text>
+                  </View>
+                  <Text style={styles.storyTitle}>{profile.story.title}</Text>
+                  <Text style={styles.storyChapter}>{profile.story.chapter}</Text>
+                  <Text style={styles.storyPremise}>{profile.story.premise}</Text>
+                  <View style={styles.nextBeat}>
+                    <Text style={styles.nextLabel}>NEXT BEAT</Text>
+                    <Text style={styles.nextText}>{profile.story.nextHook}</Text>
+                  </View>
+                </View>
+              </>
+            )}
+
             <Text style={styles.section}>What you turned him into</Text>
-            {profile.traits.map((trait) => (
-              <TraitCard key={trait.id} label={trait.label} score={trait.score} detail={trait.detail} />
-            ))}
+            {profile.traits.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>Still forming.</Text>
+                <Text style={styles.emptyText}>No label yet. Keep doing things together and the Pack Book will call out the traits that actually become true.</Text>
+              </View>
+            ) : (
+              profile.traits.map((trait) => (
+                <TraitCard key={trait.id} label={trait.label} score={trait.score} detail={trait.detail} />
+              ))
+            )}
 
             <Text style={styles.section}>Private rituals</Text>
             {profile.rituals.length === 0 ? (
@@ -127,27 +153,14 @@ export default function PackBookSheet({ visible, onClose, profile }: Props) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(28,24,19,0.48)', justifyContent: 'flex-end' },
-  sheet: {
-    maxHeight: '91%',
-    backgroundColor: PAPER,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-  },
+  sheet: { maxHeight: '91%', backgroundColor: PAPER, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 18 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
   eyebrow: { fontSize: 11, fontWeight: '900', letterSpacing: 2.1, color: GOLD },
   title: { marginTop: 2, fontSize: 26, fontWeight: '900', color: INK, letterSpacing: -0.4 },
   close: { fontSize: 20, color: INK, padding: 4 },
   scrollContent: { paddingBottom: 34 },
 
-  hero: {
-    backgroundColor: INK,
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginTop: 4,
-  },
+  hero: { backgroundColor: INK, borderRadius: 24, paddingHorizontal: 20, paddingVertical: 20, marginTop: 4 },
   stage: { fontSize: 11, fontWeight: '900', letterSpacing: 1.5, color: '#E2C471' },
   archetype: { marginTop: 7, fontSize: 29, lineHeight: 32, fontWeight: '900', color: '#FFF9EC', letterSpacing: -0.7 },
   tagline: { marginTop: 7, fontSize: 15, lineHeight: 21, color: '#E8DFC8' },
@@ -157,6 +170,17 @@ const styles = StyleSheet.create({
 
   explainer: { marginTop: 15, fontSize: 14, lineHeight: 20, color: SOFT },
   section: { marginTop: 23, marginBottom: 9, fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: '#7C694B', textTransform: 'uppercase' },
+
+  storyCard: { borderRadius: 21, padding: 17, backgroundColor: '#E8D7AC', borderWidth: 1.5, borderColor: '#C8A354' },
+  storyTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  storyKicker: { fontSize: 9, fontWeight: '900', letterSpacing: 1.7, color: '#7C5F1A' },
+  storyIntensity: { fontSize: 8, letterSpacing: 2, color: '#8B6C22' },
+  storyTitle: { marginTop: 6, fontSize: 22, fontWeight: '900', color: INK, letterSpacing: -0.3 },
+  storyChapter: { marginTop: 3, fontSize: 11, fontWeight: '900', letterSpacing: 0.8, color: '#8A6817', textTransform: 'uppercase' },
+  storyPremise: { marginTop: 10, fontSize: 13.5, lineHeight: 20, color: '#5C4F3E' },
+  nextBeat: { marginTop: 13, borderTopWidth: 1, borderTopColor: '#CDB77F', paddingTop: 10 },
+  nextLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.3, color: '#8A6817' },
+  nextText: { marginTop: 3, fontSize: 12.5, lineHeight: 18, fontWeight: '600', color: INK },
 
   traitCard: { backgroundColor: CARD, borderRadius: 18, padding: 14, marginBottom: 9 },
   traitHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
