@@ -2,15 +2,14 @@
  * Barkly's memory store — the persistence and consolidation layer over the
  * structured model in facts.ts.
  *
- * Three tiers:
+ * Four tiers:
  *  1. Working memory — recent conversation turns, kept verbatim.
  *  2. Facts — addressable, updatable things he knows about his person.
  *  3. Experiences — things he believes he and his person did together.
+ *  4. Training — explicit reusable cues his person deliberately taught him.
  *
- * Consolidation: turns that fall out of the verbatim window are distilled
- * before they are dropped, so a long conversation leaves durable facts,
- * promises, and a compact summary behind instead of an ever-growing
- * transcript. Prompt size is bounded by construction.
+ * Training is kept separate from facts because it changes future behavior.
+ * A learned cue can execute locally without another model call.
  *
  * Everything is deletable (privacy requirement) and persisted through the
  * KeyValueStore abstraction only.
@@ -29,7 +28,13 @@ import {
   rankFacts,
   sanitize,
 } from './facts';
-import { ChatTurn } from './types';
+import {
+  matchTrainingRule,
+  mergeTrainingRules,
+  noteTrainingTriggered,
+  TrainingRule,
+} from './training';
+import { ChatTurn, LearnedTrainingRule } from './types';
 
 export interface MemoryState {
   /** Recent turns, verbatim, oldest first. */
@@ -42,6 +47,8 @@ export interface MemoryState {
   experiences: Experience[];
   /** Topics raised but never resolved — hooks for him to bring things back up. */
   openThreads: string[];
+  /** Explicit user-taught tricks/rules. */
+  trainingRules: TrainingRule[];
 
   /** Back-compat display views (Settings UI reads these). Derived, not stored. */
   userFacts: string[];
@@ -55,6 +62,7 @@ export function emptyMemory(): MemoryState {
     facts: [],
     experiences: [],
     openThreads: [],
+    trainingRules: [],
     userFacts: [],
     barklyMemories: [],
   };
@@ -73,16 +81,20 @@ interface StoredShape {
   facts: Fact[];
   experiences: Experience[];
   openThreads: string[];
+  trainingRules: TrainingRule[];
 }
 
+const blankStored = (): StoredShape => ({
+  turns: [],
+  sessionSummary: '',
+  facts: [],
+  experiences: [],
+  openThreads: [],
+  trainingRules: [],
+});
+
 export class BarklyMemory {
-  private state: StoredShape = {
-    turns: [],
-    sessionSummary: '',
-    facts: [],
-    experiences: [],
-    openThreads: [],
-  };
+  private state: StoredShape = blankStored();
 
   constructor(
     private store: KeyValueStore,
@@ -106,21 +118,19 @@ export class BarklyMemory {
           facts: Array.isArray(parsed.facts) ? parsed.facts : [],
           experiences: Array.isArray(parsed.experiences) ? parsed.experiences : [],
           openThreads: Array.isArray(parsed.openThreads) ? parsed.openThreads : [],
+          trainingRules: Array.isArray(parsed.trainingRules) ? parsed.trainingRules : [],
         };
       } else {
         await this.migrateLegacy();
       }
     } catch {
       // Corrupt store — start fresh rather than crash the dog.
-      this.state = { turns: [], sessionSummary: '', facts: [], experiences: [], openThreads: [] };
+      this.state = blankStored();
     }
     return this.snapshot();
   }
 
-  /**
-   * Bring a v1 (flat string list) memory forward. Early testers should not
-   * lose the fact that Barkly knows their name.
-   */
+  /** Bring a v1 (flat string list) memory forward. */
   private async migrateLegacy(): Promise<void> {
     const raw = await this.store.get(profileKey(this.profile, LEGACY_KEY));
     if (!raw) return;
@@ -146,6 +156,7 @@ export class BarklyMemory {
         facts: mergeFacts([], facts, now).facts,
         experiences,
         openThreads: [],
+        trainingRules: [],
       };
       await this.persist();
     } catch {
@@ -165,6 +176,7 @@ export class BarklyMemory {
       facts: [...this.state.facts],
       experiences: [...this.state.experiences],
       openThreads: [...this.state.openThreads],
+      trainingRules: [...this.state.trainingRules],
       userFacts: rankFacts(this.state.facts, now, 40).map(describeFact),
       barklyMemories: rankExperiences(this.state.experiences, now, 40).map((e) => e.what),
     };
@@ -188,18 +200,9 @@ export class BarklyMemory {
     await this.persist();
   }
 
-  /**
-   * Distill turns that are leaving the verbatim window.
-   *
-   * This is deterministic local consolidation: it extracts promises and open
-   * questions, and keeps a bounded digest. It is NOT model-based summarization
-   * — `consolidateWith()` is the seam for that, so the upgrade doesn't disturb
-   * any caller.
-   */
+  /** Distill turns that are leaving the verbatim window. */
   private async consolidate(evicted: ChatTurn[]): Promise<void> {
     const now = this.now();
-
-    // Promises are the highest-value thing buried in old conversation.
     const promiseRe = /\b(?:i(?:'ll| will)|we(?:'ll| will)|promise|tomorrow|later)\b/i;
     const questionRe = /\?\s*$/;
 
@@ -222,11 +225,7 @@ export class BarklyMemory {
     this.state.sessionSummary = combined.slice(-MAX_SUMMARY_LINES).join('\n');
   }
 
-  /**
-   * Seam for model-based semantic consolidation: hand the evicted turns to a
-   * summarizer and store the result. Not wired to a provider yet — documented
-   * rather than silently missing.
-   */
+  /** Seam for model-based semantic consolidation. */
   async consolidateWith(
     summarize: (turns: ChatTurn[]) => Promise<string>,
     turns: ChatTurn[],
@@ -238,11 +237,7 @@ export class BarklyMemory {
     }
   }
 
-  /**
-   * Record new knowledge. Fact statements are parsed into structured facts and
-   * merged (so corrections replace rather than accumulate); experience strings
-   * become Experience objects.
-   */
+  /** Record new factual knowledge and shared experiences. */
   async remember(
     factStatements: string[],
     experienceTexts: string[],
@@ -270,6 +265,29 @@ export class BarklyMemory {
     };
   }
 
+  /**
+   * Persist explicit tricks proposed by the dialogue parser. The caller is
+   * responsible for the explicit-teaching gate; this layer handles validation,
+   * bounded storage, correction and persistence.
+   */
+  async learnTraining(candidates: LearnedTrainingRule[]): Promise<{ added: string[]; updated: string[] }> {
+    const merged = mergeTrainingRules(this.state.trainingRules, candidates, this.now());
+    this.state.trainingRules = merged.rules;
+    await this.persist();
+    return { added: merged.added, updated: merged.updated };
+  }
+
+  /** Find a taught cue that appears in the current user utterance. */
+  matchTraining(text: string): TrainingRule | undefined {
+    return matchTrainingRule(this.state.trainingRules, text);
+  }
+
+  /** A trigger count is useful character history, not analytics. It stays local. */
+  async noteTrainingTriggered(id: string): Promise<void> {
+    this.state.trainingRules = noteTrainingTriggered(this.state.trainingRules, id, this.now());
+    await this.persist();
+  }
+
   /** Look up one fact directly — e.g. his person's name for a greeting. */
   getFact(key: string, subject = 'person'): Fact | undefined {
     return this.state.facts.find((f) => f.subject === subject && f.key === key);
@@ -292,15 +310,20 @@ export class BarklyMemory {
     await this.persist();
   }
 
+  /**
+   * Settings uses one delete callback for learned state. An id may belong to a
+   * fact, experience or taught trick; deleting one never touches the others.
+   */
   async forgetFact(id: string): Promise<void> {
     this.state.facts = this.state.facts.filter((f) => f.id !== id);
     this.state.experiences = this.state.experiences.filter((e) => e.id !== id);
+    this.state.trainingRules = this.state.trainingRules.filter((r) => r.id !== id);
     await this.persist();
   }
 
   /** Wipe everything — the Settings "Forget everything" button. */
   async forgetAll(): Promise<void> {
-    this.state = { turns: [], sessionSummary: '', facts: [], experiences: [], openThreads: [] };
+    this.state = blankStored();
     await this.store.remove(this.key());
     await this.store.remove(profileKey(this.profile, LEGACY_KEY));
   }

@@ -1,9 +1,14 @@
 /**
- * On-device speech-to-text via expo-speech-recognition
+ * Strictly on-device speech-to-text via expo-speech-recognition
  * (iOS SFSpeechRecognizer / Android SpeechRecognizer).
  *
- * No API key, no audio leaves the recognizer, capture runs strictly between
- * start() and stop() — which is exactly the child-safety posture we want.
+ * PRIVACY INVARIANT: Barkly never starts this provider unless the device
+ * reports on-device recognition support, and every recognition request sets
+ * requiresOnDeviceRecognition=true. A device that cannot honor that invariant
+ * is treated as STT-unavailable and the UI falls back to typed input.
+ *
+ * Capture runs strictly between start() and stop(). Barkly does not persist
+ * microphone audio or configure recordingOptions/audioSource.
  *
  * Requires a DEV BUILD (`npx expo run:ios|android`): the native module does
  * not exist inside Expo Go. We therefore lazy-require it and report
@@ -42,26 +47,34 @@ export function createExpoSpeechRecognitionStt(lang = 'en-US'): SpeechToTextProv
     endResolvers = [];
   };
 
+  const supportsPrivateRecognition = (): boolean => {
+    if (!module) return false;
+    try {
+      return module.isRecognitionAvailable() && module.supportsOnDeviceRecognition();
+    } catch {
+      return false;
+    }
+  };
+
   return {
-    name: 'expo-speech-recognition',
+    name: 'expo-speech-recognition-on-device',
 
     async isAvailable() {
-      if (!module) return false;
-      try {
-        return module.isRecognitionAvailable();
-      } catch {
-        return false;
-      }
+      return supportsPrivateRecognition();
     },
 
     async requestPermissions() {
-      if (!module) return false;
+      // Do not ask for microphone/speech-recognition permission on a device
+      // where Barkly would be unable to honor the on-device-only contract.
+      if (!supportsPrivateRecognition() || !module) return false;
       const result = await module.requestPermissionsAsync();
       return result.granted;
     },
 
     async start(opts) {
-      if (!module) throw new Error('Speech recognition native module unavailable');
+      if (!module || !supportsPrivateRecognition()) {
+        throw new Error('On-device speech recognition is unavailable');
+      }
       finalTranscript = '';
       lastPartial = '';
       cleanup();
@@ -77,7 +90,13 @@ export function createExpoSpeechRecognitionStt(lang = 'en-US'): SpeechToTextProv
         module.addListener('error', () => signalEnd()),
         module.addListener('end', () => signalEnd()),
       );
-      module.start({ lang, interimResults: true, continuous: false, maxAlternatives: 1 });
+      module.start({
+        lang,
+        interimResults: true,
+        continuous: false,
+        maxAlternatives: 1,
+        requiresOnDeviceRecognition: true,
+      });
     },
 
     async stop(): Promise<SttResult> {

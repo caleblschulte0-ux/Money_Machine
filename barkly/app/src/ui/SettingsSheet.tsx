@@ -1,6 +1,11 @@
 /**
- * Settings — deliberately small: what Barkly remembers (with the delete-all
- * control the privacy posture requires), and which providers are live.
+ * Settings — what Barkly knows, remembers and has been taught, plus provider
+ * status and privacy controls. Learned tricks are visible and individually
+ * deletable: behavior should never become hidden state.
+ *
+ * Developer controls are compiled behind EXPO_PUBLIC_BARKLY_DEV=1. A normal
+ * production build has no UI path to grants/unlocks, even though the hook keeps
+ * the tooling available for explicitly configured development builds.
  */
 
 import React, { useState } from 'react';
@@ -11,6 +16,20 @@ import { MemoryState } from '../barkly/memory';
 import { BarklyStats } from '../barkly/types';
 import { Treasure } from '../world/stash';
 
+/**
+ * Dev tools are OPT-OUT, not opt-in.
+ *
+ * They were briefly gated behind EXPO_PUBLIC_BARKLY_DEV === '1', which meant
+ * an ordinary build had no way to reach the toggle at all — re-creating the
+ * exact soft-lock the operator asked to be rid of ("don't soft lock me out of
+ * stuff"). The concern behind that gate is real: a shipped App Store build
+ * should not carry a button that unlocks the whole game. So the concern is
+ * kept, and moved to where it belongs — the release build sets
+ * EXPO_PUBLIC_BARKLY_HIDE_DEV=1, and release-preflight REQUIRES it. Every
+ * other build, including the operator's, has the toggle.
+ */
+const DEV_TOOLS_VISIBLE = process.env.EXPO_PUBLIC_BARKLY_HIDE_DEV !== '1';
+
 interface Props {
   visible: boolean;
   onClose: () => void;
@@ -18,15 +37,12 @@ interface Props {
   stats: BarklyStats;
   stash: Treasure[];
   dialogueProviderName: string;
-  /** Which brain answered last, so an outage is visible rather than mysterious. */
   brain: { using: 'primary' | 'fallback'; breakerOpen: boolean; lastFailure?: string };
   modelConfigured: boolean;
-  /** Which link of the voice chain last made a sound, and whether he is muted. */
   voice: { route: 'barkly' | 'device' | 'silent' | null; muted: boolean };
   sttAvailable: boolean;
-  /** Remove one thing he knows, without wiping everything. */
+  /** Remove one learned fact/trick without wiping everything. */
   onForgetFact?: (id: string) => Promise<void>;
-  /** Dev mode: every level gate open, plus grants. */
   devMode: boolean;
   onSetDevMode: (on: boolean) => void;
   onGrantCoins: (n: number) => void;
@@ -36,8 +52,6 @@ interface Props {
 }
 
 function StatBar({ label, value, invert }: { label: string; value: number; invert?: boolean }) {
-  // For hunger, "full" is the good end — invert the display so full bars
-  // always mean "he's doing great".
   const shown = invert ? 100 - value : value;
   return (
     <View style={styles.statRow}>
@@ -79,28 +93,13 @@ export default function SettingsSheet(props: Props) {
     setWiping(false);
   };
 
-  const confirmForget = () => {
-    Alert.alert(
-      'Forget everything?',
-      "This permanently deletes Barkly's memory of you — conversations, facts, promises. He will start over.",
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Forget',
-          style: 'destructive',
-          onPress: doForget,
-        },
-      ],
-    );
-  };
-
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>Settings</Text>
-            <Pressable onPress={onClose} hitSlop={12}>
+            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close settings">
               <Text style={styles.close}>✕</Text>
             </Pressable>
           </View>
@@ -147,52 +146,44 @@ export default function SettingsSheet(props: Props) {
                       : 'not used yet'}
             </Text>
 
-            <Text style={styles.section}>Developer</Text>
-            <Pressable
-              style={[styles.devRow, devMode && styles.devRowOn]}
-              onPress={() => onSetDevMode(!devMode)}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: devMode }}
-              accessibilityLabel="Dev mode: unlock every area and shop item"
-            >
-              <View style={styles.devRowText}>
-                <Text style={styles.devTitle}>Dev mode</Text>
-                <Text style={styles.devBlurb}>
-                  Every area and shop item open, and everything free. Your real coins and level are
-                  untouched — turning it off puts you back exactly where you were.
-                </Text>
-              </View>
-              {/* Never colour alone: the state is a word, not just a tint. */}
-              <Text style={styles.devState}>{devMode ? 'ON' : 'off'}</Text>
-            </Pressable>
+            {DEV_TOOLS_VISIBLE && (
+              <>
+                <Text style={styles.section}>Developer</Text>
+                <Pressable
+                  style={[styles.devRow, devMode && styles.devRowOn]}
+                  onPress={() => onSetDevMode(!devMode)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: devMode }}
+                  accessibilityLabel="Dev mode: unlock every area and shop item"
+                >
+                  <View style={styles.devRowText}>
+                    <Text style={styles.devTitle}>Dev mode</Text>
+                    <Text style={styles.devBlurb}>
+                      Every area and shop item open, and everything free. Your real coins and level are
+                      untouched — turning it off puts you back exactly where you were.
+                    </Text>
+                  </View>
+                  <Text style={styles.devState}>{devMode ? 'ON' : 'off'}</Text>
+                </Pressable>
 
-            {devMode && (
-              <View style={styles.devGrants}>
-                <Pressable
-                  style={styles.grant}
-                  onPress={() => onGrantCoins(1000)}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.grantText}>+1000 coins</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.grant}
-                  onPress={() => onGrantLevel(7)}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.grantText}>Level 7</Text>
-                </Pressable>
-                <Pressable style={styles.grant} onPress={onGrantEverything} accessibilityRole="button">
-                  <Text style={styles.grantText}>Give me everything</Text>
-                </Pressable>
-              </View>
+                {devMode && (
+                  <View style={styles.devGrants}>
+                    <Pressable style={styles.grant} onPress={() => onGrantCoins(1000)} accessibilityRole="button">
+                      <Text style={styles.grantText}>+1000 coins</Text>
+                    </Pressable>
+                    <Pressable style={styles.grant} onPress={() => onGrantLevel(7)} accessibilityRole="button">
+                      <Text style={styles.grantText}>Level 7</Text>
+                    </Pressable>
+                    <Pressable style={styles.grant} onPress={onGrantEverything} accessibilityRole="button">
+                      <Text style={styles.grantText}>Give me everything</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </>
             )}
 
             <Text style={styles.section}>What Barkly knows about you</Text>
             {memory.facts.length === 0 && <Text style={styles.empty}>Nothing yet. Tell him your name.</Text>}
-            {/* Everything he has, not a summary - and each line individually
-                removable, so correcting one wrong thing does not cost you the
-                whole relationship. */}
             {memory.facts.map((f) => (
               <View key={f.id} style={styles.factRow}>
                 <Text style={styles.factText}>
@@ -205,6 +196,29 @@ export default function SettingsSheet(props: Props) {
                     onPress={() => void onForgetFact(f.id)}
                     accessibilityRole="button"
                     accessibilityLabel={`Make Barkly forget: ${f.key.replace(/_/g, ' ')} ${f.value}`}
+                  >
+                    <Text style={styles.factForget}>forget</Text>
+                  </Pressable>
+                )}
+              </View>
+            ))}
+
+            <Text style={styles.section}>Tricks you taught Barkly</Text>
+            {memory.trainingRules.length === 0 && (
+              <Text style={styles.empty}>None yet. Try: “When I say intruder alert, act terrified.”</Text>
+            )}
+            {memory.trainingRules.map((rule) => (
+              <View key={rule.id} style={styles.factRow}>
+                <Text style={styles.factText}>
+                  • “{rule.cue}” → {rule.instruction}
+                  {rule.timesTriggered > 0 ? ` · used ${rule.timesTriggered}×` : ''}
+                </Text>
+                {onForgetFact && (
+                  <Pressable
+                    hitSlop={10}
+                    onPress={() => void onForgetFact(rule.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Make Barkly forget the trick ${rule.cue}`}
                   >
                     <Text style={styles.factForget}>forget</Text>
                   </Pressable>
@@ -227,11 +241,7 @@ export default function SettingsSheet(props: Props) {
               <Text style={styles.forgetText}>{wiping ? 'Forgetting…' : 'Forget everything'}</Text>
             </Pressable>
 
-            <Pressable
-              style={styles.parents}
-              onPress={() => setPrivacyOpen(true)}
-              accessibilityRole="button"
-            >
+            <Pressable style={styles.parents} onPress={() => setPrivacyOpen(true)} accessibilityRole="button">
               <Text style={styles.parentsText}>For parents: microphone, data and deletion</Text>
             </Pressable>
 
@@ -313,12 +323,7 @@ const styles = StyleSheet.create({
   devBlurb: { fontSize: 13, lineHeight: 19, color: '#7A6A55', marginTop: 3 },
   devState: { fontSize: 13, fontWeight: '800', color: '#8A6B1E' },
   devGrants: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  grant: {
-    backgroundColor: '#EDE1C8',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
+  grant: { backgroundColor: '#EDE1C8', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
   grantText: { fontSize: 13, fontWeight: '700', color: '#5C4F3E' },
   parents: {
     marginTop: 10,

@@ -1,10 +1,6 @@
 /**
- * The Barkly interaction layer — the glue hook the UI talks to.
- *
- * Owns: the state machine snapshot (persisted), memory, providers, the
- * talk-flow orchestration (listen → transcribe → think → speak → settle),
- * and the settle timers for transient emotional beats. UI components stay
- * dumb: they render the snapshot and dispatch intents.
+ * Barkly interaction layer: state, memory, conversation, voice, world and the
+ * relationship that emerges from all of it.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -12,22 +8,36 @@ import { AppState } from 'react-native';
 
 import { DialogueEngine } from '../barkly/dialogue';
 import {
+  adjustSocialBond,
   CharacterState,
   expireCharacter,
   freshCharacter,
   INITIATIVE_COOLDOWN_MS,
   noteInitiative,
+  noteSocialChoice,
   pickInitiative,
   withFriend,
   withGrievance,
   withTreasure,
 } from '../barkly/character';
+import { deriveSocialEncounter, SocialEncounter } from '../barkly/encounters';
 import { nameFromFacts, welcomeBack } from '../barkly/greetings';
 import { Mishap, mishapLine } from '../barkly/mishaps';
+import { buildRelationshipProfile, RelationshipProfile } from '../barkly/relationship';
+import { looksLikeTrainingInstruction } from '../barkly/training';
+import {
+  AdventureEvent,
+  AdventureState,
+  adventureDay,
+  createAdventure,
+  PLAN_REWARD,
+  progressAdventure,
+} from '../game/adventure';
 import {
   areaUnlocked,
   buy as buyItem,
   claimDaily,
+  consume as consumeItem,
   earn,
   EarnKind,
   equip as equipItem,
@@ -39,6 +49,7 @@ import {
   grantEverything,
   grantLevel,
   levelFor,
+  STORE,
   unlockedAt,
   Wallet,
 } from '../game/progression';
@@ -66,7 +77,7 @@ import {
   isTransient,
   reduce,
 } from '../barkly/state';
-import { BarklyEvent, BarklySnapshot, BodyAction, isBusy } from '../barkly/types';
+import { BarklyEvent, BarklySnapshot, BodyAction, isBusy, RoutineBeat } from '../barkly/types';
 import { configureAudioSession } from '../providers/tts/barklyVoiceTts';
 import { createVoiceEngine } from '../audio/voiceEngine';
 import { loadDeviceId, resetDeviceId } from '../providers/device';
@@ -87,6 +98,7 @@ const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
 const ONBOARDING_KEY = profileKey(DEFAULT_PROFILE, 'onboarding-v1');
 const WALLET_KEY = profileKey(DEFAULT_PROFILE, 'wallet-v1');
 const DEV_KEY = profileKey(DEFAULT_PROFILE, 'dev-v1');
+const ADVENTURE_KEY = profileKey(DEFAULT_PROFILE, 'adventure-v1');
 
 /** Which play routine ran, so the stage can animate the matching one. */
 export type PlayRoutine = 'ball' | 'tug' | 'none';
@@ -98,92 +110,94 @@ export interface Exchange {
 
 export interface BarklyController {
   snapshot: BarklySnapshot;
-  /** Body commands the renderer should express right now. */
   actions: BodyAction[];
-  /** Latest completed exchange, for on-screen captions. */
   lastExchange: Exchange | null;
   partialTranscript: string;
   error: string | null;
-  busy: boolean; // capturing/thinking/speaking — talk button disabled
+  busy: boolean;
   sttAvailable: boolean;
   dialogueProviderName: string;
-  /** Which brain answered last, and why — surfaced in Settings. */
   dialogueStatus: () => DialogueStatus;
-  /** False in a build with no model configured at all (scripted-only demo). */
   modelConfigured: boolean;
-  /** Set when Barkly has dropped to his offline brain; his own words for it. */
   degraded: string | null;
   dismissDegraded(): void;
-  /** Coins, XP, what he owns and what he is wearing. */
+
   wallet: Wallet;
   level: number;
-  /** A short-lived toast after earning — a moment, not a banner. */
   reward: { coins: number; xp: number; note?: string } | null;
-  /** Buy from the store; returns what he says about it either way. */
   buy(itemId: string): { ok: boolean; line: string };
   equip(itemId: string): void;
-  /** False for a place he has not earned yet. */
   isUnlocked(area: string): boolean;
-  /** Tint of the collar he is wearing, or null for the canon brown leather. */
   collarColor: string | null;
   /** Home items currently out in the room — several at once, by design. */
   placedHome: string[];
   hasHome(itemId: string): boolean;
   /** The toy he is holding, if any — it drives what "play" actually does. */
   toy: { id: string; name: string; icon: string } | null;
+
+  /** The legible answer to "what kind of Barkly did I create?" */
+  relationship: RelationshipProfile;
+  /** Three personalized things Barkly wants to do this session/day. */
+  adventure: AdventureState | null;
+
   /** Every level gate open. Off by default; never fabricates progress. */
   devMode: boolean;
   setDevMode(on: boolean): void;
-  /** Dev grants: top up, jump a level, hand over one of everything. */
   devGrantCoins(n: number): void;
   devGrantLevel(n: number): void;
   devGrantEverything(): void;
-  /** Muted Barkly still takes the right amount of time — quiet, not broken. */
+
   muted: boolean;
   toggleMuted(): void;
-  /** Which link of the voice chain last made the sound. */
   voiceRoute: 'barkly' | 'device' | 'silent' | null;
-  /** undefined until storage has been read — render nothing rather than flash. */
   onboarding: OnboardingState | undefined;
   advanceOnboarding(result: ReturnType<typeof advanceOnboarding>): void;
 
   startTalk(): Promise<void>;
   stopTalk(): Promise<void>;
   cancelTalk(): Promise<void>;
-  /** Keyboard fallback (Expo Go, or mic unavailable): same brain path, typed input. */
   submitText(text: string): Promise<void>;
 
   /** All of these route through the one speaking lifecycle; they no-op while busy. */
-  feed(): Promise<void>;
+  /** Optional item id means use a purchased pantry treat instead of the bowl. */
+  feed(itemId?: string): Promise<void>;
   play(): Promise<PlayRoutine>;
   sleepToggle(): Promise<void>;
-  /** User tapped Barkly — a pet/stroke. */
   pet(): void;
 
-  /** Where Barkly is, and travel. */
   location: LocationId;
   goTo(loc: LocationId): void;
-  /** Greet another dog; returns false if he's mid-conversation. */
   npcTalk(id: NpcId): boolean;
-  /** The other dog's active speech line, shown over that NPC. */
   npcBubble: { id: NpcId; line: string } | null;
-
-  /** Dig at the park; resolves with what he found (null if he's busy). */
+  /** A choice moment generated from the relationship history, when one is active. */
+  activeEncounter: SocialEncounter | null;
+  resolveEncounter(choiceId: string): Promise<void>;
+  dismissEncounter(): void;
   dig(): Promise<Treasure | null>;
-  /** Everything he's dug up so far. */
   stashItems: Treasure[];
-  /** Current idle thought, if his mind is wandering. */
   thought: string | null;
 
   memorySnapshot(): MemoryState;
-  /** Remove one thing he knows, without wiping the whole relationship. */
   forgetFact(id: string): Promise<void>;
   forgetEverything(): Promise<void>;
 }
 
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function treatLine(itemId: string): string {
+  switch (itemId) {
+    case 'treat_steak':
+      return 'STEAK? Okay. Nobody move. I need to experience this correctly.';
+    case 'treat_cheese':
+      return 'Cheese. See, this is why I keep you around.';
+    case 'treat_biscuit':
+      return 'Biscuit. Classic. Hand it over.';
+    default:
+      return 'Correct. Food.';
+  }
+}
+
 export function useBarkly(): BarklyController {
-  // The resilient dialogue provider reports when it drops to the offline
-  // Barkly; the UI says so once, in his voice, rather than silently degrading.
   const [degraded, setDegraded] = useState<string | null>(null);
   const providers = useMemo(
     () => createProviders({ onDialogueFallback: (err) => setDegraded(err.barklyLine) }),
@@ -197,76 +211,32 @@ export function useBarkly(): BarklyController {
   const [lastExchange, setLastExchange] = useState<Exchange | null>(null);
   const [partialTranscript, setPartialTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
-  /**
-   * Everything a child can see about a failure goes through here, so a raw
-   * native message can never reach the screen and a repeated failure does not
-   * repeat the same sentence.
-   */
   const lastMishap = useRef<string | null>(null);
   const warnedUnwritable = useRef(false);
-  // Memory lives outside React state. This counter exists only so that
-  // changing it re-renders the hook's consumer, which re-reads
-  // memorySnapshot() during render and redraws the Settings list. Nothing
-  // reads the number itself, so it is not on the public controller.
-  const [, setMemoryVersion] = useState(0);
-  /**
-   * Credit an action. `useful` is the anti-farming rule: feeding a full dog
-   * or playing with an exhausted one pays nothing, because tapping a button
-   * at a bored animal is not care.
-   */
+  const [memoryVersion, setMemoryVersion] = useState(0);
+  const [bootReady, setBootReady] = useState(false);
+
   /** Whether he may go somewhere. The tab and the handler both ask this. */
   const canGo = useCallback(
     (area: string) => areaUnlocked(area, walletRef.current.xp, devRef.current),
     [],
   );
 
-  const credit = useCallback((kind: EarnKind, useful = true) => {
-    setWallet((w) => {
-      const result = earn(w, kind, useful);
-      if (result.gained.coins === 0 && result.gained.xp === 0) return w;
-      walletRef.current = result.wallet;
-      const note = result.leveledTo
-        ? unlockedAt(result.leveledTo)[0]?.line ?? `Level ${result.leveledTo}.`
-        : undefined;
-      setReward({ ...result.gained, note });
-      if (result.leveledTo) {
-        // He announces what just opened up, through the normal speaking path.
-        const unlocked = unlockedAt(result.leveledTo);
-        if (unlocked.length > 0) setPendingGreeting(unlocked[0].line);
-      }
-      return result.wallet;
-    });
-  }, []);
-
-  const sayMishap = useCallback((kind: Mishap) => {
-    const line = mishapLine(kind, lastMishap.current);
-    lastMishap.current = line;
-    setError(line);
-  }, []);
   const [busy, setBusy] = useState(false);
   const [sttAvailable, setSttAvailable] = useState(false);
   const [location, setLocation] = useState<LocationId>('home');
   const [npcBubble, setNpcBubble] = useState<{ id: NpcId; line: string } | null>(null);
+  const [activeEncounter, setActiveEncounter] = useState<SocialEncounter | null>(null);
   const npcLineCounter = useRef(0);
   const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastNpcCredit = useRef<Partial<Record<NpcId, number>>>({});
   const stash = useMemo(() => new Stash(asyncStorageStore, DEFAULT_PROFILE), []);
 
-  // The single audio lifecycle: real voice, device voice, silent-but-timed.
   const [muted, setMutedState] = useState(false);
-  // undefined = we have not read storage yet, so nothing renders and a
-  // returning child never sees a flash of the first-launch screen.
   const [onboarding, setOnboarding] = useState<OnboardingState | undefined>(undefined);
-  // Coins, XP, the shop and what he is wearing.
   const [wallet, setWallet] = useState<Wallet>(freshWallet);
   const walletRef = useRef(wallet);
-  /** Toast for a level-up or an unlock — a moment, not a number changing. */
   const [reward, setReward] = useState<{ coins: number; xp: number; note?: string } | null>(null);
-  /**
-   * Dev mode. Off by default, persisted, and it opens every level gate — the
-   * person building this should never be locked out of his own app waiting to
-   * grind past his own curve. Can also be forced on for a build with
-   * EXPO_PUBLIC_BARKLY_DEV=1.
-   */
   const [devMode, setDevModeState] = useState(process.env.EXPO_PUBLIC_BARKLY_DEV === '1');
   const devRef = useRef(devMode);
   const voiceEngine = useMemo(
@@ -279,12 +249,37 @@ export function useBarkly(): BarklyController {
   const [character, setCharacter] = useState<CharacterState>(() => freshCharacter());
   const characterRef = useRef(character);
   characterRef.current = character;
+  const [adventure, setAdventure] = useState<AdventureState | null>(null);
+  const adventureRef = useRef<AdventureState | null>(null);
   const thoughtSeed = useRef(Math.floor(Math.random() * 1000));
 
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const permissionGranted = useRef(false);
+
+  const credit = useCallback((kind: EarnKind, useful = true, note?: string) => {
+    setWallet((w) => {
+      const result = earn(w, kind, useful);
+      if (result.gained.coins === 0 && result.gained.xp === 0) return w;
+      walletRef.current = result.wallet;
+      const rewardNote = result.leveledTo
+        ? unlockedAt(result.leveledTo)[0]?.line ?? `Level ${result.leveledTo}.`
+        : note;
+      setReward({ ...result.gained, note: rewardNote });
+      if (result.leveledTo) {
+        const unlocked = unlockedAt(result.leveledTo);
+        if (unlocked.length > 0) setPendingGreeting(unlocked[0].line);
+      }
+      return result.wallet;
+    });
+  }, []);
+
+  const sayMishap = useCallback((kind: Mishap) => {
+    const line = mishapLine(kind, lastMishap.current);
+    lastMishap.current = line;
+    setError(line);
+  }, []);
 
   const dispatch = useCallback((event: BarklyEvent) => {
     setSnapshot((prev) => {
@@ -294,71 +289,110 @@ export function useBarkly(): BarklyController {
     });
   }, []);
 
-  // --- Load persisted state, apply offline decay, probe STT availability ---
+  const makePlan = useCallback((now: number): AdventureState =>
+    createAdventure({
+      character: characterRef.current,
+      memory: memory.snapshot(),
+      xp: walletRef.current.xp,
+      now,
+    }), [memory]);
+
+  const progressPlan = useCallback((event: AdventureEvent) => {
+    const current = adventureRef.current;
+    if (!current) return;
+    const result = progressAdventure(current, event, Date.now());
+    if (!result.changed) return;
+
+    let next = result.state;
+    if (result.justCompleted && !next.rewarded) {
+      next = { ...next, rewarded: true };
+      setWallet((w) => {
+        const before = levelFor(w.xp);
+        const nextWallet: Wallet = {
+          ...w,
+          coins: w.coins + PLAN_REWARD.coins,
+          xp: w.xp + PLAN_REWARD.xp,
+        };
+        walletRef.current = nextWallet;
+        const after = levelFor(nextWallet.xp);
+        const leveled = after > before;
+        const note = leveled
+          ? unlockedAt(after)[0]?.line ?? `Level ${after}.`
+          : 'plan complete';
+        setReward({ ...PLAN_REWARD, note });
+        if (leveled) {
+          const unlocked = unlockedAt(after);
+          if (unlocked.length > 0) setPendingGreeting(unlocked[0].line);
+        } else {
+          setPendingGreeting('Plan complete. Disturbingly productive. We should probably do something pointless now.');
+        }
+        return nextWallet;
+      });
+    }
+
+    adventureRef.current = next;
+    setAdventure(next);
+    asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
+  }, []);
+
+  // --------------------------------------------------------------- loading
   useEffect(() => {
     let cancelled = false;
     (async () => {
       let hoursAway = 0;
-      // Anything unreadable is not silently shrugged off: Barkly says he has
-      // forgotten something, because from the child's side that is the truth.
       let lost = false;
       try {
         const raw = await asyncStorageStore.get(SNAPSHOT_KEY);
         if (!cancelled && raw) {
           const saved = JSON.parse(raw) as BarklySnapshot;
           hoursAway = (Date.now() - saved.updatedAt) / 3_600_000;
-          const restored = reduce(
-            { ...saved, state: 'idle' },
-            { type: 'TICK', now: Date.now() },
-          );
+          const restored = reduce({ ...saved, state: 'idle' }, { type: 'TICK', now: Date.now() });
           snapshotRef.current = restored;
           setSnapshot(restored);
         }
       } catch {
-        lost = true; // corrupt snapshot: keep the fresh one
+        lost = true;
       }
+
       let mem: MemoryState;
       try {
         mem = await memory.load();
       } catch {
-        // A storage layer that throws must not strand the app half-booted.
         mem = memory.snapshot();
         lost = true;
       }
-      // Away a while? Barkly noticed. Greet without a model call so it's
-      // instant, then speak it (may be muted by autoplay policies — fine).
+      setMemoryVersion((v) => v + 1);
+
       if (!cancelled && hoursAway >= 6) {
-        const line = welcomeBack(nameFromFacts(mem.userFacts), Math.floor(hoursAway));
-        // Queued rather than awaited: loading must not block on audio.
-        if (!cancelled) setPendingGreeting(line);
+        setPendingGreeting(welcomeBack(nameFromFacts(mem.userFacts), Math.floor(hoursAway)));
       }
+
       try {
         const savedLoc = await asyncStorageStore.get(LOCATION_KEY);
         if (!cancelled && savedLoc && savedLoc in LOCATIONS) setLocation(savedLoc as LocationId);
       } catch {
-        lost = true; // keep home
+        lost = true;
       }
       try {
         const items = await stash.load();
         if (!cancelled) setStashItems(items);
       } catch {
-        lost = true; // he keeps digging; the old treasures are gone
+        lost = true;
       }
       try {
         const rawChar = await asyncStorageStore.get(CHARACTER_KEY);
         if (!cancelled && rawChar) {
-          setCharacter(expireCharacter(JSON.parse(rawChar) as CharacterState, Date.now()));
+          const restoredCharacter = expireCharacter(JSON.parse(rawChar) as CharacterState, Date.now());
+          characterRef.current = restoredCharacter;
+          setCharacter(restoredCharacter);
         }
       } catch {
-        lost = true; // keep a fresh character
+        lost = true;
       }
-      // First launch? Read this before anything renders.
       try {
         const done = await asyncStorageStore.get(ONBOARDING_KEY);
         if (!cancelled) setOnboarding(done === 'done' ? { step: 'done', micOffered: true } : freshOnboarding());
       } catch {
-        // Unreadable storage: treat as a returning child rather than making
-        // them do the introduction again on every launch.
         if (!cancelled) setOnboarding({ step: 'done', micOffered: true });
       }
       try {
@@ -367,10 +401,7 @@ export function useBarkly(): BarklyController {
           setDevModeState(true);
           devRef.current = true;
         }
-      } catch {
-        // stays off
-      }
-      // Coins and levels, plus the once-a-day bonus for showing up.
+      } catch {}
       try {
         const rawWallet = await asyncStorageStore.get(WALLET_KEY);
         const loaded = rawWallet ? (JSON.parse(rawWallet) as Wallet) : freshWallet();
@@ -383,35 +414,55 @@ export function useBarkly(): BarklyController {
       } catch {
         lost = true;
       }
-      // Mute is a parent's setting: it survives a relaunch.
       try {
         const savedMute = await asyncStorageStore.get(MUTE_KEY);
         if (!cancelled && savedMute === '1') {
           setMutedState(true);
           voiceEngine.setMuted(true);
         }
-      } catch {
-        // keep him audible
-      }
-      // Anonymous per-install id so the backend can rate-limit and budget.
+      } catch {}
+
       await loadDeviceId(asyncStorageStore);
       let available = false;
       try {
         available = await providers.stt.isAvailable();
-      } catch {
-        available = false; // no recognition here: the UI offers typing instead
-      }
+      } catch {}
       if (!cancelled) {
         setSttAvailable(available);
         if (lost) sayMishap('memory_lost');
+        setBootReady(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [memory, providers, sayMishap, voiceEngine]);
+  }, [memory, providers, sayMishap, stash, voiceEngine]);
 
-  // --- Idle life: occasional small gestures so he never feels frozen ---
+  useEffect(() => {
+    if (!bootReady) return;
+    let cancelled = false;
+    (async () => {
+      const now = Date.now();
+      let next: AdventureState | null = null;
+      try {
+        const raw = await asyncStorageStore.get(ADVENTURE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as AdventureState;
+          if (parsed.day === adventureDay(now) && Array.isArray(parsed.goals)) next = parsed;
+        }
+      } catch {}
+      if (!next) next = makePlan(now);
+      if (cancelled) return;
+      adventureRef.current = next;
+      setAdventure(next);
+      asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bootReady, makePlan]);
+
+  // ----------------------------------------------------------- ambient life
   const [idleAction, setIdleAction] = useState<BodyAction | null>(null);
   useEffect(() => {
     const IDLE_STATES = ['idle', 'happy', 'hungry'];
@@ -435,94 +486,70 @@ export function useBarkly(): BarklyController {
     };
   }, []);
 
-  // --- Persist snapshot and character on change ---
   useEffect(() => {
     asyncStorageStore.set(SNAPSHOT_KEY, JSON.stringify(snapshot)).catch(() => {
-      // A store that will not accept writes means nothing from this session
-      // survives. Say so once rather than losing it quietly.
       if (!warnedUnwritable.current) {
         warnedUnwritable.current = true;
         sayMishap('memory_unwritable');
       }
     });
   }, [snapshot, sayMishap]);
-
   useEffect(() => {
     asyncStorageStore.set(CHARACTER_KEY, JSON.stringify(character)).catch(() => {});
   }, [character]);
-
   useEffect(() => {
     walletRef.current = wallet;
     asyncStorageStore.set(WALLET_KEY, JSON.stringify(wallet)).catch(() => {});
   }, [wallet]);
-
   useEffect(() => {
     devRef.current = devMode;
     asyncStorageStore.set(DEV_KEY, devMode ? '1' : '0').catch(() => {});
   }, [devMode]);
-
-  // The reward toast is a beat, not a banner.
   useEffect(() => {
     if (!reward) return;
-    const t = setTimeout(() => setReward(null), 2600);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setReward(null), 2600);
+    return () => clearTimeout(timer);
   }, [reward]);
 
-  // --- Wall-clock decay when app returns to foreground ---
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') {
-        dispatch({ type: 'TICK', now: Date.now() });
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        const now = Date.now();
+        dispatch({ type: 'TICK', now });
+        const currentPlan = adventureRef.current;
+        if (currentPlan && currentPlan.day !== adventureDay(now)) {
+          const next = makePlan(now);
+          adventureRef.current = next;
+          setAdventure(next);
+          asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
+        }
       } else {
-        // Nobody wants a dog talking from a pocket.
         voiceEngine.onBackground();
       }
     });
     return () => sub.remove();
-  }, [dispatch, voiceEngine]);
+  }, [dispatch, makePlan, voiceEngine]);
 
-  // --- Audio session, once ---
   useEffect(() => {
     void configureAudioSession();
     return () => voiceEngine.stop();
   }, [voiceEngine]);
 
-  // --- Transient states settle back to baseline after their beat ---
   useEffect(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
     if (isTransient(snapshot.state)) {
-      // currentSettleMs honors a caller-supplied REACTION durationMs, falling
-      // back to the per-state default.
       settleTimer.current = setTimeout(() => dispatch({ type: 'SETTLE' }), currentSettleMs(snapshot));
     }
     return () => {
       if (settleTimer.current) clearTimeout(settleTimer.current);
     };
-  }, [snapshot.state, dispatch]);
+  }, [snapshot, dispatch]);
 
-  /**
-   * THE ONE SPEAKING LIFECYCLE.
-   *
-   * Every audible Barkly utterance — AI replies, NPC banter, treasure
-   * reactions, welcome-backs, feeding and fetch lines — goes through here:
-   *
-   *   caption + body actions -> SPEAK_START -> TTS -> SPEAK_END -> reaction
-   *
-   * Nothing else may start audio. That rule, plus the voice engine owning
-   * one utterance at a time, is what keeps audio and animation from ever
-   * disagreeing about what Barkly is doing.
-   */
+  // -------------------------------------------------------------- speaking
   const speak = useCallback(
     async (
       text: string,
-      opts: {
-        /** Shown above the bubble as what the user said, when relevant. */
-        userText?: string;
-        /** Body commands to hold while speaking. */
-        actions?: BodyAction[];
-        /** Event dispatched once speech completes (stats + emotional beat). */
-        after?: BarklyEvent;
-      } = {},
+      opts: { userText?: string; actions?: BodyAction[]; after?: BarklyEvent } = {},
     ): Promise<void> => {
       const line = text.trim();
       if (!line) return;
@@ -530,12 +557,8 @@ export function useBarkly(): BarklyController {
       setReplyActions(opts.actions ?? []);
       dispatch({ type: 'SPEAK_START' });
       try {
-        // The engine never throws and always returns within a deadline, so
-        // SPEAK_END below cannot be stranded.
         await voiceEngine.speak(line);
-      } catch {
-        // A silent Barkly beats a Barkly stuck mid-sentence.
-      }
+      } catch {}
       dispatch({ type: 'SPEAK_END' });
       setReplyActions([]);
       if (opts.after) dispatch(opts.after);
@@ -543,15 +566,28 @@ export function useBarkly(): BarklyController {
     [dispatch, voiceEngine],
   );
 
-  // A welcome-back queued during load speaks once the hook is live, through
-  // the same lifecycle as everything else.
+  const performRoutine = useCallback(
+    async (opening: string, userText: string, beats: RoutineBeat[]): Promise<void> => {
+      await speak(opening, { userText, actions: ['EAR_PERK', 'TAIL_WAG'] });
+      for (const beat of beats) {
+        await pause(120);
+        await speak(beat.speech, {
+          userText,
+          actions: beat.actions,
+          after: beat.reaction ? { type: 'REACTION', state: beat.reaction } : undefined,
+        });
+      }
+    },
+    [speak],
+  );
+
   useEffect(() => {
     if (!pendingGreeting) return;
     setPendingGreeting(null);
     speak(pendingGreeting, { actions: ['TAIL_WAG'] }).catch(() => {});
   }, [pendingGreeting, speak]);
 
-  // --- World context for the dialogue prompt: where he is, who's around ---
+  // --------------------------------------------------------------- world
   const locationRef = useRef(location);
   locationRef.current = location;
   const worldContext = useCallback(() => {
@@ -567,7 +603,6 @@ export function useBarkly(): BarklyController {
     };
   }, [stash]);
 
-  // --- idle thoughts: his mind wanders every so often ---
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
@@ -590,11 +625,6 @@ export function useBarkly(): BarklyController {
     };
   }, []);
 
-  // --- Initiative: Barkly starts conversations, not just answers them ---
-  //
-  // Driven entirely by his drives, memory and character state (see
-  // character.ts) — never a random popup table. Cooldowned, skipped while he
-  // is busy or asleep, and routed through the same speaking lifecycle.
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
@@ -603,7 +633,7 @@ export function useBarkly(): BarklyController {
         if (!alive) return;
         const snap = snapshotRef.current;
         const quiet = !isBusy(snap.state) && snap.state !== 'sleepy' && snap.state !== 'eating';
-        if (quiet) {
+        if (quiet && !activeEncounter) {
           const mem = memory.snapshot();
           const relevant = memory.relevant();
           const loc = LOCATIONS[locationRef.current];
@@ -630,14 +660,17 @@ export function useBarkly(): BarklyController {
       alive = false;
       clearTimeout(timer);
     };
-  }, [memory, speak]);
+  }, [activeEncounter, memory, speak]);
 
-  // --- The core exchange: text in → Barkly speaks + reacts ---
+  // ---------------------------------------------------------- conversation
   const runExchange = useCallback(
     async (userText: string) => {
       setBusy(true);
       setError(null);
-      dispatch({ type: 'TALK_CAPTURED' }); // thinking
+      dispatch({ type: 'TALK_CAPTURED' });
+      const trainedBefore = !looksLikeTrainingInstruction(userText)
+        ? memory.matchTraining(userText)
+        : undefined;
       try {
         const { reply } = await engine.converse(
           userText,
@@ -645,21 +678,27 @@ export function useBarkly(): BarklyController {
           worldContext(),
           characterRef.current,
         );
+        setMemoryVersion((v) => v + 1);
         if (!reply.speech) {
           dispatch({ type: 'TALK_FAILED' });
           return;
         }
-        await speak(reply.speech, {
-          userText,
-          actions: reply.actions,
-          // A model-chosen reaction can only ever be a ReactionState.
-          after: reply.reaction ? { type: 'REACTION', state: reply.reaction } : undefined,
-        });
+        if ((reply.routine?.length ?? 0) >= 2) {
+          await performRoutine(reply.speech, userText, reply.routine!);
+        } else {
+          await speak(reply.speech, {
+            userText,
+            actions: reply.actions,
+            after: reply.reaction ? { type: 'REACTION', state: reply.reaction } : undefined,
+          });
+        }
         credit('talk');
+        progressPlan({ kind: 'talk' });
+        if (trainedBefore) {
+          progressPlan({ kind: 'routine', target: trainedBefore.normalizedCue });
+        }
       } catch (e) {
         dispatch({ type: 'TALK_FAILED' });
-        // Never an HTTP status, never a stack trace. A child gets a dog who
-        // did not quite catch that.
         setError(barklyLineFor(e));
         if (e instanceof DialogueError && !e.recoverable) setDegraded(e.barklyLine);
       } finally {
@@ -667,11 +706,11 @@ export function useBarkly(): BarklyController {
         setPartialTranscript('');
       }
     },
-    [credit, dispatch, engine, speak, worldContext],
+    [credit, dispatch, engine, memory, performRoutine, progressPlan, speak, worldContext],
   );
 
   const startTalk = useCallback(async () => {
-    if (busy) return;
+    if (busy || activeEncounter) return;
     setError(null);
     if (!permissionGranted.current) {
       try {
@@ -689,11 +728,10 @@ export function useBarkly(): BarklyController {
     try {
       await providers.stt.start({ onPartial: setPartialTranscript });
     } catch {
-      // A native speech-engine message is not something a child can act on.
       dispatch({ type: 'TALK_FAILED' });
       sayMishap('mic_broken');
     }
-  }, [busy, dispatch, providers, sayMishap]);
+  }, [activeEncounter, busy, dispatch, providers, sayMishap]);
 
   const stopTalk = useCallback(async () => {
     if (snapshotRef.current.state !== 'listening') return;
@@ -701,8 +739,6 @@ export function useBarkly(): BarklyController {
     try {
       ({ transcript } = await providers.stt.stop());
     } catch {
-      // Capture died between start and stop. Leaving him in 'listening'
-      // forever is the real failure here, so always come back to idle.
       dispatch({ type: 'TALK_FAILED' });
       setPartialTranscript('');
       sayMishap('mic_broken');
@@ -720,19 +756,17 @@ export function useBarkly(): BarklyController {
   const cancelTalk = useCallback(async () => {
     try {
       await providers.stt.cancel();
-    } catch {
-      // Cancelling is best-effort; getting back to idle is not.
-    }
+    } catch {}
     dispatch({ type: 'TALK_FAILED' });
     setPartialTranscript('');
   }, [dispatch, providers]);
 
   const submitText = useCallback(
     async (text: string) => {
-      if (busy || !text.trim()) return;
+      if (busy || activeEncounter || !text.trim()) return;
       await runExchange(text.trim());
     },
-    [busy, runExchange],
+    [activeEncounter, busy, runExchange],
   );
 
   const goTo = useCallback((loc: LocationId) => {
@@ -740,48 +774,135 @@ export function useBarkly(): BarklyController {
     // without the dev flag, so in dev mode the tab rendered open and then
     // silently refused to move him — the same soft-lock in a new disguise.
     if (!canGo(loc)) return;
+    const moved = loc !== locationRef.current;
     setLocation(loc);
+    locationRef.current = loc;
     setNpcBubble(null);
-    setLastExchange(null); // conversations don't follow him down the street
+    setActiveEncounter(null);
+    setLastExchange(null);
     asyncStorageStore.set(LOCATION_KEY, loc).catch(() => {});
-  }, [canGo]);
+    if (moved) progressPlan({ kind: 'travel', target: loc });
+  }, [canGo, progressPlan]);
 
   const npcTalk = useCallback(
     (id: NpcId): boolean => {
-      if (busy || isBusy(snapshotRef.current.state)) return false;
+      if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return false;
       const npc = NPCS[id];
+      progressPlan({ kind: 'npc', target: npc.name });
+      const current = characterRef.current.socialBonds?.[npc.name]?.encounters ?? 0;
+      const chapters = characterRef.current.socialChoices?.[npc.name] ?? 0;
+      const nextChoiceAt = 2 + chapters * 3;
+      if (current >= nextChoiceAt) {
+        setActiveEncounter(deriveSocialEncounter({
+          npcId: id,
+          character: characterRef.current,
+          memory: memory.snapshot(),
+        }));
+        return true;
+      }
+
       const i = npcLineCounter.current++ % npc.lines.length;
       setNpcBubble({ id, line: npc.lines[i] });
       if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
       npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 4500);
 
-      // Barkly's comeback goes through the same lifecycle as everything else;
-      // the SOCIAL event (stats + emotional beat) lands after he finishes.
       speak(npc.barklyLines[i], {
         actions: ['MOUTH_MOVE', 'EAR_PERK'],
         after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
       }).catch(() => {});
-      credit('friend');
+
+      const now = Date.now();
+      const lastPaid = lastNpcCredit.current[id] ?? 0;
+      const meaningful = now - lastPaid > 45_000;
+      if (meaningful) lastNpcCredit.current[id] = now;
+      credit('friend', meaningful);
 
       setCharacter((c) =>
         npc.relationship === 'rival'
-          ? withGrievance(c, npc.name, 'was being insufferable at the park', Date.now())
-          : withFriend(c, npc.name),
+          ? withGrievance(c, npc.name, 'was being insufferable at the park', now)
+          : withFriend(c, npc.name, now),
       );
 
       if (Math.random() < 0.3) {
         const mem = npc.memories[Math.floor(Math.random() * npc.memories.length)];
         memory
           .remember([], [mem], { where: LOCATIONS[locationRef.current].name, withWhom: [npc.name] })
+          .then(() => setMemoryVersion((v) => v + 1))
           .catch(() => {});
       }
       return true;
     },
-    [busy, credit, memory, speak],
+    [activeEncounter, busy, credit, memory, progressPlan, speak],
+  );
+
+  const resolveEncounter = useCallback(
+    async (choiceId: string): Promise<void> => {
+      const encounter = activeEncounter;
+      if (!encounter || busy) return;
+      const choice = encounter.choices.find((candidate) => candidate.id === choiceId);
+      if (!choice) return;
+
+      const npc = NPCS[encounter.npcId];
+      const now = Date.now();
+      setActiveEncounter(null);
+      setBusy(true);
+      setNpcBubble({ id: encounter.npcId, line: choice.npcReply });
+      if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+      npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 5200);
+
+      setCharacter((c) => {
+        let next = adjustSocialBond(c, npc.name, npc.relationship, choice.bondDelta, now);
+        next = noteSocialChoice(next, npc.name);
+        if (npc.relationship === 'friend') {
+          next = { ...next, favoriteFriend: npc.name };
+        } else if (choice.bondDelta > 0) {
+          next = { ...next, grievance: { who: npc.name, what: choice.memory, since: now } };
+        } else if (choice.bondDelta < 0 && next.grievance?.who === npc.name) {
+          const cooled = { ...next };
+          delete cooled.grievance;
+          next = cooled;
+        }
+        characterRef.current = next;
+        return next;
+      });
+
+      try {
+        await memory.remember([], [choice.memory], {
+          where: LOCATIONS[locationRef.current].name,
+          withWhom: [npc.name],
+        });
+        setMemoryVersion((v) => v + 1);
+
+        await speak(choice.barklyReply, {
+          actions: choice.actions,
+          after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
+        });
+
+        if (choice.routineCue) {
+          const learned = memory.matchTraining(choice.routineCue);
+          if (learned?.routine && learned.routine.length >= 2) {
+            await pause(150);
+            await performRoutine(learned.speech, '', learned.routine);
+          } else if (learned) {
+            await pause(150);
+            await speak(learned.speech, {
+              actions: learned.actions,
+              after: learned.reaction ? { type: 'REACTION', state: learned.reaction } : undefined,
+            });
+          }
+          if (learned) progressPlan({ kind: 'routine', target: learned.normalizedCue });
+        }
+        credit('friend', true, 'story moved');
+        progressPlan({ kind: 'npc', target: npc.name });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeEncounter, busy, credit, memory, performRoutine, progressPlan, speak],
   );
 
   const dig = useCallback(async (): Promise<Treasure | null> => {
-    if (busy || isBusy(snapshotRef.current.state)) return null;
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return null;
     const found = await stash.dig();
     setStashItems(stash.list());
     setCharacter((c) => withTreasure(c, found.name, Date.now()));
@@ -791,21 +912,55 @@ export function useBarkly(): BarklyController {
     });
     memory
       .remember([], [`Dug up ${found.name} at the park.`], { where: 'the park' })
+      .then(() => setMemoryVersion((v) => v + 1))
       .catch(() => {});
     credit('dig');
+    progressPlan({ kind: 'dig' });
     return found;
-  }, [busy, credit, memory, speak, stash]);
+  }, [activeEncounter, busy, credit, memory, progressPlan, speak, stash]);
 
-  // --- feeding, playing and waking also speak, through the same lifecycle ---
-  const feed = useCallback(async () => {
-    if (busy || isBusy(snapshotRef.current.state)) return;
+  const feed = useCallback(async (itemId?: string) => {
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
     const full = snapshotRef.current.stats.hunger < 12;
+
+    if (itemId) {
+      const item = STORE.find((candidate) => candidate.id === itemId && candidate.slot === 'treat');
+      if (!item) return;
+      if (full) {
+        await speak(`Save the ${item.name.toLowerCase()}. I am full enough to make a responsible decision, apparently.`, {
+          actions: ['HEAD_TILT'],
+        });
+        return;
+      }
+      const nextWallet = consumeItem(walletRef.current, item.id);
+      if (!nextWallet) {
+        await speak(`We're out of ${item.name.toLowerCase()}. This cupboard has betrayed me.`, { actions: ['LOOK_LEFT'] });
+        return;
+      }
+      walletRef.current = nextWallet;
+      setWallet(nextWallet);
+      await speak(treatLine(item.id), {
+        actions: ['MOUTH_MOVE', 'TAIL_WAG'],
+        after: { type: 'FEED' },
+      });
+      memory
+        .remember([], [`You gave Barkly ${item.name}. He considered this an important event.`], {
+          where: LOCATIONS[locationRef.current].name,
+        })
+        .then(() => setMemoryVersion((v) => v + 1))
+        .catch(() => {});
+      credit('feed', true, item.name.toLowerCase());
+      progressPlan({ kind: 'feed' });
+      return;
+    }
+
     await speak(pickLine(full ? FULL_LINES : FEED_LINES), {
       actions: ['MOUTH_MOVE'],
       after: { type: 'FEED' },
     });
-    credit('feed', !full); // feeding a full dog is farming, not care
-  }, [busy, credit, speak]);
+    credit('feed', !full);
+    if (!full) progressPlan({ kind: 'feed' });
+  }, [activeEncounter, busy, credit, memory, progressPlan, speak]);
 
   /**
    * Play, with whatever he actually owns.
@@ -813,11 +968,11 @@ export function useBarkly(): BarklyController {
    * It used to be one canned line and a stat bump wherever you were, which
    * read as a button that did nothing. Now it depends on the TOY: a ball is
    * thrown and chased, a rope is a tug he intends to win, and with nothing at
-   * all he improvises and complains about it. The routine name goes back to
-   * the caller so the room can animate the right one.
+   * all he improvises. The routine name goes back to the caller so the room
+   * can animate the right one.
    */
   const play = useCallback(async (): Promise<PlayRoutine> => {
-    if (busy || isBusy(snapshotRef.current.state)) return 'none';
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return 'none';
     const tired = snapshotRef.current.stats.energy < 15;
     if (tired) {
       await speak(pickLine(TIRED_LINES), { actions: ['SLEEP'], after: { type: 'PLAY' } });
@@ -839,38 +994,30 @@ export function useBarkly(): BarklyController {
       actions: routine === 'tug' ? ['MOUTH_MOVE', 'HEAD_TILT'] : ['MOUTH_MOVE', 'EXCITED'],
       after: { type: 'PLAY' },
     });
-    credit('play', true);
+    credit('play', true, toy ? 'favorite toy time' : undefined);
+    progressPlan({ kind: 'play' });
     return routine;
-  }, [busy, credit, speak]);
+  }, [activeEncounter, busy, credit, progressPlan, speak]);
 
   const sleepToggle = useCallback(async () => {
-    if (busy || isBusy(snapshotRef.current.state)) return;
+    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
     if (snapshotRef.current.state === 'sleepy') {
       await speak(pickLine(WAKE_LINES), { actions: ['MOUTH_MOVE'], after: { type: 'SLEEP_TOGGLE' } });
       return;
     }
-    dispatch({ type: 'SLEEP_TOGGLE' }); // going to sleep needs no commentary
-  }, [busy, dispatch, speak]);
+    dispatch({ type: 'SLEEP_TOGGLE' });
+  }, [activeEncounter, busy, dispatch, speak]);
 
-  /**
-   * One beat of the first-launch meeting. The pure part decided WHAT happened;
-   * this does the three things that touch the world: remember the name, raise
-   * the OS permission prompt, and let him say his first real line.
-   */
   const handleOnboarding = useCallback(
     (result: ReturnType<typeof advanceOnboarding>) => {
       setOnboarding(result.state);
-
       if (result.learnedName) {
-        // A real memory fact, not a local variable — so five minutes later he
-        // uses it unprompted and the whole premise lands.
         memory
           .remember([`name = ${result.learnedName}`], ['We met. I asked their name.'])
+          .then(() => setMemoryVersion((v) => v + 1))
           .catch(() => {});
       }
-
       if (result.askMicrophone) {
-        // Contextual: the OS prompt follows the sentence that asked for it.
         providers.stt
           .requestPermissions()
           .then((granted) => {
@@ -880,10 +1027,8 @@ export function useBarkly(): BarklyController {
             permissionGranted.current = false;
           });
       }
-
       if (result.finished) {
         asyncStorageStore.set(ONBOARDING_KEY, 'done').catch(() => {});
-        // The app never opens cold: he is mid-sentence when the room appears.
         setPendingGreeting(openingLine(result.state));
       }
     },
@@ -899,6 +1044,14 @@ export function useBarkly(): BarklyController {
     if (idleAction) merged.push(idleAction);
     return Array.from(new Set(merged));
   }, [snapshot.state, replyActions, idleAction]);
+
+  void memoryVersion;
+  const relationship = buildRelationshipProfile({
+    memory: memory.snapshot(),
+    stats: snapshot.stats,
+    stashCount: stashItems.length,
+    character,
+  });
 
   return {
     snapshot,
@@ -926,13 +1079,14 @@ export function useBarkly(): BarklyController {
     wallet,
     level: levelFor(wallet.xp),
     reward,
+    relationship,
+    adventure,
     buy: (itemId: string) => {
       const result = buyItem(walletRef.current, itemId, devRef.current);
       if (result.ok) {
         setWallet(result.wallet);
         walletRef.current = result.wallet;
       }
-      // Success or refusal, he says it out loud through the one lifecycle.
       speak(result.line, { actions: ['MOUTH_MOVE'] }).catch(() => {});
       return { ok: result.ok, line: result.line };
     },
@@ -982,6 +1136,9 @@ export function useBarkly(): BarklyController {
     goTo,
     npcTalk,
     npcBubble,
+    activeEncounter,
+    resolveEncounter,
+    dismissEncounter: () => setActiveEncounter(null),
     dig,
     stashItems,
     thought,
@@ -992,16 +1149,18 @@ export function useBarkly(): BarklyController {
     },
     forgetEverything: async () => {
       await memory.forgetAll();
+      setMemoryVersion((v) => v + 1);
       await stash.clear();
       setStashItems([]);
+      setActiveEncounter(null);
+      setAdventure(null);
+      adventureRef.current = null;
       setCharacter(freshCharacter());
       await asyncStorageStore.remove(CHARACTER_KEY);
+      await asyncStorageStore.remove(ADVENTURE_KEY);
       setLastExchange(null);
-      // A fresh install identity too - forgetting everything should not leave
-      // a stable id behind that the backend can still recognise.
       await resetDeviceId(asyncStorageStore);
       await loadDeviceId(asyncStorageStore);
-      // He has forgotten who you are, so he introduces himself again.
       await asyncStorageStore.remove(ONBOARDING_KEY);
       setOnboarding(freshOnboarding());
       const blank = freshWallet();

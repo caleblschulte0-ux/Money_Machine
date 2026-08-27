@@ -1,23 +1,19 @@
 /**
- * The dialogue engine — one conversation round, end to end:
+ * The dialogue engine — one conversation round, end to end.
  *
- *   transcript -> prompt (personality + mood + world + ranked memory)
- *   -> DialogueProvider -> parse reply -> merge memory -> BarklyReply
- *
- * The engine is provider-agnostic and platform-agnostic. Speech capture and
- * audio playback happen outside (useBarkly's speak() lifecycle) so this stays
- * testable and so audio is never triggered from two places.
+ * User-taught cues are checked BEFORE the provider. Learned tricks and
+ * multi-step routines therefore still work offline and cost no model call.
  */
 
 import { CharacterState } from './character';
 import { BarklyMemory } from './memory';
 import { buildSystemPrompt, parseReply, WorldContext } from './prompts';
+import { looksLikeTrainingInstruction, parseLocalTrainingInstruction } from './training';
 import { BarklyReply, BarklySnapshot } from './types';
 import { DialogueProvider } from '../providers/types';
 
 export interface ConverseResult {
   reply: BarklyReply;
-  /** Facts whose value changed this turn — "actually it's green now". */
   corrections: { key: string; from: string; to: string }[];
 }
 
@@ -42,9 +38,62 @@ export class DialogueEngine {
       actions: [],
       newUserFacts: [],
       newBarklyMemories: [],
+      learnedTraining: [],
     };
     const text = userText.trim();
     if (!text) return { reply: empty, corrections: [] };
+
+    const isTeaching = looksLikeTrainingInstruction(text);
+
+    // A teaching sentence may contain an existing cue while correcting it, so
+    // never fire the old trick in the middle of teaching the new version.
+    if (!isTeaching) {
+      const trained = this.memory.matchTraining(text);
+      if (trained) {
+        const reply: BarklyReply = {
+          speech: trained.speech,
+          reaction: trained.reaction,
+          actions: trained.actions,
+          routine: trained.routine,
+          newUserFacts: [],
+          newBarklyMemories: [],
+          learnedTraining: [],
+        };
+        const now = Date.now();
+        await this.memory.noteTrainingTriggered(trained.id);
+        await this.memory.addTurn({ role: 'user', text, at: now });
+        await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
+        return { reply, corrections: [] };
+      }
+    }
+
+    // Offline-capable teaching for representable physical tricks/routines.
+    if (isTeaching) {
+      const local = parseLocalTrainingInstruction(text);
+      if (local) {
+        await this.memory.learnTraining([local]);
+        const isRoutine = (local.routine?.length ?? 0) > 1;
+        const reply: BarklyReply = {
+          speech: isRoutine
+            ? `A whole routine? Fine. Say “${local.cue}”. I know the order.`
+            : `Oh, I know this one now. Say “${local.cue}” and see what happens.`,
+          reaction: 'happy',
+          actions: ['EAR_PERK', 'TAIL_WAG'],
+          newUserFacts: [],
+          newBarklyMemories: [
+            isRoutine
+              ? `You taught me the routine “${local.cue}”: ${local.instruction}.`
+              : `You taught me the cue “${local.cue}”.`,
+          ],
+          learnedTraining: [local],
+        };
+        const now = Date.now();
+        await this.memory.addTurn({ role: 'user', text, at: now });
+        await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
+        await this.memory.remember([], reply.newBarklyMemories, { where: world?.locationDescription });
+        return { reply, corrections: [] };
+      }
+    }
 
     const memState = this.memory.snapshot();
     const relevant = this.memory.relevant();
@@ -64,12 +113,9 @@ export class DialogueEngine {
 
     const reply = parseReply(raw);
 
-    // Record the exchange and any durable memory.
     const now = Date.now();
     await this.memory.addTurn({ role: 'user', text, at: now });
-    if (reply.speech) {
-      await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
-    }
+    if (reply.speech) await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
 
     let corrections: ConverseResult['corrections'] = [];
     if (reply.newUserFacts.length > 0 || reply.newBarklyMemories.length > 0) {
@@ -79,9 +125,12 @@ export class DialogueEngine {
       corrections = result.updated;
     }
 
-    // Facts he was just shown stay prompt-relevant.
-    await this.memory.touch(relevant.facts.map((f) => f.id));
+    const learned = reply.learnedTraining ?? [];
+    if (isTeaching && learned.length > 0) {
+      await this.memory.learnTraining(learned);
+    }
 
+    await this.memory.touch(relevant.facts.map((f) => f.id));
     return { reply, corrections };
   }
 }
