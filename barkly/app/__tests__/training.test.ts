@@ -21,17 +21,34 @@ const candidate = (cue: string, instruction: string, speech = 'Got it.') => ({
 describe('Barkly training', () => {
   it('only treats explicit teaching language as a training moment', () => {
     expect(looksLikeTrainingInstruction('When I say intruder alert, act terrified.')).toBe(true);
-    expect(looksLikeTrainingInstruction('Learn this trick: when I say freeze, stop.')).toBe(true);
+    expect(looksLikeTrainingInstruction('Learn this routine: when I say showtime, spin then sit.')).toBe(true);
     expect(looksLikeTrainingInstruction('What is an intruder alert?')).toBe(false);
     expect(looksLikeTrainingInstruction('Tell me something funny.')).toBe(false);
   });
 
-  it('locally understands simple tricks but refuses choreography it cannot represent', () => {
+  it('understands one-beat tricks locally', () => {
     const local = parseLocalTrainingInstruction('When I say intruder alert, act terrified.');
     expect(local?.cue).toBe('intruder alert');
     expect(local?.actions).toEqual(['LOOK_LEFT', 'LOOK_RIGHT', 'EAR_PERK']);
-    expect(parseLocalTrainingInstruction('When I say combo, spin and then play dead.')).toBeNull();
+    expect(local?.routine).toBeUndefined();
     expect(parseLocalTrainingInstruction('When I say homework, solve my maths.')).toBeNull();
+  });
+
+  it('turns explicit choreography into an ordered routine', () => {
+    const local = parseLocalTrainingInstruction(
+      'When I say showtime, spin, sit, then play dead.',
+    );
+    expect(local?.cue).toBe('showtime');
+    expect(local?.routine).toHaveLength(3);
+    expect(local?.routine?.map((beat) => beat.actions)).toEqual([
+      ['EXCITED', 'TAIL_WAG'],
+      ['SIT'],
+      ['SLEEP'],
+    ]);
+  });
+
+  it('refuses a whole routine if one beat is not representable', () => {
+    expect(parseLocalTrainingInstruction('When I say genius, spin, solve my maths, then sit.')).toBeNull();
   });
 
   it('normalizes punctuation without making substring matches', () => {
@@ -120,10 +137,7 @@ describe('Barkly training', () => {
     };
     const engine = new DialogueEngine(provider, memory);
 
-    const taught = await engine.converse(
-      'When I say intruder alert, act terrified.',
-      freshSnapshot(100),
-    );
+    const taught = await engine.converse('When I say intruder alert, act terrified.', freshSnapshot(100));
     expect(calls).toBe(0);
     expect(taught.reply.speech).toContain('intruder alert');
     expect(memory.snapshot().trainingRules).toHaveLength(1);
@@ -131,6 +145,38 @@ describe('Barkly training', () => {
     const triggered = await engine.converse('intruder alert', freshSnapshot(200));
     expect(calls).toBe(0);
     expect(triggered.reply.actions).toEqual(['LOOK_LEFT', 'LOOK_RIGHT', 'EAR_PERK']);
+    expect(memory.snapshot().trainingRules[0].timesTriggered).toBe(1);
+  });
+
+  it('learns and later returns the exact ordered routine without the model', async () => {
+    const memory = new BarklyMemory(createInMemoryStore(), 'default', () => 100);
+    await memory.load();
+    let calls = 0;
+    const provider = {
+      name: 'offline-routine-proof',
+      isAvailable: () => true,
+      complete: async () => {
+        calls += 1;
+        return '{"speech":"provider should not be needed","actions":[]}';
+      },
+    };
+    const engine = new DialogueEngine(provider, memory);
+
+    const taught = await engine.converse(
+      'When I say showtime, spin, sit, then play dead.',
+      freshSnapshot(100),
+    );
+    expect(calls).toBe(0);
+    expect(taught.reply.speech).toMatch(/whole routine/i);
+    expect(memory.snapshot().trainingRules[0].routine).toHaveLength(3);
+
+    const triggered = await engine.converse('okay Barkly, showtime!', freshSnapshot(200));
+    expect(calls).toBe(0);
+    expect(triggered.reply.routine?.map((beat) => beat.actions)).toEqual([
+      ['EXCITED', 'TAIL_WAG'],
+      ['SIT'],
+      ['SLEEP'],
+    ]);
     expect(memory.snapshot().trainingRules[0].timesTriggered).toBe(1);
   });
 });
