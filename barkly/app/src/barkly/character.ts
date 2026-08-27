@@ -250,21 +250,37 @@ export function withTreasure(c: CharacterState, treasureName: string, now: numbe
   };
 }
 
+/**
+ * Choice-driven encounters can strengthen OR cool a relationship. This is the
+ * difference between a history counter and player agency: escalating Duke is
+ * a choice, not an inevitability. Negative deltas never erase first-seen history.
+ */
+export function adjustSocialBond(
+  c: CharacterState,
+  who: string,
+  kind: SocialBond['kind'],
+  delta: number,
+  now: number,
+): CharacterState {
+  const bonds = { ...(c.socialBonds ?? {}) };
+  const previous = bonds[who];
+  const encounters = Math.max(0, (previous?.encounters ?? 0) + Math.trunc(delta));
+  bonds[who] = {
+    kind,
+    encounters,
+    firstSeenAt: previous?.firstSeenAt ?? now,
+    lastSeenAt: now,
+  };
+  return { ...c, socialBonds: bonds };
+}
+
 function recordSocial(
   c: CharacterState,
   who: string,
   kind: SocialBond['kind'],
   now: number,
 ): Record<string, SocialBond> {
-  const bonds = { ...(c.socialBonds ?? {}) };
-  const previous = bonds[who];
-  bonds[who] = {
-    kind,
-    encounters: (previous?.encounters ?? 0) + 1,
-    firstSeenAt: previous?.firstSeenAt ?? now,
-    lastSeenAt: now,
-  };
-  return bonds;
+  return adjustSocialBond(c, who, kind, 1, now).socialBonds ?? {};
 }
 
 export function withGrievance(
