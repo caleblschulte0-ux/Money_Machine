@@ -32,6 +32,7 @@
     "typecheck": "tsc --noEmit",
     "test:server": "node --test ../server/test/*.test.mjs",
     "test:all": "jest && npm run test:server",
+    "release:check": "node scripts/release-preflight.mjs",
     "brain": "BARKLY_BRAIN=cli node ../server/index.mjs",
     "real": "EXPO_PUBLIC_BARKLY_BACKEND_URL=http://localhost:8787 expo start"
   },

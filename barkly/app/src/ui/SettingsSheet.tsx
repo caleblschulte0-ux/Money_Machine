@@ -2,6 +2,10 @@
  * Settings — what Barkly knows, remembers and has been taught, plus provider
  * status and privacy controls. Learned tricks are visible and individually
  * deletable: behavior should never become hidden state.
+ *
+ * Developer controls are compiled behind EXPO_PUBLIC_BARKLY_DEV=1. A normal
+ * production build has no UI path to grants/unlocks, even though the hook keeps
+ * the tooling available for explicitly configured development builds.
  */
 
 import React, { useState } from 'react';
@@ -11,6 +15,8 @@ import PrivacySheet from './PrivacySheet';
 import { MemoryState } from '../barkly/memory';
 import { BarklyStats } from '../barkly/types';
 import { Treasure } from '../world/stash';
+
+const DEV_TOOLS_VISIBLE = process.env.EXPO_PUBLIC_BARKLY_DEV === '1';
 
 interface Props {
   visible: boolean;
@@ -75,24 +81,13 @@ export default function SettingsSheet(props: Props) {
     setWiping(false);
   };
 
-  const confirmForget = () => {
-    Alert.alert(
-      'Forget everything?',
-      "This permanently deletes Barkly's memory of you — conversations, facts, promises and tricks you taught him. He will start over.",
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Forget', style: 'destructive', onPress: doForget },
-      ],
-    );
-  };
-
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>Settings</Text>
-            <Pressable onPress={onClose} hitSlop={12}>
+            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close settings">
               <Text style={styles.close}>✕</Text>
             </Pressable>
           </View>
@@ -139,36 +134,40 @@ export default function SettingsSheet(props: Props) {
                       : 'not used yet'}
             </Text>
 
-            <Text style={styles.section}>Developer</Text>
-            <Pressable
-              style={[styles.devRow, devMode && styles.devRowOn]}
-              onPress={() => onSetDevMode(!devMode)}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: devMode }}
-              accessibilityLabel="Dev mode: unlock every area and shop item"
-            >
-              <View style={styles.devRowText}>
-                <Text style={styles.devTitle}>Dev mode</Text>
-                <Text style={styles.devBlurb}>
-                  Every area and shop item open, and everything free. Your real coins and level are
-                  untouched — turning it off puts you back exactly where you were.
-                </Text>
-              </View>
-              <Text style={styles.devState}>{devMode ? 'ON' : 'off'}</Text>
-            </Pressable>
+            {DEV_TOOLS_VISIBLE && (
+              <>
+                <Text style={styles.section}>Developer</Text>
+                <Pressable
+                  style={[styles.devRow, devMode && styles.devRowOn]}
+                  onPress={() => onSetDevMode(!devMode)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: devMode }}
+                  accessibilityLabel="Dev mode: unlock every area and shop item"
+                >
+                  <View style={styles.devRowText}>
+                    <Text style={styles.devTitle}>Dev mode</Text>
+                    <Text style={styles.devBlurb}>
+                      Every area and shop item open, and everything free. Your real coins and level are
+                      untouched — turning it off puts you back exactly where you were.
+                    </Text>
+                  </View>
+                  <Text style={styles.devState}>{devMode ? 'ON' : 'off'}</Text>
+                </Pressable>
 
-            {devMode && (
-              <View style={styles.devGrants}>
-                <Pressable style={styles.grant} onPress={() => onGrantCoins(1000)} accessibilityRole="button">
-                  <Text style={styles.grantText}>+1000 coins</Text>
-                </Pressable>
-                <Pressable style={styles.grant} onPress={() => onGrantLevel(7)} accessibilityRole="button">
-                  <Text style={styles.grantText}>Level 7</Text>
-                </Pressable>
-                <Pressable style={styles.grant} onPress={onGrantEverything} accessibilityRole="button">
-                  <Text style={styles.grantText}>Give me everything</Text>
-                </Pressable>
-              </View>
+                {devMode && (
+                  <View style={styles.devGrants}>
+                    <Pressable style={styles.grant} onPress={() => onGrantCoins(1000)} accessibilityRole="button">
+                      <Text style={styles.grantText}>+1000 coins</Text>
+                    </Pressable>
+                    <Pressable style={styles.grant} onPress={() => onGrantLevel(7)} accessibilityRole="button">
+                      <Text style={styles.grantText}>Level 7</Text>
+                    </Pressable>
+                    <Pressable style={styles.grant} onPress={onGrantEverything} accessibilityRole="button">
+                      <Text style={styles.grantText}>Give me everything</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </>
             )}
 
             <Text style={styles.section}>What Barkly knows about you</Text>

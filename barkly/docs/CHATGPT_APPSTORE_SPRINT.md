@@ -2,6 +2,7 @@
 
 **Branch:** `chatgpt/barkly-appstore-hardening-20260827`  
 **Base:** Claude branch `claude/barkley-mvp-mobile-qbegtj` at `60b24656923ee7b309c24307715575c97890a70a`  
+**Draft review PR:** #2, targeting the Claude branch — **not `main`**  
 **Do not merge blindly. Claude should review this branch first.**
 
 ## Why this branch exists
@@ -10,7 +11,7 @@ The operator asked ChatGPT to continue while Claude is unavailable, while keepin
 
 Claude's latest branch already contained the large App Store hardening work: structured memory, conversation-state locks, resilient dialogue, onboarding, parental/privacy UI, Barkly voice routing, progression/shop, dev mode, character initiative and real-device-oriented failure handling. This sprint intentionally does **not** redo those systems.
 
-## What ChatGPT added
+## Product work: user-taught Barkly
 
 ### 1. User-taught tricks as a first-class subsystem
 
@@ -50,15 +51,25 @@ A sentence that is itself teaching/reteaching never fires the old trick while it
 
 Learned rules live alongside memory persistence but remain a distinct category because they change behavior rather than merely describe the user.
 
-Settings now shows **Tricks you taught Barkly**, including cue, instruction and local use count. The same individual-delete path used for facts can remove one trick. `Forget everything` also deletes training.
-
-This matters for both product quality and privacy: Barkly should not acquire invisible behavior the person cannot inspect or remove.
+Settings now shows **Tricks you taught Barkly**, including cue, instruction and times used. The same individual-delete path used for facts can remove one trick. `Forget everything` also deletes training.
 
 ### 4. Prompt contract extended safely
 
 `prompts.ts` now has a `teach` section in the strict JSON reply contract. Existing learned tricks are shown to the model only as fenced reference data so Barkly can answer questions like "what tricks did I teach you?"; the model is explicitly told it does **not** decide when those cues fire.
 
-Model speech is also bounded through the existing sanitizer before it reaches the app.
+The new reply field is optional at the TypeScript boundary so old/fallback providers remain compatible; the current parser always supplies an array.
+
+## Release hardening added in the same branch
+
+- Developer controls in Settings are hidden unless the build explicitly has `EXPO_PUBLIC_BARKLY_DEV=1`.
+- `.env.example` now documents that flag as development-only.
+- Offline scripted Barkly no longer emits the forbidden app-owned `playing` reaction.
+- App/package marketing version aligned to `1.0.0`, iOS build number and Android version code established.
+- Initial native iPad support disabled until it has actually been tested.
+- `npm run release:check` added as a fail-closed production preflight.
+- Full release gate documented in `docs/APP_STORE_RELEASE.md`.
+
+The preflight intentionally fails until final iOS/Android identifiers and real production backend environment are supplied. That is desired behavior.
 
 ## Tests added
 
@@ -72,9 +83,11 @@ Model speech is also bounded through the existing sanitizer before it reaches th
 - persistence and individual deletion;
 - learned cue bypasses the dialogue provider entirely.
 
+**Important:** GitHub has no workflow run attached to this draft PR, and this environment cannot clone GitHub over the network. These new tests have therefore been authored but **not executed by ChatGPT**. Claude should run the full suite/typecheck before accepting anything.
+
 ## Claude review checklist
 
-1. Run the full app test suite and TypeScript build.
+1. Run `npm run test:all` and `npm run typecheck`.
 2. Review `training.ts` trigger matching. Decide whether v1 should require exact cue, allow surrounding words as implemented, or add a user-selectable trigger mode.
 3. Try live examples through the configured brain:
    - "When I say intruder alert, act terrified."
@@ -82,9 +95,11 @@ Model speech is also bounded through the existing sanitizer before it reaches th
    - "intruder alert";
    - reteach the same cue with a different behavior;
    - verify Settings shows one updated rule.
-4. Decide whether to add a dedicated **Teach** surface later. This branch deliberately uses natural conversation first so Barkly does not become a menu-driven toy.
-5. Expand `BodyAction` only when the renderer/physical contract can support the new action. Do not let training invent device-specific motor commands.
-6. Consider a future camera/object trigger type as a sibling of voice cues, not as a string hack in this store.
+4. Run `npm run release:check` with a production-like environment and leave it red until identifiers/backend are real.
+5. Fix the dev-only `goTo()` mismatch noted in `APP_STORE_RELEASE.md` when touching `useBarkly.ts`.
+6. Decide whether to add a dedicated **Teach** surface later. This branch deliberately uses natural conversation first so Barkly does not become a menu-driven toy.
+7. Expand `BodyAction` only when the renderer/physical contract can support the new action. Do not let training invent device-specific motor commands.
+8. Consider future trigger kinds — `seen_object`, `seen_person`, `location`, `gesture` — as siblings of voice cues, not string hacks in this store.
 
 ## Known limitation, intentionally left for the next pass
 
