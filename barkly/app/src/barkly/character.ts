@@ -39,6 +39,8 @@ export interface CharacterState {
   favoriteFriend?: string;
   /** Durable relationship history with recurring dogs. */
   socialBonds?: Record<string, SocialBond>;
+  /** How many authored choice moments have resolved with each recurring dog. */
+  socialChoices?: Record<string, number>;
   /** Cooldown bookkeeping so he initiates without nagging. */
   lastInitiativeAt: number;
   /** Kinds he has recently used, newest first — avoids repeating himself. */
@@ -49,6 +51,7 @@ export function freshCharacter(): CharacterState {
   return {
     treasuresFound: 0,
     socialBonds: {},
+    socialChoices: {},
     lastInitiativeAt: 0,
     recentInitiatives: [],
   };
@@ -63,6 +66,7 @@ export function expireCharacter(c: CharacterState, now: number): CharacterState 
     ...c,
     treasuresFound: c.treasuresFound ?? 0,
     socialBonds: c.socialBonds ?? {},
+    socialChoices: c.socialChoices ?? {},
     recentInitiatives: c.recentInitiatives ?? [],
     lastInitiativeAt: c.lastInitiativeAt ?? 0,
   };
@@ -272,6 +276,17 @@ export function adjustSocialBond(
     lastSeenAt: now,
   };
   return { ...c, socialBonds: bonds };
+}
+
+/** Mark one authored choice chapter complete so it cannot immediately repeat. */
+export function noteSocialChoice(c: CharacterState, who: string): CharacterState {
+  return {
+    ...c,
+    socialChoices: {
+      ...(c.socialChoices ?? {}),
+      [who]: (c.socialChoices?.[who] ?? 0) + 1,
+    },
+  };
 }
 
 function recordSocial(
