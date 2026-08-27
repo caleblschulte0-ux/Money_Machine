@@ -54,7 +54,21 @@ def end_card(d_sec):
             track(d, (W//2, 584), "FALLS PARK, SIOUX FALLS", mono(28), DIM+(int(a*0.85),), 6.0, "ms")
         a2 = int(240*min(1.0, max(0.0, (t-0.9)/0.45)))
         if a2 > 0:
-            track(d, (W//2, 672), "VISUAL INTENTION ONLY", mono(26), AMBER+(a2,), 6.0, "ms")
+            # r74: A PLATE BEHIND THE DISCLOSURE.
+            # r67 asked for this -- "the small secondary lines are faint...
+            # 'VISUAL INTENTION ONLY' is responsible, though it should remain
+            # readable at delivery size" -- and only Demo 1 ever got it. It
+            # went unnoticed for as long as it did because the AR panels used
+            # to darken the held frame; once r74's end-card release handed the
+            # card the untouched plate, amber type landed on sunlit grass and
+            # the honesty tag became the least readable thing on screen.
+            # A disclosure nobody can read is not a disclosure.
+            s2 = "VISUAL INTENTION ONLY"
+            f2 = mono(26)
+            w2 = sum(d.textlength(c, font=f2) for c in s2) + 6.0*(len(s2)-1)
+            d.rectangle([W//2-w2/2-24, 640, W//2+w2/2+24, 688],
+                        fill=(6, 9, 12, int(150*a2/240)))
+            track(d, (W//2, 672), s2, f2, AMBER+(a2,), 6.0, "ms")
         ov = np.array(img).astype(np.float32); al = ov[..., 3:4]/255.0
         f = f*(1-al) + ov[..., :3][..., ::-1]*al
         enc.stdin.write(np.clip(f, 0, 255).astype(np.uint8).tobytes())

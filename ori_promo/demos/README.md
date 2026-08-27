@@ -23,6 +23,34 @@ cd filmN && python3 render4.py && python3 assemble4.py     # etc.
 python3 rebeat.py b1 b2                                   # re-render named beats only
 ```
 
+## The failure mode this project actually has
+
+Three separate fixes landed in Demo 1 and never reached the other four. Each
+one was found, understood, correctly implemented — and then applied to
+exactly one of five films that share the architecture.
+
+| fix | landed | propagated |
+|---|---|---|
+| end-card label release (r69) | Demo 1 | **r74**, after four films shipped with the wordmark burned through a label |
+| disclosure plate behind VISUAL INTENTION ONLY (r67) | Demo 1 | **r74**, after the end-card fix removed the AR panels that had been masking it |
+| `labelkit.block(dim=)` for a settled label (r67) | labelkit | **r74**, after three rounds of a reviewer calling Demo 5 "dense" |
+
+Demo 1 is the film that gets iterated on first, so it is where fixes are
+made — and where they stop. **When you fix something in one film, the next
+move is to check the other four for the same thing, before anything else.**
+
+Two of these also hid each other: the AR panels darkened the held end frame,
+which made the missing disclosure plate invisible until the panels were
+released. Expect a fix to uncover the next one rather than to finish the job.
+
+And the reason all three survived review: a 4×4 contact sheet samples 16
+frames across ~30s, so a 2.5s end card gets one tile at best. An external
+reviewer caught the end-card bug on Demo 5 and, in the same document,
+approved Demo 4 as-is while Demo 4 was broken. Sampled tiles cannot see this
+class of defect. Check the invariant where the data is — `renderN.py` now
+asserts the final composed frame IS the untouched plate — not in the MP4
+afterwards.
+
 ## shared/
 
 | file | what it is |
