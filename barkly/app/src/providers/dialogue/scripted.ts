@@ -40,7 +40,9 @@ const SCRIPTS: Scripted[] = [
     match: /\b(play|ball|fetch|game)\b/i,
     replies: [
       { speech: "Fetch? Throw it. Throw it right now. Why are you still talking?", reaction: 'excited', actions: ['EXCITED', 'TAIL_WAG'] },
-      { speech: "Hm. I'll play, but only because you asked. Not because I'm desperate. Throw the ball.", reaction: 'playing', actions: ['TAIL_WAG'] },
+      // `playing` is an app-owned activity state, not a model reaction. Keep
+      // the offline provider on the same contract as the live model.
+      { speech: "Hm. I'll play, but only because you asked. Not because I'm desperate. Throw the ball.", reaction: 'excited', actions: ['TAIL_WAG'] },
     ],
   },
   {
@@ -92,6 +94,7 @@ export function createScriptedDialogue(): DialogueProvider {
         reaction: pick.reaction,
         actions: pick.actions ?? [],
         remember: { user_facts: userFacts, barkly_memories: [] },
+        teach: [],
       });
     },
   };
