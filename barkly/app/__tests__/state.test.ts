@@ -145,3 +145,26 @@ describe('feed refusal', () => {
     expect(after.stats.hunger).toBe(5);
   });
 });
+
+describe('meeting other dogs', () => {
+  it('a friend visit lifts mood and bond', () => {
+    const before = snap();
+    const after = reduce(before, { type: 'SOCIAL', friendly: true });
+    expect(after.state).toBe('happy');
+    expect(after.stats.mood).toBeGreaterThan(before.stats.mood);
+    expect(after.stats.affection).toBeGreaterThan(before.stats.affection);
+  });
+
+  it('a rival encounter annoys him', () => {
+    const before = snap();
+    const after = reduce(before, { type: 'SOCIAL', friendly: false });
+    expect(after.state).toBe('annoyed');
+    expect(after.stats.mood).toBeLessThan(before.stats.mood);
+  });
+
+  it('never interrupts a conversation beat', () => {
+    for (const state of ['listening', 'thinking', 'speaking'] as const) {
+      expect(reduce(snap({ state }), { type: 'SOCIAL', friendly: true }).state).toBe(state);
+    }
+  });
+});

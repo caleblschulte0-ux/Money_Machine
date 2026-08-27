@@ -25,9 +25,17 @@ import {
   BarklyState,
 } from './types';
 
+export interface WorldContext {
+  /** e.g. "at the dog park — grass, trees, the good fence…" */
+  locationDescription: string;
+  /** Other dogs present right now, with prompt-ready personality lines. */
+  npcs: { name: string; relationship: 'friend' | 'rival'; personality: string }[];
+}
+
 export interface PromptContext {
   snapshot: BarklySnapshot;
   memory: MemoryState;
+  world?: WorldContext;
 }
 
 const REPLY_CONTRACT = `Respond with ONLY a JSON object, no markdown fence, shaped like:
@@ -45,6 +53,18 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   const sections: string[] = [IDENTITY, TRAITS, RULES, VOICE, REPLY_CONTRACT];
 
   sections.push(`Right now you are ${describeStats(snapshot.stats)}. Your current pose/state is "${snapshot.state}".`);
+
+  if (ctx.world) {
+    const lines = [`You are ${ctx.world.locationDescription}.`];
+    if (ctx.world.npcs.length > 0) {
+      lines.push('Other dogs here right now:');
+      for (const n of ctx.world.npcs) {
+        lines.push(`- ${n.personality}`);
+      }
+      lines.push('You can mention them, react to them, or gossip about them when it fits.');
+    }
+    sections.push(lines.join('\n'));
+  }
 
   if (memory.userFacts.length > 0) {
     sections.push(`Things you know about your person:\n- ${memory.userFacts.join('\n- ')}`);

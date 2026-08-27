@@ -1,14 +1,15 @@
 /**
- * The home screen — Barkly's room. Barkly is the product: he owns the
- * screen, the UI stays out of his way. Controls: TALK (hold), PLAY, FEED,
- * SLEEP, and a small settings control. No currencies, no popups, no banners.
+ * The home screen — Barkly's world. Three scenes (home, park, town), the
+ * dogs who live in them, and Barkly front and center. Controls stay minimal:
+ * TALK, and context actions (play/fetch, feed, sleep). No currencies, no
+ * popups, no banners.
  */
 
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,17 +18,32 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { useBarkly } from '../hooks/useBarkly';
 import BarklyPhotoView from './BarklyPhotoView';
 import BarklyView from './BarklyView';
 import SettingsSheet from './SettingsSheet';
 import { Ball, FoodBowl } from './StageProps';
+import { DogBed, HomeScene, NightOverlay, ParkScene, TownScene } from './scenes/Scenes';
 import { BarklyState } from '../barkly/types';
+import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
+import { NPCS, NpcId } from '../world/npcs';
 
-// Renderer choice behind the BarklyRenderProps contract: 'photo' shows the
-// real concept-sheet renders (default); 'vector' is the hand-drawn fallback.
 const Renderer =
   process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyView : BarklyPhotoView;
+
+const NPC_ART: Record<NpcId, ReturnType<typeof require>> = {
+  biscuit: require('../../assets/barkly/renders/npcs/biscuit_front.png'),
+  pepper: require('../../assets/barkly/renders/npcs/pepper_front.png'),
+  duke: require('../../assets/barkly/renders/npcs/duke_front.png'),
+};
+
+/** Where each NPC stands per scene. */
+const NPC_SPOTS: Partial<Record<NpcId, { left?: number; right?: number; bottom: number; size: number }>> = {
+  biscuit: { left: 6, bottom: 96, size: 108 },
+  duke: { right: 2, bottom: 118, size: 124 },
+  pepper: { right: 8, bottom: 100, size: 114 },
+};
 
 const STATE_LABEL: Partial<Record<BarklyState, string>> = {
   listening: 'listening',
@@ -41,10 +57,6 @@ const STATE_LABEL: Partial<Record<BarklyState, string>> = {
 
 const INK = '#3E3428';
 const INK_SOFT = '#8A7A5F';
-const WALL_TOP = '#F7F1E2';
-const WALL_BOTTOM = '#EFE5CE';
-const FLOOR_TOP = '#EBDFC4';
-const FLOOR_BOTTOM = '#E2D3B0';
 const CARD = '#FFFDF7';
 const ACCENT = '#D99A2B';
 
@@ -120,15 +132,95 @@ function HeartBurst({ burst }: { burst: number }) {
   );
 }
 
+/** Another dog, standing in the scene. Breathes; tappable to say hi. */
+function NpcDog({ id, onPress, bubble }: { id: NpcId; onPress: () => void; bubble: string | null }) {
+  const spot = NPC_SPOTS[id]!;
+  const breathe = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, { toValue: 1, duration: 2100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 0, duration: 2100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breathe]);
+  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
+  return (
+    <View style={[styles.npc, { left: spot.left, right: spot.right, bottom: spot.bottom }]}>
+      {bubble && (
+        <View style={styles.npcBubble}>
+          <Text style={styles.npcBubbleText} numberOfLines={3}>{bubble}</Text>
+        </View>
+      )}
+      <Pressable onPress={onPress} hitSlop={8}>
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <Image source={NPC_ART[id]} style={{ width: spot.size, height: spot.size * 1.25 }} resizeMode="contain" />
+        </Animated.View>
+      </Pressable>
+      <Text style={styles.npcName}>{NPCS[id].name}</Text>
+    </View>
+  );
+}
+
 export default function BarklyRoom() {
   const barkly = useBarkly();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [typed, setTyped] = useState('');
   const [heartBurst, setHeartBurst] = useState(0);
+  const [fetching, setFetching] = useState(false);
 
-  const { snapshot, actions, lastExchange, partialTranscript, error, busy, sttAvailable } = barkly;
+  const { snapshot, actions, lastExchange, partialTranscript, error, busy, sttAvailable, location } = barkly;
   const listening = snapshot.state === 'listening';
+  const asleep = snapshot.state === 'sleepy';
   const stateLabel = STATE_LABEL[snapshot.state];
+  const hour = new Date().getHours();
+  const npcsHere = LOCATIONS[location].npcIds;
+
+  // --- scene change: fade the world, walk Barkly in from the side ---
+  const sceneFade = useRef(new Animated.Value(1)).current;
+  const walkX = useRef(new Animated.Value(0)).current;
+  const hopY = useRef(new Animated.Value(0)).current;
+  const prevLocation = useRef(location);
+  useEffect(() => {
+    if (prevLocation.current === location) return;
+    prevLocation.current = location;
+    sceneFade.setValue(0);
+    walkX.setValue(-170);
+    Animated.parallel([
+      Animated.timing(sceneFade, { toValue: 1, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(walkX, { toValue: 0, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.sequence(
+        Array.from({ length: 4 }, () =>
+          Animated.sequence([
+            Animated.timing(hopY, { toValue: -12, duration: 88, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+            Animated.timing(hopY, { toValue: 0, duration: 88, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          ]),
+        ),
+      ),
+    ]).start();
+  }, [location, sceneFade, walkX, hopY]);
+
+  // --- fetch minigame (park): throw → chase → return ---
+  const chaseX = useRef(new Animated.Value(0)).current;
+  const ballFlight = useRef(new Animated.Value(0)).current;
+  const runFetch = () => {
+    if (fetching || busy) return;
+    setFetching(true);
+    ballFlight.setValue(0);
+    Animated.sequence([
+      Animated.timing(ballFlight, { toValue: 1, duration: 620, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(chaseX, { toValue: 88, duration: 480, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.delay(260),
+      Animated.timing(chaseX, { toValue: 0, duration: 520, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]).start(() => {
+      barkly.play(); // stats + the playing beat
+      setFetching(false);
+    });
+  };
+  const ballX = ballFlight.interpolate({ inputRange: [0, 1], outputRange: [0, 118] });
+  const ballY = ballFlight.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -120, -8] });
 
   const sendTyped = async () => {
     const text = typed;
@@ -145,11 +237,17 @@ export default function BarklyRoom() {
     ? `“${partialTranscript}”`
     : lastExchange?.barklyText;
 
+  const playLabel = location === 'park' ? (fetching ? 'fetching…' : 'fetch') : 'play';
+
   return (
     <View style={styles.room}>
-      {/* the room: soft gradient wall + floor */}
-      <LinearGradient colors={[WALL_TOP, WALL_BOTTOM]} style={styles.wall} />
-      <LinearGradient colors={[FLOOR_TOP, FLOOR_BOTTOM]} style={styles.floor} />
+      {/* the world */}
+      <Animated.View style={[styles.sceneLayer, { opacity: sceneFade }]}>
+        {location === 'home' && <HomeScene hour={hour} />}
+        {location === 'park' && <ParkScene hour={hour} />}
+        {location === 'town' && <TownScene hour={hour} />}
+      </Animated.View>
+      {asleep && <NightOverlay />}
 
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* header: name + settings */}
@@ -160,6 +258,22 @@ export default function BarklyRoom() {
             <View style={styles.gearDot} />
             <View style={styles.gearDot} />
           </Pressable>
+        </View>
+
+        {/* where-to tabs */}
+        <View style={styles.tabs}>
+          {LOCATION_ORDER.map((loc: LocationId) => (
+            <Pressable
+              key={loc}
+              style={[styles.tab, location === loc && styles.tabActive]}
+              disabled={busy || fetching}
+              onPress={() => barkly.goTo(loc)}
+            >
+              <Text style={[styles.tabText, location === loc && styles.tabTextActive]}>
+                {LOCATIONS[loc].name.toLowerCase()}
+              </Text>
+            </Pressable>
+          ))}
         </View>
 
         {/* speech bubble */}
@@ -173,23 +287,41 @@ export default function BarklyRoom() {
               <View style={styles.bubbleTail} />
             </AnimatedBubble>
           ) : (
-            <Text style={styles.hint}>
-              {sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
+            <Text style={[styles.hint, asleep && styles.hintNight]}>
+              {asleep ? 'shh — he’s sleeping' : sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
             </Text>
           )}
           {error && <Text style={styles.error}>{error}</Text>}
         </View>
 
-        {/* Barkly owns the middle of the screen */}
+        {/* the stage: Barkly + neighbors + props */}
         <View style={styles.stageArea}>
-          <View style={styles.rug} />
           <View style={styles.shadow} />
-          {/* tapping Barkly is petting him */}
-          <Pressable onPress={pet} disabled={busy}>
-            <Renderer state={snapshot.state} actions={actions} />
-          </Pressable>
+          {asleep && location === 'home' && <DogBed />}
+          {npcsHere.map((id) => (
+            <NpcDog
+              key={id}
+              id={id}
+              bubble={barkly.npcBubble?.id === id ? barkly.npcBubble.line : null}
+              onPress={() => barkly.npcTalk(id)}
+            />
+          ))}
+          <Animated.View style={{ transform: [{ translateX: Animated.add(chaseX, walkX) }, { translateY: hopY }] }}>
+            <Pressable onPress={pet} disabled={busy}>
+              <Renderer state={snapshot.state} actions={actions} />
+            </Pressable>
+          </Animated.View>
+          {fetching && (
+            <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
+              <Svg width={30} height={30} viewBox="0 0 30 30">
+                <Circle cx={15} cy={15} r={13} fill="#B3402E" />
+                <Path d="M3 13 C11 9 19 9 27 13" stroke="#8E2F20" strokeWidth={2.5} fill="none" />
+                <Circle cx={10} cy={9} r={3.5} fill="#FFFFFF" opacity={0.35} />
+              </Svg>
+            </Animated.View>
+          )}
           {snapshot.state === 'eating' && <FoodBowl />}
-          {snapshot.state === 'playing' && <Ball />}
+          {snapshot.state === 'playing' && !fetching && <Ball />}
           <HeartBurst burst={heartBurst} />
           {stateLabel && (
             <View style={styles.chip}>
@@ -239,12 +371,12 @@ export default function BarklyRoom() {
           )}
 
           <View style={styles.actionsRow}>
-            <ActionButton label="play" onPress={barkly.play} disabled={busy} />
-            <ActionButton label="feed" onPress={barkly.feed} disabled={busy} />
+            <ActionButton label={playLabel} onPress={location === 'park' ? runFetch : barkly.play} disabled={busy || fetching} />
+            <ActionButton label="feed" onPress={barkly.feed} disabled={busy || fetching} />
             <ActionButton
-              label={snapshot.state === 'sleepy' ? 'wake' : 'sleep'}
+              label={asleep ? 'wake' : 'sleep'}
               onPress={barkly.sleepToggle}
-              disabled={busy}
+              disabled={busy || fetching}
             />
           </View>
         </View>
@@ -294,19 +426,10 @@ const shadowCard = Platform.select({
 });
 
 const styles = StyleSheet.create({
-  room: { flex: 1, backgroundColor: WALL_TOP },
-  wall: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  floor: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '46%',
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-  },
+  room: { flex: 1, backgroundColor: '#F7F1E2' },
+  sceneLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
 
-  content: { flex: 1, paddingTop: 58, paddingBottom: 28, paddingHorizontal: 22 },
+  content: { flex: 1, paddingTop: 54, paddingBottom: 26, paddingHorizontal: 22 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   wordmark: { fontSize: 22, fontWeight: '800', color: INK, letterSpacing: 0.3 },
@@ -323,8 +446,24 @@ const styles = StyleSheet.create({
   },
   gearDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INK_SOFT },
 
-  bubbleZone: { minHeight: 108, justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 },
-  hint: { fontSize: 15, color: INK_SOFT, marginBottom: 16 },
+  tabs: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    marginTop: 10,
+    backgroundColor: 'rgba(255,253,247,0.85)',
+    borderRadius: 999,
+    padding: 4,
+    gap: 4,
+    ...(shadowCard as object),
+  },
+  tab: { paddingVertical: 7, paddingHorizontal: 18, borderRadius: 999 },
+  tabActive: { backgroundColor: INK },
+  tabText: { fontSize: 13, fontWeight: '800', color: INK_SOFT, letterSpacing: 0.4 },
+  tabTextActive: { color: '#FBF6EA' },
+
+  bubbleZone: { minHeight: 92, justifyContent: 'flex-end', alignItems: 'center', marginTop: 6 },
+  hint: { fontSize: 15, color: INK_SOFT, marginBottom: 14 },
+  hintNight: { color: '#E8DFC8' },
   bubble: {
     maxWidth: '92%',
     backgroundColor: CARD,
@@ -347,27 +486,43 @@ const styles = StyleSheet.create({
   },
   error: { marginTop: 8, fontSize: 13, color: '#B3402E', textAlign: 'center' },
 
-  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 26 },
-  rug: {
-    position: 'absolute',
-    bottom: 8,
-    width: 300,
-    height: 64,
-    borderRadius: 150,
-    backgroundColor: '#DCC9A0',
-    opacity: 0.45,
-  },
+  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 },
   shadow: {
     position: 'absolute',
-    bottom: 22,
+    bottom: 18,
     width: 230,
     height: 30,
     borderRadius: 115,
     backgroundColor: '#4A3B2A',
-    opacity: 0.13,
+    opacity: 0.15,
   },
-  heartLayer: { position: 'absolute', bottom: 190, alignItems: 'center' },
+  heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
   heart: { position: 'absolute', fontSize: 24, color: '#D46A5A' },
+  fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
+
+  npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
+  npcName: {
+    marginTop: -4,
+    fontSize: 11,
+    fontWeight: '800',
+    color: INK_SOFT,
+    backgroundColor: 'rgba(255,253,247,0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  npcBubble: {
+    maxWidth: 170,
+    backgroundColor: CARD,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+    ...(shadowCard as object),
+  },
+  npcBubbleText: { fontSize: 12.5, fontWeight: '600', color: INK, lineHeight: 17 },
+
   chip: {
     position: 'absolute',
     bottom: -6,

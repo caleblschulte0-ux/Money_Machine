@@ -24,8 +24,11 @@ import { BarklyEvent, BarklySnapshot, BodyAction } from '../barkly/types';
 import { createProviders } from '../providers/registry';
 import { asyncStorageStore } from '../storage/asyncStorageStore';
 import { DEFAULT_PROFILE, profileKey } from '../storage/types';
+import { LOCATIONS, LocationId } from '../world/locations';
+import { NPCS, NpcId } from '../world/npcs';
 
 const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
+const LOCATION_KEY = profileKey(DEFAULT_PROFILE, 'location-v1');
 
 export interface Exchange {
   userText: string;
@@ -56,6 +59,14 @@ export interface BarklyController {
   /** User tapped Barkly — a pet/stroke. */
   pet(): void;
 
+  /** Where Barkly is, and travel. */
+  location: LocationId;
+  goTo(loc: LocationId): void;
+  /** Greet another dog; returns false if he's mid-conversation. */
+  npcTalk(id: NpcId): boolean;
+  /** The other dog's active speech line, shown over that NPC. */
+  npcBubble: { id: NpcId; line: string } | null;
+
   memorySnapshot(): MemoryState;
   forgetEverything(): Promise<void>;
 }
@@ -72,6 +83,10 @@ export function useBarkly(): BarklyController {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sttAvailable, setSttAvailable] = useState(false);
+  const [location, setLocation] = useState<LocationId>('home');
+  const [npcBubble, setNpcBubble] = useState<{ id: NpcId; line: string } | null>(null);
+  const npcLineCounter = useRef(0);
+  const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
@@ -113,6 +128,12 @@ export function useBarkly(): BarklyController {
         const line = welcomeBack(nameFromFacts(mem.userFacts), Math.floor(hoursAway));
         setLastExchange({ userText: '', barklyText: line });
         providers.tts.speak(line).catch(() => {});
+      }
+      try {
+        const savedLoc = await asyncStorageStore.get(LOCATION_KEY);
+        if (!cancelled && savedLoc && savedLoc in LOCATIONS) setLocation(savedLoc as LocationId);
+      } catch {
+        // keep home
       }
       const available = await providers.stt.isAvailable();
       if (!cancelled) setSttAvailable(available);
@@ -173,6 +194,21 @@ export function useBarkly(): BarklyController {
     };
   }, [snapshot.state, dispatch]);
 
+  // --- World context for the dialogue prompt: where he is, who's around ---
+  const locationRef = useRef(location);
+  locationRef.current = location;
+  const worldContext = useCallback(() => {
+    const loc = LOCATIONS[locationRef.current];
+    return {
+      locationDescription: loc.description,
+      npcs: loc.npcIds.map((id) => ({
+        name: NPCS[id].name,
+        relationship: NPCS[id].relationship,
+        personality: NPCS[id].personality,
+      })),
+    };
+  }, []);
+
   // --- The core exchange: text in → Barkly speaks + reacts ---
   const runExchange = useCallback(
     async (userText: string) => {
@@ -180,7 +216,7 @@ export function useBarkly(): BarklyController {
       setError(null);
       dispatch({ type: 'TALK_CAPTURED' }); // thinking
       try {
-        const reply = await engine.converse(userText, snapshotRef.current);
+        const reply = await engine.converse(userText, snapshotRef.current, worldContext());
         if (!reply.speech) {
           dispatch({ type: 'TALK_FAILED' });
           return;
@@ -248,6 +284,35 @@ export function useBarkly(): BarklyController {
     [busy, runExchange],
   );
 
+  const goTo = useCallback((loc: LocationId) => {
+    setLocation(loc);
+    setNpcBubble(null);
+    setLastExchange(null); // conversations don't follow him down the street
+    asyncStorageStore.set(LOCATION_KEY, loc).catch(() => {});
+  }, []);
+
+  const npcTalk = useCallback(
+    (id: NpcId): boolean => {
+      const s = snapshotRef.current.state;
+      if (busy || s === 'listening' || s === 'thinking' || s === 'speaking') return false;
+      const npc = NPCS[id];
+      const i = npcLineCounter.current++ % npc.lines.length;
+      const barklyLine = npc.barklyLines[i];
+      setNpcBubble({ id, line: npc.lines[i] });
+      if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+      npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 4500);
+      dispatch({ type: 'SOCIAL', friendly: npc.relationship === 'friend' });
+      setLastExchange({ userText: '', barklyText: barklyLine });
+      providers.tts.speak(barklyLine).catch(() => {});
+      if (Math.random() < 0.3) {
+        const mem = npc.memories[Math.floor(Math.random() * npc.memories.length)];
+        memory.remember([], [mem]).catch(() => {});
+      }
+      return true;
+    },
+    [busy, dispatch, memory, providers],
+  );
+
   const actions = useMemo<BodyAction[]>(() => {
     const ambient = ambientActions(snapshot.state);
     const merged =
@@ -275,6 +340,10 @@ export function useBarkly(): BarklyController {
     play: () => dispatch({ type: 'PLAY' }),
     sleepToggle: () => dispatch({ type: 'SLEEP_TOGGLE' }),
     pet: () => dispatch({ type: 'PET' }),
+    location,
+    goTo,
+    npcTalk,
+    npcBubble,
     memorySnapshot: () => memory.snapshot(),
     forgetEverything: async () => {
       await memory.forgetAll();

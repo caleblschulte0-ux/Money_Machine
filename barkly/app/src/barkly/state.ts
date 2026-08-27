@@ -106,6 +106,14 @@ export function reduce(snap: BarklySnapshot, event: BarklyEvent): BarklySnapshot
         state: 'eating',
         stats: adjust(stats, { hunger: -30, mood: +8, energy: +5, affection: +3 }),
       };
+    case 'SOCIAL': {
+      if (state === 'listening' || state === 'thinking' || state === 'speaking') return snap;
+      if (event.friendly) {
+        return { ...snap, state: 'happy', stats: adjust(stats, { mood: +5, affection: +2, curiosity: -3, energy: -3 }) };
+      }
+      // Rival encounter: annoying, but a good feud is its own fun.
+      return { ...snap, state: 'annoyed', stats: adjust(stats, { mood: -2, curiosity: -2 }) };
+    }
     case 'PET': {
       // Never interrupt a conversation beat with a pet.
       if (state === 'listening' || state === 'thinking' || state === 'speaking') return snap;

@@ -9,7 +9,7 @@
  */
 
 import { BarklyMemory } from './memory';
-import { buildSystemPrompt, parseReply } from './prompts';
+import { buildSystemPrompt, parseReply, WorldContext } from './prompts';
 import { BarklyReply, BarklySnapshot } from './types';
 import { DialogueProvider } from '../providers/types';
 
@@ -23,7 +23,7 @@ export class DialogueEngine {
     return this.provider.name;
   }
 
-  async converse(userText: string, snapshot: BarklySnapshot): Promise<BarklyReply> {
+  async converse(userText: string, snapshot: BarklySnapshot, world?: WorldContext): Promise<BarklyReply> {
     const text = userText.trim();
     if (!text) {
       return {
@@ -32,7 +32,7 @@ export class DialogueEngine {
     }
 
     const memState = this.memory.snapshot();
-    const systemPrompt = buildSystemPrompt({ snapshot, memory: memState });
+    const systemPrompt = buildSystemPrompt({ snapshot, memory: memState, world });
 
     const raw = await this.provider.complete({
       systemPrompt,

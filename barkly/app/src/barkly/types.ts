@@ -73,6 +73,7 @@ export type BarklyEvent =
   | { type: 'SPEAK_END' }
   | { type: 'FEED' }
   | { type: 'PET' }               // user tapped/stroked Barkly
+  | { type: 'SOCIAL'; friendly: boolean } // greeted another dog (friend or rival)
   | { type: 'PLAY' }
   | { type: 'SLEEP_TOGGLE' }
   | { type: 'REACTION'; state: BarklyState; durationMs?: number } // brain-chosen emotional beat

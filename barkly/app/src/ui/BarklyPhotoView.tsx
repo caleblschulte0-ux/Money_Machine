@@ -23,7 +23,7 @@ import { BarklyState, BodyAction } from '../barkly/types';
 
 const RENDERS = {
   front: require('../../assets/barkly/renders/front.png'),
-  side: require('../../assets/barkly/renders/side.png'),
+  sideSleep: require('../../assets/barkly/renders/side_sleep.png'), // eyes closed
   threeQuarter: require('../../assets/barkly/renders/three_quarter.png'),
   face: require('../../assets/barkly/renders/face.png'),
 } as const;
@@ -43,7 +43,7 @@ function poseFor(state: BarklyState): Pose {
     case 'excited':
       return 'threeQuarter';
     case 'sleepy':
-      return 'side';
+      return 'sideSleep';
     case 'thinking':
     case 'annoyed':
       return 'face'; // the sheet's EXPRESSION closeup — a dramatic zoom beat
@@ -54,7 +54,7 @@ function poseFor(state: BarklyState): Pose {
 
 const POSE_SIZE: Record<Pose, { width: number; height: number }> = {
   front: { width: 244, height: 305 },
-  side: { width: 280, height: 313 },
+  sideSleep: { width: 280, height: 313 },
   threeQuarter: { width: 260, height: 300 },
   face: { width: 210, height: 170 },
 };
