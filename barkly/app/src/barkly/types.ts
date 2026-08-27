@@ -70,6 +70,21 @@ export const ALL_BODY_ACTIONS: BodyAction[] = [
   'BLINK', 'MOUTH_MOVE', 'SIT', 'EXCITED', 'SLEEP',
 ];
 
+/**
+ * One reusable trick/rule Barkly may learn when his person EXPLICITLY teaches
+ * him a cue. This is only a candidate until training.ts validates and stores it.
+ */
+export interface LearnedTrainingRule {
+  /** Exact phrase the person can say again later, e.g. "intruder alert". */
+  cue: string;
+  /** Human-readable description of what Barkly was taught to do. */
+  instruction: string;
+  /** What Barkly says when the cue fires. */
+  speech: string;
+  reaction?: ReactionState;
+  actions: BodyAction[];
+}
+
 /** Internal drives, each 0–100. These vary Barkly's behavior; they are not a Tamagotchi sim. */
 export interface BarklyStats {
   mood: number;       // 0 grumpy … 100 delighted
@@ -139,4 +154,6 @@ export interface BarklyReply {
   newUserFacts: string[];
   /** New shared experiences Barkly believes he had with his person. */
   newBarklyMemories: string[];
+  /** Explicitly taught reusable cues, accepted only behind an app-side gate. */
+  learnedTraining: LearnedTrainingRule[];
 }

@@ -1,17 +1,15 @@
 /**
- * The dialogue engine — one conversation round, end to end:
+ * The dialogue engine — one conversation round, end to end.
  *
- *   transcript -> prompt (personality + mood + world + ranked memory)
- *   -> DialogueProvider -> parse reply -> merge memory -> BarklyReply
- *
- * The engine is provider-agnostic and platform-agnostic. Speech capture and
- * audio playback happen outside (useBarkly's speak() lifecycle) so this stays
- * testable and so audio is never triggered from two places.
+ * User-taught cues are checked BEFORE the provider. Once Barkly learns a trick,
+ * saying its cue does not need another AI request and still works when the live
+ * model is unavailable.
  */
 
 import { CharacterState } from './character';
 import { BarklyMemory } from './memory';
 import { buildSystemPrompt, parseReply, WorldContext } from './prompts';
+import { looksLikeTrainingInstruction } from './training';
 import { BarklyReply, BarklySnapshot } from './types';
 import { DialogueProvider } from '../providers/types';
 
@@ -42,9 +40,33 @@ export class DialogueEngine {
       actions: [],
       newUserFacts: [],
       newBarklyMemories: [],
+      learnedTraining: [],
     };
     const text = userText.trim();
     if (!text) return { reply: empty, corrections: [] };
+
+    const isTeaching = looksLikeTrainingInstruction(text);
+
+    // A teaching sentence may contain an existing cue while correcting it, so
+    // never fire a trick in the middle of teaching/reteaching that trick.
+    if (!isTeaching) {
+      const trained = this.memory.matchTraining(text);
+      if (trained) {
+        const reply: BarklyReply = {
+          speech: trained.speech,
+          reaction: trained.reaction,
+          actions: trained.actions,
+          newUserFacts: [],
+          newBarklyMemories: [],
+          learnedTraining: [],
+        };
+        const now = Date.now();
+        await this.memory.noteTrainingTriggered(trained.id);
+        await this.memory.addTurn({ role: 'user', text, at: now });
+        await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
+        return { reply, corrections: [] };
+      }
+    }
 
     const memState = this.memory.snapshot();
     const relevant = this.memory.relevant();
@@ -64,12 +86,9 @@ export class DialogueEngine {
 
     const reply = parseReply(raw);
 
-    // Record the exchange and any durable memory.
     const now = Date.now();
     await this.memory.addTurn({ role: 'user', text, at: now });
-    if (reply.speech) {
-      await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
-    }
+    if (reply.speech) await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
 
     let corrections: ConverseResult['corrections'] = [];
     if (reply.newUserFacts.length > 0 || reply.newBarklyMemories.length > 0) {
@@ -79,9 +98,13 @@ export class DialogueEngine {
       corrections = result.updated;
     }
 
-    // Facts he was just shown stay prompt-relevant.
-    await this.memory.touch(relevant.facts.map((f) => f.id));
+    // Defense in depth: the model is not trusted to decide that an ordinary
+    // sentence was a training moment. The user's own wording must pass the gate.
+    if (isTeaching && reply.learnedTraining.length > 0) {
+      await this.memory.learnTraining(reply.learnedTraining);
+    }
 
+    await this.memory.touch(relevant.facts.map((f) => f.id));
     return { reply, corrections };
   }
 }
