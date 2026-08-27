@@ -2,9 +2,11 @@ import {
   describeCharacter,
   expireCharacter,
   freshCharacter,
+  friendshipStage,
   INITIATIVE_COOLDOWN_MS,
   noteInitiative,
   pickInitiative,
+  rivalryStage,
   withFriend,
   withGrievance,
   withTreasure,
@@ -23,7 +25,7 @@ const ctx = (over: Partial<Parameters<typeof pickInitiative>[0]> = {}) => ({
   location: 'Home',
   npcsPresent: [] as string[],
   now: NOW,
-  rng: () => 0.99, // suppress the random-gated candidates unless a test wants them
+  rng: () => 0.99,
   ...over,
 });
 
@@ -63,7 +65,7 @@ describe('Barkly starts conversations himself', () => {
     expect(i?.line).toContain('Duke');
   });
 
-  it('stays quiet during the cooldown — he is a dog, not a notification', () => {
+  it('stays quiet during the cooldown', () => {
     const snapshot = freshSnapshot(NOW);
     snapshot.stats.hunger = 95;
     const character = { ...freshCharacter(), lastInitiativeAt: NOW - 1000 };
@@ -73,13 +75,13 @@ describe('Barkly starts conversations himself', () => {
     expect(pickInitiative(ctx({ snapshot, character: later }))).not.toBeNull();
   });
 
-  it('says nothing at all when there is nothing worth saying', () => {
+  it('says nothing when there is nothing worth saying', () => {
     expect(pickInitiative(ctx())).toBeNull();
   });
 
   it('avoids repeating the kind he just used', () => {
     const snapshot = freshSnapshot(NOW);
-    snapshot.stats.hunger = 85; // hungry candidate
+    snapshot.stats.hunger = 85;
     const pref = makeFact({ key: 'favorite_color', value: 'blue' }, NOW - 12 * 3_600_000)!;
     let character = freshCharacter();
     character = noteInitiative(character, 'callback', NOW - INITIATIVE_COOLDOWN_MS - 1);
@@ -89,26 +91,44 @@ describe('Barkly starts conversations himself', () => {
 });
 
 describe('character continuity', () => {
-  it('a new treasure becomes his favorite and his obsession', () => {
-    const c = withTreasure(freshCharacter(), 'a rock that looks like a duck', NOW);
-    expect(c.favoriteTreasure).toContain('duck');
-    expect(c.obsession?.topic).toContain('duck');
-    expect(describeCharacter(c)).toContain('duck');
+  it('a new treasure becomes his favorite, obsession and collection history', () => {
+    let c = withTreasure(freshCharacter(), 'a rock that looks like a duck', NOW);
+    c = withTreasure(c, 'the good stick', NOW + 1);
+    expect(c.favoriteTreasure).toBe('the good stick');
+    expect(c.obsession?.topic).toBe('the good stick');
+    expect(c.treasuresFound).toBe(2);
   });
 
-  it('obsessions and grievances expire on their own', () => {
+  it('obsessions and grievances expire but durable social history does not', () => {
     let c = withTreasure(freshCharacter(), 'the good stick', NOW);
     c = withGrievance(c, 'Duke', 'took the ball', NOW);
     const muchLater = NOW + 10 * 86_400_000;
     const expired = expireCharacter(c, muchLater);
     expect(expired.obsession).toBeUndefined();
     expect(expired.grievance).toBeUndefined();
-    // A favorite possession is not a passing mood — it stays.
     expect(expired.favoriteTreasure).toBe('the good stick');
+    expect(expired.socialBonds?.Duke.encounters).toBe(1);
   });
 
-  it('describes who he currently is for the prompt', () => {
-    const c = withFriend(withGrievance(freshCharacter(), 'Duke', 'hogged the fence', NOW), 'Biscuit');
+  it('repeated hangouts evolve a dog from acquaintance into best friend', () => {
+    let c = freshCharacter();
+    for (let i = 0; i < 6; i++) c = withFriend(c, 'Biscuit', NOW + i);
+    expect(c.socialBonds?.Biscuit.encounters).toBe(6);
+    expect(friendshipStage(6).label).toBe('best friend');
+    expect(describeCharacter(c)).toContain('best friend');
+  });
+
+  it('repeated bad encounters create an actual nemesis', () => {
+    let c = freshCharacter();
+    for (let i = 0; i < 6; i++) c = withGrievance(c, 'Duke', 'stole the ball', NOW + i);
+    expect(c.socialBonds?.Duke.encounters).toBe(6);
+    expect(rivalryStage(6).label).toBe('nemesis');
+    expect(describeCharacter(c)).toContain('nemesis');
+  });
+
+  it('describes current friend and rival lore for the prompt', () => {
+    let c = withGrievance(freshCharacter(), 'Duke', 'hogged the fence', NOW);
+    c = withFriend(c, 'Biscuit', NOW + 1);
     const line = describeCharacter(c);
     expect(line).toContain('Duke');
     expect(line).toContain('Biscuit');
