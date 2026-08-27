@@ -65,50 +65,51 @@ function dukeEncounter(character: CharacterState, memory: MemoryState): SocialEn
 
   if (treasure) {
     const item = sanitize(treasure, 70);
+    const choices: EncounterChoice[] = [
+      {
+        id: 'defend',
+        label: 'Defend the treasure',
+        hint: 'maximum escalation',
+        npcReply: 'Relax. It is literally dirt-adjacent.',
+        barklyReply: 'You take that back. This is an artifact.',
+        memory: `Defended ${item} when Duke insulted it. The feud got worse.`,
+        bondDelta: 2,
+        reaction: 'annoyed',
+        actions: ['EAR_PERK', 'EXCITED'],
+      },
+      {
+        id: 'unbothered',
+        label: 'Act completely unbothered',
+        hint: 'de-escalate the feud',
+        npcReply: '...Wait. You are not mad?',
+        barklyReply: "Nope. Don't care. Not even a little. ...Stop looking at it though.",
+        memory: `Refused to take Duke's bait about ${item}. The feud cooled down a little.`,
+        bondDelta: -1,
+        reaction: 'happy',
+        actions: ['LOOK_LEFT', 'BLINK'],
+      },
+    ];
+    if (routine) {
+      choices.push({
+        id: 'routine',
+        label: `Hit “${sanitize(routine.cue, 32)}”`,
+        hint: 'weaponize the inside joke',
+        npcReply: 'What is happening right now.',
+        barklyReply: 'You asked for this, Duke.',
+        memory: `Performed the “${sanitize(routine.cue, 50)}” routine at Duke during the treasure dispute.`,
+        bondDelta: 1,
+        reaction: 'excited',
+        actions: ['TAIL_WAG', 'EAR_PERK'],
+        routineCue: routine.cue,
+      });
+    }
     return {
       id: `duke-treasure-${Math.floor(count / 3)}`,
       npcId: 'duke',
       eyebrow: `${rivalryStage(count).label.toUpperCase()} BUSINESS`,
       title: 'Duke looked at the treasure.',
       prompt: `Duke just called ${item} “kind of mid.” Barkly has become completely still. This is now your problem.`,
-      choices: [
-        {
-          id: 'defend',
-          label: 'Defend the treasure',
-          hint: 'maximum escalation',
-          npcReply: 'Relax. It is literally dirt-adjacent.',
-          barklyReply: 'You take that back. This is an artifact.',
-          memory: `Defended ${item} when Duke insulted it. The feud got worse.`,
-          bondDelta: 2,
-          reaction: 'annoyed',
-          actions: ['EAR_PERK', 'EXCITED'],
-        },
-        {
-          id: 'unbothered',
-          label: 'Act completely unbothered',
-          hint: 'de-escalate the feud',
-          npcReply: '...Wait. You are not mad?',
-          barklyReply: "Nope. Don't care. Not even a little. ...Stop looking at it though.",
-          memory: `Refused to take Duke's bait about ${item}. The feud cooled down a little.`,
-          bondDelta: -1,
-          reaction: 'happy',
-          actions: ['LOOK_LEFT', 'BLINK'],
-        },
-        ...(routine
-          ? [{
-              id: 'routine',
-              label: `Hit “${sanitize(routine.cue, 32)}”`,
-              hint: 'weaponize the inside joke',
-              npcReply: 'What is happening right now.',
-              barklyReply: 'You asked for this, Duke.',
-              memory: `Performed the “${sanitize(routine.cue, 50)}” routine at Duke during the treasure dispute.`,
-              bondDelta: 1,
-              reaction: 'excited' as ReactionState,
-              actions: ['TAIL_WAG', 'EAR_PERK'] as BodyAction[],
-              routineCue: routine.cue,
-            }]
-          : []),
-      ].slice(0, 3),
+      choices,
     };
   }
 
@@ -451,12 +452,13 @@ export function deriveSocialEncounter(input: EncounterInput): SocialEncounter {
 }
 
 /**
- * Keep authored choice moments paced between ordinary banter. This is based on
- * relationship history rather than a notification timer: the third meaningful
- * run-in, then roughly every three after that, becomes a choice moment.
+ * Kept as a pure helper for tests/tools. The controller uses durable chapter
+ * counts because a choice can cool a relationship and must never re-offer the
+ * same chapter simply because the bond number moved downward.
  */
 export function shouldOfferEncounter(character: CharacterState, npcId: NpcId): boolean {
   const name = NPCS[npcId].name;
   const count = bondCount(character, name);
-  return count >= 2 && count % 3 === 2;
+  const chapters = character.socialChoices?.[name] ?? 0;
+  return count >= 2 + chapters * 3;
 }
