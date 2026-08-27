@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, "..")
 
 import shotqc
-from spec_one import BEATS, FIGURES, LABELS, ICE, W, H, FPS, TOTAL
+from spec_one import (BEATS, FIGURES, LABELS, ICE, TITLES, UI_OFF,
+                      W, H, FPS, TOTAL)
 
 RAW = "../raw"
 
@@ -34,6 +35,8 @@ def main():
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps")
     L.append("")
     L.append("This file is GENERATED from the spec the renderer reads.")
+    L.append("")
+    L.append(f"Establishing montage: {', '.join(sorted(UI_OFF))} — no device UI")
     L.append("")
     L.append("SHOT LIST — film time, source, and the footage-gate reading at")
     L.append("the EXACT duration cut. A flagged plate is not cut, full stop.")
@@ -68,8 +71,21 @@ def main():
         if v:
             L.append(f"  {st+v[3]:5.1f}s  \"{v[1]}\" / \"{v[2]}\"")
     L.append("")
-    L.append(f"  the ice grade ramps in over {ICE['beat']} at "
-             f"{ICE['in'][0]:.1f}–{ICE['in'][1]:.1f}s into the beat")
+    for b, clip, tin, st, d, note in BEATS:
+        v = TITLES.get(b)
+        if v:
+            L.append(f"  {st+v[2]:5.1f}s  \"{v[0]}\" / \"{v[1]}\"   (location "
+                     f"title, not an AR label — no reticle, no leader)")
+    L.append("")
+    # ICE IS A DICT KEYED BY BEAT and always has been. This read
+    # ICE['beat'] / ICE['in'], which are not keys of anything -- so the
+    # timeline generator raised KeyError the moment anyone ran it, and it
+    # had been that way since the file was written. A generated handoff
+    # document that has never been generated is not a document.
+    _starts = {b: st for b, clip, tin, st, d, note in BEATS}
+    for b, (direction, a0, a1) in ICE.items():
+        L.append(f"  the ice grade ramps {direction.upper()} over {b} at "
+                 f"{_starts[b]+a0:.1f}–{_starts[b]+a1:.1f}s film time")
     L.append("")
     L.append("STANDING DISCLOSURE")
     L.append(f"    {disclosure()}")

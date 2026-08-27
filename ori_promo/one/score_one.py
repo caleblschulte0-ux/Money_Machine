@@ -8,7 +8,8 @@ leaving, and a pad that ignores them tells the viewer nothing is happening.
 This follows the cut, and every boundary is read out of spec_one so the
 score cannot drift from the edit:
 
-  open        near silence. the system is coming up, nothing has happened
+  montage     almost nothing. the location audio carries the place
+  arrive      the system comes up
   first era   the lift. this is the one full AR reveal and it earns it
   second era  held, warm, no new event -- the era swapped on the cut
   ice         the pad thins to its top two voices and the sub drops out.
@@ -25,7 +26,7 @@ import wave
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spec_one import BEATS, TOTAL
+from spec_one import BEATS, SCORE, TOTAL
 
 SR = 48000                      # matches the master; 44.1k would resample
 BPM = 88
@@ -70,16 +71,28 @@ def main():
     t = np.arange(n) / SR
     out = np.zeros(n, np.float32)
 
-    o_st, o_d = beat_at("open")
-    e1, _ = beat_at("b1")
-    e2, _ = beat_at("b2")
-    ice_st, ice_d = beat_at("b3")
-    ret_st, ret_d = beat_at("b4")
+    # EVERY MILESTONE IS LOOKED UP BY ROLE, not by beat name. v3 read
+    # "b1".."b4" directly; v4 renamed the beats and cut a montage in front
+    # of them, and a score that hardcodes names either raises (fine) or --
+    # worse, if a name happens to survive -- keeps playing the old edit
+    # under the new one. spec_one.SCORE maps role -> beat and asserts the
+    # beat exists at import.
+    m_st, _ = beat_at(SCORE["start"])
+    arr, _ = beat_at(SCORE["arrive"])
+    e1, _ = beat_at(SCORE["lift"])
+    e2, _ = beat_at(SCORE["hold"])
+    ice_st, ice_d = beat_at(SCORE["cold"])
+    ret_st, ret_d = beat_at(SCORE["warm"])
 
     # ---- the arc, as one gain curve read off the cut
+    # The montage is the quietest thing in the film ON PURPOSE. It is real
+    # footage of a real park and the location audio (falls, wind, footsteps)
+    # carries it; a score that comes in over the waterfall at full weight
+    # is the score telling you what to feel before anything has happened.
     gain = np.full(n, 0.22, np.float32)
-    gain = np.where(t < e1, ramp(t, o_st, e1, 0.10, 0.30), gain)
-    gain = np.where((t >= e1) & (t < e2), ramp(t, e1, e1 + 2.0, 0.30, 0.80), gain)
+    gain = np.where(t < arr, ramp(t, m_st, arr, 0.07, 0.26), gain)
+    gain = np.where((t >= arr) & (t < e1), ramp(t, arr, e1, 0.26, 0.34), gain)
+    gain = np.where((t >= e1) & (t < e2), ramp(t, e1, e1 + 2.0, 0.34, 0.80), gain)
     gain = np.where((t >= e2) & (t < ice_st), 0.80, gain)
     gain = np.where((t >= ice_st) & (t < ret_st),
                     ramp(t, ice_st, ice_st + 1.6, 0.80, 0.52), gain)
@@ -151,8 +164,8 @@ def main():
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes(np.stack([pcm, pcm], 1).tobytes())
-    print(f"  score: {TOTAL:.1f}s, lift at {e1:.1f}s, thin at {ice_st:.1f}s, "
-          f"resolve at {ret_st:.1f}s")
+    print(f"  score: {TOTAL:.1f}s, montage under {m_st:.1f}-{arr:.1f}s, "
+          f"lift at {e1:.1f}s, thin at {ice_st:.1f}s, resolve at {ret_st:.1f}s")
 
 
 if __name__ == "__main__":

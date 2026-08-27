@@ -32,13 +32,15 @@ import shotqc
 import shotnorm
 from ai import place as PL
 import depthtools as DT
-from spec_one import BEATS, FIGURES, LABELS, ICE, W, H, FPS, TOTAL
+from spec_one import (BEATS, FIGURES, LABELS, ICE, TITLES, UI_OFF,
+                      W, H, FPS, TOTAL)
 
 RAW = "../raw"
 OUT = "out1"
 CYAN = (238, 226, 120)
 AMBER = (250, 206, 128)
 INK = (250, 250, 248)
+DIM = (198, 201, 203)
 
 LAST_BEAT = [b[0] for b in BEATS if b[1] is not None][-1]
 
@@ -71,7 +73,79 @@ def frames_of(clip, tin, dur):
     return [f.copy() for f in a]
 
 
-def ice_grade(bgr, k, depth=None):
+def _guided(guide, src, r, eps):
+    """Guided filter (He, Sun & Tang). ~12 lines of box filters, no contrib.
+
+    It re-fits a coarse mask to the edges of a guide image. That is exactly
+    the problem here and there is no other tool for it in this build:
+    cv2 5.0.0 ships without ximgproc, so `cv2.ximgproc.guidedFilter` does
+    not exist.
+    """
+    k = (2 * r + 1, 2 * r + 1)
+    mI, mp = cv2.blur(guide, k), cv2.blur(src, k)
+    cov = cv2.blur(guide * src, k) - mI * mp
+    var = cv2.blur(guide * guide, k) - mI * mI
+    a = cov / (var + eps)
+    return cv2.blur(a, k) * guide + cv2.blur(mp - a * mI, k)
+
+
+def wearer_mask(depth, guide, lo=0.42, hi=0.52, grow=0.0, erode=6):
+    """Where the present-day wearer is.
+
+    THE HALO WAS NEVER A THRESHOLD PROBLEM. Three passes to establish that,
+    and the two dead ends are worth more than the fix.
+
+    Pass 1 (original) thresholded depth at 0.34, dilated 9x9 twice and
+    blurred at sigma 5 -- ~30px of growth every direction. Inside that band
+    the ORIGINAL warm plate survived while everything outside went to ice,
+    so the ice beat carried a jagged ribbon of summer quartzite around his
+    head. r78: "a bright cyan/white halo along the neck, shoulder, cheek and
+    hair boundary ... reads as a compositing failure". Measured it is the
+    opposite polarity -- ungraded WARM rock -- but the same defect, and the
+    loudest amateur tell in the film.
+
+    Pass 2 dropped the dilation and lowered the threshold to 0.22. The head
+    cleaned up and a 20px warm band stayed down the cheek and neck.
+
+    Pass 3 measured the depth profile across the edge, four scanlines. His
+    face reads 0.55-0.60, the rock behind him 0.11-0.18, and the crossing is
+    not uniform: 12px at the temple, 16px at the cheek, 110px at the
+    out-of-focus shoulder. Moving the crossing to 0.42-0.52 should have put
+    the boundary on the silhouette everywhere. It changed almost nothing --
+    because the DEPTH MAP ITSELF is wrong there. Rendered as an image, its
+    near-field boundary sits ~20px right of his actual edge: Depth Anything
+    runs at low resolution and upsamples, and his edge is a defocus gradient
+    with no depth cue in it. No threshold on that map can follow an edge the
+    map does not contain.
+
+    So the mask is snapped to the PICTURE instead. The depth threshold gives
+    a coarse "him / not him", and a guided filter re-fits it to the
+    luminance edges of the plate. Mask area barely moves (31.3% -> 31.1%);
+    what moves is the boundary, onto his jaw. A small erosion then puts any
+    residual error INSIDE him, where it grades a few pixels of his blurred
+    edge slightly cold and reads as rim light -- the failure direction that
+    is invisible rather than the one that tears the frame open.
+
+    The two callers want different masks, deliberately. The GRADE must not
+    reach past his silhouette, because ungraded summer rock in an ice beat
+    is a visible defect. The SNOWFALL wants to be generous, because a flake
+    occluded a few pixels early is invisible while a flake sitting on his
+    hair is not.
+    """
+    if depth is None:
+        return None
+    d = cv2.GaussianBlur(depth.astype(np.float32), (0, 0), 3.0)
+    m = np.clip((d - lo) / (hi - lo), 0, 1).astype(np.float32)
+    m = np.clip((_guided(guide, m, 16, 1e-3) - 0.5) * 3.0 + 0.5, 0, 1)
+    if grow > 0:
+        k = int(grow) * 2 + 1
+        m = cv2.dilate(m, np.ones((k, k), np.uint8))
+    elif erode > 0:
+        m = cv2.erode(m, np.ones((erode, erode), np.uint8))
+    return cv2.GaussianBlur(m, (0, 0), 1.5 + grow * 0.5)[..., None]
+
+
+def ice_grade(bgr, k, depth=None, near=None):
     """This place under ice. Built from the plate so it stays THIS place."""
     if k <= 0:
         return bgr
@@ -141,19 +215,106 @@ def ice_grade(bgr, k, depth=None):
     # with it -- which is also exactly what a pair of AR glasses does. The
     # first pass iced his face and hair along with the river and it read as
     # a period photograph of a boy in a blizzard.
-    # Depth separates him outright on this plate: measured, his head sits at
-    # 0.65-0.75 and NOTHING else in frame is above 0.19, so a threshold at
-    # 0.40 takes him and touches nothing else. Feathered over 0.06 so the
-    # edge of his shoulder does not become a cutout line.
-    if depth is not None:
-        near = np.clip((depth - 0.40) / 0.06, 0, 1)[..., None]
-        iced = iced * (1 - near) + f * near
+    # This comment used to say depth separates him outright -- "his head
+    # sits at 0.65-0.75 and NOTHING else is above 0.19, so a threshold at
+    # 0.40 takes him and touches nothing else". Both halves are true and the
+    # conclusion was still wrong: it is a statement about the INTERIOR of
+    # two regions and says nothing about where the boundary between them
+    # falls, which is the only thing that matters here. See wearer_mask.
+    # NOT A HARD ON/OFF. He keeps 88% of his present-day self and takes 12%
+    # of the cold, which is what standing in front of a large cold surface
+    # actually does to a person and what stops the separation reading as a
+    # key. r78: "keep a small amount of environmental cooling / reflected
+    # light on the wearer so the separation is intentional without looking
+    # keyed."
+    if near is not None:
+        iced = iced * (1 - near * 0.88) + f * (near * 0.88)
 
     return np.clip(f * (1 - k) + iced * k, 0, 255)
 
 
+# ---- snowfall, drawn INSIDE the beat rather than composited from a clip
+#
+# The ice beat was nine seconds of a mammoth standing still. Everything in
+# it was correct and nothing in it MOVED, so it read as a colour grade
+# rather than as weather.
+#
+# Two things make this worth doing in the renderer instead of over the top
+# of the finished master. It is driven by the same k the ice grade uses, so
+# the snow arrives and leaves exactly with the cold instead of needing its
+# own hand-matched fade. And it respects DEPTH: the snow belongs to the
+# visualised world, so it falls BEHIND the wearer, who is a present-day
+# person and is already excluded from the grade for the same reason.
+_SNOW_N = 520
+_srng = np.random.default_rng(11)
+_SNOW = dict(
+    x=_srng.uniform(0, W, _SNOW_N),
+    y=_srng.uniform(0, H, _SNOW_N),
+    d=_srng.uniform(0.30, 1.0, _SNOW_N),          # far -> near
+    vx=_srng.uniform(-26, 26, _SNOW_N),
+    ph=_srng.uniform(0, 6.28, _SNOW_N),
+)
+
+
+def snowfall(frame, t, k, near=None):
+    """Additive flakes. k is the ice amount, so snow follows the grade."""
+    if k <= 0.02:
+        return frame
+    d = _SNOW["d"]
+    vy = 70.0 + 210.0 * d
+    fx = (_SNOW["x"] + _SNOW["vx"] * t + 16.0 * d * np.sin(1.6 * t + _SNOW["ph"])) % W
+    fy = (_SNOW["y"] + vy * t) % H
+    lay = np.zeros((H, W), np.float32)
+    # near flakes are bigger, brighter and slightly streaked by their own speed
+    for xi, yi, dd, vyy in zip(fx.astype(int), fy.astype(int), d, vy):
+        r = int(1 + 2.4 * dd)
+        streak = int(1 + vyy * 0.012)
+        y0, y1 = max(0, yi - streak), min(H, yi + r)
+        x0, x1 = max(0, xi - r), min(W, xi + r)
+        if y1 > y0 and x1 > x0:
+            lay[y0:y1, x0:x1] += 0.35 + 0.65 * dd
+    lay = cv2.GaussianBlur(lay, (0, 0), 0.8)
+    if near is not None:
+        lay *= (1.0 - near[..., 0])          # snow falls BEHIND him
+    return np.clip(frame + lay[..., None] * (58.0 * k), 0, 255)
+
+
 def draw_label(d, anchor, box, title, sub, k, col=CYAN):
     LK.block(d, anchor, box, title, sub, k, col, W, H)
+
+
+def draw_title(d, t, dur, title, sub, t0):
+    """The location title under the montage. DELIBERATELY NOT AN AR LABEL.
+
+    No reticle, no leader, no cyan, no corner cues -- a lower-left block in
+    the film's own voice. The AR vocabulary means "the system recognised
+    this"; the montage is documentary footage of a park and claims nothing,
+    so it must not borrow that vocabulary. Same reason UI_OFF exists.
+
+    IT NEEDS A SCRIM. The first render put white text straight onto the
+    plate and the subtitle was effectively invisible: bC's lower third is
+    sunlit quartzite and lit grass, which is exactly the luminance of the
+    type. The AR labels never hit this because LK.block carries its own
+    plate. A bottom gradient is the documentary equivalent -- full width,
+    because a partial-width scrim leaves a vertical seam down the middle
+    of the frame.
+    """
+    k = AR.ease(min(1.0, max(0.0, (t - t0) / 0.4)))
+    k *= min(1.0, max(0.0, (dur - 0.06 - t) / 0.25))
+    if k <= 0:
+        return
+    band = 300
+    for i in range(band):
+        a = int(150 * k * (i / band) ** 1.6)
+        if a:
+            d.line([(0, H - band + i), (W, H - band + i)], fill=(5, 8, 11, a))
+    x, y = 96, H - 150
+    f1, f2 = LK.inter(58), mono(28)
+    d.rectangle([x - 26, y - 46, x - 22, y + 60], fill=INK + (int(215 * k),))
+    d.text((x + 2, y + 3), title, font=f1, fill=(5, 8, 11, int(170 * k)), anchor="ls")
+    d.text((x, y), title, font=f1, fill=INK + (int(252 * k),), anchor="ls")
+    d.text((x + 4, y + 49), sub, font=f2, fill=(5, 8, 11, int(150 * k)), anchor="ls")
+    d.text((x + 2, y + 46), sub, font=f2, fill=DIM + (int(240 * k),), anchor="ls")
 
 
 def frame_cue(d, t, dur):
@@ -171,6 +332,7 @@ def compose(beat, dur, frames):
     gray = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
     figs = FIGURES.get(beat, [])
     lab = LABELS.get(beat)
+    ttl = TITLES.get(beat)
 
     # Depth once, from the first frame. The camera pans but the SCENE does
     # not change, so a per-frame depth pass would cost minutes and buy a
@@ -183,6 +345,20 @@ def compose(beat, dur, frames):
     cuts = [PL.matte(asset(f[0])) for f in figs]
 
     icespec = ICE.get(beat)
+    # ONCE PER BEAT, not once per frame. The plate's depth is taken from the
+    # first frame (the camera pans, the scene does not change), so the masks
+    # derived from it are constant too -- and the guided filter is the most
+    # expensive thing in the ice path.
+    # DEPTH PER FRAME ON AN ICE BEAT. Everywhere else one depth pass from
+    # frame 0 is right -- the camera barely moves and figure occlusion does
+    # not care about a few pixels. The ice matte does: it is a hard visual
+    # boundary drawn across a face, and holding it static was worth watching
+    # go wrong. Frames 0-2s of e3 were clean and by 4s the warm band was
+    # back, because a static mask only fits the frame it was measured on.
+    # 0.6s per frame, ~110s per ice beat, and it retires the entire class.
+    ice_dep = None
+    if icespec:
+        ice_dep = [DT.depth(f) for f in frames]
 
     for i, f in enumerate(frames):
         t = i / FPS
@@ -193,7 +369,13 @@ def compose(beat, dur, frames):
             r = AR.ease(min(1.0, max(0.0, (t - a0) / (a1 - a0))))
             k_ice = r if direction == "in" else (1.0 - r)
             if k_ice > 0.002:
-                base = ice_grade(base.astype(np.uint8), k_ice, depth=dep0)
+                dpi = ice_dep[i]
+                gi = gray[i].astype(np.float32) / 255.0
+                base = ice_grade(base.astype(np.uint8), k_ice, depth=dpi,
+                                 near=wearer_mask(dpi, gi))
+                base = snowfall(base, t, k_ice,
+                                near=wearer_mask(dpi, gi, lo=0.25, hi=0.40,
+                                                 grow=6))
 
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
@@ -233,7 +415,10 @@ def compose(beat, dur, frames):
                 d.text((W / 2, 119), s, font=fn, fill=AMBER + (int(240 * tg),),
                        anchor="mm")
 
-        frame_cue(d, t, dur)
+        if beat not in UI_OFF:
+            frame_cue(d, t, dur)
+        if ttl:
+            draw_title(d, t, dur, ttl[0], ttl[1], ttl[2])
         ov = np.array(img).astype(np.float32)
         a = ov[..., 3:4] / 255.0
         out = np.clip(base * (1 - a) + ov[..., :3][..., ::-1] * a, 0, 255)
