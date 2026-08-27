@@ -24,6 +24,8 @@
  */
 
 import { DialogueContext, DialogueProvider, DialogueRequest } from '../types';
+import { compose } from '../../barkly/compose';
+import { understand } from '../../barkly/understand';
 
 interface Line {
   speech: string;
@@ -100,7 +102,7 @@ function answerQuestion(text: string, c: DialogueContext | undefined, you: strin
   if (/\bare you (a )?(robot|ai|real|computer)\b/.test(t)) {
     return { speech: "I'm a dog. You're the one talking to a dog.", reaction: 'annoyed', actions: ['HEAD_TILT'] };
   }
-  if (/\bwhat can you do\b|\bwhat should i do\b|\bhelp\b/.test(t)) {
+  if (/\bwhat (can|should) (you|i|we)\b|\bwhat do we do\b|\bwhat now\b|\bhelp\b|\bany ideas\b/.test(t)) {
     return { speech: 'Feed me, throw something, or take me somewhere. Those are the options.', actions: ['EAR_PERK'] };
   }
   if (/\bi love you\b|\bgood (boy|dog)\b|\byou'?re the best\b/.test(t)) {
@@ -180,42 +182,15 @@ const TOPICS: { id: string; match: RegExp; lines: Line[] }[] = [
   },
 ];
 
-/** When nothing matched, he says something that still fits the moment. */
-function situational(c: DialogueContext | undefined, you: string): Line[] {
-  const lines: Line[] = [
-    { speech: 'Huh. Interesting. Well — interesting for a human thing.', actions: ['HEAD_TILT'] },
-    { speech: "I was going to say something clever, but a bird happened earlier and it's still with me.", actions: ['LOOK_LEFT', 'LOOK_RIGHT'] },
-    { speech: "Sure. Probably. Tell me more, I'm about forty percent listening.", actions: ['EAR_PERK'] },
-    { speech: "That's a lot of words. None of them were 'treat'. I noticed.", reaction: 'annoyed', actions: ['HEAD_TILT'] },
-  ];
-  if (!c) return lines;
-
-  if (c.stats.hunger > 70) {
-    lines.push({ speech: `Hard to focus. Stomach's doing a bit.`, reaction: 'hungry', actions: ['MOUTH_MOVE'] });
-  }
-  if (c.stats.energy < 25) {
-    lines.push({ speech: 'Noted. Filing it under things to think about lying down.', reaction: 'sleepy' });
-  }
-  if (c.toy) {
-    lines.push({ speech: `Can we do this while I hold ${c.toy}? I'm not putting it down either way.`, actions: ['EXCITED'] });
-  }
-  if (c.npcsPresent?.length) {
-    lines.push({ speech: `Say that louder, ${c.npcsPresent[0]} is right there and I want them to hear it.`, actions: ['EAR_PERK'] });
-  }
-  if (c.hour !== undefined && (c.hour >= 21 || c.hour < 6)) {
-    lines.push({ speech: 'Big thoughts for this hour. The night makes everything sound true.', reaction: 'sleepy' });
-  }
-  if (c.personName) {
-    lines.push({ speech: `${c.personName}. Look at me. I have no idea what that meant.`, actions: ['HEAD_TILT'] });
-  }
-  if (c.cues?.length) {
-    lines.push({ speech: `Say "${c.cues[0]}" instead. That one I understand.`, actions: ['EAR_PERK'] });
-  }
-  return lines;
-}
+/** How many of his own recent lines he refuses to repeat. */
+const RECENT = 14;
 
 export function createScriptedDialogue(): DialogueProvider {
+  const recent: string[] = [];
   const pick = rotator();
+  // A walking seed rather than Math.random: successive replies land on
+  // different shapes instead of clustering, and a test can drive it.
+  let seed = Math.floor(Math.random() * 997);
 
   return {
     name: 'scripted-offline',
@@ -235,17 +210,57 @@ export function createScriptedDialogue(): DialogueProvider {
         prefix = `${named[1]}, huh. Good name. Mine's better, but good. `;
       }
 
-      // A question he can honestly answer beats a topic he merely matched.
-      let line = answerQuestion(text, c, you);
-      if (!line) {
-        const topic = TOPICS.find((t) => t.match.test(text));
-        line = topic ? pick(topic.id, topic.lines) : pick('idle', situational(c, you));
+      // A question he can honestly answer from real state beats anything
+      // generated — "what's my name" has a right answer and he should give it.
+      const known = answerQuestion(text, c, you);
+      if (known) {
+        recent.push(known.speech);
+        return JSON.stringify({
+          speech: prefix + known.speech,
+          reaction: known.reaction,
+          actions: known.actions ?? [],
+          remember: { facts, experiences: [] },
+        });
       }
 
+      // Everything else is COMPOSED from what they actually said, rather than
+      // picked out of a bucket. The seed walks so phrasing varies; if the
+      // result is one he has used recently, walk it again. This is the whole
+      // difference between "he has four lines" and "he has an opinion".
+      const u = understand(text);
+
+      // The hand-written topic lines are the funniest thing he says, so they
+      // are not thrown away — they are mixed IN. Roughly one matched topic in
+      // three gets its bespoke line; the rest compose. (What was removed is
+      // the four-line pool that everything else used to fall into.)
+      const topic = TOPICS.find((t) => t.match.test(text));
+      if (topic && seed % 3 === 0) {
+        const line = pick(topic.id, topic.lines);
+        if (!recent.includes(line.speech)) {
+          seed++;
+          recent.push(line.speech);
+          if (recent.length > RECENT) recent.shift();
+          return JSON.stringify({
+            speech: prefix + line.speech,
+            reaction: line.reaction,
+            actions: line.actions ?? [],
+            remember: { facts, experiences: [] },
+          });
+        }
+      }
+
+      const cc = { ...(c ?? {}), avoid: recent };
+      let built = compose(u, cc, seed++);
+      for (let tries = 0; tries < 6 && recent.includes(built.speech); tries++) {
+        built = compose(u, cc, seed++);
+      }
+      recent.push(built.speech);
+      if (recent.length > RECENT) recent.shift();
+
       return JSON.stringify({
-        speech: prefix + line.speech,
-        reaction: line.reaction,
-        actions: line.actions ?? [],
+        speech: prefix + built.speech,
+        reaction: built.reaction,
+        actions: built.actions,
         remember: { facts, experiences: [] },
       });
     },
