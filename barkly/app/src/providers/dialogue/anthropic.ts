@@ -125,7 +125,13 @@ export function createAnthropicDialogue(config: AnthropicDialogueConfig): Dialog
   }
 
   return {
-    name: baseURL ? `barkly-backend:${model}` : `anthropic:${model}`,
+    // Honest even when nothing is configured: Settings shows this string, and
+    // "anthropic:claude-opus-5" in a build with no key is a lie a reader acts on.
+    name: !available
+      ? 'no model configured'
+      : baseURL
+        ? `barkly-backend:${model}`
+        : `anthropic:${model}`,
     isAvailable: () => available,
 
     async complete(req: DialogueRequest): Promise<string> {

@@ -24,6 +24,12 @@ import {
 } from '../barkly/character';
 import { nameFromFacts, welcomeBack } from '../barkly/greetings';
 import { Mishap, mishapLine } from '../barkly/mishaps';
+import {
+  advance as advanceOnboarding,
+  freshOnboarding,
+  OnboardingState,
+  openingLine,
+} from '../barkly/onboarding';
 import { FEED_LINES, FULL_LINES, PLAY_LINES, pickLine, TIRED_LINES, WAKE_LINES } from '../barkly/lines';
 import { BarklyMemory, MemoryState } from '../barkly/memory';
 import {
@@ -51,6 +57,7 @@ const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
 const LOCATION_KEY = profileKey(DEFAULT_PROFILE, 'location-v1');
 const CHARACTER_KEY = profileKey(DEFAULT_PROFILE, 'character-v1');
 const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
+const ONBOARDING_KEY = profileKey(DEFAULT_PROFILE, 'onboarding-v1');
 
 export interface Exchange {
   userText: string;
@@ -80,6 +87,9 @@ export interface BarklyController {
   toggleMuted(): void;
   /** Which link of the voice chain last made the sound. */
   voiceRoute: 'barkly' | 'device' | 'silent' | null;
+  /** undefined until storage has been read — render nothing rather than flash. */
+  onboarding: OnboardingState | undefined;
+  advanceOnboarding(result: ReturnType<typeof advanceOnboarding>): void;
 
   startTalk(): Promise<void>;
   stopTalk(): Promise<void>;
@@ -151,6 +161,9 @@ export function useBarkly(): BarklyController {
 
   // The single audio lifecycle: real voice, device voice, silent-but-timed.
   const [muted, setMutedState] = useState(false);
+  // undefined = we have not read storage yet, so nothing renders and a
+  // returning child never sees a flash of the first-launch screen.
+  const [onboarding, setOnboarding] = useState<OnboardingState | undefined>(undefined);
   const voiceEngine = useMemo(
     () => createVoiceEngine({ voice: providers.voice, device: providers.tts }),
     [providers],
@@ -233,6 +246,15 @@ export function useBarkly(): BarklyController {
         }
       } catch {
         lost = true; // keep a fresh character
+      }
+      // First launch? Read this before anything renders.
+      try {
+        const done = await asyncStorageStore.get(ONBOARDING_KEY);
+        if (!cancelled) setOnboarding(done === 'done' ? { step: 'done', micOffered: true } : freshOnboarding());
+      } catch {
+        // Unreadable storage: treat as a returning child rather than making
+        // them do the introduction again on every launch.
+        if (!cancelled) setOnboarding({ step: 'done', micOffered: true });
       }
       // Mute is a parent's setting: it survives a relaunch.
       try {
@@ -651,6 +673,44 @@ export function useBarkly(): BarklyController {
     dispatch({ type: 'SLEEP_TOGGLE' }); // going to sleep needs no commentary
   }, [busy, dispatch, speak]);
 
+  /**
+   * One beat of the first-launch meeting. The pure part decided WHAT happened;
+   * this does the three things that touch the world: remember the name, raise
+   * the OS permission prompt, and let him say his first real line.
+   */
+  const handleOnboarding = useCallback(
+    (result: ReturnType<typeof advanceOnboarding>) => {
+      setOnboarding(result.state);
+
+      if (result.learnedName) {
+        // A real memory fact, not a local variable — so five minutes later he
+        // uses it unprompted and the whole premise lands.
+        memory
+          .remember([`name = ${result.learnedName}`], ['We met. I asked their name.'])
+          .catch(() => {});
+      }
+
+      if (result.askMicrophone) {
+        // Contextual: the OS prompt follows the sentence that asked for it.
+        providers.stt
+          .requestPermissions()
+          .then((granted) => {
+            permissionGranted.current = granted;
+          })
+          .catch(() => {
+            permissionGranted.current = false;
+          });
+      }
+
+      if (result.finished) {
+        asyncStorageStore.set(ONBOARDING_KEY, 'done').catch(() => {});
+        // The app never opens cold: he is mid-sentence when the room appears.
+        setPendingGreeting(openingLine(result.state));
+      }
+    },
+    [memory, providers],
+  );
+
   const actions = useMemo<BodyAction[]>(() => {
     const ambient = ambientActions(snapshot.state);
     const merged =
@@ -682,6 +742,8 @@ export function useBarkly(): BarklyController {
       asyncStorageStore.set(MUTE_KEY, next ? '1' : '0').catch(() => {});
     },
     voiceRoute: voiceEngine.lastRoute,
+    onboarding,
+    advanceOnboarding: handleOnboarding,
     startTalk,
     stopTalk,
     cancelTalk,
@@ -709,6 +771,9 @@ export function useBarkly(): BarklyController {
       // a stable id behind that the backend can still recognise.
       await resetDeviceId(asyncStorageStore);
       await loadDeviceId(asyncStorageStore);
+      // He has forgotten who you are, so he introduces himself again.
+      await asyncStorageStore.remove(ONBOARDING_KEY);
+      setOnboarding(freshOnboarding());
     },
   };
 }

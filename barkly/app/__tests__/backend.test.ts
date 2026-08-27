@@ -145,6 +145,12 @@ describe('the Anthropic adapter', () => {
     expect(createAnthropicDialogue({}).isAvailable()).toBe(false);
     expect(createAnthropicDialogue({ baseURL: 'https://x' }).isAvailable()).toBe(true);
   });
+
+  it('does not name a model it cannot reach — Settings shows this string', () => {
+    expect(createAnthropicDialogue({}).name).toBe('no model configured');
+    expect(createAnthropicDialogue({}).name).not.toContain('claude');
+    expect(createAnthropicDialogue({ baseURL: 'https://x' }).name).toContain('barkly-backend');
+  });
 });
 
 describe('Barkly does not die when the service does', () => {

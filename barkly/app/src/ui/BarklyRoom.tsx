@@ -21,6 +21,7 @@ import {
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useBarkly } from '../hooks/useBarkly';
 import BarklyPhotoView from './BarklyPhotoView';
+import Onboarding from './Onboarding';
 import BarklyView from './BarklyView';
 import SettingsSheet from './SettingsSheet';
 import { Ball, FoodBowl } from './StageProps';
@@ -301,6 +302,21 @@ export default function BarklyRoom() {
     : lastExchange?.barklyText;
 
   const playLabel = location === 'park' ? (fetching ? 'fetching…' : 'fetch') : 'play';
+
+  // Storage has not answered yet. Rendering the room now and swapping to the
+  // meeting a frame later is worse than one quiet beat of nothing.
+  if (barkly.onboarding === undefined) return <View style={styles.room} />;
+
+  if (barkly.onboarding.step !== 'done') {
+    return (
+      <Onboarding
+        state={barkly.onboarding}
+        micAvailable={sttAvailable}
+        onAdvance={barkly.advanceOnboarding}
+        Renderer={Renderer}
+      />
+    );
+  }
 
   return (
     <View style={styles.room}>
