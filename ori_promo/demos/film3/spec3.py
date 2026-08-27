@@ -53,10 +53,26 @@ SEAM = {
 
 # beat: (anchor_xy, title, subtitle, appear_t, offset_xy)
 LABELS = {
- "b1": ((560, 620),  "THEN AND NOW", "THE SAME VIEW",     2.4, (420, -300)),
- "b2": ((1250, 760), "YOU DRIVE IT", "BACK AND FORWARD",  2.0, (-620, -280)),
- "b3": ((470, 660),  "IT STOOD HERE", "SAME GROUND",      2.6, (420, -260)),
- "b4": ((900, 700),  "LET GO",       "AND IT IS NOW",     1.2, (330, -260)),
+ # r72 CLAIMS PASS. Three of these four asserted something the film does not
+ # show. "YOU DRIVE IT" and "LET GO" name a viewer-control MECHANISM -- a
+ # hand, a controller, a gaze reticle -- and no frame in the beat contains
+ # one, so a cold viewer is being told an interaction exists on the strength
+ # of a caption. "IT STOOD HERE" asserts historical placement we have not
+ # sourced, and it also pulled the film back toward Demo 2's territory when
+ # the whole point of Demo 3 is temporal COMPARISON, not reconstruction.
+ # The seam behaviour is unchanged; only the words are. What the film shows
+ # is a boundary the viewer moves back and forth through, and that is now
+ # exactly what the copy says.
+ # "THE SAME VIEW" is KEPT: both sides of the seam are literally the same
+ # photographed plate, so it is a statement about this film, not a claim
+ # about verified registration in a product.
+ "b1": ((560, 620),  "THEN AND NOW",     "THE SAME VIEW",    2.4, (420, -300)),
+ "b2": ((1250, 760), "MOVE THROUGH TIME", "BACK AND FORWARD", 2.0, (-620, -280)),
+ "b3": ((470, 660),  "COMPARE IN PLACE", "SAME GROUND",      2.6, (420, -260)),
+ # offset pulled in from 330 to 180: "RETURN TO NOW" is 613px of title
+ # against "LET GO"'s 216, and at the old offset the panel ended 51px from
+ # the right edge of frame. Shorter leader, safer margin.
+ "b4": ((900, 700),  "RETURN TO NOW",    "THE PRESENT VIEW", 1.2, (180, -260)),
 }
 
 

@@ -269,6 +269,27 @@ def compose(beat, dur, frames):
         if seen:
             roster(d, ease(min(1.0, (t - 1.0) / 0.6)), seen)
 
+        # ---- the standing honesty tag, whenever two viewers are on screen
+        # r72. ChatGPT's r71 review: "RECEIVED FROM VIEWER A", "SAME ANCHOR /
+        # DIFFERENT DEPTH" and the "N CONNECTED" roster read as a working
+        # multi-user network with shared anchors and synchronised state.
+        # Nothing here is networked -- this is one photographed plate with two
+        # label tracks drawn on it. The other four films carry a disclosure
+        # whenever they show something that is not evidence; this one showed a
+        # capability claim with nothing on it at all, which was the gap.
+        # Tied to the roster, so it is present for exactly as long as the
+        # thing it qualifies.
+        if len(seen) > 1:
+            tg = ease(min(1.0, (t - 1.4) / 0.6))
+            if tg > 0:
+                fn = mono(30)
+                msg = "MULTI-VIEWER SHOWN AS PRODUCT CONCEPT"
+                tw2 = d.textlength(msg, font=fn)
+                d.rectangle([W / 2 - tw2 / 2 - 22, H - 178, W / 2 + tw2 / 2 + 22, H - 132],
+                            fill=(6, 9, 12, int(180 * tg)))
+                d.text((W / 2, H - 155), msg, font=fn,
+                       fill=(246, 196, 118) + (int(246 * tg),), anchor="mm")
+
         frame_cue(d, t, dur)
         ov = np.array(img).astype(np.float32)
         a = ov[..., 3:4] / 255.0

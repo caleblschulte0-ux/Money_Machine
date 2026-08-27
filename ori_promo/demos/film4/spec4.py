@@ -2,10 +2,12 @@
 # DIMENSIONS AND BY MATERIAL, AND CAN SHOW WHAT IS UNDER IT.
 #
 # Deliberately the furthest thing from Demo 1. Demo 1 recognises a NAMED THING
-# and labels it. This one does not name anything: it measures. Depth from a
-# single camera, materials by class, and then a cutaway into ground nobody can
-# see. Three readings, three different visual behaviours, one after another,
-# and then all at once.
+# and labels it. This one does not name anything: it measures. Materials by
+# class, then a cutaway into ground nobody can see, then both at once. Two
+# readings with genuinely different visual behaviour, and a density beat that
+# runs them together. (It was three until r72 cut the terrain sweep -- see
+# BEATS. "Three readings" is the line most likely to get copied forward into
+# a deck after it stopped being true, so it is corrected at the source.)
 #
 # Every plate is gated by shotqc with zero flags -- no TAIL, no DRIFT, no JOLT.
 #
@@ -17,7 +19,7 @@
 # different, and the opener is a plate Demo 1 never uses -- but a viewer who
 # watches both back to back will recognise the park, and should.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 33.5
+TOTAL = 29.0
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
@@ -31,12 +33,21 @@ BEATS = [
  # Terrain 7.5 -> 4.5, subsurface 8.0 -> 11.0. Both re-gated at the new
  # durations before the change was made: 6791@4.5 over 4.5s and 6794@10.5
  # over 11.0s both PASS.
+ # r72: THE TERRAIN BEAT IS CUT. It had already been shortened twice --
+ # 7.5s -> 4.5s at r69 -- and after two strengthening passes the contour
+ # sweep was still faint enough that the label did more work than the
+ # visualisation. Two independent cold reads (my own r70 note and
+ # ChatGPT's r71 review) landed on the same verdict from the same
+ # evidence, so it goes rather than getting a third opacity pass.
+ # The film keeps three distinct behaviours -- materials, subsurface, and
+ # the two-at-once density beat -- which is what actually differentiates
+ # it from Demo 1. 33.5s -> 29.0s. The audio bed is generated from TOTAL
+ # so it re-times itself; nothing else in the film is duration-coupled.
  ("open", "6798",  6.5,  0.0, 3.5, "the walkway. system comes up, nothing claimed yet"),
- ("b1",   "6791",  4.5,  3.5, 4.5, "TERRAIN: ONE decisive near->far sweep, not a field of contours"),
- ("b2",   "6805",  4.5,  8.0, 7.0, "MATERIALS: sky / vegetation / stone, outlined and named"),
- ("b3",   "6794", 10.5, 15.0,11.0, "SUBSURFACE: the hero. the ground opens and stays open"),
- ("b4",   "6796",  8.5, 26.0, 5.0, "TWO systems at once, not three -- r69 called three cluttered"),
- ("end",   None,   0.0, 31.0, 2.5, "held from b4's last frame"),
+ ("b2",   "6805",  4.5,  3.5, 7.0, "MATERIALS: sky / vegetation / stone, outlined and named"),
+ ("b3",   "6794", 10.5, 10.5,11.0, "SUBSURFACE: the hero. the ground opens and stays open"),
+ ("b4",   "6796",  8.5, 21.5, 5.0, "TWO systems at once, not three -- r69 called three cluttered"),
+ ("end",   None,   0.0, 26.5, 2.5, "held from b4's last frame"),
 ]
 
 # Anchors for the tracked capability labels. Placed by marking them on the
@@ -46,7 +57,6 @@ BEATS = [
 # word "SURFACE".
 # beat: (anchor_xy, title, subtitle, appear_t, label_offset_xy)
 LABELS = {
- "b1": ((980, 690),  "TERRAIN MODEL",     "DEPTH / ONE CAMERA",   1.5, (-560, -230)),
  "b2": ((800, 360),  "MATERIAL CLASSES",  "SKY / PLANT / STONE",  1.2, (250, -180)),
  "b3": ((1250, 620), "BELOW THE SURFACE", "VISUALISATION",        1.6, (-560, -240)),
  "b4": ((1300, 700), "ONE PASS",          "RANGE + CLASS + CORE", 1.0, (-620, -250)),

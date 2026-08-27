@@ -158,11 +158,13 @@ def frame_cue(d, t, dur):
 # is that these three readings look and behave differently from each other.
 
 SCHED = {
-  # r69: b1 is now 4.5s and carries ONE decisive sweep rather than a slow
-  # contour build. b3 is 11.0s so the aperture -- the film's clearest proof --
-  # has room to open, fill and be read. b4 drops the aperture entirely and
-  # runs two systems, because three fully active at once read as clutter.
-  "b1": dict(shells=(0.10, 0.80), sweep=(1.00, 3.90), classes=None, ap=None),
+  # r69: b3 is 11.0s so the aperture -- the film's clearest proof -- has room
+  # to open, fill and be read. b4 drops the aperture entirely and runs two
+  # systems, because three fully active at once read as clutter.
+  # b1 (TERRAIN) was CUT at r72 -- see spec4's BEATS comment. Its schedule
+  # is removed rather than orphaned: SCHED.get() would have swallowed a
+  # stale key silently, and a dead entry here is exactly the kind of thing
+  # a later session reads as "the terrain beat still exists".
   "b2": dict(shells=(0.10, 1.10), sweep=None, classes=(0.20, 2.00), ap=None),
   # b3 runs the aperture ALONE. With shells on, the depth-shell edges trace
   # the visitor's silhouette -- he is a genuine depth discontinuity, so the
@@ -225,7 +227,11 @@ def compose(beat, dur, frames):
                 # reveal sweeps from near (depth 1) to far (depth 0)
                 gate_d = 1.0 - k * 1.25
                 e = e * np.clip((dep - gate_d) * 8.0, 0, 1)
-                hold = 0.46 if beat != "b1" else (0.62 if t < sch["sweep"][0] else 0.34)
+                # was: 0.46 for every beat except b1, which ran hotter before
+                # its sweep and cooler after. b1 is gone (r72), so the branch
+                # was dead and its dependence on sch["sweep"] would have
+                # raised on any future shells-without-sweep beat.
+                hold = 0.46
                 m = cv2.resize(e, (W, H))[..., None] * hold
                 base = base*(1-m) + np.array(CYAN[::-1], np.float32)*m
 
@@ -356,7 +362,14 @@ def compose(beat, dur, frames):
             tg = seg(t, ap[2] + 0.2, ap[2] + 0.9)
             if tg > 0:
                 fn = mono(30)
-                s = "VISUAL INTENTION ONLY — SUBSURFACE NOT PHOTOGRAPHED"
+                # r72. ChatGPT's r71 review called this the highest
+                # product-claim risk in the set, and it was right about the
+                # gap: the old wording said the subsurface was not
+                # PHOTOGRAPHED, which a cold viewer reads as "so they sensed
+                # it some other way". Nothing in this pipeline senses below
+                # ground. The band ORDER is the published surface geology of
+                # this site; the aperture is an illustration of it. Say both.
+                s = "VISUALISATION FROM PUBLISHED GEOLOGY — NOT SENSED, NOT MEASURED"
                 tw2 = d.textlength(s, font=fn)
                 d.rectangle([W/2-tw2/2-22, H-116, W/2+tw2/2+22, H-70],
                             fill=(6, 9, 12, int(180*tg)))
