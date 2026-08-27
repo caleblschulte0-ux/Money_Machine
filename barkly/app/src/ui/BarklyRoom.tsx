@@ -142,7 +142,55 @@ function HeartBurst({ burst }: { burst: number }) {
   );
 }
 
-function NpcDog({ id, onPress, bubble }: { id: NpcId; onPress: () => void; bubble: string | null }) {
+/**
+ * Ground contact.
+ *
+ * There was one shadow in the app: a single flat brown ellipse at 15% opacity,
+ * the same on wood, on grass and on wet sand, with a hard edge and no
+ * falloff — so on every surface it read as a grey slab and the dog read as
+ * pasted onto the background rather than standing on it. And the NPCs had no
+ * shadow at all, so they simply floated.
+ *
+ * Two ellipses (a soft wide one under a tighter core) in a colour drawn from
+ * the ground he is actually on is the whole difference between "on the floor"
+ * and "in front of a picture of a floor".
+ */
+const GROUND_SHADOW: Record<LocationId, string> = {
+  home: '#7A5A32',
+  park: '#4F6B3A',
+  town: '#6E5636',
+  beach: '#9A7B4C',
+};
+
+function GroundShadow({ location, width, style }: { location: LocationId; width: number; style?: object }) {
+  const tint = GROUND_SHADOW[location];
+  return (
+    <View style={[{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }, style]} pointerEvents="none">
+      <View
+        style={{
+          position: 'absolute',
+          width: width * 1.18,
+          height: width * 0.2,
+          borderRadius: width,
+          backgroundColor: tint,
+          opacity: 0.1,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          width: width * 0.74,
+          height: width * 0.125,
+          borderRadius: width,
+          backgroundColor: tint,
+          opacity: 0.17,
+        }}
+      />
+    </View>
+  );
+}
+
+function NpcDog({ id, onPress, bubble, location }: { id: NpcId; onPress: () => void; bubble: string | null; location: LocationId }) {
   const spot = NPC_SPOTS[id]!;
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -163,6 +211,7 @@ function NpcDog({ id, onPress, bubble }: { id: NpcId; onPress: () => void; bubbl
           <Text style={styles.npcBubbleText} numberOfLines={3}>{bubble}</Text>
         </View>
       )}
+      <GroundShadow location={location} width={spot.size * 0.92} style={{ bottom: 16 }} />
       <Pressable
         onPress={onPress}
         hitSlop={8}
@@ -209,7 +258,7 @@ export default function BarklyRoom() {
   const [digging, setDigging] = useState(false);
   const [variant, setVariant] = useState<'runRight' | 'carryLeft' | null>(null);
 
-  const { snapshot, actions, lastExchange, partialTranscript, error, busy, sttAvailable, location } = barkly;
+  const { snapshot, actions, lastExchange, partialTranscript, error, busy, locked, sttAvailable, location } = barkly;
   const listening = snapshot.state === 'listening';
   const asleep = snapshot.state === 'sleepy';
   const stateLabel = STATE_LABEL[snapshot.state];
@@ -274,7 +323,7 @@ export default function BarklyRoom() {
    * with nothing he improvises. Fetch at the park is the same chase.
    */
   const runPlay = async () => {
-    if (fetching || busy || digging) return;
+    if (fetching || locked || digging) return;
     const routine = await barkly.play();
     if (routine === 'ball') {
       runChase(() => {});
@@ -295,7 +344,7 @@ export default function BarklyRoom() {
   };
 
   const runFetch = () => {
-    if (fetching || busy || digging) return;
+    if (fetching || locked || digging) return;
     runChase(() => void barkly.play());
   };
 
@@ -305,7 +354,7 @@ export default function BarklyRoom() {
    * that cannot be caught, which suits him.
    */
   const runWaves = () => {
-    if (fetching || busy || digging) return;
+    if (fetching || locked || digging) return;
     runChase(() => void barkly.chaseWaves());
   };
   const ballX = ballFlight.interpolate({ inputRange: [0, 1], outputRange: [0, 118] });
@@ -319,7 +368,7 @@ export default function BarklyRoom() {
 
   const digRotate = useRef(new Animated.Value(0)).current;
   const runDig = () => {
-    if (digging || fetching || busy) return;
+    if (digging || fetching || locked) return;
     setDigging(true);
     Animated.loop(
       Animated.sequence([
@@ -415,6 +464,19 @@ export default function BarklyRoom() {
           </View>
         </View>
 
+        {/*
+          Transient notices live in an OVERLAY, not in the layout flow.
+
+          They used to be ordinary children between the header and the tabs,
+          so every coin you earned pushed the tabs, the plan pill, the speech
+          bubble and the whole stage down by ~34px and then snapped them back
+          two seconds later. Since a reward fires on almost every action, the
+          screen was jumping under your finger constantly — and a promotion
+          banner (much taller) moved it further still. Absolute positioning is
+          the whole fix: the notice appears over the scene and nothing else
+          moves at all.
+        */}
+        <View style={styles.noticeLayer} pointerEvents="box-none">
         {barkly.reward && (
           <View style={styles.reward} pointerEvents="none" accessibilityLiveRegion="polite">
             <Text style={styles.rewardText}>
@@ -447,22 +509,23 @@ export default function BarklyRoom() {
             <Text style={styles.degradedText}>{barkly.degraded}</Text>
           </Pressable>
         )}
+        </View>
 
         <View style={styles.tabs}>
           {LOCATION_ORDER.map((loc: LocationId) => {
-            const locked = !barkly.isUnlocked(loc);
+            const areaLocked = !barkly.isUnlocked(loc);
             return (
               <Pressable
                 key={loc}
-                style={[styles.tab, location === loc && styles.tabActive, locked && styles.tabLocked]}
-                disabled={busy || fetching || locked}
+                style={[styles.tab, location === loc && styles.tabActive, areaLocked && styles.tabLocked]}
+                disabled={locked || fetching || areaLocked}
                 onPress={() => barkly.goTo(loc)}
                 accessibilityRole="tab"
-                accessibilityState={{ selected: location === loc, disabled: locked }}
-                accessibilityLabel={locked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}` : LOCATIONS[loc].name}
+                accessibilityState={{ selected: location === loc, disabled: areaLocked }}
+                accessibilityLabel={areaLocked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}` : LOCATIONS[loc].name}
               >
                 <Text style={[styles.tabText, location === loc && styles.tabTextActive]}>{LOCATIONS[loc].name.toLowerCase()}</Text>
-                {locked && <Text style={styles.tabLock}>Lv {AREA_UNLOCKS[loc]?.level}</Text>}
+                {areaLocked && <Text style={styles.tabLock}>Lv {AREA_UNLOCKS[loc]?.level}</Text>}
               </Pressable>
             );
           })}
@@ -485,28 +548,46 @@ export default function BarklyRoom() {
           </Pressable>
         )}
 
-        <View style={styles.bubbleZone}>
-          {bubbleText ? (
-            <AnimatedBubble changeKey={bubbleText}>
-              {lastExchange && !listening && lastExchange.userText !== '' && (
-                <Text style={styles.bubbleYou} numberOfLines={1}>you said “{lastExchange.userText}”</Text>
-              )}
-              <Text style={styles.bubbleText} numberOfLines={4}>{bubbleText}</Text>
-              <View style={styles.bubbleTail} />
-            </AnimatedBubble>
-          ) : (
-            <Text style={[styles.hint, asleep && styles.hintNight]}>
-              {asleep ? 'shh — he’s sleeping' : sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
-            </Text>
-          )}
-          {error && <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text>}
-        </View>
-
         <View style={styles.stageArea}>
-          {!asleep && <View style={styles.shadow} />}
+          {/*
+            His voice, anchored to HIM.
+
+            The bubble used to be a block in the page flow, pinned under the
+            plan pill with the stage pushed below it — so it floated ~200px
+            above his head with its tail pointing into empty scenery, and the
+            gap between them was the dead space in the middle of every screen.
+            Anchoring it just over his head makes the tail land on the dog and
+            gives that space back to the stage. `top: 0` on the anchor is what
+            stops a long line from ever climbing into the chrome.
+          */}
+          <View style={styles.speechAnchor} pointerEvents="box-none">
+            {bubbleText ? (
+              <AnimatedBubble changeKey={bubbleText}>
+                {lastExchange && !listening && lastExchange.userText !== '' && (
+                  <Text style={styles.bubbleYou} numberOfLines={1}>you said “{lastExchange.userText}”</Text>
+                )}
+                <Text style={styles.bubbleText} numberOfLines={4}>{bubbleText}</Text>
+                <View style={styles.bubbleTail} />
+              </AnimatedBubble>
+            ) : barkly.thought ? (
+              /* His inner voice belongs where his voice is, not floating at
+                 the top of the stage disconnected from him. */
+              <View style={styles.thought} pointerEvents="none">
+                <Text style={styles.thoughtText}>{barkly.thought}</Text>
+                <View style={styles.thoughtDot1} />
+                <View style={styles.thoughtDot2} />
+              </View>
+            ) : (
+              <Text style={[styles.hint, asleep && styles.hintNight]}>
+                {asleep ? 'shh — he’s sleeping' : sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
+              </Text>
+            )}
+            {error && <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text>}
+          </View>
+          {!asleep && <GroundShadow location={location} width={230} style={{ bottom: 18 }} />}
           {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
           {npcsHere.map((id) => (
-            <NpcDog key={id} id={id} bubble={barkly.npcBubble?.id === id ? barkly.npcBubble.line : null} onPress={() => barkly.npcTalk(id)} />
+            <NpcDog key={id} id={id} location={location} bubble={barkly.npcBubble?.id === id ? barkly.npcBubble.line : null} onPress={() => barkly.npcTalk(id)} />
           ))}
           <Animated.View
             style={{
@@ -517,7 +598,13 @@ export default function BarklyRoom() {
               ],
             }}
           >
-            <Pressable onPress={pet} disabled={busy}>
+            <Pressable
+              onPress={pet}
+              disabled={locked}
+              accessibilityRole="button"
+              accessibilityLabel={`Barkly. ${stateLabel || snapshot.state}.`}
+              accessibilityHint="Tap to pet him."
+            >
               <Renderer state={snapshot.state} actions={actions} variant={variant} collarColor={barkly.collarColor} />
             </Pressable>
           </Animated.View>
@@ -539,7 +626,7 @@ export default function BarklyRoom() {
             <Pressable
               style={styles.digSpot}
               onPress={runDig}
-              disabled={digging || fetching || busy}
+              disabled={digging || fetching || locked}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={location === 'beach' ? 'Search the wet sand' : 'Dig here'}
@@ -561,13 +648,6 @@ export default function BarklyRoom() {
                 {digging ? '…' : location === 'beach' ? 'sift?' : 'dig?'}
               </Text>
             </Pressable>
-          )}
-          {barkly.thought && !bubbleText && (
-            <View style={styles.thought} pointerEvents="none">
-              <Text style={styles.thoughtText}>{barkly.thought}</Text>
-              <View style={styles.thoughtDot1} />
-              <View style={styles.thoughtDot2} />
-            </View>
           )}
           {/* A bought toy is IN THE ROOM, not a line on a receipt. It sits
               off to the side when idle and vanishes while it is in play. */}
@@ -608,10 +688,13 @@ export default function BarklyRoom() {
         <View style={styles.controls}>
           {sttAvailable ? (
             <Pressable
-              style={({ pressed }) => [styles.talk, listening && styles.talkActive, (busy || pressed) && styles.pressed, busy && styles.disabled]}
-              disabled={busy}
+              style={({ pressed }) => [styles.talk, listening && styles.talkActive, (locked || pressed) && styles.pressed, locked && styles.disabled]}
+              disabled={locked}
               onPressIn={barkly.startTalk}
               onPressOut={barkly.stopTalk}
+              accessibilityRole="button"
+              accessibilityLabel={listening ? 'Listening. Release to send.' : 'Hold to talk to Barkly'}
+              accessibilityState={{ disabled: locked, busy: listening }}
             >
               <View style={[styles.micDot, listening && styles.micDotLive]} />
               <Text style={styles.talkText}>{listening ? 'listening — release to send' : 'hold to talk'}</Text>
@@ -624,11 +707,20 @@ export default function BarklyRoom() {
                 onChangeText={setTyped}
                 placeholder="say something to Barkly…"
                 placeholderTextColor={INK_SOFT}
-                editable={!busy}
+                editable={!locked}
                 onSubmitEditing={sendTyped}
                 returnKeyType="send"
+                accessibilityLabel="Say something to Barkly"
+                accessibilityHint="Type a message, then press talk."
               />
-              <Pressable style={({ pressed }) => [styles.send, pressed && styles.pressed, (busy || !typed.trim()) && styles.disabled]} disabled={busy || !typed.trim()} onPress={sendTyped}>
+              <Pressable
+                style={({ pressed }) => [styles.send, pressed && styles.pressed, (locked || !typed.trim()) && styles.disabled]}
+                disabled={locked || !typed.trim()}
+                onPress={sendTyped}
+                accessibilityRole="button"
+                accessibilityLabel="Talk to Barkly"
+                accessibilityState={{ disabled: locked || !typed.trim() }}
+              >
                 <Text style={styles.sendText}>talk</Text>
               </Pressable>
             </View>
@@ -637,8 +729,15 @@ export default function BarklyRoom() {
           <View style={styles.actionsRow}>
             <ActionButton
               label={playLabel}
+              hint={
+                location === 'park'
+                  ? 'Throw the ball and let him chase it.'
+                  : location === 'beach'
+                    ? 'Send him at the sea. He will not win.'
+                    : 'Play with whatever he is holding.'
+              }
               onPress={location === 'park' ? runFetch : location === 'beach' ? runWaves : runPlay}
-              disabled={busy || fetching || tugging}
+              disabled={locked || fetching || tugging}
             />
             <ActionButton
               label="feed"
@@ -649,9 +748,15 @@ export default function BarklyRoom() {
                 if (hasTreats) setFoodOpen(true);
                 else void barkly.feed();
               }}
-              disabled={busy || fetching}
+              disabled={locked || fetching}
+              hint="Give him something to eat."
             />
-            <ActionButton label={asleep ? 'wake' : 'sleep'} onPress={barkly.sleepToggle} disabled={busy || fetching} />
+            <ActionButton
+              label={asleep ? 'wake' : 'sleep'}
+              hint={asleep ? 'Wake him up.' : 'Send him to bed.'}
+              onPress={barkly.sleepToggle}
+              disabled={locked || fetching}
+            />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -705,11 +810,36 @@ export default function BarklyRoom() {
   );
 }
 
-function ActionButton({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+/**
+ * A primary action. It had no accessibility role and no label, so with
+ * VoiceOver or TalkBack the three controls the whole app runs on announced
+ * nothing and could not be found at all.
+ */
+function ActionButton({
+  label,
+  onPress,
+  disabled,
+  hint,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  hint?: string;
+}) {
   const scale = useRef(new Animated.Value(1)).current;
   const springTo = (v: number) => Animated.spring(scale, { toValue: v, friction: 5, tension: 300, useNativeDriver: true }).start();
   return (
-    <Pressable style={styles.actionWrap} onPressIn={() => springTo(0.94)} onPressOut={() => springTo(1)} onPress={onPress} disabled={disabled}>
+    <Pressable
+      style={styles.actionWrap}
+      onPressIn={() => springTo(0.94)}
+      onPressOut={() => springTo(1)}
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+      accessibilityState={{ disabled: Boolean(disabled) }}
+    >
       <Animated.View style={[styles.action, disabled && styles.disabled, { transform: [{ scale }] }]}>
         <Text style={styles.actionText}>{label}</Text>
       </Animated.View>
@@ -771,12 +901,27 @@ const styles = StyleSheet.create({
   packLevel: { marginTop: 1, fontSize: 15, lineHeight: 16, fontWeight: '900', color: '#FFF9EC' },
   tabLocked: { opacity: 0.5 },
   tabLock: { fontSize: 10, fontWeight: '800', color: '#9A8F7A', marginTop: 1 },
-  reward: { alignSelf: 'center', marginTop: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F5E6BE' },
+  /**
+   * The notice overlay. Sits above the location tabs, out of the flow, so a
+   * reward or a promotion banner never reflows the screen underneath it.
+   */
+  noticeLayer: {
+    position: 'absolute',
+    left: 22,
+    right: 22,
+    // Below the plan pill, in the open sky above the speech bubble: the one
+    // band with nothing in it. Anchored, so it covers nothing and moves nothing.
+    top: 190,
+    alignItems: 'center',
+    gap: 6,
+    zIndex: 20,
+  },
+  reward: { alignSelf: 'center', marginTop: 0, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F5E6BE' },
   // The promotion banner. Never colour alone: the eyebrow and the
   // "from → to" line say what happened without relying on the tint.
   promo: {
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 0,
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 18,
@@ -790,7 +935,7 @@ const styles = StyleSheet.create({
   promoHeadline: { marginTop: 3, fontSize: 15, fontWeight: '900', color: '#3E332A', textAlign: 'center' },
   promoStep: { marginTop: 2, fontSize: 11.5, color: '#7A6A55' },
   rewardText: { fontSize: 13, fontWeight: '800', color: '#6B5310' },
-  degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F0E4CC' },
+  degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F0E4CC' },
   degradedDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#B98F3E' },
   degradedText: { fontSize: 12, color: INK_SOFT, flexShrink: 1 },
   gearMuted: { backgroundColor: '#E6DCC8' },
@@ -825,7 +970,21 @@ const styles = StyleSheet.create({
   planTeaseDone: { color: '#71805C' },
   planArrow: { marginLeft: 7, fontSize: 18, lineHeight: 18, color: '#A08759' },
 
-  bubbleZone: { minHeight: 92, justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 },
+  /**
+   * Anchored just over his head, inside the stage. `top: 0` plus flex-end
+   * means a long line grows UPWARD from the anchor and simply stops at the top
+   * of the stage instead of climbing into the location tabs.
+   */
+  speechAnchor: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 318,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    zIndex: 6,
+  },
   hint: { fontSize: 15, color: INK_SOFT, marginBottom: 14 },
   hintNight: { color: '#E8DFC8' },
   bubble: { maxWidth: '92%', backgroundColor: CARD, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...(shadowCard as object) },
@@ -835,14 +994,13 @@ const styles = StyleSheet.create({
   error: { marginTop: 8, fontSize: 13, color: '#B3402E', textAlign: 'center' },
 
   stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 },
-  shadow: { position: 'absolute', bottom: 18, width: 230, height: 30, borderRadius: 115, backgroundColor: '#4A3B2A', opacity: 0.15 },
   heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
   heart: { position: 'absolute', fontSize: 24, color: '#D46A5A' },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
   digSpot: { position: 'absolute', left: 18, bottom: 26, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: 2, fontSize: 11, fontWeight: '800', color: INK_SOFT, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
-  thought: { position: 'absolute', top: 0, alignSelf: 'center', maxWidth: 250, backgroundColor: 'rgba(255,253,247,0.92)', borderRadius: 18, paddingVertical: 9, paddingHorizontal: 14, ...(shadowCard as object) },
+  thought: { alignSelf: 'center', maxWidth: 250, marginBottom: 10, backgroundColor: 'rgba(255,253,247,0.92)', borderRadius: 18, paddingVertical: 9, paddingHorizontal: 14, ...(shadowCard as object) },
   thoughtText: { fontSize: 13, fontStyle: 'italic', color: INK_SOFT, lineHeight: 18 },
   thoughtDot1: { position: 'absolute', bottom: -8, left: '46%', width: 9, height: 9, borderRadius: 5, backgroundColor: 'rgba(255,253,247,0.92)' },
   thoughtDot2: { position: 'absolute', bottom: -15, left: '52%', width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,253,247,0.85)' },

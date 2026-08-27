@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { DialogueEngine } from '../barkly/dialogue';
+import { isInterruptible, isLocked } from '../barkly/types';
 import {
   contactSocialBond,
   CharacterState,
@@ -21,7 +22,7 @@ import {
   withTreasure,
 } from '../barkly/character';
 import { deriveSocialEncounter, SocialEncounter } from '../barkly/encounters';
-import { nameFromFacts, welcomeBack } from '../barkly/greetings';
+import { nameFromFacts, returnGreeting } from '../barkly/greetings';
 import { Mishap, mishapLine } from '../barkly/mishaps';
 import { buildRelationshipProfile, RelationshipProfile } from '../barkly/relationship';
 import { looksLikeTrainingInstruction } from '../barkly/training';
@@ -90,7 +91,9 @@ import { asyncStorageStore } from '../storage/asyncStorageStore';
 import { DEFAULT_PROFILE, profileKey } from '../storage/types';
 import { LOCATIONS, LocationId } from '../world/locations';
 import { NPCS, NpcId } from '../world/npcs';
+import { freshExchangeMemory, pickExchange } from '../world/npcExchange';
 import { DigSite, Stash, Treasure } from '../world/stash';
+import { HydrationGate } from '../storage/hydration';
 import { pickThought } from '../world/thoughts';
 
 const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
@@ -129,6 +132,13 @@ export interface BarklyController {
   reward: { coins: number; xp: number; note?: string } | null;
   /** A relationship just crossed a rung. Announce it, then let it clear. */
   promotion: Promotion | null;
+  /**
+   * True only when a tap would genuinely be refused — a turn in flight or an
+   * open encounter. Deliberately NOT true while he is merely speaking: a tap
+   * cuts him off instead, so the buttons stay live. The UI uses this for
+   * `disabled`, which is what stops a control from lying about being tappable.
+   */
+  locked: boolean;
   buy(itemId: string): { ok: boolean; line: string };
   equip(itemId: string): void;
   isUnlocked(area: string): boolean;
@@ -228,6 +238,14 @@ export function useBarkly(): BarklyController {
   const warnedUnwritable = useRef(false);
   const [memoryVersion, setMemoryVersion] = useState(0);
   const [bootReady, setBootReady] = useState(false);
+  /**
+   * Nothing durable is written until the load pass has run. Without this the
+   * save-on-change effects fire once with their DEFAULTS and overwrite the
+   * saved profile before the loader ever reads it — which is exactly what was
+   * happening, on every launch, to coins, purchases, levels, relationships,
+   * his stats and dev mode. See storage/hydration.ts.
+   */
+  const gate = useRef(new HydrationGate(asyncStorageStore)).current;
 
   /** Whether he may go somewhere. The tab and the handler both ask this. */
   const canGo = useCallback(
@@ -245,7 +263,7 @@ export function useBarkly(): BarklyController {
   const contestChoice = useRef<{ encounter: SocialEncounter; choiceId: string } | null>(null);
   /** Won or lost, read once by the resolution that follows. */
   const contestOutcome = useRef<boolean | undefined>(undefined);
-  const npcLineCounter = useRef(0);
+  const exchangeMemory = useRef(freshExchangeMemory());
   const waveLineCounter = useRef(0);
   const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNpcCredit = useRef<Partial<Record<NpcId, number>>>({});
@@ -352,7 +370,7 @@ export function useBarkly(): BarklyController {
 
     adventureRef.current = next;
     setAdventure(next);
-    asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
+    gate.write(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
   }, []);
 
   // --------------------------------------------------------------- loading
@@ -383,8 +401,15 @@ export function useBarkly(): BarklyController {
       }
       setMemoryVersion((v) => v + 1);
 
-      if (!cancelled && hoursAway >= 6) {
-        setPendingGreeting(welcomeBack(nameFromFacts(mem.userFacts), Math.floor(hoursAway)));
+      // Any real absence gets acknowledged, not just a six-hour one. Under
+      // two minutes returnGreeting says null, so a reload stays silent.
+      if (!cancelled) {
+        const line = returnGreeting(
+          nameFromFacts(mem.userFacts),
+          hoursAway * 60,
+          Math.floor(Date.now() / 60000),
+        );
+        if (line) setPendingGreeting(line);
       }
 
       try {
@@ -452,11 +477,18 @@ export function useBarkly(): BarklyController {
         if (lost) sayMishap('memory_lost');
         setBootReady(true);
       }
-    })();
+    })()
+      .catch(() => {})
+      .finally(() => {
+        // ALWAYS, including on a boot that threw. A load failure must not
+        // leave the app permanently unable to save — that would trade a
+        // wipe-on-launch bug for a never-save bug.
+        gate.openAfterLoad();
+      });
     return () => {
       cancelled = true;
     };
-  }, [memory, providers, sayMishap, stash, voiceEngine]);
+  }, [gate, memory, providers, sayMishap, stash, voiceEngine]);
 
   useEffect(() => {
     if (!bootReady) return;
@@ -475,7 +507,7 @@ export function useBarkly(): BarklyController {
       if (cancelled) return;
       adventureRef.current = next;
       setAdventure(next);
-      asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
+      gate.write(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
     })();
     return () => {
       cancelled = true;
@@ -484,9 +516,17 @@ export function useBarkly(): BarklyController {
 
   // ----------------------------------------------------------- ambient life
   const [idleAction, setIdleAction] = useState<BodyAction | null>(null);
+  /**
+   * Ambient life. The old schedule waited 9–18 seconds for his FIRST movement,
+   * 22–38 for his first thought and up to 53 for his first unprompted line —
+   * so the opening half-minute of the app was a still photograph of a dog.
+   * For something whose whole proposition is "he is alive when you are not
+   * doing anything", the first beat has to land while you are still looking.
+   */
   useEffect(() => {
     const IDLE_STATES = ['idle', 'happy', 'hungry'];
     let alive = true;
+    let first = true;
     let timer: ReturnType<typeof setTimeout>;
     const schedule = () => {
       timer = setTimeout(() => {
@@ -496,8 +536,9 @@ export function useBarkly(): BarklyController {
           setIdleAction(pool[Math.floor(Math.random() * pool.length)]);
           setTimeout(() => alive && setIdleAction(null), 2000);
         }
+        first = false;
         schedule();
-      }, 9000 + Math.random() * 9000);
+      }, first ? 2200 + Math.random() * 2200 : 5000 + Math.random() * 6000);
     };
     schedule();
     return () => {
@@ -507,7 +548,7 @@ export function useBarkly(): BarklyController {
   }, []);
 
   useEffect(() => {
-    asyncStorageStore.set(SNAPSHOT_KEY, JSON.stringify(snapshot)).catch(() => {
+    gate.write(SNAPSHOT_KEY, JSON.stringify(snapshot)).catch(() => {
       if (!warnedUnwritable.current) {
         warnedUnwritable.current = true;
         sayMishap('memory_unwritable');
@@ -515,15 +556,15 @@ export function useBarkly(): BarklyController {
     });
   }, [snapshot, sayMishap]);
   useEffect(() => {
-    asyncStorageStore.set(CHARACTER_KEY, JSON.stringify(character)).catch(() => {});
+    gate.write(CHARACTER_KEY, JSON.stringify(character)).catch(() => {});
   }, [character]);
   useEffect(() => {
     walletRef.current = wallet;
-    asyncStorageStore.set(WALLET_KEY, JSON.stringify(wallet)).catch(() => {});
+    gate.write(WALLET_KEY, JSON.stringify(wallet)).catch(() => {});
   }, [wallet]);
   useEffect(() => {
     devRef.current = devMode;
-    asyncStorageStore.set(DEV_KEY, devMode ? '1' : '0').catch(() => {});
+    gate.write(DEV_KEY, devMode ? '1' : '0').catch(() => {});
   }, [devMode]);
   useEffect(() => {
     if (!reward) return;
@@ -549,7 +590,7 @@ export function useBarkly(): BarklyController {
           const next = makePlan(now);
           adventureRef.current = next;
           setAdventure(next);
-          asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
+          gate.write(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
         }
       } else {
         voiceEngine.onBackground();
@@ -594,6 +635,30 @@ export function useBarkly(): BarklyController {
     [dispatch, voiceEngine],
   );
 
+  /**
+   * Claim the floor for a player-initiated action.
+   *
+   * Returns false when a turn is genuinely in flight (listening / thinking /
+   * an open encounter / a request already running) — those must not be torn
+   * up mid-way. When he is merely SPEAKING it cuts him off and returns true,
+   * because for several seconds after every line the buttons rendered enabled
+   * and every handler silently returned. A tap that does nothing and says
+   * nothing about why is the single most common way this app felt broken.
+   */
+  const claimTurn = useCallback((): boolean => {
+    if (busy || activeEncounter) return false;
+    const state = snapshotRef.current.state;
+    if (isLocked(state)) return false;
+    if (isInterruptible(state)) {
+      try {
+        voiceEngine.stop();
+      } catch {}
+      dispatch({ type: 'SPEAK_END' });
+      setReplyActions([]);
+    }
+    return true;
+  }, [activeEncounter, busy, dispatch, voiceEngine]);
+
   const performRoutine = useCallback(
     async (opening: string, userText: string, beats: RoutineBeat[]): Promise<void> => {
       await speak(opening, { userText, actions: ['EAR_PERK', 'TAIL_WAG'] });
@@ -634,6 +699,7 @@ export function useBarkly(): BarklyController {
 
   useEffect(() => {
     let alive = true;
+    let firstThought = true;
     let timer: ReturnType<typeof setTimeout>;
     const IDLE_STATES = ['idle', 'happy', 'hungry'];
     const schedule = () => {
@@ -644,8 +710,9 @@ export function useBarkly(): BarklyController {
           setThought(pickThought(locationRef.current, new Date().getHours(), thoughtSeed.current));
           setTimeout(() => alive && setThought(null), 5200);
         }
+        firstThought = false;
         schedule();
-      }, 22000 + Math.random() * 16000);
+      }, firstThought ? 7000 + Math.random() * 5000 : 16000 + Math.random() * 14000);
     };
     schedule();
     return () => {
@@ -656,6 +723,7 @@ export function useBarkly(): BarklyController {
 
   useEffect(() => {
     let alive = true;
+    let firstBeat = true;
     let timer: ReturnType<typeof setTimeout>;
     const schedule = () => {
       timer = setTimeout(() => {
@@ -681,8 +749,9 @@ export function useBarkly(): BarklyController {
             speak(initiative.line, { actions: ['MOUTH_MOVE', 'EAR_PERK'] }).catch(() => {});
           }
         }
+        firstBeat = false;
         schedule();
-      }, INITIATIVE_COOLDOWN_MS / 3 + Math.random() * 20000);
+      }, firstBeat ? 14000 + Math.random() * 8000 : INITIATIVE_COOLDOWN_MS / 3 + Math.random() * 20000);
     };
     schedule();
     return () => {
@@ -809,13 +878,13 @@ export function useBarkly(): BarklyController {
     setNpcBubble(null);
     setActiveEncounter(null);
     setLastExchange(null);
-    asyncStorageStore.set(LOCATION_KEY, loc).catch(() => {});
+    gate.write(LOCATION_KEY, loc).catch(() => {});
     if (moved) progressPlan({ kind: 'travel', target: loc });
   }, [canGo, progressPlan]);
 
   const npcTalk = useCallback(
     (id: NpcId): boolean => {
-      if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return false;
+      if (!claimTurn()) return false;
       const npc = NPCS[id];
       progressPlan({ kind: 'npc', target: npc.name });
       const current = characterRef.current.socialBonds?.[npc.name]?.encounters ?? 0;
@@ -830,12 +899,15 @@ export function useBarkly(): BarklyController {
         return true;
       }
 
-      const i = npcLineCounter.current++ % npc.lines.length;
-      setNpcBubble({ id, line: npc.lines[i] });
+      // Greeting and reply drawn INDEPENDENTLY, per dog, never repeating the
+      // last one. See world/npcExchange for the three bugs this replaces.
+      const exchange = pickExchange(npc, exchangeMemory.current);
+      exchangeMemory.current = exchange.memory;
+      setNpcBubble({ id, line: exchange.npcLine });
       if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
       npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 4500);
 
-      speak(npc.barklyLines[i], {
+      speak(exchange.barklyLine, {
         actions: ['MOUTH_MOVE', 'EAR_PERK'],
         after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
       }).catch(() => {});
@@ -861,7 +933,7 @@ export function useBarkly(): BarklyController {
       }
       return true;
     },
-    [activeEncounter, busy, credit, memory, progressPlan, speak],
+    [claimTurn, credit, memory, progressPlan, speak],
   );
 
   /**
@@ -1006,7 +1078,7 @@ export function useBarkly(): BarklyController {
    * is a new background, not a new place.
    */
   const dig = useCallback(async (): Promise<Treasure | null> => {
-    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return null;
+    if (!claimTurn()) return null;
     const site: DigSite = locationRef.current === 'beach' ? 'beach' : 'park';
     const found = await stash.dig(site);
     setStashItems(stash.list());
@@ -1025,7 +1097,7 @@ export function useBarkly(): BarklyController {
     credit('dig');
     progressPlan({ kind: 'dig' });
     return found;
-  }, [activeEncounter, busy, credit, memory, progressPlan, speak, stash]);
+  }, [claimTurn, credit, memory, progressPlan, speak, stash]);
 
   /**
    * Chasing the sea. It cannot be caught, which is the joke and also the
@@ -1033,7 +1105,7 @@ export function useBarkly(): BarklyController {
    * have been a reskin. Pays the same as a round of play.
    */
   const chaseWaves = useCallback(async (): Promise<void> => {
-    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
+    if (!claimTurn()) return;
     const lines = [
       'It ran away. It always runs away. I am UNDEFEATED and also soaked.',
       'I have chased that water back into the sea. You are welcome, everyone.',
@@ -1049,10 +1121,10 @@ export function useBarkly(): BarklyController {
       .catch(() => {});
     credit('play');
     progressPlan({ kind: 'play' });
-  }, [activeEncounter, busy, credit, memory, progressPlan, speak]);
+  }, [claimTurn, credit, memory, progressPlan, speak]);
 
   const feed = useCallback(async (itemId?: string) => {
-    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
+    if (!claimTurn()) return;
     const full = snapshotRef.current.stats.hunger < 12;
 
     if (itemId) {
@@ -1092,7 +1164,7 @@ export function useBarkly(): BarklyController {
     });
     credit('feed', !full);
     if (!full) progressPlan({ kind: 'feed' });
-  }, [activeEncounter, busy, credit, memory, progressPlan, speak]);
+  }, [claimTurn, credit, memory, progressPlan, speak]);
 
   /**
    * Play, with whatever he actually owns.
@@ -1104,7 +1176,7 @@ export function useBarkly(): BarklyController {
    * can animate the right one.
    */
   const play = useCallback(async (): Promise<PlayRoutine> => {
-    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return 'none';
+    if (!claimTurn()) return 'none';
     const tired = snapshotRef.current.stats.energy < 15;
     if (tired) {
       await speak(pickLine(TIRED_LINES), { actions: ['SLEEP'], after: { type: 'PLAY' } });
@@ -1129,16 +1201,16 @@ export function useBarkly(): BarklyController {
     credit('play', true, toy ? 'favorite toy time' : undefined);
     progressPlan({ kind: 'play' });
     return routine;
-  }, [activeEncounter, busy, credit, progressPlan, speak]);
+  }, [claimTurn, credit, progressPlan, speak]);
 
   const sleepToggle = useCallback(async () => {
-    if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
+    if (!claimTurn()) return;
     if (snapshotRef.current.state === 'sleepy') {
       await speak(pickLine(WAKE_LINES), { actions: ['MOUTH_MOVE'], after: { type: 'SLEEP_TOGGLE' } });
       return;
     }
     dispatch({ type: 'SLEEP_TOGGLE' });
-  }, [activeEncounter, busy, dispatch, speak]);
+  }, [claimTurn, dispatch, speak]);
 
   const handleOnboarding = useCallback(
     (result: ReturnType<typeof advanceOnboarding>) => {
@@ -1160,7 +1232,7 @@ export function useBarkly(): BarklyController {
           });
       }
       if (result.finished) {
-        asyncStorageStore.set(ONBOARDING_KEY, 'done').catch(() => {});
+        gate.write(ONBOARDING_KEY, 'done').catch(() => {});
         setPendingGreeting(openingLine(result.state));
       }
     },
@@ -1238,7 +1310,7 @@ export function useBarkly(): BarklyController {
       const next = !muted;
       setMutedState(next);
       voiceEngine.setMuted(next);
-      asyncStorageStore.set(MUTE_KEY, next ? '1' : '0').catch(() => {});
+      gate.write(MUTE_KEY, next ? '1' : '0').catch(() => {});
     },
     voiceRoute: voiceEngine.lastRoute,
     onboarding,
@@ -1249,6 +1321,7 @@ export function useBarkly(): BarklyController {
     level: levelFor(wallet.xp),
     reward,
     promotion,
+    locked: busy || activeEncounter !== null || isLocked(snapshot.state),
     relationship,
     adventure,
     buy: (itemId: string) => {

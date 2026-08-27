@@ -42,6 +42,27 @@ export function isBusy(state: BarklyState): boolean {
 }
 
 /**
+ * States where a tap should CUT HIM OFF rather than be ignored.
+ *
+ * Speaking is the long one — several seconds per line on a real device — and
+ * for most of that the buttons rendered fully enabled while every handler
+ * silently refused, so a tap did nothing at all and said nothing about why.
+ * A dog you can't interrupt is not a pet, it is a cutscene.
+ *
+ * Listening and thinking are NOT interruptible: there is a capture or a
+ * request in flight and tearing it up mid-way is how the conversation state
+ * gets corrupted.
+ */
+export function isInterruptible(state: BarklyState): boolean {
+  return state === 'speaking';
+}
+
+/** A tap must be refused outright only while a turn is actually in flight. */
+export function isLocked(state: BarklyState): boolean {
+  return isBusy(state) && !isInterruptible(state);
+}
+
+/**
  * High-level body commands emitted by the brain. The same commands can drive
  * today's renderer and tomorrow's motors.
  */
