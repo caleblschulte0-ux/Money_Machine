@@ -4,6 +4,7 @@
  */
 
 import { CharacterState, friendshipStage, rivalryStage } from './character';
+import { ladderProgress } from './escalation';
 import { sanitize } from './facts';
 import { MemoryState } from './memory';
 import { deriveStoryArc, describeStory, StoryArc } from './story';
@@ -201,12 +202,15 @@ function loreFrom(character?: CharacterState): RelationshipLore[] {
   const lore: RelationshipLore[] = [];
   for (const [who, bond] of Object.entries(character.socialBonds ?? {})) {
     const stage = bond.kind === 'friend' ? friendshipStage(bond.encounters) : rivalryStage(bond.encounters);
+    // The pack book says what is NEXT, not just what is. A relationship
+    // ladder you cannot see the top of is a number, not an arc.
+    const progress = ladderProgress(bond.kind, bond.encounters);
     lore.push({
       id: `${bond.kind}-${who}`,
       title: `${who}: ${stage.label}`,
       detail: bond.kind === 'friend'
-        ? `${bond.encounters} run-in${bond.encounters === 1 ? '' : 's'} together. ${stage.blurb}`
-        : `${bond.encounters} incident${bond.encounters === 1 ? '' : 's'}. ${stage.blurb}`,
+        ? `${bond.encounters} run-in${bond.encounters === 1 ? '' : 's'} together. ${stage.blurb} ${progress.hint}`
+        : `${bond.encounters} incident${bond.encounters === 1 ? '' : 's'}. ${stage.blurb} ${progress.hint}`,
       kind: bond.kind === 'friend' ? 'friendship' : 'rivalry',
       strength: bond.encounters,
     });

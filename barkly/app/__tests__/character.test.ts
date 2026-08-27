@@ -7,6 +7,7 @@ import {
   noteInitiative,
   pickInitiative,
   rivalryStage,
+  adjustSocialBond,
   withFriend,
   withGrievance,
   withTreasure,
@@ -110,20 +111,42 @@ describe('character continuity', () => {
     expect(expired.socialBonds?.Duke.encounters).toBe(1);
   });
 
-  it('repeated hangouts evolve a dog from acquaintance into best friend', () => {
+  it('played-through moments evolve a dog from acquaintance into best friend', () => {
     let c = freshCharacter();
-    for (let i = 0; i < 6; i++) c = withFriend(c, 'Biscuit', NOW + i);
+    // adjustSocialBond is the promoting path: an encounter choice, a settled
+    // duel — something the player was present for.
+    for (let i = 0; i < 6; i++) c = adjustSocialBond(c, 'Biscuit', 'friend', 1, NOW + i);
+    c = { ...c, favoriteFriend: 'Biscuit' };
     expect(c.socialBonds?.Biscuit.encounters).toBe(6);
     expect(friendshipStage(6).label).toBe('best friend');
     expect(describeCharacter(c)).toContain('best friend');
   });
 
-  it('repeated bad encounters create an actual nemesis', () => {
+  it('played-through bad encounters create an actual nemesis', () => {
     let c = freshCharacter();
-    for (let i = 0; i < 6; i++) c = withGrievance(c, 'Duke', 'stole the ball', NOW + i);
+    for (let i = 0; i < 6; i++) c = adjustSocialBond(c, 'Duke', 'rival', 1, NOW + i);
+    c = { ...c, grievance: { who: 'Duke', what: 'stole the ball', since: NOW } };
     expect(c.socialBonds?.Duke.encounters).toBe(6);
     expect(rivalryStage(6).label).toBe('nemesis');
     expect(describeCharacter(c)).toContain('nemesis');
+  });
+
+  it('casual taps alone can never manufacture a nemesis', () => {
+    let c = freshCharacter();
+    // withGrievance is the casual path — one tap on Duke in the park. Twenty
+    // of them must NOT produce a feud; that promotion belongs to a moment the
+    // player actually played.
+    for (let i = 0; i < 20; i++) c = withGrievance(c, 'Duke', 'stole the ball', NOW + i);
+    expect(c.socialBonds?.Duke.encounters).toBe(2); // held one short of rung 2
+    expect(rivalryStage(c.socialBonds!.Duke.encounters).label).toBe('annoying dog');
+  });
+
+  it('casual friendliness stalls at the edge too, but keeps the history', () => {
+    let c = freshCharacter();
+    for (let i = 0; i < 20; i++) c = withFriend(c, 'Biscuit', NOW + i);
+    expect(c.socialBonds?.Biscuit.encounters).toBe(2);
+    expect(c.socialBonds?.Biscuit.firstSeenAt).toBe(NOW);
+    expect(c.socialBonds?.Biscuit.lastSeenAt).toBe(NOW + 19);
   });
 
   it('describes current friend and rival lore for the prompt', () => {

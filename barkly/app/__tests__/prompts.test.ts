@@ -1,4 +1,4 @@
-import { freshCharacter, withFriend } from '../src/barkly/character';
+import { adjustSocialBond, freshCharacter, withFriend } from '../src/barkly/character';
 import { emptyMemory } from '../src/barkly/memory';
 import { buildSystemPrompt, parseReply } from '../src/barkly/prompts';
 import { freshSnapshot } from '../src/barkly/state';
@@ -26,7 +26,8 @@ describe('buildSystemPrompt', () => {
 
   it('feeds evolved recurring-dog lore into the conversation texture', () => {
     let character = freshCharacter();
-    for (let i = 0; i < 6; i++) character = withFriend(character, 'Biscuit', i);
+    for (let i = 0; i < 6; i++) character = adjustSocialBond(character, 'Biscuit', 'friend', 1, i);
+    character = withFriend(character, 'Biscuit', 6);
     const prompt = buildSystemPrompt({
       snapshot: freshSnapshot(10),
       memory: emptyMemory(),

@@ -42,6 +42,30 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
           <Text style={styles.title}>{encounter.title}</Text>
           <Text style={styles.prompt}>{encounter.prompt}</Text>
 
+          {/* Where this stands and what is next. Escalation you can see
+              coming reads as a story; escalation you discover afterwards
+              reads as a counter. */}
+          {encounter.ladder && (
+            <View style={styles.ladder} accessibilityLabel={`${npc.name}: ${encounter.ladder.stage.label}. ${encounter.ladder.hint}`}>
+              <View style={styles.ladderRow}>
+                <Text style={styles.ladderNow}>{encounter.ladder.stage.label}</Text>
+                {encounter.ladder.nextLabel ? (
+                  <Text style={styles.ladderNext}>next: {encounter.ladder.nextLabel}</Text>
+                ) : null}
+              </View>
+              <View style={styles.meter}>
+                <View
+                  style={[
+                    styles.meterFill,
+                    encounter.ladder.kind === 'rival' ? styles.meterRival : styles.meterFriend,
+                    { width: `${Math.round(encounter.ladder.fraction * 100)}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.ladderHint}>{encounter.ladder.hint}</Text>
+            </View>
+          )}
+
           <View style={styles.divider} />
           <Text style={styles.question}>What do you tell Barkly?</Text>
 
@@ -77,6 +101,15 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
 }
 
 const styles = StyleSheet.create({
+  ladder: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#EFE4CD' },
+  ladderRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
+  ladderNow: { fontSize: 13.5, fontWeight: '900', color: INK },
+  ladderNext: { fontSize: 11.5, color: SOFT },
+  meter: { height: 6, borderRadius: 999, backgroundColor: '#EFE4CD', marginTop: 7, overflow: 'hidden' },
+  meterFill: { height: 6, borderRadius: 999 },
+  meterRival: { backgroundColor: '#C97B4B' },
+  meterFriend: { backgroundColor: '#7FA35C' },
+  ladderHint: { marginTop: 6, fontSize: 11.5, color: SOFT },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(29,24,18,0.58)',

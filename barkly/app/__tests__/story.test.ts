@@ -1,4 +1,4 @@
-import { freshCharacter, withFriend, withGrievance, withTreasure } from '../src/barkly/character';
+import { adjustSocialBond, freshCharacter, withFriend, withGrievance, withTreasure } from '../src/barkly/character';
 import { emptyMemory } from '../src/barkly/memory';
 import { deriveStoryArc } from '../src/barkly/story';
 import { mergeTrainingRules } from '../src/barkly/training';
@@ -12,7 +12,8 @@ describe('Barkly story engine', () => {
 
   it('turns a rival plus favorite treasure into a specific ongoing saga', () => {
     let character = withTreasure(freshCharacter(), 'the perfect stick', NOW);
-    for (let i = 0; i < 6; i++) character = withGrievance(character, 'Duke', 'kept starting things', NOW + i + 1);
+    for (let i = 0; i < 6; i++) character = adjustSocialBond(character, 'Duke', 'rival', 1, NOW + i + 1);
+    character = withGrievance(character, 'Duke', 'kept starting things', NOW + 8);
 
     const story = deriveStoryArc({ character, memory: emptyMemory() });
     expect(story?.title).toBe('The Duke Situation');
@@ -23,8 +24,10 @@ describe('Barkly story engine', () => {
 
   it('turns a real friend plus rival into dog-park politics', () => {
     let character = freshCharacter();
-    for (let i = 0; i < 4; i++) character = withFriend(character, 'Biscuit', NOW + i);
-    for (let i = 0; i < 4; i++) character = withGrievance(character, 'Duke', 'was unbearable', NOW + 10 + i);
+    for (let i = 0; i < 4; i++) character = adjustSocialBond(character, 'Biscuit', 'friend', 1, NOW + i);
+    character = withFriend(character, 'Biscuit', NOW + 5);
+    for (let i = 0; i < 4; i++) character = adjustSocialBond(character, 'Duke', 'rival', 1, NOW + 10 + i);
+    character = withGrievance(character, 'Duke', 'was unbearable', NOW + 15);
 
     const story = deriveStoryArc({ character, memory: emptyMemory() });
     expect(story?.title).toBe('Dog Park Politics');

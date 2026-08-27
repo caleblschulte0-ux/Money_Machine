@@ -1,4 +1,4 @@
-import { freshCharacter, withFriend, withGrievance, withTreasure } from '../src/barkly/character';
+import { adjustSocialBond, freshCharacter, withFriend, withGrievance, withTreasure } from '../src/barkly/character';
 import { emptyMemory } from '../src/barkly/memory';
 import { buildRelationshipProfile, describeRelationship } from '../src/barkly/relationship';
 import { freshSnapshot } from '../src/barkly/state';
@@ -60,8 +60,8 @@ describe('Relationship DNA', () => {
   it('turns repeated NPC encounters into visible social lore', () => {
     const input = base();
     let character = freshCharacter();
-    for (let i = 0; i < 6; i++) character = withFriend(character, 'Biscuit', NOW + i);
-    for (let i = 0; i < 6; i++) character = withGrievance(character, 'Duke', 'stole the ball', NOW + 20 + i);
+    for (let i = 0; i < 6; i++) character = adjustSocialBond(character, 'Biscuit', 'friend', 1, NOW + i);
+    for (let i = 0; i < 6; i++) character = adjustSocialBond(character, 'Duke', 'rival', 1, NOW + 20 + i);
     input.character = character;
 
     const profile = buildRelationshipProfile(input);

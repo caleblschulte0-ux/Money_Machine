@@ -163,7 +163,13 @@ function NpcDog({ id, onPress, bubble }: { id: NpcId; onPress: () => void; bubbl
           <Text style={styles.npcBubbleText} numberOfLines={3}>{bubble}</Text>
         </View>
       )}
-      <Pressable onPress={onPress} hitSlop={8}>
+      <Pressable
+        onPress={onPress}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={`Talk to ${NPCS[id].name}`}
+        accessibilityHint={NPCS[id].relationship === 'rival' ? 'Barkly has opinions about this one.' : 'One of the good ones.'}
+      >
         <Animated.View style={{ transform: [{ scale }] }}>
           <Image source={NPC_ART[id]} style={{ width: spot.size, height: spot.size * 1.25 }} resizeMode="contain" />
         </Animated.View>
@@ -400,6 +406,23 @@ export default function BarklyRoom() {
             <Text style={styles.rewardText}>
               +{barkly.reward.coins}c  +{barkly.reward.xp} xp
               {barkly.reward.note ? `  ·  ${barkly.reward.note}` : ''}
+            </Text>
+          </View>
+        )}
+
+        {barkly.promotion && (
+          <View
+            style={[styles.promo, barkly.promotion.kind === 'rival' ? styles.promoRival : styles.promoFriend]}
+            pointerEvents="none"
+            accessibilityLiveRegion="polite"
+            accessibilityLabel={`${barkly.promotion.headline}. From ${barkly.promotion.fromLabel} to ${barkly.promotion.toLabel}.`}
+          >
+            <Text style={styles.promoEyebrow}>
+              {barkly.promotion.kind === 'rival' ? 'RIVALRY ESCALATED' : 'FRIENDSHIP DEEPENED'}
+            </Text>
+            <Text style={styles.promoHeadline}>{barkly.promotion.headline}</Text>
+            <Text style={styles.promoStep}>
+              {barkly.promotion.fromLabel} → {barkly.promotion.toLabel}
             </Text>
           </View>
         )}
@@ -715,6 +738,23 @@ const styles = StyleSheet.create({
   tabLocked: { opacity: 0.5 },
   tabLock: { fontSize: 10, fontWeight: '800', color: '#9A8F7A', marginTop: 1 },
   reward: { alignSelf: 'center', marginTop: 6, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F5E6BE' },
+  // The promotion banner. Never colour alone: the eyebrow and the
+  // "from → to" line say what happened without relying on the tint.
+  promo: {
+    alignSelf: 'center',
+    marginTop: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    maxWidth: '92%',
+  },
+  promoRival: { backgroundColor: '#FBE7DC', borderColor: '#D08A5F' },
+  promoFriend: { backgroundColor: '#E6F0DC', borderColor: '#7FA35C' },
+  promoEyebrow: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1.4, color: '#7A6A55' },
+  promoHeadline: { marginTop: 3, fontSize: 15, fontWeight: '900', color: '#3E332A', textAlign: 'center' },
+  promoStep: { marginTop: 2, fontSize: 11.5, color: '#7A6A55' },
   rewardText: { fontSize: 13, fontWeight: '800', color: '#6B5310' },
   degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F0E4CC' },
   degradedDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#B98F3E' },

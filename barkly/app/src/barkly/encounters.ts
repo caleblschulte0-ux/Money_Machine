@@ -10,6 +10,7 @@
  */
 
 import { CharacterState, friendshipStage, rivalryStage } from './character';
+import { LadderProgress, ladderProgress } from './escalation';
 import { MemoryState } from './memory';
 import { sanitize } from './facts';
 import { BodyAction, ReactionState } from './types';
@@ -52,6 +53,12 @@ export interface SocialEncounter {
   title: string;
   prompt: string;
   choices: EncounterChoice[];
+  /**
+   * Where this relationship currently stands and what is next. Attached so
+   * the sheet can SHOW the ladder instead of hiding it in an eyebrow — the
+   * player should be able to see a nemesis coming.
+   */
+  ladder?: LadderProgress;
 }
 
 export interface EncounterInput {
@@ -463,7 +470,7 @@ function pepperEncounter(character: CharacterState, memory: MemoryState): Social
   };
 }
 
-export function deriveSocialEncounter(input: EncounterInput): SocialEncounter {
+function build(input: EncounterInput): SocialEncounter {
   switch (input.npcId) {
     case 'duke':
       return dukeEncounter(input.character, input.memory);
@@ -472,6 +479,20 @@ export function deriveSocialEncounter(input: EncounterInput): SocialEncounter {
     case 'pepper':
       return pepperEncounter(input.character, input.memory);
   }
+}
+
+export function deriveSocialEncounter(input: EncounterInput): SocialEncounter {
+  const npc = NPCS[input.npcId];
+  const encounter = build(input);
+  const ladder = ladderProgress(npc.relationship === 'rival' ? 'rival' : 'friend', bondCount(input.character, npc.name));
+  // ONE eyebrow rule for every encounter. It used to be written by hand per
+  // branch, which is how "PUBLIC CHALLENGE" ended up next to a stage the
+  // player had no way to see.
+  return {
+    ...encounter,
+    eyebrow: `${ladder.stage.label.toUpperCase()} · CHAPTER ${((input.character.socialChoices?.[npc.name] ?? 0) + 1)}`,
+    ladder,
+  };
 }
 
 /**

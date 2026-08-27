@@ -103,22 +103,79 @@ export function HomeScene({ hour, upgrades = [] }: { hour: number; upgrades?: st
 
 // ---------------------------------------------------------------- park
 
+/**
+ * The sky, shared by every outdoor scene.
+ *
+ * It used to be a fixed 190px strip pinned to the top of the park only, which
+ * did three unhelpful things: it put the sun directly behind the header pills
+ * on any tall phone, it left the whole middle of the screen an empty wash, and
+ * the beach had no sky furniture at all. One component, in PERCENTAGES, fixes
+ * all three — everything sits below the chrome (which ends around 22% of the
+ * height) and spreads down toward the horizon, so the sky reads as depth
+ * rather than dead space.
+ */
+function SkyDetail({ band, birds = true }: { band: SkyBand; birds?: boolean }) {
+  const night = band === 'night';
+  return (
+    <Svg width="100%" height="100%" style={styles.fill}>
+      {/* A bare disc reads as a rendering glitch. The halo is what makes it a sun. */}
+      {band === 'day' && (
+        <>
+          <Circle cx="84%" cy="30%" r={54} fill="#F5DC8C" opacity={0.22} />
+          <Circle cx="84%" cy="30%" r={30} fill="#F7E39B" opacity={0.95} />
+        </>
+      )}
+      {band === 'evening' && (
+        <>
+          <Circle cx="84%" cy="32%" r={56} fill="#EFA35C" opacity={0.2} />
+          <Circle cx="84%" cy="32%" r={30} fill="#F0AF6E" opacity={0.95} />
+        </>
+      )}
+      {band === 'morning' && (
+        <>
+          <Circle cx="84%" cy="29%" r={50} fill="#F5DC8C" opacity={0.2} />
+          <Circle cx="84%" cy="29%" r={26} fill="#F8E7B4" opacity={0.95} />
+        </>
+      )}
+      {night && (
+        <>
+          <Circle cx="84%" cy="29%" r={40} fill="#F2EAC8" opacity={0.13} />
+          <Circle cx="84%" cy="29%" r={22} fill="#F2EAC8" />
+          <Circle cx="18%" cy="27%" r={1.7} fill="#F2EAC8" />
+          <Circle cx="34%" cy="35%" r={1.4} fill="#F2EAC8" />
+          <Circle cx="52%" cy="25%" r={1.5} fill="#F2EAC8" />
+          <Circle cx="62%" cy="40%" r={1.3} fill="#F2EAC8" />
+          <Circle cx="88%" cy="43%" r={1.5} fill="#F2EAC8" />
+        </>
+      )}
+      <Ellipse cx="24%" cy="34%" rx={44} ry={15} fill="#FFFFFF" opacity={night ? 0.12 : 0.7} />
+      <Ellipse cx="34%" cy="31%" rx={30} ry={11} fill="#FFFFFF" opacity={night ? 0.1 : 0.55} />
+      <Ellipse cx="70%" cy="45%" rx={34} ry={12} fill="#FFFFFF" opacity={night ? 0.1 : 0.5} />
+      {/* Two birds, because an empty sky is the thing that reads unfinished. */}
+      {birds && !night && (
+        <>
+          <Path d="M148 232 q7 -7 14 0 q7 -7 14 0" stroke="#8C7C63" strokeWidth={2} fill="none" opacity={0.5} />
+          <Path d="M196 258 q5 -5 10 0 q5 -5 10 0" stroke="#8C7C63" strokeWidth={1.8} fill="none" opacity={0.4} />
+        </>
+      )}
+    </Svg>
+  );
+}
+
+
 export function ParkScene({ hour }: { hour: number }) {
   const band = skyBand(hour);
   const night = band === 'night';
   return (
     <View style={styles.fill} pointerEvents="none">
       <LinearGradient colors={SKY[band]} style={styles.fill} />
-      {/* sky details */}
-      <Svg width={420} height={190} style={styles.skyTop}>
-        {band === 'day' && <Circle cx={62} cy={96} r={30} fill="#F5DC8C" opacity={0.9} />}
-        {band === 'evening' && <Circle cx={62} cy={110} r={30} fill="#EFA35C" opacity={0.9} />}
-        {night && <Circle cx={60} cy={92} r={22} fill="#F2EAC8" />}
-        <Ellipse cx={150} cy={148} rx={46} ry={16} fill="#FFFFFF" opacity={night ? 0.14 : 0.75} />
-        <Ellipse cx={250} cy={92} rx={36} ry={13} fill="#FFFFFF" opacity={night ? 0.1 : 0.6} />
-      </Svg>
+      <SkyDetail band={band} />
       {/* ground block, anchored to the bottom */}
       <Svg width="100%" height={460} viewBox="0 0 420 460" preserveAspectRatio="none" style={styles.ground}>
+        {/* A far ridge above the near hills. Two planes of green instead of
+            one is what stops the horizon reading as a flat cut-off. */}
+        <Ellipse cx={140} cy={70} rx={230} ry={54} fill={night ? '#6C7F58' : '#CBDCAB'} opacity={0.85} />
+        <Ellipse cx={352} cy={78} rx={190} ry={48} fill={night ? '#74875F' : '#D2E1B5'} opacity={0.8} />
         {/* rolling hills */}
         <Ellipse cx={90} cy={166} rx={260} ry={110} fill={night ? '#7E9068' : '#BCD094'} />
         <Ellipse cx={370} cy={186} rx={280} ry={120} fill={night ? '#88996F' : '#C8DAA2'} />
@@ -156,6 +213,7 @@ export function TownScene({ hour }: { hour: number }) {
   return (
     <View style={styles.fill} pointerEvents="none">
       <LinearGradient colors={SKY[band]} style={styles.fill} />
+      <SkyDetail band={band} />
       <Svg width="100%" height={560} viewBox="0 0 420 560" preserveAspectRatio="none" style={styles.ground}>
         {/* storefront block */}
         <Rect x={0} y={0} width={420} height={280} fill={dim('#E8D9BC', '#A99C82')} />
@@ -226,6 +284,7 @@ export function BeachScene({ hour }: { hour: number }) {
   return (
     <View style={styles.fill} pointerEvents="none">
       <LinearGradient colors={SKY[band]} style={styles.fill} />
+      <SkyDetail band={band} />
       <Svg width="100%" height={560} viewBox="0 0 420 560" preserveAspectRatio="none" style={styles.ground}>
         {/* far sea */}
         <Rect x={0} y={196} width={420} height={92} fill={dim('#5E93A8', '#243E52')} />
@@ -251,11 +310,12 @@ export function BeachScene({ hour }: { hour: number }) {
         <Ellipse cx={318} cy={470} rx={9} ry={6} fill={dim('#F0DCC0', '#A89873')} />
         <Path d="M336 398 q 14 -12 26 -2 q -10 12 -26 2 Z" fill={dim('#5C7A52', '#3C5236')} />
         <Path d="M96 500 q 18 -10 30 2 q -14 10 -30 -2 Z" fill={dim('#5C7A52', '#3C5236')} />
-        {/* gulls, because he has opinions about them */}
+        {/* Gulls out over the water, off to the sides. They used to sit dead
+            centre at head height, which put both of them behind Barkly. */}
         {!night && (
           <>
-            <Path d="M120 150 q 10 -8 20 0 q 10 -8 20 0" stroke="#7A6A55" strokeWidth={2.5} fill="none" />
-            <Path d="M268 122 q 8 -6 16 0 q 8 -6 16 0" stroke="#7A6A55" strokeWidth={2} fill="none" />
+            <Path d="M28 148 q 10 -8 20 0 q 10 -8 20 0" stroke="#7A6A55" strokeWidth={2.5} fill="none" />
+            <Path d="M352 122 q 8 -6 16 0 q 8 -6 16 0" stroke="#7A6A55" strokeWidth={2} fill="none" />
           </>
         )}
       </Svg>
@@ -341,7 +401,6 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: '15%', alignSelf: 'center', width: 300, height: 64,
     borderRadius: 150, backgroundColor: '#C77C52', opacity: 0.3,
   },
-  skyTop: { position: 'absolute', top: 0, left: 0 },
   ground: { position: 'absolute', bottom: 0, left: 0, right: 0 },
 
 });

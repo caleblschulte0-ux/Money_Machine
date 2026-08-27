@@ -11,6 +11,7 @@
  * and accumulated lore instead of behaving like a chatbot waiting for input.
  */
 
+import { applyContact, ContactOptions, Promotion, rungAt } from './escalation';
 import { Experience, Fact } from './facts';
 import { BarklySnapshot } from './types';
 
@@ -75,18 +76,17 @@ export function expireCharacter(c: CharacterState, now: number): CharacterState 
   return out;
 }
 
+/**
+ * The two ladders live in ./escalation, which owns the thresholds, the
+ * promotion moments and the rule that casual taps cannot promote anybody.
+ * These stay as the names the rest of the app already calls.
+ */
 export function friendshipStage(encounters: number): SocialStage {
-  if (encounters >= 12) return { label: 'pack family', blurb: 'At this point Barkly treats them like they came with the house.' };
-  if (encounters >= 6) return { label: 'best friend', blurb: 'This is now a real recurring friendship with its own history.' };
-  if (encounters >= 3) return { label: 'actual buddy', blurb: 'Barkly expects to see them again and acts like it.' };
-  return { label: 'park acquaintance', blurb: 'They know each other. Barkly is still deciding how embarrassing to be.' };
+  return rungAt('friend', encounters);
 }
 
 export function rivalryStage(encounters: number): SocialStage {
-  if (encounters >= 12) return { label: 'generational feud', blurb: 'Nobody remembers how this started. Barkly absolutely remembers every incident.' };
-  if (encounters >= 6) return { label: 'nemesis', blurb: 'This has moved beyond irritation into personal mythology.' };
-  if (encounters >= 3) return { label: 'official rival', blurb: 'The beef has continuity now. There are receipts.' };
-  return { label: 'annoying dog', blurb: 'One more incident and Barkly is going to start a file.' };
+  return rungAt('rival', encounters);
 }
 
 function socialCount(c: CharacterState, who: string): number {
@@ -259,6 +259,45 @@ export function withTreasure(c: CharacterState, treasureName: string, now: numbe
  * difference between a history counter and player agency: escalating Duke is
  * a choice, not an inevitability. Negative deltas never erase first-seen history.
  */
+export interface ContactOutcome {
+  character: CharacterState;
+  /** Set only when this contact crossed a rung. The UI announces it. */
+  promotion: Promotion | null;
+  /** True when a casual tap was held one short of the next rung. */
+  held: boolean;
+}
+
+/**
+ * One contact with a recurring dog, applied through the escalation ladder.
+ *
+ * `promotes: false` is a casual tap: it builds pressure and stops at the edge
+ * of the next rung. `promotes: true` is something the player played through —
+ * an encounter choice, a settled duel — and is the only thing that can move
+ * a relationship to a new stage. See ./escalation for why.
+ */
+export function contactSocialBond(
+  c: CharacterState,
+  who: string,
+  kind: SocialBond['kind'],
+  opts: ContactOptions,
+  now: number,
+): ContactOutcome {
+  const bonds = { ...(c.socialBonds ?? {}) };
+  const previous = bonds[who];
+  const result = applyContact(who, kind, previous?.encounters ?? 0, opts);
+  bonds[who] = {
+    kind,
+    encounters: result.encounters,
+    firstSeenAt: previous?.firstSeenAt ?? now,
+    lastSeenAt: now,
+  };
+  return {
+    character: { ...c, socialBonds: bonds },
+    promotion: result.promotion,
+    held: result.held,
+  };
+}
+
 export function adjustSocialBond(
   c: CharacterState,
   who: string,
@@ -266,16 +305,7 @@ export function adjustSocialBond(
   delta: number,
   now: number,
 ): CharacterState {
-  const bonds = { ...(c.socialBonds ?? {}) };
-  const previous = bonds[who];
-  const encounters = Math.max(0, (previous?.encounters ?? 0) + Math.trunc(delta));
-  bonds[who] = {
-    kind,
-    encounters,
-    firstSeenAt: previous?.firstSeenAt ?? now,
-    lastSeenAt: now,
-  };
-  return { ...c, socialBonds: bonds };
+  return contactSocialBond(c, who, kind, { promotes: true, delta }, now).character;
 }
 
 /** Mark one authored choice chapter complete so it cannot immediately repeat. */
@@ -289,13 +319,18 @@ export function noteSocialChoice(c: CharacterState, who: string): CharacterState
   };
 }
 
+/**
+ * A casual run-in. Deliberately NON-promoting: tapping a dog over and over
+ * must never manufacture a nemesis on its own. It walks the relationship up
+ * to the edge of the next rung, where the encounter system takes over.
+ */
 function recordSocial(
   c: CharacterState,
   who: string,
   kind: SocialBond['kind'],
   now: number,
 ): Record<string, SocialBond> {
-  return adjustSocialBond(c, who, kind, 1, now).socialBonds ?? {};
+  return contactSocialBond(c, who, kind, { promotes: false, delta: 1 }, now).character.socialBonds ?? {};
 }
 
 export function withGrievance(

@@ -8,7 +8,7 @@ import { AppState } from 'react-native';
 
 import { DialogueEngine } from '../barkly/dialogue';
 import {
-  adjustSocialBond,
+  contactSocialBond,
   CharacterState,
   expireCharacter,
   freshCharacter,
@@ -34,6 +34,7 @@ import {
   progressAdventure,
 } from '../game/adventure';
 import { contestReward, CONTEST_ROUNDS, ContestRules, ContestState } from '../game/contest';
+import { Promotion } from '../barkly/escalation';
 import {
   areaUnlocked,
   buy as buyItem,
@@ -126,6 +127,8 @@ export interface BarklyController {
   wallet: Wallet;
   level: number;
   reward: { coins: number; xp: number; note?: string } | null;
+  /** A relationship just crossed a rung. Announce it, then let it clear. */
+  promotion: Promotion | null;
   buy(itemId: string): { ok: boolean; line: string };
   equip(itemId: string): void;
   isUnlocked(area: string): boolean;
@@ -250,6 +253,7 @@ export function useBarkly(): BarklyController {
   const [wallet, setWallet] = useState<Wallet>(freshWallet);
   const walletRef = useRef(wallet);
   const [reward, setReward] = useState<{ coins: number; xp: number; note?: string } | null>(null);
+  const [promotion, setPromotion] = useState<Promotion | null>(null);
   const [devMode, setDevModeState] = useState(process.env.EXPO_PUBLIC_BARKLY_DEV === '1');
   const devRef = useRef(devMode);
   const voiceEngine = useMemo(
@@ -523,6 +527,14 @@ export function useBarkly(): BarklyController {
     const timer = setTimeout(() => setReward(null), 2600);
     return () => clearTimeout(timer);
   }, [reward]);
+
+  // A promotion banner stays up longer than a coin toast — it is the payoff
+  // for a whole arc, not a receipt.
+  useEffect(() => {
+    if (!promotion) return;
+    const timer = setTimeout(() => setPromotion(null), 5200);
+    return () => clearTimeout(timer);
+  }, [promotion]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -849,16 +861,27 @@ export function useBarkly(): BarklyController {
     [activeEncounter, busy, credit, memory, progressPlan, speak],
   );
 
-  const resolveEncounter = useCallback(
-    async (choiceId: string): Promise<void> => {
-      const encounter = activeEncounter;
-      if (!encounter || busy) return;
+  /**
+   * Resolve a choice against an encounter passed in EXPLICITLY.
+   *
+   * This used to read `activeEncounter` out of the render closure, which is
+   * fine when the sheet is on screen and broken when it is not: after a duel,
+   * finishContest had to put the encounter back into state and then call in,
+   * and the callback it called was still closed over `null`. The sheet
+   * reopened and sat there forever with the duel already paid out. Passing the
+   * encounter along the call removes the round trip entirely.
+   */
+  const resolveWith = useCallback(
+    async (encounter: SocialEncounter, choiceId: string, playedContest = false): Promise<void> => {
       const choice = encounter.choices.find((candidate) => candidate.id === choiceId);
       if (!choice) return;
 
       // A contest choice is not answered here — it is PLAYED. Hold it, open
       // the duel, and let finishContest resolve it with the real outcome.
-      if (choice.contest && !contestChoice.current) {
+      // `playedContest` is what stops that from looping: the duel is over by
+      // the time finishContest calls back in, and the ref it used to check had
+      // already been cleared.
+      if (choice.contest && !playedContest) {
         contestChoice.current = { encounter, choiceId };
         setActiveEncounter(null);
         setPendingContest({ ...choice.contest, rounds: CONTEST_ROUNDS });
@@ -873,9 +896,20 @@ export function useBarkly(): BarklyController {
       if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
       npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 5200);
 
-      setCharacter((c) => {
-        let next = adjustSocialBond(c, npc.name, npc.relationship, choice.bondDelta, now);
-        next = noteSocialChoice(next, npc.name);
+      // An encounter choice is the thing that PROMOTES a relationship — see
+      // barkly/escalation.ts. Casual taps only build pressure, so the moment
+      // a dog becomes a nemesis is always a moment the player played through.
+      const contact = contactSocialBond(
+        characterRef.current,
+        npc.name,
+        npc.relationship,
+        { promotes: true, delta: choice.bondDelta },
+        now,
+      );
+      const crossed = contact.promotion;
+
+      setCharacter(() => {
+        let next = noteSocialChoice(contact.character, npc.name);
         if (npc.relationship === 'friend') {
           next = { ...next, favoriteFriend: npc.name };
         } else if (choice.bondDelta > 0) {
@@ -914,6 +948,24 @@ export function useBarkly(): BarklyController {
           after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
         });
 
+        // The relationship moved a rung. Say so, show so, and write it down —
+        // an escalation nobody witnessed is a counter, not a story.
+        if (crossed) {
+          setPromotion(crossed);
+          await pause(220);
+          await speak(crossed.line, {
+            actions: crossed.kind === 'rival' ? ['EAR_PERK', 'EXCITED'] : ['TAIL_WAG', 'EAR_PERK'],
+            after: { type: 'SOCIAL', friendly: crossed.kind === 'friend' },
+          });
+          memory
+            .remember([], [`${crossed.who} went from ${crossed.fromLabel} to ${crossed.toLabel}.`], {
+              where: LOCATIONS[locationRef.current].name,
+              withWhom: [crossed.who],
+            })
+            .then(() => setMemoryVersion((v) => v + 1))
+            .catch(() => {});
+        }
+
         if (choice.routineCue) {
           const learned = memory.matchTraining(choice.routineCue);
           if (learned?.routine && learned.routine.length >= 2) {
@@ -934,7 +986,15 @@ export function useBarkly(): BarklyController {
         setBusy(false);
       }
     },
-    [activeEncounter, busy, credit, memory, performRoutine, progressPlan, speak],
+    [credit, memory, performRoutine, progressPlan, speak],
+  );
+
+  const resolveEncounter = useCallback(
+    async (choiceId: string): Promise<void> => {
+      if (!activeEncounter || busy) return;
+      await resolveWith(activeEncounter, choiceId);
+    },
+    [activeEncounter, busy, resolveWith],
   );
 
   const dig = useCallback(async (): Promise<Treasure | null> => {
@@ -1098,13 +1158,12 @@ export function useBarkly(): BarklyController {
         }
       }
 
-      setActiveEncounter(held.encounter);
-      // The encounter is back on screen for a frame; resolve it immediately
-      // with the choice that started the duel.
-      await pause(0);
-      await resolveEncounter(held.choiceId);
+      // Resolve directly against the held encounter. Putting it back into
+      // state first and calling the public entry point looked tidier and left
+      // the sheet stranded on screen — see resolveWith.
+      await resolveWith(held.encounter, held.choiceId, true);
     },
-    [resolveEncounter],
+    [resolveWith],
   );
 
   const actions = useMemo<BodyAction[]>(() => {
@@ -1153,6 +1212,7 @@ export function useBarkly(): BarklyController {
     wallet,
     level: levelFor(wallet.xp),
     reward,
+    promotion,
     relationship,
     adventure,
     buy: (itemId: string) => {
