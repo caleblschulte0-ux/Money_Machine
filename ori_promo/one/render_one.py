@@ -32,7 +32,7 @@ import shotqc
 import shotnorm
 from ai import place as PL
 import depthtools as DT
-from spec_one import (BEATS, FIGURES, LABELS, ICE, TITLES, UI_OFF,
+from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, figures,
                       W, H, FPS, TOTAL)
 
 RAW = "../raw"
@@ -283,7 +283,7 @@ def draw_label(d, anchor, box, title, sub, k, col=CYAN):
     LK.block(d, anchor, box, title, sub, k, col, W, H)
 
 
-def draw_title(d, t, dur, title, sub, t0):
+def draw_title(d, t, dur, title, sub, t0, scale=1.0):
     """The location title under the montage. DELIBERATELY NOT AN AR LABEL.
 
     No reticle, no leader, no cyan, no corner cues -- a lower-left block in
@@ -309,12 +309,14 @@ def draw_title(d, t, dur, title, sub, t0):
         if a:
             d.line([(0, H - band + i), (W, H - band + i)], fill=(5, 8, 11, a))
     x, y = 96, H - 150
-    f1, f2 = LK.inter(58), mono(28)
-    d.rectangle([x - 26, y - 46, x - 22, y + 60], fill=INK + (int(215 * k),))
+    f1, f2 = LK.inter(int(58 * scale)), mono(int(28 * scale))
+    sub_dy = int(46 * scale)
+    d.rectangle([x - 26, y - int(46 * scale), x - 22, y + sub_dy + 14],
+                fill=INK + (int(215 * k),))
     d.text((x + 2, y + 3), title, font=f1, fill=(5, 8, 11, int(170 * k)), anchor="ls")
     d.text((x, y), title, font=f1, fill=INK + (int(252 * k),), anchor="ls")
-    d.text((x + 4, y + 49), sub, font=f2, fill=(5, 8, 11, int(150 * k)), anchor="ls")
-    d.text((x + 2, y + 46), sub, font=f2, fill=DIM + (int(240 * k),), anchor="ls")
+    d.text((x + 4, y + sub_dy + 3), sub, font=f2, fill=(5, 8, 11, int(150 * k)), anchor="ls")
+    d.text((x + 2, y + sub_dy), sub, font=f2, fill=DIM + (int(240 * k),), anchor="ls")
 
 
 def frame_cue(d, t, dur):
@@ -330,7 +332,7 @@ def frame_cue(d, t, dur):
 
 def compose(beat, dur, frames):
     gray = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
-    figs = FIGURES.get(beat, [])
+    figs = figures(beat)
     lab = LABELS.get(beat)
     ttl = TITLES.get(beat)
 
@@ -380,7 +382,8 @@ def compose(beat, dur, frames):
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
 
-        for (src, _fx, hpx, t0, build, sdep, mtch), path, cut in zip(figs, fpaths, cuts):
+        for (src, _fx, hpx, t0, build, sdep, mtch, toff), path, cut in zip(
+                figs, fpaths, cuts):
             foot = path[min(i, len(path) - 1)]
             lt = t - t0
             if lt < -0.55:
@@ -390,8 +393,28 @@ def compose(beat, dur, frames):
                            dur=0.55, col=CYAN, a=235)
                 continue
             k = min(1.0, lt / build)
-            base = PL.place(base, cut, foot, hpx, k=k, depth=dep0,
-                            subj_depth=sdep, reveal=(k < 1.0), match=mtch)
+            # THE FIGURE MAY LEAVE. On the closer each era is scrubbed
+            # through rather than assembled, so it fades back out over
+            # 0.3s and the reveal is suppressed once it starts leaving --
+            # a resolve line rising up a figure that is on its way out
+            # reads as it arriving again.
+            going = False
+            if toff is not None:
+                if t >= toff:
+                    k *= max(0.0, 1.0 - (t - toff) / 0.30)
+                    going = True
+                if k <= 0.002:
+                    continue
+            # NO RESOLVE LINE ON A FLASH. The reveal draws a warm band
+            # travelling up the figure, which over a 1.4s build is the
+            # "system placing something" moment and over a 0.3s one is a
+            # red smear across a woman's chest -- which is exactly what
+            # the first cut of the new ending looked like. A figure with
+            # an out-time is a RECALL of something already revealed, so
+            # it just appears.
+            base = PL.place(base, cut, foot, hpx, k=k,
+                            depth=dep0, subj_depth=sdep,
+                            reveal=(toff is None and k < 1.0), match=mtch)
 
         if lab and lpath:
             (_, title, sub, t0, off) = lab
@@ -418,7 +441,8 @@ def compose(beat, dur, frames):
         if beat not in UI_OFF:
             frame_cue(d, t, dur)
         if ttl:
-            draw_title(d, t, dur, ttl[0], ttl[1], ttl[2])
+            draw_title(d, t, dur, ttl[0], ttl[1], ttl[2],
+                       scale=(ttl[3] if len(ttl) > 3 else 1.0))
         ov = np.array(img).astype(np.float32)
         a = ov[..., 3:4] / 255.0
         out = np.clip(base * (1 - a) + ov[..., :3][..., ::-1] * a, 0, 255)

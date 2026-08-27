@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, "..")
 
 import shotqc
-from spec_one import (BEATS, FIGURES, LABELS, ICE, TITLES, UI_OFF,
+from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, figures,
                       W, H, FPS, TOTAL)
 
 RAW = "../raw"
@@ -59,10 +59,12 @@ def main():
     L.append("FIGURES PLACED — the generated imagery, and where it stands")
     L.append("")
     for b, clip, tin, st, d, note in BEATS:
-        for (src, foot, hpx, t0, build, sdep, mtch) in FIGURES.get(b, []):
+        for (src, foot, hpx, t0, build, sdep, mtch, toff) in figures(b):
             L.append(f"  {st+t0:5.1f}s  {os.path.basename(src)}")
             L.append(f"           feet at {foot}, {hpx}px tall, builds over {build:.1f}s")
             L.append(f"           light-match {mtch:.2f}, occlusion depth {sdep:.2f}")
+            if toff is not None:
+                L.append(f"           LEAVES at {st+toff:5.1f}s, gone by {st+toff+0.3:.1f}s")
     L.append("")
     L.append("ON-SCREEN COPY, VERBATIM")
     L.append("")

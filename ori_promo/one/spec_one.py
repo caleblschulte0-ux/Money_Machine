@@ -32,7 +32,7 @@
 # B-roll would claim the phone footage was a device view; it isn't, and the
 # film is stronger if the glasses switch on in front of you.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 37.9
+TOTAL = 38.9
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
@@ -55,8 +55,8 @@ BEATS = [
  ("e2",   "6804", 18.0, 15.2, 6.0, "THE SETTLERS: the era swaps on the cut, no reveal"),
  ("bE",   "6686", 16.0, 21.2, 1.2, "rock texture — the cutaway the ice change hides behind"),
  ("e3",   "6804", 26.0, 22.4, 6.0, "THE LAST ICE: the same view frozen, and a mammoth"),
- ("e4",   "6804", 34.0, 28.4, 6.0, "RETURN, then ALL THREE ERAS on the same rock at once"),
- ("end",   None,   0.0, 34.4, 3.5, "held from e4's last frame — which is PRESENT DAY"),
+ ("e4",   "6804", 34.0, 28.4, 7.0, "RETURN, then the three eras ONE AT A TIME, then empty rock"),
+ ("end",   None,   0.0, 35.4, 3.5, "held from e4's last frame — which is PRESENT DAY"),
 ]
 
 # Beats that get NO viewfinder frame: the establishing montage. bE keeps it
@@ -72,6 +72,10 @@ UI_OFF = {"bA", "bB", "bC", "bD"}
 # establishing frame -- and gives it 1.85s.
 TITLES = {
  "bC": ("FALLS PARK", "SIOUX FALLS, SOUTH DAKOTA", 0.15),
+ # 1.3x, and it is the only title that gets a size. This is the film's
+ # closing line landing on empty rock with about 1.3 seconds to read it,
+ # where "FALLS PARK" opens over a wide with nothing competing.
+ "e4": ("ONE PLACE", "EVERY TIME", 5.1, 1.3),
 }
 
 # THE FRONTAL POSING IS A KNOWN, UNFIXED TELL — and the fix was TRIED and
@@ -130,12 +134,20 @@ FIGURES = {
  # walking out of frame away from the person looking at it is the wrong
  # picture.
  "e3": [("ai/era/mam41f.jpg",    (1330, 690), 320, 0.30, 0.60, 0.30, 0.45)],
- # THE CLOSER. Spread across the ledge so the two family groups read as
- # two groups and not one crowd, and sized a touch down from their own
- # beats so three of them fit without the frame feeling stacked.
- "e4": [("ai/era/dak_s17.jpg",  (955, 775), 355, 2.0, 1.0, 0.30, 0.55),
-        ("ai/era/fam3_s3.jpg",  (1285, 728), 335, 2.3, 1.0, 0.30, 0.30),
-        ("ai/era/mam41f.jpg",    (1615, 700), 290, 2.6, 1.0, 0.30, 0.45)],
+ # THE CLOSER, REBUILT. It used to stand all three eras on the ledge at
+ # once -- my idea, and r80 killed it correctly: "resembles an asset
+ # browser, theme-park menu, or cast lineup. It breaks the illusion that
+ # the product is revealing time." It also put every asset mismatch on
+ # screen simultaneously, which is the worst possible frame to end on.
+ # Now the three eras arrive and leave ONE AT A TIME, each in the exact
+ # position the viewer already saw it in, each held under a second. That
+ # is time being scrubbed rather than a cast being assembled. Then they
+ # are all gone and the film ends on the empty present-day rock, which is
+ # the honest last image: the place, as it is, now.
+ # The 8th element is when the figure LEAVES (None = stays to the end).
+ "e4": [("ai/era/dak_s17.jpg",  (1150, 745), 385, 1.8, 0.30, 0.30, 0.55, 2.6),
+        ("ai/era/fam3_s3.jpg",  (1180, 700), 360, 2.9, 0.30, 0.30, 0.30, 3.7),
+        ("ai/era/mam41f.jpg",   (1330, 690), 320, 4.0, 0.30, 0.30, 0.45, 4.8)],
 }
 
 # beat: (anchor_xy, title, subtitle, appear_t, offset_xy)
@@ -146,11 +158,10 @@ LABELS = {
  "e1":   ((1032, 752), "BEFORE THE MILL", "VISUALISATION",  2.0, (-40, -410)),
  "e2":   ((1072, 707), "THE SETTLERS",    "VISUALISATION",  1.0, (-40, -390)),
  "e3":   ((1222, 700), "THE LAST ICE",    "VISUALISATION",  1.4, (-40, -380)),
- # anchored at 838, not 955: at the closer's smaller placement the Dakota
- # group spans roughly 830-1080, so 955 was its CENTRE and the leader went
- # straight down through it again. 838 puts the line just off its left
- # shoulder. "Left edge" has to be measured per placement, not reused.
- "e4":   ((838, 788),  "ONE PLACE",       "EVERY TIME",     3.6, (-40, -430)),
+ # e4 HAS NO AR LABEL ANY MORE. "ONE PLACE / EVERY TIME" is the film
+ # talking, not the system recognising something, and with the eras gone
+ # by 4.8s an AR leader line would be pointing at bare rock. It moves to
+ # TITLES, in the same documentary voice as the location title.
 }
 
 # The ice ramps IN over e3 and back OUT over e4, so the return to now is an
@@ -173,6 +184,20 @@ SCORE = {
  "cold":   "e3",     # low voices leave
  "warm":   "e4",     # they come back with the colour
 }
+
+
+def figures(beat):
+    """FIGURES rows, normalised to 8 fields.
+
+    (image, foot_xy, height_px, appear_t, build, subj_depth, match, out_t)
+
+    out_t is when the figure leaves; None means it stays to the end of the
+    beat. Written as an OPTIONAL eighth field so every existing 7-field row
+    keeps working untouched -- three separate modules unpack these tuples
+    and widening them all at once is how you get a positional-argument bug
+    that renders fine and means something different.
+    """
+    return [f if len(f) == 8 else f + (None,) for f in FIGURES.get(beat, [])]
 
 
 def timeline():
