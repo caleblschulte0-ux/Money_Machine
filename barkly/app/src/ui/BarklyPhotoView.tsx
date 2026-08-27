@@ -32,6 +32,8 @@ const RENDERS = {
 // real jaw-flap while speaking, real blinks while idle.
 const FRONT_MOUTH_OPEN = require('../../assets/barkly/renders/front_mouth_open.png');
 const FRONT_BLINK = require('../../assets/barkly/renders/front_blink.png');
+const FRONT_WIDE = require('../../assets/barkly/renders/front_wide.png');   // listening
+const FRONT_SMILE = require('../../assets/barkly/renders/front_smile.png'); // happy
 
 type Pose = keyof typeof RENDERS;
 
@@ -266,7 +268,11 @@ export default function BarklyPhotoView({ state, actions }: BarklyRenderProps) {
                   ? FRONT_MOUTH_OPEN
                   : blinking
                     ? FRONT_BLINK
-                    : RENDERS.front
+                    : state === 'listening'
+                      ? FRONT_WIDE
+                      : state === 'happy'
+                        ? FRONT_SMILE
+                        : RENDERS.front
                 : RENDERS[shown.current]
             }
             style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
@@ -275,9 +281,11 @@ export default function BarklyPhotoView({ state, actions }: BarklyRenderProps) {
         </View>
       </Animated.View>
 
-      {/* invisible preloads so the first jaw-flap/blink never flickers */}
+      {/* invisible preloads so the first variant swap never flickers */}
       <Image source={FRONT_MOUTH_OPEN} style={styles.preload} />
       <Image source={FRONT_BLINK} style={styles.preload} />
+      <Image source={FRONT_WIDE} style={styles.preload} />
+      <Image source={FRONT_SMILE} style={styles.preload} />
 
       {asleep && <SleepZs />}
     </View>

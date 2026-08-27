@@ -13,6 +13,7 @@ The product test, in one sentence:
 | Path | What it is |
 |---|---|
 | [`app/`](app/) | The React Native (Expo + TypeScript) mobile app — the MVP. Setup and run instructions in its README. |
+| [`server/`](server/) | Backend proxy that holds the Anthropic key in production (the app never ships a key). |
 | [`docs/CHARACTER.md`](docs/CHARACTER.md) | Barkly's **locked** character design. Canon. Do not redesign him. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture: brain/body split, provider adapters, memory, animation swap path, child-safety posture. |
 | `app/assets/barkly/` | Character art slot — where the approved concept sheet and future animation assets go (documented in its README). |

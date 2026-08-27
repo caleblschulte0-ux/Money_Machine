@@ -21,6 +21,7 @@ import { useBarkly } from '../hooks/useBarkly';
 import BarklyPhotoView from './BarklyPhotoView';
 import BarklyView from './BarklyView';
 import SettingsSheet from './SettingsSheet';
+import { Ball, FoodBowl } from './StageProps';
 import { BarklyState } from '../barkly/types';
 
 // Renderer choice behind the BarklyRenderProps contract: 'photo' shows the
@@ -187,6 +188,8 @@ export default function BarklyRoom() {
           <Pressable onPress={pet} disabled={busy}>
             <Renderer state={snapshot.state} actions={actions} />
           </Pressable>
+          {snapshot.state === 'eating' && <FoodBowl />}
+          {snapshot.state === 'playing' && <Ball />}
           <HeartBurst burst={heartBurst} />
           {stateLabel && (
             <View style={styles.chip}>

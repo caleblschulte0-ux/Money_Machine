@@ -58,9 +58,10 @@ Swapping a vendor = writing one adapter + one registry line.
 
 Production secrets never ship in the mobile binary. The Anthropic adapter's
 direct-from-device mode is **development only** (`EXPO_PUBLIC_*` env vars are
-bundled into the app and are not secret). The adapter takes a `baseURL` so the
-same code points at a backend proxy for production; the proxy is the sprint
-after this one. `.env.example` documents every variable.
+bundled into the app and are not secret). For production the adapter's
+`baseURL` points at **`../server`** — a zero-dependency Node proxy that holds
+the real key, forwards only `POST /v1/messages`, and rate-limits per IP (its
+README has run/deploy instructions). `.env.example` documents every variable.
 
 ## The Barkly state machine
 
