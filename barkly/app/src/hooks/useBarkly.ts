@@ -24,6 +24,15 @@ import { deriveSocialEncounter, SocialEncounter } from '../barkly/encounters';
 import { nameFromFacts, welcomeBack } from '../barkly/greetings';
 import { Mishap, mishapLine } from '../barkly/mishaps';
 import { buildRelationshipProfile, RelationshipProfile } from '../barkly/relationship';
+import { looksLikeTrainingInstruction } from '../barkly/training';
+import {
+  AdventureEvent,
+  AdventureState,
+  adventureDay,
+  createAdventure,
+  PLAN_REWARD,
+  progressAdventure,
+} from '../game/adventure';
 import {
   areaUnlocked,
   buy as buyItem,
@@ -76,6 +85,7 @@ const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
 const ONBOARDING_KEY = profileKey(DEFAULT_PROFILE, 'onboarding-v1');
 const WALLET_KEY = profileKey(DEFAULT_PROFILE, 'wallet-v1');
 const DEV_KEY = profileKey(DEFAULT_PROFILE, 'dev-v1');
+const ADVENTURE_KEY = profileKey(DEFAULT_PROFILE, 'adventure-v1');
 
 export interface Exchange {
   userText: string;
@@ -106,6 +116,8 @@ export interface BarklyController {
 
   /** The legible answer to "what kind of Barkly did I create?" */
   relationship: RelationshipProfile;
+  /** Three personalized things Barkly wants to do this session/day. */
+  adventure: AdventureState | null;
 
   devMode: boolean;
   setDevMode(on: boolean): void;
@@ -165,6 +177,7 @@ export function useBarkly(): BarklyController {
   const lastMishap = useRef<string | null>(null);
   const warnedUnwritable = useRef(false);
   const [memoryVersion, setMemoryVersion] = useState(0);
+  const [bootReady, setBootReady] = useState(false);
 
   const [busy, setBusy] = useState(false);
   const [sttAvailable, setSttAvailable] = useState(false);
@@ -193,6 +206,8 @@ export function useBarkly(): BarklyController {
   const [character, setCharacter] = useState<CharacterState>(() => freshCharacter());
   const characterRef = useRef(character);
   characterRef.current = character;
+  const [adventure, setAdventure] = useState<AdventureState | null>(null);
+  const adventureRef = useRef<AdventureState | null>(null);
   const thoughtSeed = useRef(Math.floor(Math.random() * 1000));
 
   const snapshotRef = useRef(snapshot);
@@ -229,6 +244,57 @@ export function useBarkly(): BarklyController {
       snapshotRef.current = next;
       return next;
     });
+  }, []);
+
+  /** Generate a plan from the relationship that exists RIGHT NOW. */
+  const makePlan = useCallback((now: number): AdventureState =>
+    createAdventure({
+      character: characterRef.current,
+      memory: memory.snapshot(),
+      xp: walletRef.current.xp,
+      now,
+    }), [memory]);
+
+  /**
+   * Advance today's three-goal plan from normal play. Completing it pays once;
+   * there is no streak, no penalty and no separate "claim" button to farm.
+   */
+  const progressPlan = useCallback((event: AdventureEvent) => {
+    const current = adventureRef.current;
+    if (!current) return;
+    const result = progressAdventure(current, event, Date.now());
+    if (!result.changed) return;
+
+    let next = result.state;
+    if (result.justCompleted && !next.rewarded) {
+      next = { ...next, rewarded: true };
+      setWallet((w) => {
+        const before = levelFor(w.xp);
+        const nextWallet: Wallet = {
+          ...w,
+          coins: w.coins + PLAN_REWARD.coins,
+          xp: w.xp + PLAN_REWARD.xp,
+        };
+        walletRef.current = nextWallet;
+        const after = levelFor(nextWallet.xp);
+        const leveled = after > before;
+        const note = leveled
+          ? unlockedAt(after)[0]?.line ?? `Level ${after}.`
+          : 'plan complete';
+        setReward({ ...PLAN_REWARD, note });
+        if (leveled) {
+          const unlocked = unlockedAt(after);
+          if (unlocked.length > 0) setPendingGreeting(unlocked[0].line);
+        } else {
+          setPendingGreeting('Plan complete. Disturbingly productive. We should probably do something pointless now.');
+        }
+        return nextWallet;
+      });
+    }
+
+    adventureRef.current = next;
+    setAdventure(next);
+    asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
   }, []);
 
   // --------------------------------------------------------------- loading
@@ -278,7 +344,9 @@ export function useBarkly(): BarklyController {
       try {
         const rawChar = await asyncStorageStore.get(CHARACTER_KEY);
         if (!cancelled && rawChar) {
-          setCharacter(expireCharacter(JSON.parse(rawChar) as CharacterState, Date.now()));
+          const restoredCharacter = expireCharacter(JSON.parse(rawChar) as CharacterState, Date.now());
+          characterRef.current = restoredCharacter;
+          setCharacter(restoredCharacter);
         }
       } catch {
         lost = true;
@@ -324,12 +392,38 @@ export function useBarkly(): BarklyController {
       if (!cancelled) {
         setSttAvailable(available);
         if (lost) sayMishap('memory_lost');
+        setBootReady(true);
       }
     })();
     return () => {
       cancelled = true;
     };
   }, [memory, providers, sayMishap, stash, voiceEngine]);
+
+  /** Load today's plan, or make a fresh one from the fully restored Barkly. */
+  useEffect(() => {
+    if (!bootReady) return;
+    let cancelled = false;
+    (async () => {
+      const now = Date.now();
+      let next: AdventureState | null = null;
+      try {
+        const raw = await asyncStorageStore.get(ADVENTURE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as AdventureState;
+          if (parsed.day === adventureDay(now) && Array.isArray(parsed.goals)) next = parsed;
+        }
+      } catch {}
+      if (!next) next = makePlan(now);
+      if (cancelled) return;
+      adventureRef.current = next;
+      setAdventure(next);
+      asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [bootReady, makePlan]);
 
   // ----------------------------------------------------------- ambient life
   const [idleAction, setIdleAction] = useState<BodyAction | null>(null);
@@ -382,11 +476,22 @@ export function useBarkly(): BarklyController {
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') dispatch({ type: 'TICK', now: Date.now() });
-      else voiceEngine.onBackground();
+      if (state === 'active') {
+        const now = Date.now();
+        dispatch({ type: 'TICK', now });
+        const currentPlan = adventureRef.current;
+        if (currentPlan && currentPlan.day !== adventureDay(now)) {
+          const next = makePlan(now);
+          adventureRef.current = next;
+          setAdventure(next);
+          asyncStorageStore.set(ADVENTURE_KEY, JSON.stringify(next)).catch(() => {});
+        }
+      } else {
+        voiceEngine.onBackground();
+      }
     });
     return () => sub.remove();
-  }, [dispatch, voiceEngine]);
+  }, [dispatch, makePlan, voiceEngine]);
 
   useEffect(() => {
     void configureAudioSession();
@@ -531,6 +636,9 @@ export function useBarkly(): BarklyController {
       setBusy(true);
       setError(null);
       dispatch({ type: 'TALK_CAPTURED' });
+      const trainedBefore = !looksLikeTrainingInstruction(userText)
+        ? memory.matchTraining(userText)
+        : undefined;
       try {
         const { reply } = await engine.converse(
           userText,
@@ -553,6 +661,10 @@ export function useBarkly(): BarklyController {
           });
         }
         credit('talk');
+        progressPlan({ kind: 'talk' });
+        if (trainedBefore) {
+          progressPlan({ kind: 'routine', target: trainedBefore.normalizedCue });
+        }
       } catch (e) {
         dispatch({ type: 'TALK_FAILED' });
         setError(barklyLineFor(e));
@@ -562,7 +674,7 @@ export function useBarkly(): BarklyController {
         setPartialTranscript('');
       }
     },
-    [credit, dispatch, engine, performRoutine, speak, worldContext],
+    [credit, dispatch, engine, memory, performRoutine, progressPlan, speak, worldContext],
   );
 
   const startTalk = useCallback(async () => {
@@ -627,12 +739,15 @@ export function useBarkly(): BarklyController {
 
   const goTo = useCallback((loc: LocationId) => {
     if (!areaUnlocked(loc, walletRef.current.xp, devRef.current)) return;
+    const moved = loc !== locationRef.current;
     setLocation(loc);
+    locationRef.current = loc;
     setNpcBubble(null);
     setActiveEncounter(null);
     setLastExchange(null);
     asyncStorageStore.set(LOCATION_KEY, loc).catch(() => {});
-  }, []);
+    if (moved) progressPlan({ kind: 'travel', target: loc });
+  }, [progressPlan]);
 
   /**
    * Every few meaningful run-ins, ordinary NPC banter upgrades into a player
@@ -643,6 +758,7 @@ export function useBarkly(): BarklyController {
     (id: NpcId): boolean => {
       if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return false;
       const npc = NPCS[id];
+      progressPlan({ kind: 'npc', target: npc.name });
       const current = characterRef.current.socialBonds?.[npc.name]?.encounters ?? 0;
       const chapters = characterRef.current.socialChoices?.[npc.name] ?? 0;
       const nextChoiceAt = 2 + chapters * 3;
@@ -686,7 +802,7 @@ export function useBarkly(): BarklyController {
       }
       return true;
     },
-    [activeEncounter, busy, credit, memory, speak],
+    [activeEncounter, busy, credit, memory, progressPlan, speak],
   );
 
   const resolveEncounter = useCallback(
@@ -744,13 +860,15 @@ export function useBarkly(): BarklyController {
               after: learned.reaction ? { type: 'REACTION', state: learned.reaction } : undefined,
             });
           }
+          if (learned) progressPlan({ kind: 'routine', target: learned.normalizedCue });
         }
         credit('friend', true, 'story moved');
+        progressPlan({ kind: 'npc', target: npc.name });
       } finally {
         setBusy(false);
       }
     },
-    [activeEncounter, busy, credit, memory, performRoutine, speak],
+    [activeEncounter, busy, credit, memory, performRoutine, progressPlan, speak],
   );
 
   const dig = useCallback(async (): Promise<Treasure | null> => {
@@ -767,8 +885,9 @@ export function useBarkly(): BarklyController {
       .then(() => setMemoryVersion((v) => v + 1))
       .catch(() => {});
     credit('dig');
+    progressPlan({ kind: 'dig' });
     return found;
-  }, [activeEncounter, busy, credit, memory, speak, stash]);
+  }, [activeEncounter, busy, credit, memory, progressPlan, speak, stash]);
 
   const feed = useCallback(async () => {
     if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
@@ -778,7 +897,8 @@ export function useBarkly(): BarklyController {
       after: { type: 'FEED' },
     });
     credit('feed', !full);
-  }, [activeEncounter, busy, credit, speak]);
+    if (!full) progressPlan({ kind: 'feed' });
+  }, [activeEncounter, busy, credit, progressPlan, speak]);
 
   const play = useCallback(async () => {
     if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
@@ -788,7 +908,8 @@ export function useBarkly(): BarklyController {
       after: { type: 'PLAY' },
     });
     credit('play', !tired);
-  }, [activeEncounter, busy, credit, speak]);
+    if (!tired) progressPlan({ kind: 'play' });
+  }, [activeEncounter, busy, credit, progressPlan, speak]);
 
   const sleepToggle = useCallback(async () => {
     if (busy || activeEncounter || isBusy(snapshotRef.current.state)) return;
@@ -873,6 +994,7 @@ export function useBarkly(): BarklyController {
     level: levelFor(wallet.xp),
     reward,
     relationship,
+    adventure,
     buy: (itemId: string) => {
       const result = buyItem(walletRef.current, itemId, devRef.current);
       if (result.ok) {
@@ -939,8 +1061,11 @@ export function useBarkly(): BarklyController {
       await stash.clear();
       setStashItems([]);
       setActiveEncounter(null);
+      setAdventure(null);
+      adventureRef.current = null;
       setCharacter(freshCharacter());
       await asyncStorageStore.remove(CHARACTER_KEY);
+      await asyncStorageStore.remove(ADVENTURE_KEY);
       setLastExchange(null);
       await resetDeviceId(asyncStorageStore);
       await loadDeviceId(asyncStorageStore);
