@@ -17,6 +17,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { color } from './theme';
 import { Animated, Easing, Image, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { BarklyRenderProps } from '../animation/renderer';
 import { BarklyState, BodyAction } from '../barkly/types';
@@ -162,7 +163,8 @@ export function faceFrame({
   }
 }
 
-export default function BarklyPhotoView({ state, actions, variant, collarColor }: BarklyRenderProps) {
+export default function BarklyPhotoView({ state, actions, variant, collarId }: BarklyRenderProps) {
+  const collarArt = collarId ? COLLAR_ART[collarId] : undefined;
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
   const talking = has('MOUTH_MOVE');
@@ -317,17 +319,20 @@ export default function BarklyPhotoView({ state, actions, variant, collarColor }
             style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
             resizeMode="contain"
           />
-          {/* A bought collar recolours the leather he already wears. It rides
-              inside the same transform stack, so it breathes and tilts with
-              him instead of sliding around on top. */}
-          {collarColor && COLLAR_BAND[shown.current] && (
-            <View
-              pointerEvents="none"
-              style={[
-                styles.collar,
-                COLLAR_BAND[shown.current],
-                { backgroundColor: collarColor },
-              ]}
+          {/* The bought collar, as ART.
+
+              This was a translucent rectangle — square ends, no shading, laid
+              over the buckle — and it looked exactly like a rectangle laid on
+              a rendered dog. The overlays are derived from the render itself
+              (scripts/derive_collars.py): the real leather, rehued, with every
+              highlight and stitch intact and the brass left brass. Same
+              dimensions as the sprite, so it lines up at any scale and rides
+              the same transform stack he does. */}
+          {collarArt && FRONT_POSES.has(shown.current) && (
+            <Image
+              source={collarArt}
+              style={[styles.collarArt, { width: size.width, height: size.height }]}
+              resizeMode="contain"
             />
           )}
         </View>
@@ -357,21 +362,32 @@ export default function BarklyPhotoView({ state, actions, variant, collarColor }
  * no tint. Those poses keep the canon brown leather until someone measures
  * them properly or the art ships a separate collar layer.
  */
-const COLLAR_BAND: Partial<Record<Pose, ViewStyle>> = {
-  front: {
-    bottom: '31%' as const,
-    left: '24%' as const,
-    right: '25%' as const,
-    height: '11%' as const,
-  },
+/**
+ * Keyed by the STORE item id, not by its hex.
+ *
+ * Keying on the colour meant the map's keys were data that looked like theme
+ * values, and a palette refactor happily rewrote them into token references —
+ * silently breaking every lookup. An id is an id.
+ */
+const COLLAR_ART: Record<string, ReturnType<typeof require>> = {
+  collar_red: require('../../assets/barkly/renders/collars/front_red.png'),
+  collar_blue: require('../../assets/barkly/renders/collars/front_blue.png'),
+  collar_green: require('../../assets/barkly/renders/collars/front_green.png'),
+  collar_gold: require('../../assets/barkly/renders/collars/front_gold.png'),
 };
 
+/**
+ * The poses the overlay is aligned to. Every front frame shares identical
+ * collar pixels, so one overlay covers the lot; the three-quarter and side
+ * poses would each need their own derivation and keep the canon brown until
+ * they get it.
+ */
+const FRONT_POSES = new Set<Pose>(['front']);
+
 const styles = StyleSheet.create({
-  // Translucent so it TINTS the leather that is already there rather than
-  // covering it: the buckle and the tag still read through.
-  collar: { position: 'absolute', opacity: 0.6, borderRadius: 5 },
+  collarArt: { position: 'absolute', bottom: 0 },
   stage: { width: 300, height: 322, alignItems: 'center', justifyContent: 'flex-end' },
   preload: { position: 'absolute', width: 1, height: 1, opacity: 0 },
   zzzWrap: { position: 'absolute', top: 8, right: 34, width: 60, height: 60 },
-  zzz: { position: 'absolute', bottom: 0, color: '#A08F6F', fontWeight: '800' },
+  zzz: { position: 'absolute', bottom: 0, color: color.inkFaint, fontWeight: '800' },
 });

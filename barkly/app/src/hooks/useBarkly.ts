@@ -156,7 +156,7 @@ export interface BarklyController {
   buy(itemId: string): { ok: boolean; line: string };
   equip(itemId: string): void;
   isUnlocked(area: string): boolean;
-  collarColor: string | null;
+  collarId: string | null;
   /** Home items currently out in the room — several at once, by design. */
   placedHome: string[];
   hasHome(itemId: string): boolean;
@@ -1405,7 +1405,7 @@ export function useBarkly(): BarklyController {
       walletRef.current = next;
     },
     isUnlocked: canGo,
-    collarColor: equippedItem(wallet, 'collar')?.color ?? null,
+    collarId: equippedItem(wallet, 'collar')?.id ?? null,
     placedHome: placedIn(wallet, 'home').map((i) => i.id),
     hasHome: (itemId: string) => isPlaced(wallet, itemId),
     toy: (() => {

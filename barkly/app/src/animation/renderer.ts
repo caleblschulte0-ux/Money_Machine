@@ -26,5 +26,6 @@ export interface BarklyRenderProps {
    * default and stays canon; this recolours it, it never redraws him. A
    * renderer with no collar layer may ignore it.
    */
-  collarColor?: string | null;
+  /** STORE id of the collar he is wearing, e.g. `collar_red`. */
+  collarId?: string | null;
 }

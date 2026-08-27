@@ -15,12 +15,10 @@
  */
 
 import React, { useState } from 'react';
+import { color } from './theme';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ParentalGate from './ParentalGate';
 
-const INK = '#3E332A';
-const INK_SOFT = '#7A6A55';
-const CARD = '#FFFDF7';
 
 interface Props {
   visible: boolean;
@@ -159,7 +157,7 @@ export default function PrivacySheet({
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(40,32,22,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#F6EEDC', borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: '92%' },
+  sheet: { backgroundColor: color.well, borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: '92%' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -168,30 +166,30 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 8,
   },
-  title: { fontSize: 22, fontWeight: '800', color: INK },
-  close: { fontSize: 20, color: INK_SOFT, paddingHorizontal: 6 },
+  title: { fontSize: 24, fontWeight: '800', color: color.ink },
+  close: { fontSize: 18, color: color.inkSoft, paddingHorizontal: 6 },
   body: { paddingHorizontal: 22, paddingBottom: 34 },
-  lead: { fontSize: 15, lineHeight: 22, color: INK, marginBottom: 6 },
+  lead: { fontSize: 15, lineHeight: 22, color: color.ink, marginBottom: 6 },
   section: {
     marginTop: 20,
     marginBottom: 6,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.1,
-    color: '#A8987C',
+    color: color.inkFaint,
     textTransform: 'uppercase',
   },
-  item: { backgroundColor: CARD, borderRadius: 16, padding: 14, marginBottom: 8 },
-  itemTitle: { fontSize: 15, fontWeight: '700', color: INK, marginBottom: 4 },
-  itemBody: { fontSize: 14, lineHeight: 20, color: INK_SOFT },
+  item: { backgroundColor: color.card, borderRadius: 18, padding: 14, marginBottom: 8 },
+  itemTitle: { fontSize: 15, fontWeight: '700', color: color.ink, marginBottom: 4 },
+  itemBody: { fontSize: 13, lineHeight: 20, color: color.inkSoft },
   danger: {
     marginTop: 20,
-    backgroundColor: '#B3402E',
+    backgroundColor: color.brand,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  dangerText: { color: '#FFF6EC', fontSize: 16, fontWeight: '800' },
-  fine: { marginTop: 14, fontSize: 12, lineHeight: 18, color: '#9A8F7A' },
-  link: { marginTop: 14, fontSize: 14, color: '#7A6A55', textDecorationLine: 'underline' },
+  dangerText: { color: color.inkOn, fontSize: 15, fontWeight: '800' },
+  fine: { marginTop: 14, fontSize: 12, lineHeight: 18, color: color.inkSoft },
+  link: { marginTop: 14, fontSize: 13, color: color.inkSoft, textDecorationLine: 'underline' },
 });

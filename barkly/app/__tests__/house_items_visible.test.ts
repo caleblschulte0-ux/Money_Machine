@@ -50,9 +50,9 @@ describe('everything you can buy is visible', () => {
   }
 
   it('wearables and toys reach the renderer too', () => {
-    // Collars tint the sprite; a toy is a prop beside him. Both go through the
+    // The collar is a derived overlay keyed by item id; a toy is a prop beside him. Both go through the
     // controller rather than by id, so this checks the wiring exists at all.
-    expect(ROOM).toMatch(/collarColor/);
+    expect(ROOM).toMatch(/collarId/);
     expect(ROOM).toMatch(/barkly\.toy/);
   });
 

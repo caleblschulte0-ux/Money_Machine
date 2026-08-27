@@ -1,4 +1,5 @@
 import React from 'react';
+import { color } from './theme';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdventureState, adventureProgress, PLAN_REWARD } from '../game/adventure';
 
@@ -8,10 +9,6 @@ interface Props {
   adventure: AdventureState | null;
 }
 
-const INK = '#3E3428';
-const SOFT = '#8A7A5F';
-const PAPER = '#FFF9EC';
-const GOLD = '#C6952F';
 
 export default function AdventureSheet({ visible, onClose, adventure }: Props) {
   if (!adventure) return null;
@@ -87,7 +84,7 @@ export default function AdventureSheet({ visible, onClose, adventure }: Props) {
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(29,24,18,0.5)', justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: PAPER,
+    backgroundColor: color.paper,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 20,
@@ -95,49 +92,49 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.7, color: GOLD },
-  title: { marginTop: 3, maxWidth: 290, fontSize: 24, lineHeight: 28, fontWeight: '900', color: INK, letterSpacing: -0.5 },
-  close: { fontSize: 20, color: SOFT, padding: 4 },
-  subtitle: { marginTop: 9, fontSize: 14, lineHeight: 20, color: SOFT },
+  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.7, color: color.gold },
+  title: { marginTop: 3, maxWidth: 290, fontSize: 24, lineHeight: 28, fontWeight: '900', color: color.ink, letterSpacing: -0.5 },
+  close: { fontSize: 18, color: color.inkSoft, padding: 4 },
+  subtitle: { marginTop: 9, fontSize: 13, lineHeight: 20, color: color.inkSoft },
   progressCard: {
     marginTop: 17,
-    backgroundColor: INK,
-    borderRadius: 20,
+    backgroundColor: color.ink,
+    borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  progressDone: { backgroundColor: '#5B6B3D' },
-  progressBig: { fontSize: 26, lineHeight: 27, fontWeight: '900', color: '#FFF9EC' },
-  progressSmall: { marginTop: 2, fontSize: 8.5, fontWeight: '900', letterSpacing: 1.3, color: '#DCCB9C' },
+  progressDone: { backgroundColor: color.good },
+  progressBig: { fontSize: 24, lineHeight: 27, fontWeight: '900', color: color.paper },
+  progressSmall: { marginTop: 2, fontSize: 10, fontWeight: '900', letterSpacing: 1.3, color: color.line },
   progressRight: { alignItems: 'flex-end' },
-  rewardLabel: { fontSize: 10, color: '#C5BBA8' },
-  reward: { marginTop: 2, fontSize: 12.5, fontWeight: '800', color: '#F1D77E' },
+  rewardLabel: { fontSize: 10, color: color.inkFaint },
+  reward: { marginTop: 2, fontSize: 12, fontWeight: '800', color: color.goldSoft },
   goals: { marginTop: 14, gap: 9 },
   goal: {
     minHeight: 78,
     borderRadius: 18,
     paddingHorizontal: 13,
     paddingVertical: 12,
-    backgroundColor: '#FFFDF7',
+    backgroundColor: color.card,
     borderWidth: 1,
-    borderColor: '#E8DCC5',
+    borderColor: color.fill,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  goalDone: { backgroundColor: '#F0EAD9', borderColor: '#D6C7A8' },
-  check: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#EDE1C8', alignItems: 'center', justifyContent: 'center' },
-  checkDone: { backgroundColor: '#667848' },
-  checkText: { fontSize: 13, fontWeight: '900', color: '#7A684D' },
-  checkTextDone: { color: '#FFF9EC', fontSize: 16 },
+  goalDone: { backgroundColor: color.well, borderColor: color.line },
+  check: { width: 34, height: 34, borderRadius: 18, backgroundColor: color.fill, alignItems: 'center', justifyContent: 'center' },
+  checkDone: { backgroundColor: color.good },
+  checkText: { fontSize: 13, fontWeight: '900', color: color.inkSoft },
+  checkTextDone: { color: color.paper, fontSize: 15 },
   goalCopy: { flex: 1, marginLeft: 12 },
-  goalLabel: { fontSize: 15.5, fontWeight: '800', color: INK },
-  goalLabelDone: { textDecorationLine: 'line-through', color: '#7D7567' },
-  goalDetail: { marginTop: 3, fontSize: 12.5, lineHeight: 17, color: SOFT },
-  verdict: { marginTop: 16, borderRadius: 18, padding: 15, backgroundColor: '#E7ECD9' },
-  verdictTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1, color: '#59643D', textTransform: 'uppercase' },
-  verdictText: { marginTop: 5, fontSize: 14, lineHeight: 20, color: '#4A503B' },
-  footer: { marginTop: 15, fontSize: 11.5, lineHeight: 17, color: '#A09480', textAlign: 'center' },
+  goalLabel: { fontSize: 15, fontWeight: '800', color: color.ink },
+  goalLabelDone: { textDecorationLine: 'line-through', color: color.inkSoft },
+  goalDetail: { marginTop: 3, fontSize: 12, lineHeight: 17, color: color.inkSoft },
+  verdict: { marginTop: 16, borderRadius: 18, padding: 15, backgroundColor: color.goodWell },
+  verdictTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1, color: color.inkMid, textTransform: 'uppercase' },
+  verdictText: { marginTop: 5, fontSize: 13, lineHeight: 20, color: color.inkMid },
+  footer: { marginTop: 15, fontSize: 12, lineHeight: 17, color: color.inkFaint, textAlign: 'center' },
 });

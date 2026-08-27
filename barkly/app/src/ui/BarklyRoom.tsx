@@ -4,6 +4,8 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { color, elevation } from './theme';
+import { BRASS, DIRT, GROUND, LEAF, SAND } from './scenes/artPalette';
 import {
   Animated,
   Easing,
@@ -78,10 +80,7 @@ const STATE_LABEL: Partial<Record<BarklyState, string>> = {
   playing: 'zoomies',
 };
 
-const INK = '#3E3428';
-const INK_SOFT = '#8A7A5F';
-const CARD = '#FFFDF7';
-const ACCENT = '#D99A2B';
+const ACCENT = BRASS.light;
 
 function AnimatedBubble({ children, changeKey }: { children: React.ReactNode; changeKey: string }) {
   const v = useRef(new Animated.Value(0)).current;
@@ -167,10 +166,10 @@ function HeartBurst({ burst }: { burst: number }) {
  * and "in front of a picture of a floor".
  */
 const GROUND_SHADOW: Record<LocationId, string> = {
-  home: '#7A5A32',
-  park: '#4F6B3A',
-  town: '#6E5636',
-  beach: '#9A7B4C',
+  home: GROUND.home,
+  park: GROUND.park,
+  town: GROUND.town,
+  beach: GROUND.beach,
 };
 
 function GroundShadow({ location, width, style }: { location: LocationId; width: number; style?: object }) {
@@ -237,14 +236,14 @@ function NpcDog({ id, onPress, location }: { id: NpcId; onPress: () => void; loc
 function SpeakerIcon({ muted }: { muted: boolean }) {
   return (
     <Svg width={20} height={20} viewBox="0 0 20 20">
-      <Path d="M3 7.5h3.2L10.5 4v12L6.2 12.5H3z" fill={muted ? '#9A8C76' : INK_SOFT} />
+      <Path d="M3 7.5h3.2L10.5 4v12L6.2 12.5H3z" fill={muted ? color.inkFaint : color.inkSoft} />
       {!muted && (
         <>
-          <Path d="M13 7.2a4 4 0 0 1 0 5.6" stroke={INK_SOFT} strokeWidth={1.6} strokeLinecap="round" fill="none" />
-          <Path d="M15.4 5.2a7 7 0 0 1 0 9.6" stroke={INK_SOFT} strokeWidth={1.6} strokeLinecap="round" fill="none" />
+          <Path d="M13 7.2a4 4 0 0 1 0 5.6" stroke={color.inkSoft} strokeWidth={1.6} strokeLinecap="round" fill="none" />
+          <Path d="M15.4 5.2a7 7 0 0 1 0 9.6" stroke={color.inkSoft} strokeWidth={1.6} strokeLinecap="round" fill="none" />
         </>
       )}
-      {muted && <Path d="M13 6.5l5 7M18 6.5l-5 7" stroke="#B3402E" strokeWidth={1.8} strokeLinecap="round" />}
+      {muted && <Path d="M13 6.5l5 7M18 6.5l-5 7" stroke="color.brand" strokeWidth={1.8} strokeLinecap="round" />}
     </Svg>
   );
 }
@@ -705,7 +704,7 @@ export default function BarklyRoom() {
               accessibilityLabel={`Barkly. ${stateLabel || snapshot.state}.`}
               accessibilityHint="Tap to pet him."
             >
-              <Renderer state={snapshot.state} actions={actions} variant={variant} collarColor={barkly.collarColor} />
+              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} />
             </Pressable>
           </Animated.View>
           {/* After the dog, so the near rim overlaps his lower body. */}
@@ -713,9 +712,9 @@ export default function BarklyRoom() {
           {fetching && location !== 'beach' && variant !== 'carryLeft' && (
             <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
               <Svg width={30} height={30} viewBox="0 0 30 30">
-                <Circle cx={15} cy={15} r={13} fill="#B3402E" />
-                <Path d="M3 13 C11 9 19 9 27 13" stroke="#8E2F20" strokeWidth={2.5} fill="none" />
-                <Circle cx={10} cy={9} r={3.5} fill="#FFFFFF" opacity={0.35} />
+                <Circle cx={15} cy={15} r={13} fill="color.brand" />
+                <Path d="M3 13 C11 9 19 9 27 13" stroke="color.danger" strokeWidth={2.5} fill="none" />
+                <Circle cx={10} cy={9} r={3.5} fill="color.card" opacity={0.35} />
               </Svg>
             </Animated.View>
           )}
@@ -733,15 +732,15 @@ export default function BarklyRoom() {
             >
               {location === 'beach' ? (
                 <Svg width={86} height={44} viewBox="0 0 86 44">
-                  <Path d="M4 38 Q43 12 82 38 Z" fill="#D3BA92" />
-                  <Path d="M18 38 Q43 22 68 38 Z" fill="#C2A87E" />
-                  <Path d="M34 33 q5 -6 10 0 q5 -6 10 0" stroke="#9C8560" strokeWidth={2} fill="none" />
+                  <Path d="M4 38 Q43 12 82 38 Z" fill={SAND.mound} />
+                  <Path d="M18 38 Q43 22 68 38 Z" fill={SAND.shade} />
+                  <Path d="M34 33 q5 -6 10 0 q5 -6 10 0" stroke={SAND.ripple} strokeWidth={2} fill="none" />
                 </Svg>
               ) : (
                 <Svg width={86} height={44} viewBox="0 0 86 44">
-                  <Path d="M6 38 Q43 2 80 38 Z" fill="#8A6B3A" />
-                  <Path d="M18 38 Q43 14 68 38 Z" fill="#75592F" />
-                  <Circle cx={43} cy={34} r={7} fill="#5C4426" />
+                  <Path d="M6 38 Q43 2 80 38 Z" fill={DIRT.mound} />
+                  <Path d="M18 38 Q43 14 68 38 Z" fill={DIRT.shade} />
+                  <Circle cx={43} cy={34} r={7} fill={DIRT.hole} />
                 </Svg>
               )}
               <Text style={styles.digHint}>
@@ -755,21 +754,21 @@ export default function BarklyRoom() {
             <View style={styles.toyProp} pointerEvents="none">
               {barkly.toy.id === 'toy_ball' ? (
                 <Svg width={34} height={34} viewBox="0 0 30 30">
-                  <Circle cx={15} cy={15} r={13} fill="#B3402E" />
-                  <Path d="M3 13 C11 9 19 9 27 13" stroke="#8E2F20" strokeWidth={2.5} fill="none" />
-                  <Circle cx={10} cy={9} r={3.5} fill="#FFFFFF" opacity={0.35} />
+                  <Circle cx={15} cy={15} r={13} fill="color.brand" />
+                  <Path d="M3 13 C11 9 19 9 27 13" stroke="color.danger" strokeWidth={2.5} fill="none" />
+                  <Circle cx={10} cy={9} r={3.5} fill="color.card" opacity={0.35} />
                 </Svg>
               ) : (
                 <Svg width={58} height={26} viewBox="0 0 58 26">
                   <Path
                     d="M8 13 q 10 -8 20 0 q 10 8 22 0"
-                    stroke="#C9A46A"
+                    stroke={BRASS.mid}
                     strokeWidth={9}
                     strokeLinecap="round"
                     fill="none"
                   />
                   <Path d="M4 13 l -2 -6 M4 13 l -2 6 M54 13 l 2 -6 M54 13 l 2 6"
-                    stroke="#B08E58" strokeWidth={3} strokeLinecap="round" />
+                    stroke={BRASS.pale} strokeWidth={3} strokeLinecap="round" />
                 </Svg>
               )}
             </View>
@@ -806,7 +805,7 @@ export default function BarklyRoom() {
                 value={typed}
                 onChangeText={setTyped}
                 placeholder="say something to Barkly…"
-                placeholderTextColor={INK_SOFT}
+                placeholderTextColor={color.inkSoft}
                 editable={!locked}
                 onSubmitEditing={sendTyped}
                 returnKeyType="send"
@@ -963,19 +962,9 @@ function ActionButton({
   );
 }
 
-const shadowCard = Platform.select({
-  web: { boxShadow: '0 10px 24px rgba(74, 59, 42, 0.12)' } as object,
-  default: {
-    shadowColor: '#4A3B2A',
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
-  },
-});
 
 const styles = StyleSheet.create({
-  room: { flex: 1, backgroundColor: '#F7F1E2' },
+  room: { flex: 1, backgroundColor: color.well },
   sceneLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   content: { flex: 1, paddingTop: 54, paddingBottom: 26, paddingHorizontal: 22 },
 
@@ -986,39 +975,39 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    ...(shadowCard as object),
+    ...elevation.card,
   },
-  wordmark: { fontSize: 20, fontWeight: '800', color: INK, letterSpacing: 0.3 },
-  wordmarkTight: { fontSize: 16, letterSpacing: 0 },
+  wordmark: { fontSize: 20, fontWeight: '800', color: color.ink, letterSpacing: 0.3 },
+  wordmarkTight: { fontSize: 15, letterSpacing: 0 },
   gear: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    backgroundColor: CARD,
+    borderRadius: 18,
+    backgroundColor: color.card,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 3,
-    ...(shadowCard as object),
+    ...elevation.card,
   },
-  gearDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INK_SOFT },
+  gearDot: { width: 4, height: 4, borderRadius: 8, backgroundColor: color.inkSoft },
   headerButtons: { flexDirection: 'row', gap: 7 },
   toyProp: { position: 'absolute', bottom: 16, right: 24 },
   walletTap: { flex: 1, marginHorizontal: 8 },
   packButton: {
     minWidth: 43,
     height: 38,
-    borderRadius: 13,
+    borderRadius: 12,
     paddingHorizontal: 7,
-    backgroundColor: INK,
+    backgroundColor: color.ink,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(shadowCard as object),
+    ...elevation.card,
   },
-  packLabel: { fontSize: 7, lineHeight: 8, fontWeight: '900', letterSpacing: 1.1, color: '#E2C471' },
-  packLevel: { marginTop: 1, fontSize: 15, lineHeight: 16, fontWeight: '900', color: '#FFF9EC' },
+  packLabel: { fontSize: 10, lineHeight: 8, fontWeight: '900', letterSpacing: 1.1, color: color.goldSoft },
+  packLevel: { marginTop: 1, fontSize: 15, lineHeight: 16, fontWeight: '900', color: color.paper },
   tabLocked: { opacity: 0.5 },
-  tabLock: { fontSize: 10, fontWeight: '800', color: '#9A8F7A', marginTop: 1 },
+  tabLock: { fontSize: 10, fontWeight: '800', color: color.inkSoft, marginTop: 1 },
   /**
    * The notice overlay. Sits above the location tabs, out of the flow, so a
    * reward or a promotion banner never reflows the screen underneath it.
@@ -1035,7 +1024,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     zIndex: 20,
   },
-  reward: { alignSelf: 'center', marginTop: 0, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F5E6BE' },
+  reward: { alignSelf: 'center', marginTop: 0, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: color.goldWell },
   // The promotion banner. Never colour alone: the eyebrow and the
   // "from → to" line say what happened without relying on the tint.
   promo: {
@@ -1048,22 +1037,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: '92%',
   },
-  promoRival: { backgroundColor: '#FBE7DC', borderColor: '#D08A5F' },
-  promoFriend: { backgroundColor: '#E6F0DC', borderColor: '#7FA35C' },
-  promoEyebrow: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1.4, color: '#7A6A55' },
-  promoHeadline: { marginTop: 3, fontSize: 15, fontWeight: '900', color: '#3E332A', textAlign: 'center' },
-  promoStep: { marginTop: 2, fontSize: 11.5, color: '#7A6A55' },
-  rewardText: { fontSize: 13, fontWeight: '800', color: '#6B5310' },
-  degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F0E4CC' },
-  degradedDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#B98F3E' },
-  degradedText: { fontSize: 12, color: INK_SOFT, flexShrink: 1 },
-  gearMuted: { backgroundColor: '#E6DCC8' },
+  promoRival: { backgroundColor: color.warmWell, borderColor: color.warmLine },
+  promoFriend: { backgroundColor: color.goodWell, borderColor: color.goodLine },
+  promoEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4, color: color.inkSoft },
+  promoHeadline: { marginTop: 3, fontSize: 15, fontWeight: '900', color: color.ink, textAlign: 'center' },
+  promoStep: { marginTop: 2, fontSize: 12, color: color.inkSoft },
+  rewardText: { fontSize: 13, fontWeight: '800', color: color.goldInk },
+  degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: color.fill },
+  degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished },
+  degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
+  gearMuted: { backgroundColor: color.fill },
 
-  tabs: { flexDirection: 'row', alignSelf: 'center', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 4, ...(shadowCard as object) },
+  tabs: { flexDirection: 'row', alignSelf: 'center', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 4, ...elevation.card },
   tab: { paddingVertical: 7, paddingHorizontal: 18, borderRadius: 999 },
-  tabActive: { backgroundColor: INK },
-  tabText: { fontSize: 13, fontWeight: '800', color: INK_SOFT, letterSpacing: 0.4 },
-  tabTextActive: { color: '#FBF6EA' },
+  tabActive: { backgroundColor: color.ink },
+  tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.4 },
+  tabTextActive: { color: color.paper },
 
   planPill: {
     alignSelf: 'center',
@@ -1076,18 +1065,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,253,247,0.92)',
     flexDirection: 'row',
     alignItems: 'center',
-    ...(shadowCard as object),
+    ...elevation.card,
   },
   planPillDone: { backgroundColor: 'rgba(232,238,217,0.96)' },
-  planLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.1, color: '#8B6817' },
-  planLabelDone: { color: '#5E6F40' },
-  planDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#D1A63B', marginHorizontal: 7 },
-  planDotDone: { backgroundColor: '#70834D' },
-  planProgress: { fontSize: 12, fontWeight: '900', color: INK },
-  planProgressDone: { color: '#53623A' },
-  planTease: { flexShrink: 1, maxWidth: 190, marginLeft: 8, fontSize: 11.5, color: INK_SOFT },
-  planTeaseDone: { color: '#71805C' },
-  planArrow: { marginLeft: 7, fontSize: 18, lineHeight: 18, color: '#A08759' },
+  planLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.1, color: BRASS.dark },
+  planLabelDone: { color: LEAF.mid },
+  planDot: { width: 5, height: 5, borderRadius: 8, backgroundColor: BRASS.warm, marginHorizontal: 7 },
+  planDotDone: { backgroundColor: LEAF.light },
+  planProgress: { fontSize: 12, fontWeight: '900', color: color.ink },
+  planProgressDone: { color: LEAF.dark },
+  planTease: { flexShrink: 1, maxWidth: 190, marginLeft: 8, fontSize: 12, color: color.inkSoft },
+  planTeaseDone: { color: LEAF.grey },
+  planArrow: { marginLeft: 7, fontSize: 17, lineHeight: 18, color: BRASS.shade },
 
   /**
    * Anchored just over his head, inside the stage. `top: 0` plus flex-end
@@ -1103,63 +1092,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 6,
   },
-  hint: { fontSize: 15, color: INK_SOFT, marginBottom: 14 },
-  hintNight: { color: '#E8DFC8' },
-  bubble: { maxWidth: '92%', backgroundColor: CARD, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...(shadowCard as object) },
-  bubbleYou: { fontSize: 12, color: INK_SOFT, marginBottom: 5 },
-  bubbleText: { fontSize: 17, fontWeight: '600', color: INK, lineHeight: 24 },
-  bubbleTail: { position: 'absolute', bottom: -7, left: '48%', width: 16, height: 16, backgroundColor: CARD, borderRadius: 3, transform: [{ rotate: '45deg' }] },
+  hint: { fontSize: 15, color: color.inkSoft, marginBottom: 14 },
+  hintNight: { color: color.fill },
+  bubble: { maxWidth: '92%', backgroundColor: color.card, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...elevation.card },
+  bubbleYou: { fontSize: 12, color: color.inkSoft, marginBottom: 5 },
+  bubbleText: { fontSize: 17, fontWeight: '600', color: color.ink, lineHeight: 24 },
+  bubbleTail: { position: 'absolute', bottom: -7, left: '48%', width: 16, height: 16, backgroundColor: color.card, borderRadius: 8, transform: [{ rotate: '45deg' }] },
   errorNotice: {
     alignSelf: 'center',
     maxWidth: '100%',
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: '#FBE3DE',
+    borderRadius: 18,
+    backgroundColor: color.dangerWell,
     borderWidth: 1,
-    borderColor: '#D08A7F',
+    borderColor: color.dangerLine,
   },
-  errorText: { fontSize: 13, lineHeight: 17, color: '#8E2F20', textAlign: 'center' },
+  errorText: { fontSize: 13, lineHeight: 17, color: color.danger, textAlign: 'center' },
 
   stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 },
   heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
-  heart: { position: 'absolute', fontSize: 24, color: '#D46A5A' },
+  heart: { position: 'absolute', fontSize: 24, color: color.danger },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
   digSpot: { position: 'absolute', left: 18, bottom: 26, alignItems: 'center', zIndex: 2 },
-  digHint: { marginTop: 2, fontSize: 11, fontWeight: '800', color: INK_SOFT, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
-  thought: { alignSelf: 'center', maxWidth: 250, marginBottom: 10, backgroundColor: 'rgba(255,253,247,0.92)', borderRadius: 18, paddingVertical: 9, paddingHorizontal: 14, ...(shadowCard as object) },
-  thoughtText: { fontSize: 13, fontStyle: 'italic', color: INK_SOFT, lineHeight: 18 },
-  thoughtDot1: { position: 'absolute', bottom: -8, left: '46%', width: 9, height: 9, borderRadius: 5, backgroundColor: 'rgba(255,253,247,0.92)' },
-  thoughtDot2: { position: 'absolute', bottom: -15, left: '52%', width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,253,247,0.85)' },
+  digHint: { marginTop: 2, fontSize: 12, fontWeight: '800', color: color.inkSoft, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
+  thought: { alignSelf: 'center', maxWidth: 250, marginBottom: 10, backgroundColor: 'rgba(255,253,247,0.92)', borderRadius: 18, paddingVertical: 9, paddingHorizontal: 14, ...elevation.card },
+  thoughtText: { fontSize: 13, fontStyle: 'italic', color: color.inkSoft, lineHeight: 18 },
+  thoughtDot1: { position: 'absolute', bottom: -8, left: '46%', width: 9, height: 9, borderRadius: 8, backgroundColor: 'rgba(255,253,247,0.92)' },
+  thoughtDot2: { position: 'absolute', bottom: -15, left: '52%', width: 5, height: 5, borderRadius: 8, backgroundColor: 'rgba(255,253,247,0.85)' },
   npcBubbleBand: { position: 'absolute', left: 18, right: 18, zIndex: 5 },
   npcBubbleLeft: { alignSelf: 'flex-start' },
   npcBubbleRight: { alignSelf: 'flex-end' },
-  npcBubbleWho: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, color: '#A8987C', marginBottom: 2 },
-  npcName: { marginTop: -4, fontSize: 11, fontWeight: '800', color: INK_SOFT, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
-  npcBubble: { maxWidth: '68%', backgroundColor: CARD, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 6, ...(shadowCard as object) },
-  npcBubbleText: { fontSize: 12.5, fontWeight: '600', color: INK, lineHeight: 17 },
+  npcBubbleWho: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, color: color.inkFaint, marginBottom: 2 },
+  npcName: { marginTop: -4, fontSize: 12, fontWeight: '800', color: color.inkSoft, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
+  npcBubble: { maxWidth: '68%', backgroundColor: color.card, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 6, ...elevation.card },
+  npcBubbleText: { fontSize: 12, fontWeight: '600', color: color.ink, lineHeight: 17 },
 
-  chip: { position: 'absolute', bottom: 8, zIndex: 3, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: CARD, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...(shadowCard as object) },
-  chipDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: ACCENT },
-  chipText: { fontSize: 13, fontWeight: '700', color: INK_SOFT },
+  chip: { position: 'absolute', bottom: 8, zIndex: 3, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
+  chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
+  chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
 
   controls: { gap: 10 },
-  talk: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: INK, borderRadius: 999, paddingVertical: 18, ...(shadowCard as object) },
-  talkActive: { backgroundColor: '#B3402E' },
-  micDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: ACCENT },
-  micDotLive: { backgroundColor: '#FFD9CF' },
-  talkText: { color: '#FBF6EA', fontWeight: '800', fontSize: 16, letterSpacing: 0.4 },
+  talk: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.ink, borderRadius: 999, paddingVertical: 18, ...elevation.card },
+  talkActive: { backgroundColor: color.brand },
+  micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT },
+  micDotLive: { backgroundColor: color.dangerWell },
+  talkText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
   typeRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, backgroundColor: CARD, borderRadius: 999, paddingHorizontal: 20, paddingVertical: 15, fontSize: 15, color: INK, ...(shadowCard as object) },
-  send: { backgroundColor: INK, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', ...(shadowCard as object) },
-  sendText: { color: '#FBF6EA', fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
+  input: { flex: 1, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 20, paddingVertical: 15, fontSize: 15, color: color.ink, ...elevation.card },
+  send: { backgroundColor: color.ink, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', ...elevation.card },
+  sendText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
   actionsRow: { flexDirection: 'row', gap: 10 },
   actionWrap: { flex: 1 },
-  action: { backgroundColor: CARD, borderRadius: 999, paddingVertical: 14, alignItems: 'center', ...(shadowCard as object) },
+  action: { backgroundColor: color.card, borderRadius: 999, paddingVertical: 14, alignItems: 'center', ...elevation.card },
   pressed: { transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },
-  actionText: { fontWeight: '800', color: INK, fontSize: 15, letterSpacing: 0.4 },
+  actionText: { fontWeight: '800', color: color.ink, fontSize: 15, letterSpacing: 0.4 },
 });

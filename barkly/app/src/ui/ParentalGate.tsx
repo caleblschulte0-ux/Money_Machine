@@ -12,10 +12,9 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { color } from './theme';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-const INK = '#3E332A';
-const INK_SOFT = '#7A6A55';
 
 interface Props {
   visible: boolean;
@@ -103,31 +102,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 28,
   },
-  card: { backgroundColor: '#FFFDF7', borderRadius: 24, padding: 24, width: '100%', maxWidth: 340 },
-  title: { fontSize: 20, fontWeight: '800', color: INK },
-  purpose: { fontSize: 14, lineHeight: 20, color: INK_SOFT, marginTop: 6 },
-  sum: { fontSize: 30, fontWeight: '800', color: INK, textAlign: 'center', marginTop: 20 },
+  card: { backgroundColor: color.card, borderRadius: 22, padding: 24, width: '100%', maxWidth: 340 },
+  title: { fontSize: 20, fontWeight: '800', color: color.ink },
+  purpose: { fontSize: 13, lineHeight: 20, color: color.inkSoft, marginTop: 6 },
+  sum: { fontSize: 24, fontWeight: '800', color: color.ink, textAlign: 'center', marginTop: 20 },
   input: {
     marginTop: 14,
-    backgroundColor: '#F3EAD6',
-    borderRadius: 14,
+    backgroundColor: color.well,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: 'transparent',
     paddingVertical: 12,
-    fontSize: 22,
+    fontSize: 24,
     textAlign: 'center',
-    color: INK,
+    color: color.ink,
   },
-  inputWrong: { borderColor: '#B3402E' },
-  wrongText: { marginTop: 8, fontSize: 13, color: '#B3402E', textAlign: 'center' },
+  inputWrong: { borderColor: color.brand },
+  wrongText: { marginTop: 8, fontSize: 13, color: color.brand, textAlign: 'center' },
   primary: {
     marginTop: 16,
-    backgroundColor: INK,
+    backgroundColor: color.ink,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  primaryText: { color: '#FFFDF7', fontSize: 16, fontWeight: '800' },
+  primaryText: { color: color.card, fontSize: 15, fontWeight: '800' },
   cancel: { marginTop: 6, alignItems: 'center', paddingVertical: 8 },
-  cancelText: { color: INK_SOFT, fontSize: 14 },
+  cancelText: { color: color.inkSoft, fontSize: 13 },
 });

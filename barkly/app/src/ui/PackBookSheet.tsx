@@ -1,4 +1,5 @@
 import React from 'react';
+import { color } from './theme';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RelationshipProfile } from '../barkly/relationship';
 
@@ -8,11 +9,6 @@ interface Props {
   profile: RelationshipProfile;
 }
 
-const INK = '#3E3428';
-const SOFT = '#8A7A5F';
-const PAPER = '#FFF9EC';
-const CARD = '#FFFDF7';
-const GOLD = '#C6952F';
 
 function TraitCard({ label, score, detail }: { label: string; score: number; detail: string }) {
   return (
@@ -162,62 +158,62 @@ export default function PackBookSheet({ visible, onClose, profile }: Props) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(28,24,19,0.48)', justifyContent: 'flex-end' },
-  sheet: { maxHeight: '91%', backgroundColor: PAPER, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 18 },
+  sheet: { maxHeight: '91%', backgroundColor: color.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 18 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
-  eyebrow: { fontSize: 11, fontWeight: '900', letterSpacing: 2.1, color: GOLD },
-  title: { marginTop: 2, fontSize: 26, fontWeight: '900', color: INK, letterSpacing: -0.4 },
-  close: { fontSize: 20, color: INK, padding: 4 },
+  eyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 2.1, color: color.gold },
+  title: { marginTop: 2, fontSize: 24, fontWeight: '900', color: color.ink, letterSpacing: -0.4 },
+  close: { fontSize: 18, color: color.ink, padding: 4 },
   scrollContent: { paddingBottom: 34 },
 
-  hero: { backgroundColor: INK, borderRadius: 24, paddingHorizontal: 20, paddingVertical: 20, marginTop: 4 },
-  stage: { fontSize: 11, fontWeight: '900', letterSpacing: 1.5, color: '#E2C471' },
-  archetype: { marginTop: 7, fontSize: 29, lineHeight: 32, fontWeight: '900', color: '#FFF9EC', letterSpacing: -0.7 },
-  tagline: { marginTop: 7, fontSize: 15, lineHeight: 21, color: '#E8DFC8' },
-  bondTrack: { height: 7, borderRadius: 999, backgroundColor: '#665A49', overflow: 'hidden', marginTop: 17 },
-  bondFill: { height: 7, borderRadius: 999, backgroundColor: '#E2C471' },
-  stageBlurb: { marginTop: 9, fontSize: 12.5, lineHeight: 18, color: '#BFB39C' },
+  hero: { backgroundColor: color.ink, borderRadius: 22, paddingHorizontal: 20, paddingVertical: 20, marginTop: 4 },
+  stage: { fontSize: 12, fontWeight: '900', letterSpacing: 1.5, color: color.goldSoft },
+  archetype: { marginTop: 7, fontSize: 24, lineHeight: 32, fontWeight: '900', color: color.paper, letterSpacing: -0.7 },
+  tagline: { marginTop: 7, fontSize: 15, lineHeight: 21, color: color.fill },
+  bondTrack: { height: 7, borderRadius: 999, backgroundColor: color.inkMid, overflow: 'hidden', marginTop: 17 },
+  bondFill: { height: 7, borderRadius: 999, backgroundColor: color.goldSoft },
+  stageBlurb: { marginTop: 9, fontSize: 12, lineHeight: 18, color: color.inkFaint },
 
-  explainer: { marginTop: 15, fontSize: 14, lineHeight: 20, color: SOFT },
-  section: { marginTop: 23, marginBottom: 9, fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: '#7C694B', textTransform: 'uppercase' },
+  explainer: { marginTop: 15, fontSize: 13, lineHeight: 20, color: color.inkSoft },
+  section: { marginTop: 23, marginBottom: 9, fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: color.inkSoft, textTransform: 'uppercase' },
 
-  storyCard: { borderRadius: 21, padding: 17, backgroundColor: '#E8D7AC', borderWidth: 1.5, borderColor: '#C8A354' },
+  storyCard: { borderRadius: 22, padding: 17, backgroundColor: color.line, borderWidth: 1.5, borderColor: color.warmLine },
   storyTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  storyKicker: { fontSize: 9, fontWeight: '900', letterSpacing: 1.7, color: '#7C5F1A' },
-  storyIntensity: { fontSize: 8, letterSpacing: 2, color: '#8B6C22' },
-  storyTitle: { marginTop: 6, fontSize: 22, fontWeight: '900', color: INK, letterSpacing: -0.3 },
-  storyChapter: { marginTop: 3, fontSize: 11, fontWeight: '900', letterSpacing: 0.8, color: '#8A6817', textTransform: 'uppercase' },
-  storyPremise: { marginTop: 10, fontSize: 13.5, lineHeight: 20, color: '#5C4F3E' },
-  nextBeat: { marginTop: 13, borderTopWidth: 1, borderTopColor: '#CDB77F', paddingTop: 10 },
-  nextLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.3, color: '#8A6817' },
-  nextText: { marginTop: 3, fontSize: 12.5, lineHeight: 18, fontWeight: '600', color: INK },
+  storyKicker: { fontSize: 10, fontWeight: '900', letterSpacing: 1.7, color: color.goldInk },
+  storyIntensity: { fontSize: 10, letterSpacing: 2, color: color.goldInk },
+  storyTitle: { marginTop: 6, fontSize: 24, fontWeight: '900', color: color.ink, letterSpacing: -0.3 },
+  storyChapter: { marginTop: 3, fontSize: 12, fontWeight: '900', letterSpacing: 0.8, color: color.goldInk, textTransform: 'uppercase' },
+  storyPremise: { marginTop: 10, fontSize: 13, lineHeight: 20, color: color.inkMid },
+  nextBeat: { marginTop: 13, borderTopWidth: 1, borderTopColor: color.goldSoft, paddingTop: 10 },
+  nextLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.3, color: color.goldInk },
+  nextText: { marginTop: 3, fontSize: 12, lineHeight: 18, fontWeight: '600', color: color.ink },
 
-  traitCard: { backgroundColor: CARD, borderRadius: 18, padding: 14, marginBottom: 9 },
+  traitCard: { backgroundColor: color.card, borderRadius: 18, padding: 14, marginBottom: 9 },
   traitHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  traitLabel: { fontSize: 16, fontWeight: '800', color: INK },
-  traitScore: { fontSize: 13, fontWeight: '900', color: GOLD },
-  traitTrack: { height: 6, borderRadius: 999, backgroundColor: '#EEE2CA', overflow: 'hidden', marginTop: 9 },
-  traitFill: { height: 6, borderRadius: 999, backgroundColor: GOLD },
-  traitDetail: { marginTop: 8, fontSize: 12.5, lineHeight: 18, color: SOFT },
+  traitLabel: { fontSize: 15, fontWeight: '800', color: color.ink },
+  traitScore: { fontSize: 13, fontWeight: '900', color: color.gold },
+  traitTrack: { height: 6, borderRadius: 999, backgroundColor: color.fill, overflow: 'hidden', marginTop: 9 },
+  traitFill: { height: 6, borderRadius: 999, backgroundColor: color.gold },
+  traitDetail: { marginTop: 8, fontSize: 12, lineHeight: 18, color: color.inkSoft },
 
-  emptyCard: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D9C9AA', padding: 16 },
-  emptyTitle: { fontSize: 15, fontWeight: '800', color: INK },
-  emptyText: { marginTop: 5, fontSize: 13, lineHeight: 19, color: SOFT },
-  emptyLine: { fontSize: 13.5, lineHeight: 20, color: SOFT, fontStyle: 'italic' },
+  emptyCard: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.line, padding: 16 },
+  emptyTitle: { fontSize: 15, fontWeight: '800', color: color.ink },
+  emptyText: { marginTop: 5, fontSize: 13, lineHeight: 19, color: color.inkSoft },
+  emptyLine: { fontSize: 13, lineHeight: 20, color: color.inkSoft, fontStyle: 'italic' },
 
-  loreCard: { backgroundColor: CARD, borderRadius: 17, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#EEE2CA' },
-  signatureCard: { borderColor: '#C6A04A', borderWidth: 1.5 },
+  loreCard: { backgroundColor: color.card, borderRadius: 18, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: color.fill },
+  signatureCard: { borderColor: color.warmLine, borderWidth: 1.5 },
   loreHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  loreTitle: { flex: 1, fontSize: 15, fontWeight: '800', color: INK },
-  loreDetail: { marginTop: 4, fontSize: 13, lineHeight: 19, color: SOFT },
-  signature: { fontSize: 9, fontWeight: '900', letterSpacing: 1.1, color: '#8A6817' },
+  loreTitle: { flex: 1, fontSize: 15, fontWeight: '800', color: color.ink },
+  loreDetail: { marginTop: 4, fontSize: 13, lineHeight: 19, color: color.inkSoft },
+  signature: { fontSize: 10, fontWeight: '900', letterSpacing: 1.1, color: color.goldInk },
 
-  memoryRow: { flexDirection: 'row', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#EADFCB' },
-  memoryNumber: { width: 24, fontSize: 11, fontWeight: '900', letterSpacing: 1.1, color: '#B49B69', paddingTop: 2 },
+  memoryRow: { flexDirection: 'row', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: color.fill },
+  memoryNumber: { width: 24, fontSize: 12, fontWeight: '900', letterSpacing: 1.1, color: color.inkFaint, paddingTop: 2 },
   memoryCopy: { flex: 1 },
-  memoryText: { fontSize: 14, lineHeight: 20, fontWeight: '600', color: INK },
-  memoryWhere: { marginTop: 3, fontSize: 11.5, color: SOFT, textTransform: 'uppercase', letterSpacing: 0.7 },
+  memoryText: { fontSize: 13, lineHeight: 20, fontWeight: '600', color: color.ink },
+  memoryWhere: { marginTop: 3, fontSize: 12, color: color.inkSoft, textTransform: 'uppercase', letterSpacing: 0.7 },
 
-  footerCard: { marginTop: 24, borderRadius: 20, padding: 17, backgroundColor: '#EDE1C8' },
-  footerTitle: { fontSize: 14, fontWeight: '900', color: INK },
-  footerText: { marginTop: 6, fontSize: 13.5, lineHeight: 20, color: '#655845' },
+  footerCard: { marginTop: 24, borderRadius: 18, padding: 17, backgroundColor: color.fill },
+  footerTitle: { fontSize: 13, fontWeight: '900', color: color.ink },
+  footerText: { marginTop: 6, fontSize: 13, lineHeight: 20, color: color.inkMid },
 });

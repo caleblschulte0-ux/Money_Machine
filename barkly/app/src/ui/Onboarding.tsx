@@ -13,6 +13,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { color, elevation } from './theme';
 import {
   Animated,
   KeyboardAvoidingView,
@@ -35,9 +36,6 @@ import {
 } from '../barkly/onboarding';
 import { BodyAction } from '../barkly/types';
 
-const INK = '#3E332A';
-const INK_SOFT = '#7A6A55';
-const CARD = '#FFFDF7';
 
 interface Props {
   state: OnboardingState;
@@ -90,7 +88,7 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
   };
 
   return (
-    <LinearGradient colors={['#F6EEDC', '#EFE3CC']} style={styles.fill}>
+    <LinearGradient colors={[color.well, color.fill]} style={styles.fill}>
       <KeyboardAvoidingView
         style={styles.fill}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -116,7 +114,7 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
               value={typed}
               onChangeText={setTyped}
               placeholder="your name"
-              placeholderTextColor="#B4A48C"
+              placeholderTextColor={color.inkFaint}
               autoCapitalize="words"
               autoCorrect={false}
               maxLength={24}
@@ -163,19 +161,15 @@ const styles = StyleSheet.create({
   // a pile of empty space at the bottom of a tall phone.
   stage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 22 },
   bubble: {
-    backgroundColor: CARD,
+    backgroundColor: color.card,
     borderRadius: 22,
     paddingHorizontal: 20,
     paddingVertical: 16,
     maxWidth: 340,
     marginBottom: 18,
-    shadowColor: '#5A4A33',
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    ...elevation.card,
   },
-  line: { fontSize: 20, lineHeight: 27, fontWeight: '700', color: INK },
+  line: { fontSize: 20, lineHeight: 27, fontWeight: '700', color: color.ink },
   tail: {
     position: 'absolute',
     bottom: -9,
@@ -188,29 +182,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 10,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: CARD,
+    borderTopColor: color.card,
   },
   dog: { width: 260, height: 300, alignItems: 'center', justifyContent: 'flex-end' },
   controls: { paddingHorizontal: 26, paddingBottom: 34, gap: 12 },
   input: {
-    backgroundColor: CARD,
+    backgroundColor: color.card,
     borderRadius: 999,
     paddingHorizontal: 20,
     paddingVertical: 14,
     fontSize: 17,
-    color: INK,
+    color: color.ink,
   },
   primary: {
-    backgroundColor: INK,
+    backgroundColor: color.ink,
     borderRadius: 999,
     paddingVertical: 15,
     alignItems: 'center',
   },
-  primaryOff: { backgroundColor: '#B9AB94' },
-  primaryText: { color: '#FFFDF7', fontSize: 17, fontWeight: '800' },
+  primaryOff: { backgroundColor: color.inkFaint },
+  primaryText: { color: color.card, fontSize: 17, fontWeight: '800' },
   skip: { alignItems: 'center', paddingVertical: 6 },
-  skipText: { color: INK_SOFT, fontSize: 14 },
+  skipText: { color: color.inkSoft, fontSize: 13 },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 2 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D6C8AE' },
-  dotOn: { backgroundColor: INK_SOFT, width: 18 },
+  dot: { width: 6, height: 6, borderRadius: 8, backgroundColor: color.line },
+  dotOn: { backgroundColor: color.inkSoft, width: 18 },
 });

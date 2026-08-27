@@ -1,4 +1,5 @@
 import React from 'react';
+import { color } from './theme';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { STORE, Wallet } from '../game/progression';
 
@@ -12,9 +13,6 @@ interface Props {
   onOpenShop: () => void;
 }
 
-const INK = '#3E3428';
-const SOFT = '#8A7A5F';
-const PAPER = '#FFF9EC';
 
 export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, onOpenShop }: Props) {
   const treats = STORE.filter((item) => item.slot === 'treat')
@@ -113,33 +111,33 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(29,24,18,0.48)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: PAPER, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 28 },
+  sheet: { backgroundColor: color.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 28 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 },
-  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, color: '#C6952F' },
-  title: { marginTop: 4, maxWidth: 300, fontSize: 23, lineHeight: 27, fontWeight: '900', color: INK, letterSpacing: -0.5 },
-  close: { fontSize: 20, color: SOFT, padding: 4 },
-  section: { marginTop: 18, marginBottom: 7, fontSize: 11, fontWeight: '900', letterSpacing: 1.2, color: '#8B795B', textTransform: 'uppercase' },
-  meal: { marginTop: 16, minHeight: 76, borderRadius: 18, padding: 12, backgroundColor: '#EDE1C8', flexDirection: 'row', alignItems: 'center' },
-  treat: { minHeight: 76, borderRadius: 18, padding: 12, marginBottom: 8, backgroundColor: '#FFFDF7', borderWidth: 1, borderColor: '#E7D9BE', flexDirection: 'row', alignItems: 'center' },
-  iconBubble: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#F5EAD4', alignItems: 'center', justifyContent: 'center' },
-  icon: { fontSize: 25 },
+  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, color: color.gold },
+  title: { marginTop: 4, maxWidth: 300, fontSize: 24, lineHeight: 27, fontWeight: '900', color: color.ink, letterSpacing: -0.5 },
+  close: { fontSize: 18, color: color.inkSoft, padding: 4 },
+  section: { marginTop: 18, marginBottom: 7, fontSize: 12, fontWeight: '900', letterSpacing: 1.2, color: color.inkSoft, textTransform: 'uppercase' },
+  meal: { marginTop: 16, minHeight: 76, borderRadius: 18, padding: 12, backgroundColor: color.fill, flexDirection: 'row', alignItems: 'center' },
+  treat: { minHeight: 76, borderRadius: 18, padding: 12, marginBottom: 8, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, flexDirection: 'row', alignItems: 'center' },
+  iconBubble: { width: 46, height: 46, borderRadius: 22, backgroundColor: color.well, alignItems: 'center', justifyContent: 'center' },
+  icon: { fontSize: 26 },
   copy: { flex: 1, marginLeft: 12 },
-  name: { fontSize: 15.5, fontWeight: '800', color: INK },
-  detail: { marginTop: 3, fontSize: 12.5, lineHeight: 17, color: SOFT },
-  arrow: { fontSize: 26, color: '#A78E62', marginLeft: 8 },
-  countPill: { minWidth: 36, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: '#EDE1C8', alignItems: 'center' },
-  count: { fontSize: 12.5, fontWeight: '900', color: '#72591E' },
-  empty: { borderRadius: 17, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D8C8A8', padding: 15 },
-  emptyTitle: { fontSize: 15, fontWeight: '800', color: INK },
-  emptyText: { marginTop: 4, fontSize: 12.5, lineHeight: 18, color: SOFT },
+  name: { fontSize: 15, fontWeight: '800', color: color.ink },
+  detail: { marginTop: 3, fontSize: 12, lineHeight: 17, color: color.inkSoft },
+  arrow: { fontSize: 26, color: color.inkFaint, marginLeft: 8 },
+  countPill: { minWidth: 36, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: color.fill, alignItems: 'center' },
+  count: { fontSize: 12, fontWeight: '900', color: color.goldInk },
+  empty: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.line, padding: 15 },
+  emptyTitle: { fontSize: 15, fontWeight: '800', color: color.ink },
+  emptyText: { marginTop: 4, fontSize: 12, lineHeight: 18, color: color.inkSoft },
   emptyCta: {
     alignSelf: 'flex-start',
     marginTop: 12,
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: 999,
-    backgroundColor: INK,
+    backgroundColor: color.ink,
   },
-  emptyCtaText: { color: '#FFF9EC', fontSize: 13.5, fontWeight: '800' },
-  footer: { marginTop: 15, fontSize: 11.5, lineHeight: 17, textAlign: 'center', color: '#A09480' },
+  emptyCtaText: { color: color.paper, fontSize: 13, fontWeight: '800' },
+  footer: { marginTop: 15, fontSize: 12, lineHeight: 17, textAlign: 'center', color: color.inkFaint },
 });

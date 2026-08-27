@@ -11,6 +11,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import { color } from './theme';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   isMultiSlot,
@@ -23,10 +24,7 @@ import {
   Wallet,
 } from '../game/progression';
 
-const INK = '#3E332A';
-const INK_SOFT = '#7A6A55';
-const CARD = '#FFFDF7';
-const COIN = '#C9A227';
+const COIN = color.gold;
 
 interface Props {
   visible: boolean;
@@ -220,7 +218,7 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(40,32,22,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#F6EEDC', borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: '90%' },
+  sheet: { backgroundColor: color.well, borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: '90%' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -229,14 +227,14 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 10,
   },
-  title: { fontSize: 22, fontWeight: '800', color: INK },
-  close: { fontSize: 20, color: INK_SOFT, paddingHorizontal: 4 },
+  title: { fontSize: 24, fontWeight: '800', color: color.ink },
+  close: { fontSize: 18, color: color.inkSoft, paddingHorizontal: 4 },
   flash: {
     marginHorizontal: 20,
     marginBottom: 6,
-    fontSize: 14,
-    color: '#5C4F3E',
-    backgroundColor: '#EDE1C8',
+    fontSize: 13,
+    color: color.inkMid,
+    backgroundColor: color.fill,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -248,44 +246,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.1,
-    color: '#A8987C',
+    color: color.inkFaint,
     textTransform: 'uppercase',
   },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: CARD,
-    borderRadius: 16,
+    backgroundColor: color.card,
+    borderRadius: 18,
     padding: 12,
     marginBottom: 8,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   itemLocked: { opacity: 0.55 },
-  itemWorn: { borderColor: '#C9A227' },
+  itemWorn: { borderColor: color.gold },
   icon: { fontSize: 26 },
   itemText: { flex: 1 },
-  itemName: { fontSize: 16, fontWeight: '700', color: INK },
-  itemBlurb: { fontSize: 13, color: INK_SOFT, marginTop: 2 },
+  itemName: { fontSize: 15, fontWeight: '700', color: color.ink },
+  itemBlurb: { fontSize: 13, color: color.inkSoft, marginTop: 2 },
   price: { fontSize: 15, fontWeight: '800', color: COIN },
-  priceShort: { color: '#B09A6A' },
-  lockTag: { fontSize: 13, fontWeight: '700', color: INK_SOFT },
-  ownedTag: { fontSize: 13, fontWeight: '700', color: '#4E7A46' },
-  wornTag: { fontSize: 13, fontWeight: '800', color: '#8A6B1E' },
+  priceShort: { color: color.inkFaint },
+  lockTag: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
+  ownedTag: { fontSize: 13, fontWeight: '700', color: color.good },
+  wornTag: { fontSize: 13, fontWeight: '800', color: color.goldInk },
   devBanner: {
     marginHorizontal: 20,
     marginBottom: 6,
     fontSize: 12,
     fontWeight: '800',
-    color: '#6B5310',
-    backgroundColor: '#F5E6BE',
-    borderRadius: 10,
+    color: color.goldInk,
+    backgroundColor: color.goldWell,
+    borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
     overflow: 'hidden',
   },
-  note: { marginTop: 20, fontSize: 12, lineHeight: 18, color: '#9A8F7A' },
+  note: { marginTop: 20, fontSize: 12, lineHeight: 18, color: color.inkSoft },
 
   pill: {
     flex: 1,
@@ -296,7 +294,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: CARD,
+    backgroundColor: color.card,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -304,22 +302,22 @@ const styles = StyleSheet.create({
   coin: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: COIN,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  coinMark: { fontSize: 12, fontWeight: '900', color: '#6B5310' },
-  coinCount: { fontSize: 16, fontWeight: '800', color: INK, flexShrink: 0 },
+  coinMark: { fontSize: 12, fontWeight: '900', color: color.goldInk },
+  coinCount: { fontSize: 15, fontWeight: '800', color: color.ink, flexShrink: 0 },
   levelWrap: { flex: 1, minWidth: 40, alignItems: 'flex-end' },
-  levelText: { fontSize: 11, fontWeight: '700', color: INK_SOFT },
+  levelText: { fontSize: 12, fontWeight: '700', color: color.inkSoft },
   levelTrack: {
     width: '100%',
     height: 5,
-    borderRadius: 3,
-    backgroundColor: '#E4D8BE',
+    borderRadius: 8,
+    backgroundColor: color.line,
     marginTop: 3,
     overflow: 'hidden',
   },
-  levelFill: { height: 5, borderRadius: 3, backgroundColor: COIN },
+  levelFill: { height: 5, borderRadius: 8, backgroundColor: COIN },
 });

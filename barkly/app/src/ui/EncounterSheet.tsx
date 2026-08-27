@@ -1,4 +1,5 @@
 import React from 'react';
+import { color, elevation } from './theme';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SocialEncounter } from '../barkly/encounters';
 import { NPCS } from '../world/npcs';
@@ -10,10 +11,6 @@ interface Props {
   onClose: () => void;
 }
 
-const INK = '#3E3428';
-const PAPER = '#FFF9EC';
-const SOFT = '#8A7A5F';
-const GOLD = '#C6952F';
 
 export default function EncounterSheet({ encounter, busy, onChoose, onClose }: Props) {
   if (!encounter) return null;
@@ -101,15 +98,15 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
 }
 
 const styles = StyleSheet.create({
-  ladder: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#EFE4CD' },
+  ladder: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: color.fill },
   ladderRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
-  ladderNow: { fontSize: 13.5, fontWeight: '900', color: INK },
-  ladderNext: { fontSize: 11.5, color: SOFT },
-  meter: { height: 6, borderRadius: 999, backgroundColor: '#EFE4CD', marginTop: 7, overflow: 'hidden' },
+  ladderNow: { fontSize: 13, fontWeight: '900', color: color.ink },
+  ladderNext: { fontSize: 12, color: color.inkSoft },
+  meter: { height: 6, borderRadius: 999, backgroundColor: color.fill, marginTop: 7, overflow: 'hidden' },
   meterFill: { height: 6, borderRadius: 999 },
-  meterRival: { backgroundColor: '#C97B4B' },
-  meterFriend: { backgroundColor: '#7FA35C' },
-  ladderHint: { marginTop: 6, fontSize: 11.5, color: SOFT },
+  meterRival: { backgroundColor: color.warm },
+  meterFriend: { backgroundColor: color.goodLine },
+  ladderHint: { marginTop: 6, fontSize: 12, color: color.inkSoft },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(29,24,18,0.58)',
@@ -117,45 +114,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   sheet: {
-    backgroundColor: PAPER,
+    backgroundColor: color.paper,
     borderRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 20,
-    shadowColor: '#2D241B',
-    shadowOpacity: 0.25,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 12,
+    ...elevation.sheet,
   },
   topline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  eyebrowPill: { backgroundColor: '#F2E3B6', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },
-  eyebrow: { fontSize: 9.5, fontWeight: '900', letterSpacing: 1.2, color: '#775913' },
-  close: { fontSize: 19, color: SOFT, padding: 4 },
-  npcName: { marginTop: 18, fontSize: 12, fontWeight: '900', color: GOLD, letterSpacing: 1.4, textTransform: 'uppercase' },
-  title: { marginTop: 4, fontSize: 28, lineHeight: 31, fontWeight: '900', color: INK, letterSpacing: -0.7 },
-  prompt: { marginTop: 10, fontSize: 15, lineHeight: 22, color: '#625544' },
-  divider: { height: 1, backgroundColor: '#E3D5B9', marginTop: 18, marginBottom: 15 },
-  question: { fontSize: 11, fontWeight: '900', letterSpacing: 1.1, color: SOFT, textTransform: 'uppercase' },
+  eyebrowPill: { backgroundColor: color.goldWell, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },
+  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.2, color: color.goldInk },
+  close: { fontSize: 18, color: color.inkSoft, padding: 4 },
+  npcName: { marginTop: 18, fontSize: 12, fontWeight: '900', color: color.gold, letterSpacing: 1.4, textTransform: 'uppercase' },
+  title: { marginTop: 4, fontSize: 24, lineHeight: 31, fontWeight: '900', color: color.ink, letterSpacing: -0.7 },
+  prompt: { marginTop: 10, fontSize: 15, lineHeight: 22, color: color.inkMid },
+  divider: { height: 1, backgroundColor: color.line, marginTop: 18, marginBottom: 15 },
+  question: { fontSize: 12, fontWeight: '900', letterSpacing: 1.1, color: color.inkSoft, textTransform: 'uppercase' },
   choices: { marginTop: 9, gap: 9 },
   choice: {
     minHeight: 70,
     borderRadius: 18,
     borderWidth: 1.3,
-    borderColor: '#E5D8BF',
-    backgroundColor: '#FFFDF7',
+    borderColor: color.line,
+    backgroundColor: color.card,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
-  choicePressed: { transform: [{ scale: 0.985 }], backgroundColor: '#F7EEDC' },
-  choiceNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: INK, alignItems: 'center', justifyContent: 'center' },
-  choiceNumberText: { color: '#FFF8E9', fontSize: 13, fontWeight: '900' },
+  choicePressed: { transform: [{ scale: 0.985 }], backgroundColor: color.well },
+  choiceNumber: { width: 32, height: 32, borderRadius: 18, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center' },
+  choiceNumberText: { color: color.inkOn, fontSize: 13, fontWeight: '900' },
   choiceCopy: { flex: 1, marginLeft: 11 },
-  choiceLabel: { fontSize: 15.5, fontWeight: '800', color: INK },
-  choiceHint: { marginTop: 3, fontSize: 12.5, color: SOFT },
-  arrow: { fontSize: 27, lineHeight: 30, color: '#B89B61', marginLeft: 8 },
-  footer: { marginTop: 14, fontSize: 11.5, lineHeight: 17, color: '#A0937D', textAlign: 'center' },
+  choiceLabel: { fontSize: 15, fontWeight: '800', color: color.ink },
+  choiceHint: { marginTop: 3, fontSize: 12, color: color.inkSoft },
+  arrow: { fontSize: 26, lineHeight: 30, color: color.warmLine, marginLeft: 8 },
+  footer: { marginTop: 14, fontSize: 12, lineHeight: 17, color: color.inkFaint, textAlign: 'center' },
   disabled: { opacity: 0.48 },
 });
