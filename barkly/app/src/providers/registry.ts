@@ -17,13 +17,13 @@
  * is the point.
  */
 
-import { DialogueProvider, SpeechToTextProvider, TextToSpeechProvider } from './types';
+import { DialogueProvider, SpeechToTextProvider } from './types';
 import { BarklyVoice, createBarklyVoice } from './tts/barklyVoiceTts';
 import { createAnthropicDialogue } from './dialogue/anthropic';
 import { createResilientDialogue, DialogueStatus } from './dialogue/resilient';
 import { createScriptedDialogue } from './dialogue/scripted';
 import { createExpoSpeechRecognitionStt } from './stt/expoSpeechRecognitionStt';
-import { createExpoSpeechTts } from './tts/expoSpeechTts';
+import { createExpoSpeechTts, ExpoSpeechTts } from './tts/expoSpeechTts';
 import { currentDeviceId } from './device';
 import { DialogueError } from './errors';
 
@@ -31,7 +31,8 @@ export interface ProviderSet {
   stt: SpeechToTextProvider;
   dialogue: DialogueProvider;
   /** The device voice — the fallback link, not the one the UI calls directly. */
-  tts: TextToSpeechProvider;
+  /** The device voice, with its picker and shaping controls exposed. */
+  tts: ExpoSpeechTts;
   /** Barkly's own synthesized voice, via the proxy. Unavailable without one. */
   voice: BarklyVoice;
   /** Which brain answered last, and why — for the settings screen and error copy. */
@@ -77,6 +78,7 @@ export function createProviders(opts: ProviderOptions = {}): ProviderSet {
     onFallback: opts.onDialogueFallback,
   });
 
+  const deviceTts: ExpoSpeechTts = createExpoSpeechTts();
   const stt = createExpoSpeechRecognitionStt();
   if (process.env.EXPO_PUBLIC_BARKLY_FORCE_KEYBOARD === '1') {
     stt.isAvailable = async () => false;
@@ -85,7 +87,7 @@ export function createProviders(opts: ProviderOptions = {}): ProviderSet {
   return {
     stt,
     dialogue,
-    tts: createExpoSpeechTts(),
+    tts: deviceTts,
     voice,
     dialogueStatus: () => dialogue.status(),
     modelConfigured: anthropic.isAvailable(),

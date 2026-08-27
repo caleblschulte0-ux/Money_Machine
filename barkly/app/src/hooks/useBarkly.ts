@@ -94,6 +94,7 @@ import { NPCS, NpcId } from '../world/npcs';
 import { freshExchangeMemory, pickExchange } from '../world/npcExchange';
 import { DigSite, Stash, Treasure } from '../world/stash';
 import { HydrationGate } from '../storage/hydration';
+import { VoiceShape } from '../providers/tts/expoSpeechTts';
 import { pickThought } from '../world/thoughts';
 
 const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
@@ -102,6 +103,7 @@ const CHARACTER_KEY = profileKey(DEFAULT_PROFILE, 'character-v1');
 const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
 const ONBOARDING_KEY = profileKey(DEFAULT_PROFILE, 'onboarding-v1');
 const WALLET_KEY = profileKey(DEFAULT_PROFILE, 'wallet-v1');
+const VOICE_KEY = profileKey(DEFAULT_PROFILE, 'voice-v1');
 const DEV_KEY = profileKey(DEFAULT_PROFILE, 'dev-v1');
 const ADVENTURE_KEY = profileKey(DEFAULT_PROFILE, 'adventure-v1');
 
@@ -132,6 +134,18 @@ export interface BarklyController {
   reward: { coins: number; xp: number; note?: string } | null;
   /** A relationship just crossed a rung. Announce it, then let it clear. */
   promotion: Promotion | null;
+  /**
+   * Dev stress mode: force every overlay on screen at once so the spacing can
+   * be checked against something real rather than imagined. Toggled from
+   * Settings; see ui/layout.ts.
+   */
+  showcase: boolean;
+  setShowcase(on: boolean): void;
+  /** Device voices to choose from, and the pitch/rate he is shaped with. */
+  voices: { id: string; name: string; language: string }[];
+  voiceShape: VoiceShape;
+  setVoiceShape(next: Partial<VoiceShape>): void;
+  previewVoice(): void;
   /**
    * True only when a tap would genuinely be refused — a turn in flight or an
    * open encounter. Deliberately NOT true while he is merely speaking: a tap
@@ -275,6 +289,35 @@ export function useBarkly(): BarklyController {
   const walletRef = useRef(wallet);
   const [reward, setReward] = useState<{ coins: number; xp: number; note?: string } | null>(null);
   const [promotion, setPromotion] = useState<Promotion | null>(null);
+  const [showcase, setShowcase] = useState(false);
+  const [voices, setVoices] = useState<{ id: string; name: string; language: string }[]>([]);
+  const [voiceShape, setVoiceShapeState] = useState<VoiceShape>(() => providers.tts.getShape());
+
+  // The installed voices, once, after boot. Enumerating them can be slow and
+  // occasionally never settles, so the provider races it against a timeout.
+  useEffect(() => {
+    let alive = true;
+    providers.tts
+      .listVoices()
+      .then((list) => {
+        if (alive) setVoices(list);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [providers]);
+
+  useEffect(() => {
+    const raw = voiceShape;
+    providers.tts.setShape(raw);
+    gate.write(VOICE_KEY, JSON.stringify(raw)).catch(() => {});
+  }, [gate, providers, voiceShape]);
+
+  const setVoiceShape = useCallback((next: Partial<VoiceShape>) => {
+    setVoiceShapeState((prev) => ({ ...prev, ...next }));
+  }, []);
+
   const [devMode, setDevModeState] = useState(process.env.EXPO_PUBLIC_BARKLY_DEV === '1');
   const devRef = useRef(devMode);
   const voiceEngine = useMemo(
@@ -459,6 +502,14 @@ export function useBarkly(): BarklyController {
       } catch {
         lost = true;
       }
+      try {
+        const rawVoice = await asyncStorageStore.get(VOICE_KEY);
+        if (!cancelled && rawVoice) {
+          const parsed = JSON.parse(rawVoice) as VoiceShape;
+          providers.tts.setShape(parsed);
+          setVoiceShapeState(providers.tts.getShape());
+        }
+      } catch {}
       try {
         const savedMute = await asyncStorageStore.get(MUTE_KEY);
         if (!cancelled && savedMute === '1') {
@@ -658,6 +709,15 @@ export function useBarkly(): BarklyController {
     }
     return true;
   }, [activeEncounter, busy, dispatch, voiceEngine]);
+
+  /**
+   * Say a line in the current shape so a choice can be HEARD before it is
+   * kept. Picking a voice from a list of names is guesswork otherwise.
+   */
+  const previewVoice = useCallback(() => {
+    voiceEngine.stop();
+    void voiceEngine.speak('Hey. This is me. Say it back and I will judge you.').catch(() => {});
+  }, [voiceEngine]);
 
   const performRoutine = useCallback(
     async (opening: string, userText: string, beats: RoutineBeat[]): Promise<void> => {
@@ -1321,6 +1381,12 @@ export function useBarkly(): BarklyController {
     level: levelFor(wallet.xp),
     reward,
     promotion,
+    showcase,
+    setShowcase,
+    voices,
+    voiceShape,
+    setVoiceShape,
+    previewVoice,
     locked: busy || activeEncounter !== null || isLocked(snapshot.state),
     relationship,
     adventure,

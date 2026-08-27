@@ -15,6 +15,7 @@ import PrivacySheet from './PrivacySheet';
 import { MemoryState } from '../barkly/memory';
 import { BarklyStats } from '../barkly/types';
 import { Treasure } from '../world/stash';
+import { DEFAULT_SHAPE, PITCH_RANGE, RATE_RANGE, VoiceShape } from '../providers/tts/expoSpeechTts';
 
 /**
  * Dev tools are OPT-OUT, not opt-in.
@@ -29,6 +30,9 @@ import { Treasure } from '../world/stash';
  * other build, including the operator's, has the toggle.
  */
 const DEV_TOOLS_VISIBLE = process.env.EXPO_PUBLIC_BARKLY_HIDE_DEV !== '1';
+
+const INK = '#2E2A26';
+const INK_SOFT = '#9A8F7A';
 
 interface Props {
   visible: boolean;
@@ -45,10 +49,56 @@ interface Props {
   onForgetFact?: (id: string) => Promise<void>;
   devMode: boolean;
   onSetDevMode: (on: boolean) => void;
+  showcase: boolean;
+  onSetShowcase: (on: boolean) => void;
+  voices: { id: string; name: string; language: string }[];
+  voiceShape: VoiceShape;
+  onSetVoiceShape: (next: Partial<VoiceShape>) => void;
+  onPreviewVoice: () => void;
   onGrantCoins: (n: number) => void;
   onGrantLevel: (n: number) => void;
   onGrantEverything: () => void;
   onForgetEverything: () => Promise<void>;
+}
+
+/** A plain +/- stepper. No slider dependency, and it is reachable by name. */
+function Stepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (n: number) => void;
+}) {
+  const step = 0.04;
+  const shown = `${Math.round(value * 100)}%`;
+  return (
+    <View style={styles.stepper}>
+      <Text style={styles.stepperLabel}>{label}</Text>
+      <Pressable
+        style={styles.stepperBtn}
+        onPress={() => onChange(Math.max(min, Number((value - step).toFixed(2))))}
+        accessibilityRole="button"
+        accessibilityLabel={`${label} down`}
+      >
+        <Text style={styles.stepperBtnText}>−</Text>
+      </Pressable>
+      <Text style={styles.stepperValue}>{shown}</Text>
+      <Pressable
+        style={styles.stepperBtn}
+        onPress={() => onChange(Math.min(max, Number((value + step).toFixed(2))))}
+        accessibilityRole="button"
+        accessibilityLabel={`${label} up`}
+      >
+        <Text style={styles.stepperBtnText}>+</Text>
+      </Pressable>
+    </View>
+  );
 }
 
 function StatBar({ label, value, invert }: { label: string; value: number; invert?: boolean }) {
@@ -79,6 +129,12 @@ export default function SettingsSheet(props: Props) {
     onForgetEverything,
     devMode,
     onSetDevMode,
+    showcase,
+    onSetShowcase,
+    voices,
+    voiceShape,
+    onSetVoiceShape,
+    onPreviewVoice,
     onGrantCoins,
     onGrantLevel,
     onGrantEverything,
@@ -146,6 +202,68 @@ export default function SettingsSheet(props: Props) {
                       : 'not used yet'}
             </Text>
 
+            <Text style={styles.section}>His voice</Text>
+            <Text style={styles.voiceBlurb}>
+              He was pitched a third of an octave up, which the speech engines do by resampling —
+              that is where the chipmunk came from. Pick a voice and set how he sounds; tap “hear it”
+              after each change.
+            </Text>
+
+            <View style={styles.voiceList}>
+              <Pressable
+                style={[styles.voiceRow, !voiceShape.voiceId && styles.voiceRowOn]}
+                onPress={() => onSetVoiceShape({ voiceId: undefined })}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: !voiceShape.voiceId }}
+                accessibilityLabel="Voice: best available, chosen automatically"
+              >
+                <Text style={styles.voiceName}>Best available</Text>
+                <Text style={styles.voiceLang}>auto</Text>
+              </Pressable>
+              {voices.slice(0, 8).map((v) => (
+                <Pressable
+                  key={v.id}
+                  style={[styles.voiceRow, voiceShape.voiceId === v.id && styles.voiceRowOn]}
+                  onPress={() => onSetVoiceShape({ voiceId: v.id })}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: voiceShape.voiceId === v.id }}
+                  accessibilityLabel={`Voice: ${v.name}`}
+                >
+                  <Text style={styles.voiceName} numberOfLines={1}>{v.name}</Text>
+                  <Text style={styles.voiceLang}>{v.language}</Text>
+                </Pressable>
+              ))}
+              {voices.length === 0 && (
+                <Text style={styles.empty}>This device has not told us what voices it has.</Text>
+              )}
+            </View>
+
+            <Stepper
+              label="Pitch"
+              value={voiceShape.pitch}
+              min={PITCH_RANGE.min}
+              max={PITCH_RANGE.max}
+              onChange={(pitch) => onSetVoiceShape({ pitch })}
+            />
+            <Stepper
+              label="Speed"
+              value={voiceShape.rate}
+              min={RATE_RANGE.min}
+              max={RATE_RANGE.max}
+              onChange={(rate) => onSetVoiceShape({ rate })}
+            />
+            <Pressable style={styles.hearIt} onPress={onPreviewVoice} accessibilityRole="button" accessibilityLabel="Hear it">
+              <Text style={styles.hearItText}>hear it</Text>
+            </Pressable>
+            <Pressable
+              style={styles.voiceReset}
+              onPress={() => onSetVoiceShape({ voiceId: undefined, ...DEFAULT_SHAPE })}
+              accessibilityRole="button"
+              accessibilityLabel="Reset his voice to the default"
+            >
+              <Text style={styles.voiceResetText}>reset to default</Text>
+            </Pressable>
+
             {DEV_TOOLS_VISIBLE && (
               <>
                 <Text style={styles.section}>Developer</Text>
@@ -164,6 +282,23 @@ export default function SettingsSheet(props: Props) {
                     </Text>
                   </View>
                   <Text style={styles.devState}>{devMode ? 'ON' : 'off'}</Text>
+                </Pressable>
+
+                <Pressable
+                  style={[styles.devRow, showcase && styles.devRowOn]}
+                  onPress={() => onSetShowcase(!showcase)}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: showcase }}
+                  accessibilityLabel="Everything at once: show every popup together to check the spacing"
+                >
+                  <View style={styles.devRowText}>
+                    <Text style={styles.devTitle}>Everything at once</Text>
+                    <Text style={styles.devBlurb}>
+                      Forces every popup on screen together — a notice, his speech, a thought, an NPC
+                      bubble, the state chip and an error — so you can see whether anything collides.
+                    </Text>
+                  </View>
+                  <Text style={styles.devState}>{showcase ? 'ON' : 'off'}</Text>
                 </Pressable>
 
                 {devMode && (
@@ -307,6 +442,46 @@ const styles = StyleSheet.create({
   factRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   factText: { flex: 1, fontSize: 14, color: '#5C4F3E', lineHeight: 21 },
   factForget: { fontSize: 12, color: '#B3402E', paddingVertical: 3 },
+  voiceBlurb: { fontSize: 12.5, lineHeight: 17, color: INK_SOFT, marginBottom: 10 },
+  voiceList: { gap: 6, marginBottom: 12 },
+  voiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#F6EEDC',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  voiceRowOn: { borderColor: INK, backgroundColor: '#FFF6E2' },
+  voiceName: { flex: 1, fontSize: 14, fontWeight: '700', color: INK },
+  voiceLang: { fontSize: 11, color: INK_SOFT },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  stepperLabel: { flex: 1, fontSize: 14, fontWeight: '700', color: INK },
+  stepperBtn: {
+    width: 38,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: '#EFE4CD',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperBtnText: { fontSize: 18, fontWeight: '900', color: INK },
+  stepperValue: { minWidth: 52, textAlign: 'center', fontSize: 14, fontWeight: '800', color: INK },
+  hearIt: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: INK,
+  },
+  hearItText: { color: '#FFFDF7', fontSize: 14, fontWeight: '800' },
+  voiceReset: { alignSelf: 'flex-start', paddingVertical: 10 },
+  voiceResetText: { fontSize: 13, color: INK_SOFT, textDecorationLine: 'underline' },
   devRow: {
     flexDirection: 'row',
     alignItems: 'center',

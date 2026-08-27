@@ -251,6 +251,10 @@ const styles = StyleSheet.create({
 
   pill: {
     flex: 1,
+    // At 360px the wordmark and the three header buttons left this about 70px
+    // wide, and the coin count printed straight through "Lv 1". The pill gets
+    // a floor; the wordmark beside it is what gives way.
+    minWidth: 124,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -268,8 +272,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   coinMark: { fontSize: 12, fontWeight: '900', color: '#6B5310' },
-  coinCount: { fontSize: 16, fontWeight: '800', color: INK },
-  levelWrap: { flex: 1, alignItems: 'flex-end' },
+  coinCount: { fontSize: 16, fontWeight: '800', color: INK, flexShrink: 0 },
+  levelWrap: { flex: 1, minWidth: 40, alignItems: 'flex-end' },
   levelText: { fontSize: 11, fontWeight: '700', color: INK_SOFT },
   levelTrack: {
     width: '100%',

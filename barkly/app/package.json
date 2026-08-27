@@ -33,6 +33,8 @@
     "test:server": "node --test ../server/test/*.test.mjs",
     "test:all": "jest && npm run test:server",
     "release:check": "node scripts/release-preflight.mjs",
+    "build:web": "node scripts/build-artifact.mjs",
+    "check:layout": "node scripts/build-artifact.mjs && node scripts/overlap-check.mjs",
     "brain": "BARKLY_BRAIN=cli node ../server/index.mjs",
     "real": "EXPO_PUBLIC_BARKLY_BACKEND_URL=http://localhost:8787 expo start"
   },

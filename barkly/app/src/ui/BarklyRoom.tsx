@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -41,6 +42,17 @@ import {
 } from './scenes/Scenes';
 import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
+import {
+  CHIP_BOTTOM,
+  npcBubbleTop,
+  NOTICE_MAX_HEIGHT,
+  NOTICE_PRIORITY,
+  NOTICE_TOP,
+  NoticeKind,
+  speechTail,
+  SPEECH_MAX_LINES,
+  SPEECH_TOP,
+} from './layout';
 import { NPCS, NpcId } from '../world/npcs';
 
 const Renderer = process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyView : BarklyPhotoView;
@@ -190,7 +202,7 @@ function GroundShadow({ location, width, style }: { location: LocationId; width:
   );
 }
 
-function NpcDog({ id, onPress, bubble, location }: { id: NpcId; onPress: () => void; bubble: string | null; location: LocationId }) {
+function NpcDog({ id, onPress, location }: { id: NpcId; onPress: () => void; location: LocationId }) {
   const spot = NPC_SPOTS[id]!;
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -206,11 +218,6 @@ function NpcDog({ id, onPress, bubble, location }: { id: NpcId; onPress: () => v
   const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
   return (
     <View style={[styles.npc, { left: spot.left, right: spot.right, bottom: spot.bottom }]}>
-      {bubble && (
-        <View style={styles.npcBubble}>
-          <Text style={styles.npcBubbleText} numberOfLines={3}>{bubble}</Text>
-        </View>
-      )}
       <GroundShadow location={location} width={spot.size * 0.92} style={{ bottom: 16 }} />
       <Pressable
         onPress={onPress}
@@ -261,9 +268,41 @@ export default function BarklyRoom() {
   const { snapshot, actions, lastExchange, partialTranscript, error, busy, locked, sttAvailable, location } = barkly;
   const listening = snapshot.state === 'listening';
   const asleep = snapshot.state === 'sleepy';
+  const { height: screenH, width: screenW } = useWindowDimensions();
   const stateLabel = STATE_LABEL[snapshot.state];
+
+  /**
+   * Stress mode: every overlay on screen at once.
+   *
+   * This is the brief made runnable — "pretend that everything that could ever
+   * pop up on the screen popped up at once". Turned on from Settings (dev
+   * tools), it forces a notice, a speech bubble, a thought, an NPC bubble, the
+   * state chip and an error to render together so the spacing can be checked
+   * against something real instead of imagined. scripts/overlap-check.mjs
+   * measures the boxes in a browser and fails on any collision.
+   */
+  const showcase = barkly.showcase;
+
+  const shownPromo = barkly.promotion ?? SHOWCASE_PROMOTION;
+
+  // Exactly one notice, highest priority first.
+  const notice: NoticeKind | null = showcase
+    ? 'promotion'
+    : (NOTICE_PRIORITY.find((kind) =>
+        kind === 'error'
+          ? Boolean(error)
+          : kind === 'degraded'
+            ? Boolean(barkly.degraded)
+            : kind === 'promotion'
+              ? Boolean(barkly.promotion)
+              : Boolean(barkly.reward),
+      ) ?? null);
   const hour = new Date().getHours();
   const npcsHere = LOCATIONS[location].npcIds;
+  const npcBubble =
+    showcase && npcsHere.length > 0
+      ? { id: npcsHere[0], line: 'Barkly!! I found a stick. It might be THE stick.' }
+      : barkly.npcBubble;
   const planDone = barkly.adventure?.goals.filter((goal) => goal.done).length ?? 0;
   const planTotal = barkly.adventure?.goals.length ?? 0;
   const planComplete = Boolean(barkly.adventure?.completedAt);
@@ -388,9 +427,11 @@ export default function BarklyRoom() {
     if (snapshot.state !== 'sleepy') setHeartBurst((b) => b + 1);
   };
 
-  const bubbleText = listening && partialTranscript
-    ? `“${partialTranscript}”`
-    : lastExchange?.barklyText;
+  const bubbleText = showcase
+    ? 'The longest thing he can say, at three full lines, so the tallest bubble this app can produce is the one being measured right here.'
+    : listening && partialTranscript
+      ? `“${partialTranscript}”`
+      : lastExchange?.barklyText;
 
   const playLabel =
     location === 'park'
@@ -425,7 +466,9 @@ export default function BarklyRoom() {
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <View style={styles.wordmarkChip}>
-            <Text style={styles.wordmark}>Barkly</Text>
+            <Text style={[styles.wordmark, screenW < 380 && styles.wordmarkTight]} numberOfLines={1}>
+              Barkly
+            </Text>
           </View>
           <Pressable
             style={styles.walletTap}
@@ -476,40 +519,62 @@ export default function BarklyRoom() {
           the whole fix: the notice appears over the scene and nothing else
           moves at all.
         */}
-        <View style={styles.noticeLayer} pointerEvents="box-none">
-        {barkly.reward && (
-          <View style={styles.reward} pointerEvents="none" accessibilityLiveRegion="polite">
-            <Text style={styles.rewardText}>
-              +{barkly.reward.coins}c  +{barkly.reward.xp} xp
-              {barkly.reward.note ? `  ·  ${barkly.reward.note}` : ''}
-            </Text>
+        {/*
+          ONE notice at a time, in a strip of its own.
+
+          These used to be three siblings stacking downward with a 6px gap, so
+          earning coins during a rivalry promotion put two cards on screen and
+          a backend warning made three — reaching down into his speech bubble.
+          A notice is now chosen by priority (a real problem beats a story beat
+          beats a coin receipt) and the strip's height is fixed, so everything
+          below it can be positioned against a constant. See ui/layout.ts.
+        */}
+        {notice && (
+          <View style={styles.noticeLayer} pointerEvents="box-none">
+            {notice === 'error' && (
+              <View style={styles.errorNotice} pointerEvents="none" accessibilityLiveRegion="polite">
+                <Text style={styles.errorText} numberOfLines={3}>
+                  {error ?? 'Something went wrong and this is what it says.'}
+                </Text>
+              </View>
+            )}
+            {notice === 'degraded' && barkly.degraded && (
+              <Pressable
+                style={styles.degraded}
+                onPress={barkly.dismissDegraded}
+                accessibilityRole="button"
+                accessibilityLabel={`${barkly.degraded}. Tap to dismiss.`}
+              >
+                <View style={styles.degradedDot} />
+                <Text style={styles.degradedText} numberOfLines={2}>{barkly.degraded}</Text>
+              </Pressable>
+            )}
+            {notice === 'promotion' && (barkly.promotion ?? SHOWCASE_PROMOTION) && (
+              <View
+                style={[styles.promo, shownPromo.kind === 'rival' ? styles.promoRival : styles.promoFriend]}
+                pointerEvents="none"
+                accessibilityLiveRegion="polite"
+                accessibilityLabel={`${shownPromo.headline}. From ${shownPromo.fromLabel} to ${shownPromo.toLabel}.`}
+              >
+                <Text style={styles.promoEyebrow}>
+                  {shownPromo.kind === 'rival' ? 'RIVALRY ESCALATED' : 'FRIENDSHIP DEEPENED'}
+                </Text>
+                <Text style={styles.promoHeadline} numberOfLines={2}>{shownPromo.headline}</Text>
+                <Text style={styles.promoStep}>
+                  {shownPromo.fromLabel} → {shownPromo.toLabel}
+                </Text>
+              </View>
+            )}
+            {notice === 'reward' && barkly.reward && (
+              <View style={styles.reward} pointerEvents="none" accessibilityLiveRegion="polite">
+                <Text style={styles.rewardText} numberOfLines={1}>
+                  +{barkly.reward.coins}c  +{barkly.reward.xp} xp
+                  {barkly.reward.note ? `  ·  ${barkly.reward.note}` : ''}
+                </Text>
+              </View>
+            )}
           </View>
         )}
-
-        {barkly.promotion && (
-          <View
-            style={[styles.promo, barkly.promotion.kind === 'rival' ? styles.promoRival : styles.promoFriend]}
-            pointerEvents="none"
-            accessibilityLiveRegion="polite"
-            accessibilityLabel={`${barkly.promotion.headline}. From ${barkly.promotion.fromLabel} to ${barkly.promotion.toLabel}.`}
-          >
-            <Text style={styles.promoEyebrow}>
-              {barkly.promotion.kind === 'rival' ? 'RIVALRY ESCALATED' : 'FRIENDSHIP DEEPENED'}
-            </Text>
-            <Text style={styles.promoHeadline}>{barkly.promotion.headline}</Text>
-            <Text style={styles.promoStep}>
-              {barkly.promotion.fromLabel} → {barkly.promotion.toLabel}
-            </Text>
-          </View>
-        )}
-
-        {barkly.degraded && (
-          <Pressable style={styles.degraded} onPress={barkly.dismissDegraded} accessibilityRole="button" accessibilityLabel={`${barkly.degraded}. Tap to dismiss.`}>
-            <View style={styles.degradedDot} />
-            <Text style={styles.degradedText}>{barkly.degraded}</Text>
-          </Pressable>
-        )}
-        </View>
 
         <View style={styles.tabs}>
           {LOCATION_ORDER.map((loc: LocationId) => {
@@ -548,46 +613,66 @@ export default function BarklyRoom() {
           </Pressable>
         )}
 
-        <View style={styles.stageArea}>
-          {/*
-            His voice, anchored to HIM.
+        {/*
+          His voice, anchored to HIM and bounded by the layout contract.
 
-            The bubble used to be a block in the page flow, pinned under the
-            plan pill with the stage pushed below it — so it floated ~200px
-            above his head with its tail pointing into empty scenery, and the
-            gap between them was the dead space in the middle of every screen.
-            Anchoring it just over his head makes the tail land on the dog and
-            gives that space back to the stage. `top: 0` on the anchor is what
-            stops a long line from ever climbing into the chrome.
-          */}
-          <View style={styles.speechAnchor} pointerEvents="box-none">
-            {bubbleText ? (
-              <AnimatedBubble changeKey={bubbleText}>
-                {lastExchange && !listening && lastExchange.userText !== '' && (
-                  <Text style={styles.bubbleYou} numberOfLines={1}>you said “{lastExchange.userText}”</Text>
-                )}
-                <Text style={styles.bubbleText} numberOfLines={4}>{bubbleText}</Text>
-                <View style={styles.bubbleTail} />
-              </AnimatedBubble>
-            ) : barkly.thought ? (
-              /* His inner voice belongs where his voice is, not floating at
-                 the top of the stage disconnected from him. */
-              <View style={styles.thought} pointerEvents="none">
-                <Text style={styles.thoughtText}>{barkly.thought}</Text>
-                <View style={styles.thoughtDot1} />
-                <View style={styles.thoughtDot2} />
-              </View>
-            ) : (
-              <Text style={[styles.hint, asleep && styles.hintNight]}>
-                {asleep ? 'shh — he’s sleeping' : sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
-              </Text>
-            )}
-            {error && <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text>}
+          It lives against the content view rather than inside the stage, so
+          its ceiling is a CONSTANT (SPEECH_TOP, below the notice strip) rather
+          than "the top of the stage, wherever that lands today". A four-line
+          reply grows upward and stops there; it can no longer climb through a
+          reward pill or a promotion banner.
+        */}
+      <View style={styles.speechAnchor} pointerEvents="box-none">
+          {bubbleText ? (
+            <AnimatedBubble changeKey={bubbleText}>
+              {lastExchange && !listening && lastExchange.userText !== '' && (
+                <Text style={styles.bubbleYou} numberOfLines={1}>you said “{lastExchange.userText}”</Text>
+              )}
+              <Text style={styles.bubbleText} numberOfLines={SPEECH_MAX_LINES}>{bubbleText}</Text>
+              <View style={styles.bubbleTail} />
+            </AnimatedBubble>
+          ) : barkly.thought ? (
+            /* His inner voice belongs where his voice is, not floating at
+               the top of the stage disconnected from him. */
+            <View style={styles.thought} pointerEvents="none">
+              <Text style={styles.thoughtText}>{barkly.thought}</Text>
+              <View style={styles.thoughtDot1} />
+              <View style={styles.thoughtDot2} />
+            </View>
+          ) : (
+            <Text style={[styles.hint, asleep && styles.hintNight]}>
+              {asleep ? 'shh — he’s sleeping' : sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
+            </Text>
+          )}
+        </View>
+
+        {/*
+          The NPC's line, in a band of its own directly under his.
+
+          It used to float above each NPC sprite, so its position depended on
+          that dog's size and offset — and on a short screen, where his own
+          bubble is pushed down toward his head, the two met. Deriving both
+          bands from one function makes the separation structural.
+        */}
+        {npcBubble && (
+          <View style={[styles.npcBubbleBand, { top: npcBubbleTop(screenH) }]} pointerEvents="none">
+            <View
+              style={[
+                styles.npcBubble,
+                NPC_SPOTS[npcBubble.id]?.right !== undefined ? styles.npcBubbleRight : styles.npcBubbleLeft,
+              ]}
+            >
+              <Text style={styles.npcBubbleWho}>{NPCS[npcBubble.id].name}</Text>
+              <Text style={styles.npcBubbleText} numberOfLines={3}>{npcBubble.line}</Text>
+            </View>
           </View>
+        )}
+
+        <View style={styles.stageArea}>
           {!asleep && <GroundShadow location={location} width={230} style={{ bottom: 18 }} />}
           {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
           {npcsHere.map((id) => (
-            <NpcDog key={id} id={id} location={location} bubble={barkly.npcBubble?.id === id ? barkly.npcBubble.line : null} onPress={() => barkly.npcTalk(id)} />
+            <NpcDog key={id} id={id} location={location} onPress={() => barkly.npcTalk(id)} />
           ))}
           <Animated.View
             style={{
@@ -677,10 +762,10 @@ export default function BarklyRoom() {
           {snapshot.state === 'eating' && <FoodBowl />}
           {snapshot.state === 'playing' && !fetching && <Ball />}
           <HeartBurst burst={heartBurst} />
-          {stateLabel && (
+          {(stateLabel || showcase) && (
             <View style={styles.chip}>
               {(listening || snapshot.state === 'thinking') && <View style={styles.chipDot} />}
-              <Text style={styles.chipText}>{stateLabel}</Text>
+              <Text style={styles.chipText}>{stateLabel || 'listening'}</Text>
             </View>
           )}
         </View>
@@ -729,6 +814,7 @@ export default function BarklyRoom() {
           <View style={styles.actionsRow}>
             <ActionButton
               label={playLabel}
+              testLabel="play-action"
               hint={
                 location === 'park'
                   ? 'Throw the ball and let him chase it.'
@@ -800,6 +886,12 @@ export default function BarklyRoom() {
         sttAvailable={sttAvailable}
         onForgetFact={barkly.forgetFact}
         devMode={barkly.devMode}
+        showcase={barkly.showcase}
+        onSetShowcase={barkly.setShowcase}
+        voices={barkly.voices}
+        voiceShape={barkly.voiceShape}
+        onSetVoiceShape={barkly.setVoiceShape}
+        onPreviewVoice={barkly.previewVoice}
         onSetDevMode={barkly.setDevMode}
         onGrantCoins={barkly.devGrantCoins}
         onGrantLevel={barkly.devGrantLevel}
@@ -815,16 +907,29 @@ export default function BarklyRoom() {
  * VoiceOver or TalkBack the three controls the whole app runs on announced
  * nothing and could not be found at all.
  */
+/** Stand-in used only by the stress mode, so the tallest notice is measurable. */
+const SHOWCASE_PROMOTION = {
+  who: 'Duke',
+  kind: 'rival' as const,
+  headline: 'Duke is now an official rival',
+  line: '',
+  fromLabel: 'annoying dog',
+  toLabel: 'official rival',
+};
+
 function ActionButton({
   label,
   onPress,
   disabled,
   hint,
+  testLabel,
 }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   hint?: string;
+  /** Stable handle for the overlap checker; the visible label changes by place. */
+  testLabel?: string;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const springTo = (v: number) => Animated.spring(scale, { toValue: v, friction: 5, tension: 300, useNativeDriver: true }).start();
@@ -838,6 +943,7 @@ function ActionButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={hint}
+      testID={testLabel}
       accessibilityState={{ disabled: Boolean(disabled) }}
     >
       <Animated.View style={[styles.action, disabled && styles.disabled, { transform: [{ scale }] }]}>
@@ -865,6 +971,7 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   wordmarkChip: {
+    flexShrink: 1,
     backgroundColor: 'rgba(255,253,247,0.85)',
     borderRadius: 999,
     paddingHorizontal: 14,
@@ -872,6 +979,7 @@ const styles = StyleSheet.create({
     ...(shadowCard as object),
   },
   wordmark: { fontSize: 20, fontWeight: '800', color: INK, letterSpacing: 0.3 },
+  wordmarkTight: { fontSize: 16, letterSpacing: 0 },
   gear: {
     width: 38,
     height: 38,
@@ -909,11 +1017,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 22,
     right: 22,
-    // Below the plan pill, in the open sky above the speech bubble: the one
-    // band with nothing in it. Anchored, so it covers nothing and moves nothing.
-    top: 190,
+    // A strip of its own between the chrome and his speech. Fixed height, so
+    // the speech band below can be positioned against a constant.
+    top: NOTICE_TOP,
+    height: NOTICE_MAX_HEIGHT,
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'flex-start',
     zIndex: 20,
   },
   reward: { alignSelf: 'center', marginTop: 0, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: '#F5E6BE' },
@@ -979,8 +1088,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: 0,
-    bottom: 318,
+    top: SPEECH_TOP,
     justifyContent: 'flex-end',
     alignItems: 'center',
     zIndex: 6,
@@ -991,7 +1099,17 @@ const styles = StyleSheet.create({
   bubbleYou: { fontSize: 12, color: INK_SOFT, marginBottom: 5 },
   bubbleText: { fontSize: 17, fontWeight: '600', color: INK, lineHeight: 24 },
   bubbleTail: { position: 'absolute', bottom: -7, left: '48%', width: 16, height: 16, backgroundColor: CARD, borderRadius: 3, transform: [{ rotate: '45deg' }] },
-  error: { marginTop: 8, fontSize: 13, color: '#B3402E', textAlign: 'center' },
+  errorNotice: {
+    alignSelf: 'center',
+    maxWidth: '100%',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#FBE3DE',
+    borderWidth: 1,
+    borderColor: '#D08A7F',
+  },
+  errorText: { fontSize: 13, lineHeight: 17, color: '#8E2F20', textAlign: 'center' },
 
   stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 },
   heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
@@ -1004,8 +1122,12 @@ const styles = StyleSheet.create({
   thoughtText: { fontSize: 13, fontStyle: 'italic', color: INK_SOFT, lineHeight: 18 },
   thoughtDot1: { position: 'absolute', bottom: -8, left: '46%', width: 9, height: 9, borderRadius: 5, backgroundColor: 'rgba(255,253,247,0.92)' },
   thoughtDot2: { position: 'absolute', bottom: -15, left: '52%', width: 5, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,253,247,0.85)' },
+  npcBubbleBand: { position: 'absolute', left: 18, right: 18, zIndex: 5 },
+  npcBubbleLeft: { alignSelf: 'flex-start' },
+  npcBubbleRight: { alignSelf: 'flex-end' },
+  npcBubbleWho: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, color: '#A8987C', marginBottom: 2 },
   npcName: { marginTop: -4, fontSize: 11, fontWeight: '800', color: INK_SOFT, backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, overflow: 'hidden' },
-  npcBubble: { maxWidth: 170, backgroundColor: CARD, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 6, ...(shadowCard as object) },
+  npcBubble: { maxWidth: '68%', backgroundColor: CARD, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 6, ...(shadowCard as object) },
   npcBubbleText: { fontSize: 12.5, fontWeight: '600', color: INK, lineHeight: 17 },
 
   chip: { position: 'absolute', bottom: 8, zIndex: 3, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: CARD, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...(shadowCard as object) },

@@ -27,9 +27,34 @@
 import * as Speech from 'expo-speech';
 import { TextToSpeechProvider } from '../types';
 
-/** Barkly is small: up in pitch, a touch fast, never a narrator. */
-const PITCH = 1.32;
-const RATE = 1.06;
+/**
+ * Voice shaping.
+ *
+ * This was 1.32 and it sounded like a chipmunk in a tunnel. The Web Speech
+ * API and both mobile engines pitch-shift by resampling, not by re-synthesis,
+ * so a third above the recorded pitch introduces exactly the warble you would
+ * expect — the further you push it, the more it stops sounding like a voice.
+ * A small dog reads as small at a much gentler shift than I assumed; past
+ * about 1.15 you are trading character for artefacts.
+ *
+ * These are DEFAULTS. The picker in Settings is what actually settles it,
+ * because I cannot hear the voices installed on your phone.
+ */
+export const DEFAULT_PITCH = 1.12;
+export const DEFAULT_RATE = 1.02;
+
+/** Bounds for the Settings sliders — beyond these it stops sounding like him. */
+export const PITCH_RANGE = { min: 0.9, max: 1.35 };
+export const RATE_RANGE = { min: 0.8, max: 1.3 };
+
+export interface VoiceShape {
+  /** Platform voice identifier, or undefined for "whatever it scores best". */
+  voiceId?: string;
+  pitch: number;
+  rate: number;
+}
+
+export const DEFAULT_SHAPE: VoiceShape = { pitch: DEFAULT_PITCH, rate: DEFAULT_RATE };
 
 /** Voices that sound like a person. Higher is better. */
 function scoreVoice(v: Speech.Voice): number {
@@ -57,9 +82,21 @@ function scoreVoice(v: Speech.Voice): number {
   return score;
 }
 
-export function createExpoSpeechTts(): TextToSpeechProvider {
+export interface ExpoSpeechTts extends TextToSpeechProvider {
+  /** Every English voice on this device, best first, for the Settings picker. */
+  listVoices(): Promise<{ id: string; name: string; language: string }[]>;
+  setShape(shape: Partial<VoiceShape>): void;
+  getShape(): VoiceShape;
+}
+
+function clamp(n: number, range: { min: number; max: number }): number {
+  return Math.min(range.max, Math.max(range.min, n));
+}
+
+export function createExpoSpeechTts(): ExpoSpeechTts {
   let chosen: string | undefined;
   let settled = false;
+  let shape: VoiceShape = { ...DEFAULT_SHAPE };
 
   /**
    * Choose once, but do not latch onto an empty list: on web the voice list
@@ -98,10 +135,41 @@ export function createExpoSpeechTts(): TextToSpeechProvider {
       return true;
     },
 
+    getShape: () => ({ ...shape }),
+
+    setShape(next) {
+      shape = {
+        voiceId: 'voiceId' in next ? next.voiceId : shape.voiceId,
+        pitch: clamp(next.pitch ?? shape.pitch, PITCH_RANGE),
+        rate: clamp(next.rate ?? shape.rate, RATE_RANGE),
+      };
+    },
+
+    async listVoices() {
+      try {
+        const voices = await Promise.race([
+          Speech.getAvailableVoicesAsync(),
+          new Promise<Speech.Voice[]>((resolve) => setTimeout(() => resolve([]), 1200)),
+        ]);
+        return (voices ?? [])
+          .map((v) => ({ v, s: scoreVoice(v) }))
+          .filter((x) => x.s >= 0)
+          .sort((a, b) => b.s - a.s)
+          .map((x) => ({
+            id: x.v.identifier,
+            name: x.v.name || x.v.identifier,
+            language: x.v.language || '',
+          }));
+      } catch {
+        return [];
+      }
+    },
+
     async speak(text, opts) {
       const line = text.trim();
       if (!line) return;
-      const voice = await ensureVoice();
+      // An explicit choice from Settings always wins over the scorer.
+      const voice = shape.voiceId ?? (await ensureVoice());
 
       return new Promise<void>((resolve) => {
         // Some environments (headless browsers, muted webviews) never fire
@@ -115,8 +183,8 @@ export function createExpoSpeechTts(): TextToSpeechProvider {
         try {
           Speech.speak(line, {
             voice,
-            pitch: PITCH,
-            rate: RATE,
+            pitch: shape.pitch,
+            rate: shape.rate,
             language: 'en-US',
             onStart: opts?.onStart,
             onDone: done,
