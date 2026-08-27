@@ -122,7 +122,15 @@ def compose(beat, dur, frames):
                 a = (w * (m/255.0))[..., None]
                 base = base*(1-a) + np.array(CYAN[::-1], np.float32)*a
             AR.reticle(d, (cx, cy), 1.0, dur=0.55, a=210)
+            # r69: "the end card remains layered over a held quartzite label.
+            # Remove or fully suppress the underlying scene label before the
+            # brand card so the close has one hierarchy." The end card is a
+            # HELD FRAME of b4's last frame, so a label still up at the cut is
+            # baked into it. Every label now releases over the last 0.45s of
+            # its beat, which also stops labels hard-cutting mid-word at every
+            # other join.
             k = AR.ease(min(1.0, (lt - 0.35)/0.5))
+            k *= min(1.0, max(0.0, (dur - t) / 0.45))
             if k > 0:
                 dim = 1.0
                 if len(tracks) > 1 and t0 < last_t0 and t >= last_t0:

@@ -37,6 +37,7 @@ from spec2 import BEATS, PLACES, LABELS, PICK, W, H, FPS
 import arlabel as AR
 import labelkit as LK
 import holo
+import depthtools as DT
 import shotqc
 import shotnorm as SN
 from native_check import check as native_check
@@ -156,6 +157,57 @@ def layer_for(key):
 # vanished mid-beat and the log just stopped). Streaming halves the peak and
 # the input list is dropped as soon as the generator owns it.
 
+SW, SH_ = 960, 540          # working resolution for the depth read
+DKEY = 12                   # depth recomputed every DKEY frames and warped
+
+
+def occlusion_for(frames, places, tracks):
+    """Per-beat depth read -> a function(i, place_index) -> HxW occlusion mask.
+
+    r69's single most valuable note was that the reconstructions look
+    composited OVER the scene rather than planted IN it, and named
+    environmental occlusion as the fix. The depth model already in this repo
+    answers it directly: sample the depth at the ground point the structure
+    stands on, and anything nearer than that covers it.
+
+    Depth is keyframed, not per-frame -- it is stable on these plates and a
+    per-frame read both costs 0.6s a frame and crawls.
+    """
+    if not places:
+        return lambda i, j: None
+    keys = {}
+    for i in range(0, len(frames), DKEY):
+        keys[i] = DT.depth(cv2.resize(frames[i], (SW, SH_), interpolation=cv2.INTER_AREA))
+    last = len(frames) - 1
+    if last not in keys:
+        keys[last] = DT.depth(cv2.resize(frames[last], (SW, SH_),
+                                         interpolation=cv2.INTER_AREA))
+    ks = sorted(keys)
+
+    def dep_at(i):
+        if i in keys:
+            return keys[i]
+        hi = next(k for k in ks if k > i)
+        lo = max(k for k in ks if k < i)
+        u = (i - lo) / float(hi - lo)
+        return keys[lo] * (1 - u) + keys[hi] * u
+
+    def mask(i, j):
+        dmap = dep_at(min(i, len(frames) - 1))
+        gx, gy = tracks[j][min(i, len(tracks[j]) - 1)]
+        sx = int(np.clip(gx * SW / W, 0, SW - 1))
+        sy = int(np.clip(gy * SH_ / H, 0, SH_ - 1))
+        # the depth of the GROUND the structure stands on, read over a small
+        # patch so one noisy pixel cannot decide what occludes a building
+        patch = dmap[max(0, sy - 8):sy + 8, max(0, sx - 8):sx + 8]
+        place_d = float(np.median(patch)) if patch.size else float(dmap[sy, sx])
+        near = np.clip((dmap - (place_d + 0.045)) * 9.0, 0, 1)
+        near = cv2.GaussianBlur(near.astype(np.float32), (0, 0), 2.0)
+        return cv2.resize(near, (W, H), interpolation=cv2.INTER_LINEAR)
+
+    return mask
+
+
 def compose(beat, dur, frames):
     gray = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
     places = PLACES.get(beat, [])
@@ -163,6 +215,7 @@ def compose(beat, dur, frames):
     # tracked from there, so it moves with the plate instead of with the screen
     tracks = [AR.track_anchor(gray, (c[0], c[1] + h * 0.5))
               for (_k, c, h, _t0, _bs) in places]
+    occl = occlusion_for(frames, places, tracks)
     lab = LABELS.get(beat)
     lpath = AR.track_anchor(gray, lab[0]) if lab else None
 
@@ -195,8 +248,13 @@ def compose(beat, dur, frames):
                 build = min(1.0, lt / max(0.2, bs))
                 k = min(1.0, lt / 0.35)
                 lay = layer_for(key)
+                j = places.index((key, ctr, hgt, t0, bs))
+                # the contact glow is brightest WHILE it assembles and settles
+                # to a trace, so the growing-from-a-footprint reads as an event
+                fp = (0.35 + 0.65 * (1.0 - build)) * min(1.0, lt / 0.25)
                 base = holo.composite(base, lay, holo.fit_rect(lay, (cx, cy), hgt),
-                                      k=k, build=build)
+                                      k=k, build=build,
+                                      occlude=occl(i, j), footprint=fp)
                 AR.reticle(d, (gx, gy), 1.0, dur=0.55, a=150)
 
         if lab and lpath:

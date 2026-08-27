@@ -116,13 +116,25 @@ def occupancy(layer, grow=13, blur=17):
     return np.clip(f * 1.7, 0, 1)
 
 
-def composite(plate_bgr, layer, rect, k=1.0, build=1.0, gain=1.0, dim=0.78):
+def composite(plate_bgr, layer, rect, k=1.0, build=1.0, gain=1.0, dim=0.78,
+              occlude=None, footprint=0.0):
     """Add the reconstruction into the plate.
 
     rect  : (x, y, w, h) in plate pixels
     k     : 0..1 overall presence
     build : 0..1 assemble-in -- the structure resolves from the ground up, the
             way a system that is still solving would actually reveal it
+    occlude   : optional HxW float32, 1 where something in the plate is NEARER
+                than the reconstruction and must cover it. This is r69's
+                single most valuable note -- "make every reconstruction
+                visibly grow from and remain attached to its exact
+                real-world footprint, with consistent environmental
+                occlusion... that turns 'a hologram composited over footage'
+                into 'the glasses reconstructed this site in place'."
+    footprint : 0..1 strength of a contact glow at the base, so the thing
+                visibly rises FROM a patch of ground rather than hovering
+                over one.
+
     ADDITIVE, not alpha-over: a head-up display adds light to the scene, it
     does not punch a hole in it. Alpha-over is what made the earlier films'
     elements look like stickers.
@@ -152,8 +164,30 @@ def composite(plate_bgr, layer, rect, k=1.0, build=1.0, gain=1.0, dim=0.78):
     sa = a[y0 - y:y1 - y, x0 - x:x1 - x][..., None]
     so = occ[y0 - y:y1 - y, x0 - x:x1 - x][..., None] * (dim * k)
     sr = lay[y0 - y:y1 - y, x0 - x:x1 - x, :3].astype(np.float32)
+
+    # OCCLUSION. Anything the depth map says is nearer than the placement
+    # covers the reconstruction -- and it covers the DIM as well as the light,
+    # or you get a dark halo of a person cut out of the sky behind them.
+    if occlude is not None:
+        near = occlude[y0:y1, x0:x1][..., None]
+        sa = sa * (1.0 - near)
+        so = so * (1.0 - near)
+
     sub = plate_bgr[y0:y1, x0:x1].astype(np.float32)
-    plate_bgr[y0:y1, x0:x1] = np.clip(sub * (1.0 - so) + sr * sa * 1.15, 0, 255)
+    out = sub * (1.0 - so) + sr * sa * 1.15
+
+    # CONTACT. A soft bar of light where the base meets the ground, so the
+    # structure reads as rising from a footprint instead of hovering above one.
+    if footprint > 0:
+        hh = y1 - y0
+        ys = np.arange(y0, y1, dtype=np.float32)[:, None, None]
+        base_y = float(y + h)
+        glow = np.clip(1.0 - np.abs(ys - base_y) / max(5.0, h * 0.022), 0, 1) ** 1.5
+        xs = np.linspace(-1.0, 1.0, x1 - x0, dtype=np.float32)[None, :, None]
+        span = np.clip(1.0 - np.abs(xs) ** 1.6, 0, 1)
+        out = out + np.float32([200, 228, 246]) * (glow * span * footprint * 0.40)
+
+    plate_bgr[y0:y1, x0:x1] = np.clip(out, 0, 255)
     return plate_bgr
 
 
