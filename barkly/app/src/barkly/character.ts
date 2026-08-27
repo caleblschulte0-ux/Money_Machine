@@ -2,34 +2,43 @@
  * Barkly's character engine — the layer that makes him a specific dog rather
  * than a prompt.
  *
- * Two jobs:
+ * CONTINUITY is durable here. Barkly does not merely know that Biscuit exists:
+ * repeated encounters can turn Biscuit into a best friend. Duke can graduate
+ * from irritating dog to actual nemesis. Treasure hunting becomes part of who
+ * this Barkly is. Two users therefore grow measurably different Barklys.
  *
- * 1. CONTINUITY. Persistent character state that drifts on its own: a current
- *    favorite treasure, a temporary obsession, a grievance against Duke, a
- *    preferred friend. Two users' Barklys diverge over time because these are
- *    seeded by what actually happened to each of them.
- *
- * 2. INITIATIVE. He cannot feel alive if the user is always the one pressing
- *    buttons. `pickInitiative()` decides when Barkly should speak first and
- *    about what, derived from his drives, his memory and where he is — never
- *    from a random popup table.
- *
- * Pure and platform-agnostic: no storage, no React, clock passed in. The hook
- * owns persistence and the speaking.
+ * INITIATIVE lives here too: he starts conversations from his drives, memory
+ * and accumulated lore instead of behaving like a chatbot waiting for input.
  */
 
 import { Experience, Fact } from './facts';
 import { BarklySnapshot } from './types';
 
+export interface SocialBond {
+  kind: 'friend' | 'rival';
+  encounters: number;
+  firstSeenAt: number;
+  lastSeenAt: number;
+}
+
+export interface SocialStage {
+  label: string;
+  blurb: string;
+}
+
 export interface CharacterState {
-  /** Treasure id he is currently proudest of. */
+  /** Treasure he is currently proudest of. */
   favoriteTreasure?: string;
+  /** Total discoveries: treasure hunting becomes a character trait over time. */
+  treasuresFound?: number;
   /** A thing he cannot stop thinking about right now, and when it started. */
   obsession?: { topic: string; since: number };
-  /** His current beef with the rival. */
+  /** His current beef with a rival. */
   grievance?: { who: string; what: string; since: number };
   /** Which friend he currently prefers. */
   favoriteFriend?: string;
+  /** Durable relationship history with recurring dogs. */
+  socialBonds?: Record<string, SocialBond>;
   /** Cooldown bookkeeping so he initiates without nagging. */
   lastInitiativeAt: number;
   /** Kinds he has recently used, newest first — avoids repeating himself. */
@@ -37,38 +46,64 @@ export interface CharacterState {
 }
 
 export function freshCharacter(): CharacterState {
-  return { lastInitiativeAt: 0, recentInitiatives: [] };
+  return {
+    treasuresFound: 0,
+    socialBonds: {},
+    lastInitiativeAt: 0,
+    recentInitiatives: [],
+  };
 }
 
-/** Obsessions are temporary by nature. */
-const OBSESSION_TTL_MS = 3 * 86_400_000; // three days
+/** Obsessions are temporary by nature; relationship history is not. */
+const OBSESSION_TTL_MS = 3 * 86_400_000;
 const GRIEVANCE_TTL_MS = 5 * 86_400_000;
 
-/** Drop anything that has naturally run its course. */
 export function expireCharacter(c: CharacterState, now: number): CharacterState {
-  const out: CharacterState = { ...c };
+  const out: CharacterState = {
+    ...c,
+    treasuresFound: c.treasuresFound ?? 0,
+    socialBonds: c.socialBonds ?? {},
+    recentInitiatives: c.recentInitiatives ?? [],
+    lastInitiativeAt: c.lastInitiativeAt ?? 0,
+  };
   if (out.obsession && now - out.obsession.since > OBSESSION_TTL_MS) delete out.obsession;
   if (out.grievance && now - out.grievance.since > GRIEVANCE_TTL_MS) delete out.grievance;
   return out;
 }
 
+export function friendshipStage(encounters: number): SocialStage {
+  if (encounters >= 12) return { label: 'pack family', blurb: 'At this point Barkly treats them like they came with the house.' };
+  if (encounters >= 6) return { label: 'best friend', blurb: 'This is now a real recurring friendship with its own history.' };
+  if (encounters >= 3) return { label: 'actual buddy', blurb: 'Barkly expects to see them again and acts like it.' };
+  return { label: 'park acquaintance', blurb: 'They know each other. Barkly is still deciding how embarrassing to be.' };
+}
+
+export function rivalryStage(encounters: number): SocialStage {
+  if (encounters >= 12) return { label: 'generational feud', blurb: 'Nobody remembers how this started. Barkly absolutely remembers every incident.' };
+  if (encounters >= 6) return { label: 'nemesis', blurb: 'This has moved beyond irritation into personal mythology.' };
+  if (encounters >= 3) return { label: 'official rival', blurb: 'The beef has continuity now. There are receipts.' };
+  return { label: 'annoying dog', blurb: 'One more incident and Barkly is going to start a file.' };
+}
+
+function socialCount(c: CharacterState, who: string): number {
+  return c.socialBonds?.[who]?.encounters ?? 0;
+}
+
 // ------------------------------------------------------------- initiative
 
 export type InitiativeKind =
-  | 'promise'      // "You said we'd play yesterday."
-  | 'hungry'       // "I'm hungry."
-  | 'treasure'     // "I found something."
-  | 'friend'       // "Biscuit was here earlier."
-  | 'grievance'    // "Duke said something stupid again."
-  | 'callback'     // "Do you still like that blue car you told me about?"
-  | 'tired'        // "No. Nap."
-  | 'affection';   // he just wants you
+  | 'promise'
+  | 'hungry'
+  | 'treasure'
+  | 'friend'
+  | 'grievance'
+  | 'callback'
+  | 'tired'
+  | 'affection';
 
 export interface Initiative {
   kind: InitiativeKind;
-  /** What he says, already in his voice. */
   line: string;
-  /** Higher wins when several fire at once. */
   priority: number;
 }
 
@@ -79,10 +114,8 @@ export interface InitiativeContext {
   openThreads: string[];
   character: CharacterState;
   location: string;
-  /** Names of dogs present. */
   npcsPresent: string[];
   now: number;
-  /** Deterministic in tests; Math.random in the app. */
   rng?: () => number;
 }
 
@@ -93,22 +126,16 @@ function personName(facts: Fact[]): string | undefined {
   return facts.find((f) => f.subject === 'person' && f.key === 'name')?.value;
 }
 
-/**
- * Decide whether Barkly should say something unprompted, and what.
- * Returns null far more often than not — restraint is the whole point.
- */
 export function pickInitiative(ctx: InitiativeContext): Initiative | null {
   const { snapshot, facts, experiences, character, now } = ctx;
   const rng = ctx.rng ?? Math.random;
 
-  // Never interrupt, never nag.
   if (now - character.lastInitiativeAt < INITIATIVE_COOLDOWN_MS) return null;
 
   const name = personName(facts);
   const you = name ? `${name}` : 'hey';
   const candidates: Initiative[] = [];
 
-  // A promise he is still owed is the strongest thing he can raise.
   const PROMISE_RE = /\b(?:promis\w*|i(?:'ll| will)|we(?:'ll| will| would)|tomorrow|later)\b/i;
   const promise = experiences.find((e) => PROMISE_RE.test(e.what));
   if (promise) {
@@ -123,7 +150,6 @@ export function pickInitiative(ctx: InitiativeContext): Initiative | null {
     });
   }
 
-  // Physical needs come next — they are honest and specific.
   if (snapshot.stats.hunger > 78) {
     candidates.push({
       kind: 'hungry',
@@ -132,39 +158,49 @@ export function pickInitiative(ctx: InitiativeContext): Initiative | null {
     });
   }
   if (snapshot.stats.energy < 18) {
-    candidates.push({
-      kind: 'tired',
-      priority: 70,
-      line: 'No. Nap. I have made my decision.',
-    });
+    candidates.push({ kind: 'tired', priority: 70, line: 'No. Nap. I have made my decision.' });
   }
 
-  // Things he owns and cares about.
   if (character.favoriteTreasure) {
+    const found = character.treasuresFound ?? 1;
     candidates.push({
       kind: 'treasure',
-      priority: 60,
-      line: `I've been thinking about ${character.favoriteTreasure}. Still the best thing I own.`,
+      priority: found >= 5 ? 68 : 60,
+      line:
+        found >= 5
+          ? `We have found ${found} treasures now. That's a collection. I don't care what you say.`
+          : `I've been thinking about ${character.favoriteTreasure}. Still the best thing I own.`,
     });
   }
 
-  // The social world.
   if (character.grievance) {
+    const count = socialCount(character, character.grievance.who);
+    const stage = rivalryStage(count);
     candidates.push({
       kind: 'grievance',
-      priority: 65,
-      line: `${character.grievance.who} ${character.grievance.what}. I'm not over it.`,
-    });
-  }
-  if (ctx.npcsPresent.length > 0 && rng() < 0.5) {
-    candidates.push({
-      kind: 'friend',
-      priority: 50,
-      line: `${ctx.npcsPresent[0]} is right there. Should I say something? I'm going to say something.`,
+      priority: count >= 3 ? 74 : 65,
+      line:
+        count >= 3
+          ? `${character.grievance.who} is now my ${stage.label}. Their choices led us here.`
+          : `${character.grievance.who} ${character.grievance.what}. I'm not over it.`,
     });
   }
 
-  // Callbacks to things he was told — the "he remembers me" moment.
+  if (ctx.npcsPresent.length > 0 && rng() < 0.5) {
+    const present = ctx.npcsPresent
+      .map((who) => ({ who, bond: character.socialBonds?.[who] }))
+      .sort((a, b) => (b.bond?.encounters ?? 0) - (a.bond?.encounters ?? 0))[0];
+    const count = present.bond?.encounters ?? 0;
+    candidates.push({
+      kind: 'friend',
+      priority: count >= 3 ? 58 : 50,
+      line:
+        present.bond?.kind === 'friend' && count >= 3
+          ? `${present.who} is here. That's my ${friendshipStage(count).label}, so obviously we have business.`
+          : `${present.who} is right there. Should I say something? I'm going to say something.`,
+    });
+  }
+
   const preference = facts.find(
     (f) => f.category === 'preference' && now - f.updatedAt > 6 * 3_600_000,
   );
@@ -176,7 +212,6 @@ export function pickInitiative(ctx: InitiativeContext): Initiative | null {
     });
   }
 
-  // Pure attachment, when the bond is strong and nothing else is pressing.
   if (snapshot.stats.affection > 70 && candidates.length === 0 && rng() < 0.35) {
     candidates.push({
       kind: 'affection',
@@ -186,15 +221,12 @@ export function pickInitiative(ctx: InitiativeContext): Initiative | null {
   }
 
   if (candidates.length === 0) return null;
-
-  // Prefer high priority, but avoid repeating a kind he just used.
-  const fresh = candidates.filter((c) => !character.recentInitiatives.slice(0, 2).includes(c.kind));
+  const fresh = candidates.filter((candidate) => !character.recentInitiatives.slice(0, 2).includes(candidate.kind));
   const pool = fresh.length > 0 ? fresh : candidates;
   pool.sort((a, b) => b.priority - a.priority);
   return pool[0];
 }
 
-/** Record that he took the initiative, for cooldown and repetition control. */
 export function noteInitiative(
   c: CharacterState,
   kind: InitiativeKind,
@@ -203,46 +235,84 @@ export function noteInitiative(
   return {
     ...c,
     lastInitiativeAt: now,
-    recentInitiatives: [kind, ...c.recentInitiatives].slice(0, 4),
+    recentInitiatives: [kind, ...(c.recentInitiatives ?? [])].slice(0, 4),
   };
 }
 
 // -------------------------------------------------------- character drift
 
-/** A new treasure becomes his favorite — dogs are like that. */
 export function withTreasure(c: CharacterState, treasureName: string, now: number): CharacterState {
   return {
     ...c,
+    treasuresFound: (c.treasuresFound ?? 0) + 1,
     favoriteTreasure: treasureName,
     obsession: { topic: treasureName, since: now },
   };
 }
 
-/** A rival encounter leaves a grievance he will bring up later. */
+function recordSocial(
+  c: CharacterState,
+  who: string,
+  kind: SocialBond['kind'],
+  now: number,
+): Record<string, SocialBond> {
+  const bonds = { ...(c.socialBonds ?? {}) };
+  const previous = bonds[who];
+  bonds[who] = {
+    kind,
+    encounters: (previous?.encounters ?? 0) + 1,
+    firstSeenAt: previous?.firstSeenAt ?? now,
+    lastSeenAt: now,
+  };
+  return bonds;
+}
+
 export function withGrievance(
   c: CharacterState,
   who: string,
   what: string,
   now: number,
 ): CharacterState {
-  return { ...c, grievance: { who, what, since: now } };
+  return {
+    ...c,
+    grievance: { who, what, since: now },
+    socialBonds: recordSocial(c, who, 'rival', now),
+  };
 }
 
-/** Time with a friend shifts who he prefers. */
-export function withFriend(c: CharacterState, who: string): CharacterState {
-  return { ...c, favoriteFriend: who };
+export function withFriend(c: CharacterState, who: string, now: number): CharacterState {
+  return {
+    ...c,
+    favoriteFriend: who,
+    socialBonds: recordSocial(c, who, 'friend', now),
+  };
 }
 
 /**
- * One line describing who Barkly currently is, for the system prompt. This is
- * what stops the model inventing a fresh personality every turn.
+ * Prompt texture for who this Barkly has become. Relationship labels are not
+ * game badges; they are continuity anchors the model can naturally reference.
  */
 export function describeCharacter(c: CharacterState): string {
   const bits: string[] = [];
   if (c.favoriteTreasure) bits.push(`your current favorite possession is ${c.favoriteTreasure}`);
+  if ((c.treasuresFound ?? 0) >= 4) bits.push(`you have become a serious treasure collector after ${c.treasuresFound} finds`);
   if (c.obsession) bits.push(`you are a bit obsessed with ${c.obsession.topic} right now`);
-  if (c.grievance) bits.push(`you have a running grievance: ${c.grievance.who} ${c.grievance.what}`);
-  if (c.favoriteFriend) bits.push(`your favorite dog to see lately is ${c.favoriteFriend}`);
+  if (c.grievance) {
+    const count = socialCount(c, c.grievance.who);
+    bits.push(
+      count >= 3
+        ? `${c.grievance.who} has become your ${rivalryStage(count).label} after ${count} incidents`
+        : `you have a running grievance: ${c.grievance.who} ${c.grievance.what}`,
+    );
+  }
+  if (c.favoriteFriend) {
+    const count = socialCount(c, c.favoriteFriend);
+    bits.push(
+      count >= 3
+        ? `${c.favoriteFriend} is your ${friendshipStage(count).label} after ${count} hangouts`
+        : `your favorite dog to see lately is ${c.favoriteFriend}`,
+    );
+  }
   if (bits.length === 0) return '';
   return `Right now, specifically: ${bits.join('; ')}.`;
 }
