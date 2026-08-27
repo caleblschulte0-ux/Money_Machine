@@ -8,13 +8,15 @@ interface Props {
   wallet: Wallet;
   hungry: boolean;
   onFeed: (itemId?: string) => void;
+  /** Take them to the shop. An empty cupboard should be a door, not a notice. */
+  onOpenShop: () => void;
 }
 
 const INK = '#3E3428';
 const SOFT = '#8A7A5F';
 const PAPER = '#FFF9EC';
 
-export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed }: Props) {
+export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, onOpenShop }: Props) {
   const treats = STORE.filter((item) => item.slot === 'treat')
     .map((item) => ({ item, count: wallet.pantry[item.id] ?? 0 }))
     .filter((row) => row.count > 0);
@@ -26,8 +28,17 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed }: 
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+            {/*
+        Tapping the dimmed area closes the sheet.
+
+        Five bottom sheets shipped without it. The backdrop looks tappable,
+        every other app on the phone behaves that way, and the only way out was
+        a 15px ✕ in the corner — which is also the smallest tap target in the
+        app. `accessible={false}` keeps it out of the screen-reader order; the
+        ✕ is the labelled way out.
+      */}
+      <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
+        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
           <View style={styles.header}>
             <View>
               <Text style={styles.eyebrow}>THE FOOD SITUATION</Text>
@@ -38,7 +49,13 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed }: 
             </Pressable>
           </View>
 
-          <Pressable style={styles.meal} onPress={() => choose()} accessibilityRole="button">
+          <Pressable
+            style={styles.meal}
+            onPress={() => choose()}
+            accessibilityRole="button"
+            accessibilityLabel="Regular dinner"
+            accessibilityHint="Feed him his ordinary food."
+          >
             <View style={styles.iconBubble}><Text style={styles.icon}>🥣</Text></View>
             <View style={styles.copy}>
               <Text style={styles.name}>Regular dinner</Text>
@@ -51,11 +68,32 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed }: 
           {treats.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Cupboard's empty.</Text>
-              <Text style={styles.emptyText}>The shop has biscuits, cheese and eventually a completely unreasonable steak.</Text>
+              <Text style={styles.emptyText}>
+                The shop has biscuits, cheese and eventually a completely unreasonable steak.
+              </Text>
+              <Pressable
+                style={styles.emptyCta}
+                onPress={() => {
+                  onClose();
+                  onOpenShop();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Go to the shop"
+                accessibilityHint="Buy treats for him."
+              >
+                <Text style={styles.emptyCtaText}>go to the shop</Text>
+              </Pressable>
             </View>
           ) : (
             treats.map(({ item, count }) => (
-              <Pressable key={item.id} style={styles.treat} onPress={() => choose(item.id)} accessibilityRole="button">
+              <Pressable
+                key={item.id}
+                style={styles.treat}
+                onPress={() => choose(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.name}, ${count} left`}
+                accessibilityHint="Give him this instead of dinner."
+              >
                 <View style={styles.iconBubble}><Text style={styles.icon}>{item.icon}</Text></View>
                 <View style={styles.copy}>
                   <Text style={styles.name}>{item.name}</Text>
@@ -67,8 +105,8 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed }: 
           )}
 
           <Text style={styles.footer}>Special food is a possession you actually use. Barkly will remember the good stuff.</Text>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -94,5 +132,14 @@ const styles = StyleSheet.create({
   empty: { borderRadius: 17, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#D8C8A8', padding: 15 },
   emptyTitle: { fontSize: 15, fontWeight: '800', color: INK },
   emptyText: { marginTop: 4, fontSize: 12.5, lineHeight: 18, color: SOFT },
+  emptyCta: {
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: INK,
+  },
+  emptyCtaText: { color: '#FFF9EC', fontSize: 13.5, fontWeight: '800' },
   footer: { marginTop: 15, fontSize: 11.5, lineHeight: 17, textAlign: 'center', color: '#A09480' },
 });

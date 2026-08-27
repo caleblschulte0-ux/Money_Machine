@@ -151,8 +151,17 @@ export default function SettingsSheet(props: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+            {/*
+        Tapping the dimmed area closes the sheet.
+
+        Five bottom sheets shipped without it. The backdrop looks tappable,
+        every other app on the phone behaves that way, and the only way out was
+        a 15px ✕ in the corner — which is also the smallest tap target in the
+        app. `accessible={false}` keeps it out of the screen-reader order; the
+        ✕ is the labelled way out.
+      */}
+      <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
+        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
           <View style={styles.header}>
             <Text style={styles.title}>Settings</Text>
             <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close settings">
@@ -405,8 +414,8 @@ export default function SettingsSheet(props: Props) {
               void doForget();
             }}
           />
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

@@ -39,7 +39,13 @@ const sizes = arg('--sizes', '360x780,390x844,430x932')
  * the same time as anything else belongs here — that is the whole point.
  */
 const TARGETS = [
-  ['header', '[aria-label^="Shop."]'],
+  // Header internals, not just the header as a block: the coin count printing
+  // through "Lv 1" at 360px was invisible to a whole-header measurement.
+  ['wordmark', 'text=/^Barkly$/'],
+  ['coin-pill', '[aria-label^="Shop."]'],
+  ['pack', '[aria-label^="Pack Book"]'],
+  ['mute', '[aria-label$="Barkly"][role="switch"]'],
+  ['settings', '[aria-label="Settings"]'],
   ['tabs', '[aria-label="Park"]'],
   ['plan', '[aria-label^="Barkly\'s plan"]'],
   ['notice', '[aria-label*="official rival"]'],

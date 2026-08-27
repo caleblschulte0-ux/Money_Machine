@@ -76,8 +76,11 @@ describe('every tappable thing announces itself', () => {
   for (const file of files) {
     const short = file.slice(file.indexOf('src/'));
     it(`${short}: no bare Pressable`, () => {
+      // Either it announces itself, or it opts out ON PURPOSE. A backdrop or
+      // a tap-swallowing wrapper is not a control and should not be in the
+      // screen-reader order — but saying so has to be explicit.
       const bare = pressableTags(readFileSync(file, 'utf8')).filter(
-        (tag) => !/accessibilityRole|accessibilityLabel/.test(tag),
+        (tag) => !/accessibilityRole|accessibilityLabel|accessible=\{false\}/.test(tag),
       );
       // The message matters more than the assertion: it has to say WHICH tag.
       expect(bare.map((t) => t.replace(/\s+/g, ' ').slice(0, 90))).toEqual([]);

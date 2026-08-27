@@ -43,7 +43,6 @@ import {
 import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import {
-  CHIP_BOTTOM,
   npcBubbleTop,
   NOTICE_MAX_HEIGHT,
   NOTICE_PRIORITY,
@@ -255,6 +254,22 @@ export default function BarklyRoom() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [storeOpen, setStoreOpen] = useState(false);
   const [foodOpen, setFoodOpen] = useState(false);
+
+  /**
+   * Open one sheet, closing the rest.
+   *
+   * Nothing stopped two from being up at once — the shop over the settings
+   * sheet, an encounter behind the food picker — and the one underneath still
+   * caught taps through the backdrop. One at a time, always.
+   */
+  const openOnly = (open: (v: boolean) => void) => {
+    setStoreOpen(false);
+    setSettingsOpen(false);
+    setPackOpen(false);
+    setPlanOpen(false);
+    setFoodOpen(false);
+    open(true);
+  };
   const [packOpen, setPackOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [typed, setTyped] = useState('');
@@ -472,7 +487,7 @@ export default function BarklyRoom() {
           </View>
           <Pressable
             style={styles.walletTap}
-            onPress={() => setStoreOpen(true)}
+            onPress={() => openOnly(setStoreOpen)}
             accessibilityRole="button"
             accessibilityLabel={`Shop. ${barkly.wallet.coins} coins, level ${barkly.level}.`}
           >
@@ -482,7 +497,7 @@ export default function BarklyRoom() {
             <Pressable
               style={styles.packButton}
               hitSlop={8}
-              onPress={() => setPackOpen(true)}
+              onPress={() => openOnly(setPackOpen)}
               accessibilityRole="button"
               accessibilityLabel={`Pack Book. ${barkly.relationship.archetype}. ${barkly.relationship.stage.label}.`}
             >
@@ -499,7 +514,7 @@ export default function BarklyRoom() {
             >
               <SpeakerIcon muted={barkly.muted} />
             </Pressable>
-            <Pressable style={styles.gear} hitSlop={10} onPress={() => setSettingsOpen(true)} accessibilityRole="button" accessibilityLabel="Settings">
+            <Pressable style={styles.gear} hitSlop={10} onPress={() => openOnly(setSettingsOpen)} accessibilityRole="button" accessibilityLabel="Settings">
               <View style={styles.gearDot} />
               <View style={styles.gearDot} />
               <View style={styles.gearDot} />
@@ -599,7 +614,7 @@ export default function BarklyRoom() {
         {barkly.adventure && (
           <Pressable
             style={[styles.planPill, planComplete && styles.planPillDone]}
-            onPress={() => setPlanOpen(true)}
+            onPress={() => openOnly(setPlanOpen)}
             accessibilityRole="button"
             accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete.`}
           >
@@ -827,13 +842,7 @@ export default function BarklyRoom() {
             />
             <ActionButton
               label="feed"
-              onPress={() => {
-                // Only make it a decision when there IS a decision: an empty
-                // cupboard should not cost a tap on a modal that says "nothing".
-                const hasTreats = Object.values(barkly.wallet.pantry).some((n) => n > 0);
-                if (hasTreats) setFoodOpen(true);
-                else void barkly.feed();
-              }}
+              onPress={() => openOnly(setFoodOpen)}
               disabled={locked || fetching}
               hint="Give him something to eat."
             />
@@ -856,6 +865,7 @@ export default function BarklyRoom() {
       <FoodSheet
         visible={foodOpen}
         onClose={() => setFoodOpen(false)}
+        onOpenShop={() => openOnly(setStoreOpen)}
         wallet={barkly.wallet}
         hungry={snapshot.stats.hunger > 45}
         onFeed={(itemId) => void barkly.feed(itemId)}

@@ -5,26 +5,27 @@
  */
 
 import {
+  LEVEL_XP,
+  SLOT_VERBS,
+  STORE,
+  Wallet,
   areaUnlocked,
-  grantCoins,
-  grantEverything,
-  grantLevel,
   buy,
-  isPlaced,
-  placedIn,
   claimDaily,
   consume,
   earn,
   equip,
   equippedItem,
   freshWallet,
-  LEVEL_XP,
+  grantCoins,
+  grantEverything,
+  grantLevel,
+  isPlaced,
   levelFor,
   levelProgress,
-  STORE,
+  placedIn,
   storeFor,
   unlockedAt,
-  Wallet,
 } from '../src/game/progression';
 
 const rich = (over: Partial<Wallet> = {}): Wallet => ({
@@ -311,5 +312,76 @@ describe('the house holds more than one thing at a time', () => {
     expect(placedIn(w, 'home').length).toBe(
       STORE.filter((i) => i.slot === 'home').length,
     );
+  });
+});
+
+/**
+ * Taking things off. Buying a collar used to be a one-way door: `equip` only
+ * ever SET the slot, so once he had one on he wore one forever and tapping the
+ * one he was wearing was a dead tap that flashed "Red collar on."
+ */
+describe('equip is a toggle, not a one-way door', () => {
+  const owning = (...ids: string[]): Wallet => ({
+    ...freshWallet(),
+    coins: 9999,
+    xp: 5000,
+    owned: [...ids],
+  });
+
+  it('tapping the collar he is wearing takes it off', () => {
+    let w = equip(owning('collar_red'), 'collar_red');
+    expect(w.equipped.collar).toBe('collar_red');
+    w = equip(w, 'collar_red');
+    expect(w.equipped.collar).toBeUndefined();
+    expect(isPlaced(w, 'collar_red')).toBe(false);
+    // and he still owns it
+    expect(w.owned).toContain('collar_red');
+  });
+
+  it('a different collar swaps rather than stacking', () => {
+    let w = equip(owning('collar_red', 'collar_blue'), 'collar_red');
+    w = equip(w, 'collar_blue');
+    expect(w.equipped.collar).toBe('collar_blue');
+    expect(isPlaced(w, 'collar_red')).toBe(false);
+  });
+
+  it('the same for a toy', () => {
+    let w = equip(owning('toy_ball'), 'toy_ball');
+    expect(isPlaced(w, 'toy_ball')).toBe(true);
+    w = equip(w, 'toy_ball');
+    expect(isPlaced(w, 'toy_ball')).toBe(false);
+  });
+
+  it('house items still toggle in and out of the room', () => {
+    let w = equip(owning('home_bed'), 'home_bed');
+    expect(isPlaced(w, 'home_bed')).toBe(true);
+    w = equip(w, 'home_bed');
+    expect(isPlaced(w, 'home_bed')).toBe(false);
+    w = equip(w, 'home_bed');
+    expect(isPlaced(w, 'home_bed')).toBe(true);
+  });
+
+  it('you cannot equip what you do not own', () => {
+    const w = equip(freshWallet(), 'collar_gold');
+    expect(w.equipped.collar).toBeUndefined();
+  });
+});
+
+describe('every slot has words that fit the thing', () => {
+  it('nothing offers to let you WEAR A BED', () => {
+    for (const slot of ['collar', 'toy', 'home', 'treat'] as const) {
+      const v = SLOT_VERBS[slot];
+      expect(v.on.length).toBeGreaterThan(0);
+      expect(v.off.length).toBeGreaterThan(0);
+      expect(v.onState.length).toBeGreaterThan(0);
+      expect(v.offState.length).toBeGreaterThan(0);
+    }
+    expect(SLOT_VERBS.home.on).not.toMatch(/wear/i);
+    expect(SLOT_VERBS.home.onState).not.toMatch(/worn/i);
+    expect(SLOT_VERBS.collar.on).toMatch(/put on/i);
+  });
+
+  it('covers every slot in the store, so no item can fall through', () => {
+    for (const item of STORE) expect(SLOT_VERBS[item.slot]).toBeDefined();
   });
 });

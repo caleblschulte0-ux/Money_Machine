@@ -10,10 +10,11 @@
  * transaction screen bolted onto a pet.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   isMultiSlot,
+  SLOT_VERBS,
   isPlaced,
   ItemSlot,
   levelProgress,
@@ -64,34 +65,68 @@ export function CoinPill({ coins, level, frac }: { coins: number; level: number;
 
 export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, devMode }: Props) {
   const [flash, setFlash] = useState<string | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Say something for a few seconds. The old flash was set and never cleared,
+   * so "Proper bed is out." sat at the top of the shop for the rest of the
+   * session, describing a tap you made ten purchases ago.
+   */
+  const say = (line: string) => {
+    setFlash(line);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setFlash(null), 3400);
+  };
+
+  useEffect(() => {
+    if (!visible) {
+      setFlash(null);
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+    }
+    return () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+    };
+  }, [visible]);
   const progress = levelProgress(wallet.xp);
   const shelf = storeFor(progress.level, devMode);
 
+  /**
+   * What tapping a row does, and what it says afterwards.
+   *
+   * Every state used to end in "wear": the accessibility label offered to let
+   * you WEAR A BED, and tapping the collar he already had on flashed
+   * "Red collar on." at a dog wearing it — a dead tap with a confident
+   * message. The verbs come from the slot now (SLOT_VERBS), and an item that
+   * is on can be taken off.
+   */
   const press = (item: StoreItem, locked: boolean, owned: boolean) => {
     if (locked) {
-      setFlash(`Level ${item.level} unlocks this one.`);
+      say(`Level ${item.level} unlocks this one. You're level ${progress.level}.`);
       return;
     }
     if (owned && !item.consumable) {
       const wasOut = isPlaced(wallet, item.id);
       onEquip(item.id);
-      // The house toggles in and out; a collar just goes on.
-      setFlash(
-        isMultiSlot(item.slot)
-          ? wasOut
-            ? `${item.name} put away.`
-            : `${item.name} is out.`
-          : `${item.name} on.`,
-      );
+      const v = SLOT_VERBS[item.slot];
+      say(wasOut ? `${item.name}: ${v.offState}.` : `${item.name}: ${v.onState}.`);
       return;
     }
-    setFlash(onBuy(item.id).line);
+    say(onBuy(item.id).line);
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+            {/*
+        Tapping the dimmed area closes the sheet.
+
+        Five bottom sheets shipped without it. The backdrop looks tappable,
+        every other app on the phone behaves that way, and the only way out was
+        a 15px ✕ in the corner — which is also the smallest tap target in the
+        app. `accessible={false}` keeps it out of the screen-reader order; the
+        ✕ is the labelled way out.
+      */}
+      <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
+        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
           <View style={styles.header}>
             <Text style={styles.title}>Shop</Text>
             <CoinPill coins={wallet.coins} level={progress.level} frac={progress.frac} />
@@ -133,9 +168,12 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                           locked
                             ? `${item.name}, locked until level ${item.level}`
                             : owned && !item.consumable
-                              ? `${item.name}, owned${worn ? ', currently worn' : ''}. Tap to wear.`
-                              : `${item.name}, ${item.price} coins. ${afford ? '' : 'Not enough coins.'}`
+                              ? `${item.name}. ${worn ? SLOT_VERBS[item.slot].onState : SLOT_VERBS[item.slot].offState}. Tap to ${
+                                  worn ? SLOT_VERBS[item.slot].off : SLOT_VERBS[item.slot].on
+                                }.`
+                              : `${item.name}, ${item.price} coins.${afford || devMode ? '' : ' Not enough coins.'}`
                         }
+                        accessibilityState={{ disabled: locked }}
                       >
                         <Text style={styles.icon}>{item.icon}</Text>
                         <View style={styles.itemText}>
@@ -149,9 +187,9 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                         {locked ? (
                           <Text style={styles.lockTag}>Lv {item.level}</Text>
                         ) : worn ? (
-                          <Text style={styles.wornTag}>{multi ? 'out' : 'worn'}</Text>
+                          <Text style={styles.wornTag}>{SLOT_VERBS[item.slot].onState}</Text>
                         ) : owned && !item.consumable ? (
-                          <Text style={styles.ownedTag}>{multi ? 'put away' : 'owned'}</Text>
+                          <Text style={styles.ownedTag}>{SLOT_VERBS[item.slot].offState}</Text>
                         ) : (
                           <Text style={[styles.price, !afford && !devMode && styles.priceShort]}>
                             {devMode ? 'free' : `${item.price}c`}
@@ -166,7 +204,7 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
 
             <Text style={styles.note}>
               His place holds everything at once — a bed AND a rug AND a window. Collars and toys
-              are one at a time. Tap anything you own to put it on, out, or away.
+              are one at a time. Tap anything you already own to put it on or take it off again.
             </Text>
             <Text style={styles.note}>
               Coins come from looking after him — feeding him when he is hungry, playing when he has
@@ -174,8 +212,8 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
               money.
             </Text>
           </ScrollView>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

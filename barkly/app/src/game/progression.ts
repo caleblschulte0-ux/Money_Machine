@@ -278,23 +278,42 @@ function buyLine(item: StoreItem): string {
 }
 
 /**
- * Put something on, or — for the house — toggle it in and out of the room.
- * A single slot swaps; a multi slot accumulates.
+ * TOGGLE something you own: on/off for a collar or a toy, in/out of the room
+ * for the house.
+ *
+ * A single slot used to only ever SET, never clear — so once you bought a
+ * collar he wore one forever. There was no way to take it off, and tapping the
+ * one he had on was a dead tap that flashed "Red collar on." at a dog already
+ * wearing it. Buying a thing should not be a one-way door.
  */
 export function equip(wallet: Wallet, itemId: string): Wallet {
   const item = STORE.find((i) => i.id === itemId);
   if (!item || item.consumable || !wallet.owned.includes(itemId)) return wallet;
+
   if (!isMultiSlot(item.slot)) {
-    return { ...wallet, equipped: { ...wallet.equipped, [item.slot]: itemId } };
+    const equipped = { ...wallet.equipped };
+    if (equipped[item.slot] === itemId) delete equipped[item.slot];
+    else equipped[item.slot] = itemId;
+    return { ...wallet, equipped };
   }
+
   const placed = wallet.placed ?? [];
   return {
     ...wallet,
-    placed: placed.includes(itemId)
-      ? placed.filter((id) => id !== itemId)
-      : [...placed, itemId],
+    placed: placed.includes(itemId) ? placed.filter((id) => id !== itemId) : [...placed, itemId],
   };
 }
+
+/**
+ * The words for a slot, so nothing ever offers to let you WEAR A BED.
+ * Every label, hint and confirmation in the store comes from here.
+ */
+export const SLOT_VERBS: Record<ItemSlot, { on: string; off: string; onState: string; offState: string }> = {
+  collar: { on: 'put on', off: 'take off', onState: 'wearing', offState: 'in the drawer' },
+  toy: { on: 'give him', off: 'take back', onState: 'has it', offState: 'in the toy box' },
+  home: { on: 'put out', off: 'put away', onState: 'out', offState: 'put away' },
+  treat: { on: 'buy another', off: 'buy another', onState: 'in the cupboard', offState: 'cupboard empty' },
+};
 
 export function equippedItem(wallet: Wallet, slot: ItemSlot): StoreItem | undefined {
   const id = wallet.equipped[slot];

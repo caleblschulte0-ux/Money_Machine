@@ -32,8 +32,17 @@ function TraitCard({ label, score, detail }: { label: string; score: number; det
 export default function PackBookSheet({ visible, onClose, profile }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+            {/*
+        Tapping the dimmed area closes the sheet.
+
+        Five bottom sheets shipped without it. The backdrop looks tappable,
+        every other app on the phone behaves that way, and the only way out was
+        a 15px ✕ in the corner — which is also the smallest tap target in the
+        app. `accessible={false}` keeps it out of the screen-reader order; the
+        ✕ is the labelled way out.
+      */}
+      <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
+        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
           <View style={styles.header}>
             <View>
               <Text style={styles.eyebrow}>THE PACK BOOK</Text>
@@ -145,8 +154,8 @@ export default function PackBookSheet({ visible, onClose, profile }: Props) {
               </Text>
             </View>
           </ScrollView>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

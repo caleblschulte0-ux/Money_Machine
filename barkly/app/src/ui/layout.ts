@@ -25,9 +25,6 @@
  * enter another.
  */
 
-/** Header row: wordmark, coins, pack, mute, settings. */
-export const CHROME_TOP = 0;
-
 /**
  * Everything above this is fixed chrome (header, location tabs, plan pill).
  * Measured with all three present, which is the normal case.
@@ -98,9 +95,6 @@ export const NPC_BUBBLE_GAP = 12;
 export function npcBubbleTop(screenHeight: number): number {
   return speechTail(screenHeight) + NPC_BUBBLE_GAP;
 }
-
-/** The state chip ("napping", "listening") sits under him, above the controls. */
-export const CHIP_BOTTOM = 150;
 
 /**
  * Notices are mutually exclusive and this is the order they win in: a hard
