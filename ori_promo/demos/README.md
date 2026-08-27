@@ -23,6 +23,40 @@ cd filmN && python3 render4.py && python3 assemble4.py     # etc.
 python3 rebeat.py b1 b2                                   # re-render named beats only
 ```
 
+## LOCKED — do not re-render Demos 1, 3, 4 and 5
+
+Signed off at r75 (2026-08-27) against the r74 masters. The review record
+is `r75__chatgpt__four_film_signoff_and_demo2_asset_gate.md` in the
+ORI_AI_HANDOFF Drive folder.
+
+| film | running time | state |
+|---|---|---|
+| 1 THROUGH THE GLASS | 32.000s | **locked** |
+| 2 WHAT STOOD HERE | 32.500s | visual execution, claim framing, end card and concept all PASS — held on the asset rule alone |
+| 3 THEN AND NOW | 32.000s | **locked** |
+| 4 DEEP TIME | 29.000s | **locked** |
+| 5 THE TOUR | 33.500s | **locked** |
+
+A locked film is not reopened by a good idea. It is reopened by an
+explicit operator brief and nothing else. If you are a later session
+holding a real improvement to one of these four, write it down and ask —
+do not render it. Seven rounds of this project were spent finding defects
+that shipped; the four that survived that are not worth churning.
+
+**Demo 2 is blocked on an operator action neither agent can take.** r00
+prohibits newly generated AI imagery; the operator lifted that verbally on
+2026-08-26 and a relayed report is not an authoritative Drive record.
+Either of these closes it, and both are the operator's to do:
+
+1. an operator-authored amendment in ORI_AI_HANDOFF explicitly approving
+   Demo 2's exact provisional reconstruction assets, or
+2. link-sharing the folder so the approved replacement assets
+   (`r60__chatgpt__ar__A1..A5.png`) can actually be fetched — as of r74 the
+   folder and A1.png each return exactly one permission, owner only.
+
+Until then Demo 2 holds at its current visual master. Do not rebuild it
+speculatively and do not swap sources without one of the two above.
+
 ## The failure mode this project actually has
 
 Three separate fixes landed in Demo 1 and never reached the other four. Each
