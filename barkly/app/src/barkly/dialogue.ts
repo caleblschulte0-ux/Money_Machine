@@ -1,10 +1,8 @@
 /**
  * The dialogue engine — one conversation round, end to end.
  *
- * User-taught cues are checked BEFORE the provider. Once Barkly learns a trick,
- * saying its cue does not need another AI request and still works when the live
- * model is unavailable. A small set of unambiguous physical tricks can also be
- * taught locally; complex teaching falls through to the model.
+ * User-taught cues are checked BEFORE the provider. Learned tricks and
+ * multi-step routines therefore still work offline and cost no model call.
  */
 
 import { CharacterState } from './character';
@@ -16,7 +14,6 @@ import { DialogueProvider } from '../providers/types';
 
 export interface ConverseResult {
   reply: BarklyReply;
-  /** Facts whose value changed this turn — "actually it's green now". */
   corrections: { key: string; from: string; to: string }[];
 }
 
@@ -49,7 +46,7 @@ export class DialogueEngine {
     const isTeaching = looksLikeTrainingInstruction(text);
 
     // A teaching sentence may contain an existing cue while correcting it, so
-    // never fire a trick in the middle of teaching/reteaching that trick.
+    // never fire the old trick in the middle of teaching the new version.
     if (!isTeaching) {
       const trained = this.memory.matchTraining(text);
       if (trained) {
@@ -57,6 +54,7 @@ export class DialogueEngine {
           speech: trained.speech,
           reaction: trained.reaction,
           actions: trained.actions,
+          routine: trained.routine,
           newUserFacts: [],
           newBarklyMemories: [],
           learnedTraining: [],
@@ -69,19 +67,24 @@ export class DialogueEngine {
       }
     }
 
-    // Offline-capable teaching for simple, representable physical tricks. The
-    // parser returns null rather than bluffing when it cannot faithfully map
-    // the instruction to Barkly's current body-action vocabulary.
+    // Offline-capable teaching for representable physical tricks/routines.
     if (isTeaching) {
       const local = parseLocalTrainingInstruction(text);
       if (local) {
         await this.memory.learnTraining([local]);
+        const isRoutine = (local.routine?.length ?? 0) > 1;
         const reply: BarklyReply = {
-          speech: `Oh, I know this one now. Say “${local.cue}” and see what happens.`,
+          speech: isRoutine
+            ? `A whole routine? Fine. Say “${local.cue}”. I know the order.`
+            : `Oh, I know this one now. Say “${local.cue}” and see what happens.`,
           reaction: 'happy',
           actions: ['EAR_PERK', 'TAIL_WAG'],
           newUserFacts: [],
-          newBarklyMemories: [`You taught me the cue “${local.cue}”.`],
+          newBarklyMemories: [
+            isRoutine
+              ? `You taught me the routine “${local.cue}”: ${local.instruction}.`
+              : `You taught me the cue “${local.cue}”.`,
+          ],
           learnedTraining: [local],
         };
         const now = Date.now();
@@ -122,8 +125,6 @@ export class DialogueEngine {
       corrections = result.updated;
     }
 
-    // Defense in depth: the model is not trusted to decide that an ordinary
-    // sentence was a training moment. The user's own wording must pass the gate.
     const learned = reply.learnedTraining ?? [];
     if (isTeaching && learned.length > 0) {
       await this.memory.learnTraining(learned);
