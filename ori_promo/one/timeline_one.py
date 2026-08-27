@@ -76,8 +76,8 @@ def main():
     for b, clip, tin, st, d, note in BEATS:
         v = TITLES.get(b)
         if v:
-            L.append(f"  {st+v[2]:5.1f}s  \"{v[0]}\" / \"{v[1]}\"   (location "
-                     f"title, not an AR label — no reticle, no leader)")
+            L.append(f"  {st+v[2]:5.1f}s  \"{v[0]}\" / \"{v[1]}\"   (the film's "
+                     f"own voice, not an AR label — no reticle, no leader)")
     L.append("")
     # ICE IS A DICT KEYED BY BEAT and always has been. This read
     # ICE['beat'] / ICE['in'], which are not keys of anything -- so the
