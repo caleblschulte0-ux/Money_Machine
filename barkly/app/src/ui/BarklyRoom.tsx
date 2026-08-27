@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useBarkly } from '../hooks/useBarkly';
+import AdventureSheet from './AdventureSheet';
 import BarklyPhotoView from './BarklyPhotoView';
 import EncounterSheet from './EncounterSheet';
 import Onboarding from './Onboarding';
@@ -182,6 +183,7 @@ export default function BarklyRoom() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [storeOpen, setStoreOpen] = useState(false);
   const [packOpen, setPackOpen] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
   const [typed, setTyped] = useState('');
   const [heartBurst, setHeartBurst] = useState(0);
   const [fetching, setFetching] = useState(false);
@@ -194,6 +196,9 @@ export default function BarklyRoom() {
   const stateLabel = STATE_LABEL[snapshot.state];
   const hour = new Date().getHours();
   const npcsHere = LOCATIONS[location].npcIds;
+  const planDone = barkly.adventure?.goals.filter((goal) => goal.done).length ?? 0;
+  const planTotal = barkly.adventure?.goals.length ?? 0;
+  const planComplete = Boolean(barkly.adventure?.completedAt);
 
   const sceneFade = useRef(new Animated.Value(1)).current;
   const walkX = useRef(new Animated.Value(0)).current;
@@ -368,6 +373,23 @@ export default function BarklyRoom() {
           })}
         </View>
 
+        {barkly.adventure && (
+          <Pressable
+            style={[styles.planPill, planComplete && styles.planPillDone]}
+            onPress={() => setPlanOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete.`}
+          >
+            <Text style={[styles.planLabel, planComplete && styles.planLabelDone]}>PLAN</Text>
+            <View style={[styles.planDot, planComplete && styles.planDotDone]} />
+            <Text style={[styles.planProgress, planComplete && styles.planProgressDone]}>{planDone}/{planTotal}</Text>
+            <Text style={[styles.planTease, planComplete && styles.planTeaseDone]} numberOfLines={1}>
+              {planComplete ? 'disturbingly productive' : barkly.adventure.goals.find((goal) => !goal.done)?.label ?? 'see the plan'}
+            </Text>
+            <Text style={[styles.planArrow, planComplete && styles.planProgressDone]}>›</Text>
+          </Pressable>
+        )}
+
         <View style={styles.bubbleZone}>
           {bubbleText ? (
             <AnimatedBubble changeKey={bubbleText}>
@@ -481,6 +503,7 @@ export default function BarklyRoom() {
 
       <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={barkly.buy} onEquip={barkly.equip} devMode={barkly.devMode} />
       <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} />
+      <AdventureSheet visible={planOpen} onClose={() => setPlanOpen(false)} adventure={barkly.adventure} />
       <EncounterSheet
         encounter={barkly.activeEncounter}
         busy={busy}
@@ -592,7 +615,31 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: '800', color: INK_SOFT, letterSpacing: 0.4 },
   tabTextActive: { color: '#FBF6EA' },
 
-  bubbleZone: { minHeight: 92, justifyContent: 'flex-end', alignItems: 'center', marginTop: 6 },
+  planPill: {
+    alignSelf: 'center',
+    maxWidth: '94%',
+    marginTop: 7,
+    minHeight: 30,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,253,247,0.92)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...(shadowCard as object),
+  },
+  planPillDone: { backgroundColor: 'rgba(232,238,217,0.96)' },
+  planLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 1.1, color: '#8B6817' },
+  planLabelDone: { color: '#5E6F40' },
+  planDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#D1A63B', marginHorizontal: 7 },
+  planDotDone: { backgroundColor: '#70834D' },
+  planProgress: { fontSize: 12, fontWeight: '900', color: INK },
+  planProgressDone: { color: '#53623A' },
+  planTease: { flexShrink: 1, maxWidth: 190, marginLeft: 8, fontSize: 11.5, color: INK_SOFT },
+  planTeaseDone: { color: '#71805C' },
+  planArrow: { marginLeft: 7, fontSize: 18, lineHeight: 18, color: '#A08759' },
+
+  bubbleZone: { minHeight: 92, justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 },
   hint: { fontSize: 15, color: INK_SOFT, marginBottom: 14 },
   hintNight: { color: '#E8DFC8' },
   bubble: { maxWidth: '92%', backgroundColor: CARD, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...(shadowCard as object) },
