@@ -120,6 +120,8 @@ export interface BarklyController {
   thought: string | null;
 
   memorySnapshot(): MemoryState;
+  /** Remove one thing he knows, without wiping the whole relationship. */
+  forgetFact(id: string): Promise<void>;
   forgetEverything(): Promise<void>;
 }
 
@@ -146,6 +148,11 @@ export function useBarkly(): BarklyController {
    */
   const lastMishap = useRef<string | null>(null);
   const warnedUnwritable = useRef(false);
+  // Memory lives outside React state. This counter exists only so that
+  // changing it re-renders the hook's consumer, which re-reads
+  // memorySnapshot() during render and redraws the Settings list. Nothing
+  // reads the number itself, so it is not on the public controller.
+  const [, setMemoryVersion] = useState(0);
   const sayMishap = useCallback((kind: Mishap) => {
     const line = mishapLine(kind, lastMishap.current);
     lastMishap.current = line;
@@ -760,6 +767,10 @@ export function useBarkly(): BarklyController {
     stashItems,
     thought,
     memorySnapshot: () => memory.snapshot(),
+    forgetFact: async (id: string) => {
+      await memory.forgetFact(id);
+      setMemoryVersion((v) => v + 1);
+    },
     forgetEverything: async () => {
       await memory.forgetAll();
       await stash.clear();

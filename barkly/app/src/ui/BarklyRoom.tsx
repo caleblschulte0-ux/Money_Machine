@@ -540,6 +540,7 @@ export default function BarklyRoom() {
         modelConfigured={barkly.modelConfigured}
         voice={{ route: barkly.voiceRoute, muted: barkly.muted }}
         sttAvailable={sttAvailable}
+        onForgetFact={barkly.forgetFact}
         onForgetEverything={barkly.forgetEverything}
       />
     </View>

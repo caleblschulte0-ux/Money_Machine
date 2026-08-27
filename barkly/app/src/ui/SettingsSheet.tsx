@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import ParentalGate from './ParentalGate';
+import PrivacySheet from './PrivacySheet';
 import { MemoryState } from '../barkly/memory';
 import { BarklyStats } from '../barkly/types';
 import { Treasure } from '../world/stash';
@@ -22,6 +24,8 @@ interface Props {
   /** Which link of the voice chain last made a sound, and whether he is muted. */
   voice: { route: 'barkly' | 'device' | 'silent' | null; muted: boolean };
   sttAvailable: boolean;
+  /** Remove one thing he knows, without wiping everything. */
+  onForgetFact?: (id: string) => Promise<void>;
   onForgetEverything: () => Promise<void>;
 }
 
@@ -51,9 +55,18 @@ export default function SettingsSheet(props: Props) {
     modelConfigured,
     voice,
     sttAvailable,
+    onForgetFact,
     onForgetEverything,
   } = props;
   const [wiping, setWiping] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
+
+  const doForget = async () => {
+    setWiping(true);
+    await onForgetEverything();
+    setWiping(false);
+  };
 
   const confirmForget = () => {
     Alert.alert(
@@ -64,11 +77,7 @@ export default function SettingsSheet(props: Props) {
         {
           text: 'Forget',
           style: 'destructive',
-          onPress: async () => {
-            setWiping(true);
-            await onForgetEverything();
-            setWiping(false);
-          },
+          onPress: doForget,
         },
       ],
     );
@@ -128,9 +137,27 @@ export default function SettingsSheet(props: Props) {
             </Text>
 
             <Text style={styles.section}>What Barkly knows about you</Text>
-            {memory.userFacts.length === 0 && <Text style={styles.empty}>Nothing yet. Tell him your name.</Text>}
-            {memory.userFacts.map((f) => (
-              <Text key={f} style={styles.row}>• {f}</Text>
+            {memory.facts.length === 0 && <Text style={styles.empty}>Nothing yet. Tell him your name.</Text>}
+            {/* Everything he has, not a summary - and each line individually
+                removable, so correcting one wrong thing does not cost you the
+                whole relationship. */}
+            {memory.facts.map((f) => (
+              <View key={f.id} style={styles.factRow}>
+                <Text style={styles.factText}>
+                  • {f.subject === 'person' ? '' : `${f.subject}: `}
+                  {f.key.replace(/_/g, ' ')} — {f.value}
+                </Text>
+                {onForgetFact && (
+                  <Pressable
+                    hitSlop={10}
+                    onPress={() => void onForgetFact(f.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Make Barkly forget: ${f.key.replace(/_/g, ' ')} ${f.value}`}
+                  >
+                    <Text style={styles.factForget}>forget</Text>
+                  </Pressable>
+                )}
+              </View>
             ))}
 
             <Text style={styles.section}>What Barkly remembers doing with you</Text>
@@ -139,14 +166,48 @@ export default function SettingsSheet(props: Props) {
               <Text key={f} style={styles.row}>• {f}</Text>
             ))}
 
-            <Pressable style={styles.forget} onPress={confirmForget} disabled={wiping}>
+            <Pressable
+              style={styles.forget}
+              onPress={() => setGateOpen(true)}
+              disabled={wiping}
+              accessibilityRole="button"
+            >
               <Text style={styles.forgetText}>{wiping ? 'Forgetting…' : 'Forget everything'}</Text>
             </Pressable>
+
+            <Pressable
+              style={styles.parents}
+              onPress={() => setPrivacyOpen(true)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.parentsText}>For parents: microphone, data and deletion</Text>
+            </Pressable>
+
             <Text style={styles.note}>
               Audio is only captured while you hold TALK and never stored. Speech is
               recognized on this device; only the text is sent to the dialogue provider.
             </Text>
           </ScrollView>
+
+          <ParentalGate
+            visible={gateOpen}
+            purpose="This permanently deletes everything Barkly remembers. It cannot be undone."
+            onPass={() => {
+              setGateOpen(false);
+              void doForget();
+            }}
+            onCancel={() => setGateOpen(false)}
+          />
+          <PrivacySheet
+            visible={privacyOpen}
+            onClose={() => setPrivacyOpen(false)}
+            modelConfigured={modelConfigured}
+            micAvailable={sttAvailable}
+            onForgetEverything={() => {
+              setPrivacyOpen(false);
+              void doForget();
+            }}
+          />
         </View>
       </View>
     </Modal>
@@ -181,5 +242,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forgetText: { color: 'white', fontWeight: '800', fontSize: 15 },
+  factRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  factText: { flex: 1, fontSize: 14, color: '#5C4F3E', lineHeight: 21 },
+  factForget: { fontSize: 12, color: '#B3402E', paddingVertical: 3 },
+  parents: {
+    marginTop: 10,
+    borderRadius: 999,
+    paddingVertical: 13,
+    alignItems: 'center',
+    backgroundColor: '#EDE1C8',
+  },
+  parentsText: { fontSize: 15, fontWeight: '700', color: '#5C4F3E' },
   note: { marginTop: 14, marginBottom: 24, fontSize: 12, color: '#9A8F7A', lineHeight: 17 },
 });
