@@ -164,7 +164,13 @@ SCHED = {
   # runs two systems, because three fully active at once read as clutter.
   "b1": dict(shells=(0.10, 0.80), sweep=(1.00, 3.90), classes=None, ap=None),
   "b2": dict(shells=(0.10, 1.10), sweep=None, classes=(0.20, 2.00), ap=None),
-  "b3": dict(shells=(0.20, 1.20), sweep=None, classes=None, ap=(1.60, 3.40)),
+  # b3 runs the aperture ALONE. With shells on, the depth-shell edges trace
+  # the visitor's silhouette -- he is a genuine depth discontinuity, so the
+  # system is not wrong -- and the result is a bright cyan halo around a
+  # person standing next to the thing the beat is actually about. This is the
+  # film's strongest sequence and it just got 3 extra seconds to be read; it
+  # should not share them with a correct but distracting second reading.
+  "b3": dict(shells=None, sweep=None, classes=None, ap=(1.60, 3.40)),
   "b4": dict(shells=(0.10, 0.90), sweep=(1.20, 4.40), classes=(0.40, 1.90),
              ap=None),
 }
