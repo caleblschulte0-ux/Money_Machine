@@ -43,6 +43,12 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
+      # Do not auto-fix dependency trees in CI. Fail only on high/critical
+      # production dependency findings; moderate transitive findings are still
+      # visible in npm output and should be reviewed deliberately with Expo.
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Typecheck
         run: npm run typecheck
 
