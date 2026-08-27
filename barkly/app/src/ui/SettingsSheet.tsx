@@ -7,12 +7,14 @@ import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MemoryState } from '../barkly/memory';
 import { BarklyStats } from '../barkly/types';
+import { Treasure } from '../world/stash';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   memory: MemoryState;
   stats: BarklyStats;
+  stash: Treasure[];
   dialogueProviderName: string;
   sttAvailable: boolean;
   onForgetEverything: () => Promise<void>;
@@ -33,7 +35,7 @@ function StatBar({ label, value, invert }: { label: string; value: number; inver
 }
 
 export default function SettingsSheet(props: Props) {
-  const { visible, onClose, memory, stats, dialogueProviderName, sttAvailable, onForgetEverything } = props;
+  const { visible, onClose, memory, stats, stash, dialogueProviderName, sttAvailable, onForgetEverything } = props;
   const [wiping, setWiping] = useState(false);
 
   const confirmForget = () => {
@@ -72,6 +74,12 @@ export default function SettingsSheet(props: Props) {
             <StatBar label="energy" value={stats.energy} />
             <StatBar label="tummy" value={stats.hunger} invert />
             <StatBar label="bond" value={stats.affection} />
+
+            <Text style={styles.section}>Barkly's stash</Text>
+            {stash.length === 0 && <Text style={styles.empty}>Nothing yet. There's a dig spot at the park…</Text>}
+            {stash.map((t) => (
+              <Text key={t.id} style={styles.row}>{t.icon}  {t.name}</Text>
+            ))}
 
             <Text style={styles.section}>Providers</Text>
             <Text style={styles.row}>Dialogue: {dialogueProviderName}</Text>

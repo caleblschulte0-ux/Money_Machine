@@ -26,6 +26,8 @@ import { asyncStorageStore } from '../storage/asyncStorageStore';
 import { DEFAULT_PROFILE, profileKey } from '../storage/types';
 import { LOCATIONS, LocationId } from '../world/locations';
 import { NPCS, NpcId } from '../world/npcs';
+import { Stash, Treasure } from '../world/stash';
+import { pickThought } from '../world/thoughts';
 
 const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
 const LOCATION_KEY = profileKey(DEFAULT_PROFILE, 'location-v1');
@@ -67,6 +69,13 @@ export interface BarklyController {
   /** The other dog's active speech line, shown over that NPC. */
   npcBubble: { id: NpcId; line: string } | null;
 
+  /** Dig at the park; resolves with what he found (null if he's busy). */
+  dig(): Promise<Treasure | null>;
+  /** Everything he's dug up so far. */
+  stashItems: Treasure[];
+  /** Current idle thought, if his mind is wandering. */
+  thought: string | null;
+
   memorySnapshot(): MemoryState;
   forgetEverything(): Promise<void>;
 }
@@ -87,6 +96,10 @@ export function useBarkly(): BarklyController {
   const [npcBubble, setNpcBubble] = useState<{ id: NpcId; line: string } | null>(null);
   const npcLineCounter = useRef(0);
   const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stash = useMemo(() => new Stash(asyncStorageStore, DEFAULT_PROFILE), []);
+  const [stashItems, setStashItems] = useState<Treasure[]>([]);
+  const [thought, setThought] = useState<string | null>(null);
+  const thoughtSeed = useRef(Math.floor(Math.random() * 1000));
 
   const snapshotRef = useRef(snapshot);
   snapshotRef.current = snapshot;
@@ -135,6 +148,8 @@ export function useBarkly(): BarklyController {
       } catch {
         // keep home
       }
+      const items = await stash.load();
+      if (!cancelled) setStashItems(items);
       const available = await providers.stt.isAvailable();
       if (!cancelled) setSttAvailable(available);
     })();
@@ -206,6 +221,30 @@ export function useBarkly(): BarklyController {
         relationship: NPCS[id].relationship,
         personality: NPCS[id].personality,
       })),
+      stashItems: stash.list().slice(-5).map((t) => t.name),
+    };
+  }, [stash]);
+
+  // --- idle thoughts: his mind wanders every so often ---
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const IDLE_STATES = ['idle', 'happy', 'hungry'];
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (!alive) return;
+        if (IDLE_STATES.includes(snapshotRef.current.state)) {
+          thoughtSeed.current += 1;
+          setThought(pickThought(locationRef.current, new Date().getHours(), thoughtSeed.current));
+          setTimeout(() => alive && setThought(null), 5200);
+        }
+        schedule();
+      }, 22000 + Math.random() * 16000);
+    };
+    schedule();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
     };
   }, []);
 
@@ -313,6 +352,19 @@ export function useBarkly(): BarklyController {
     [busy, dispatch, memory, providers],
   );
 
+  const dig = useCallback(async (): Promise<Treasure | null> => {
+    const s = snapshotRef.current.state;
+    if (busy || s === 'listening' || s === 'thinking' || s === 'speaking') return null;
+    const found = await stash.dig();
+    setStashItems(stash.list());
+    dispatch({ type: 'TREASURE' });
+    const line = `${found.name}?! MINE. This goes in the stash.`;
+    setLastExchange({ userText: '', barklyText: line });
+    providers.tts.speak(line).catch(() => {});
+    memory.remember([], [`Dug up ${found.name} at the park.`]).catch(() => {});
+    return found;
+  }, [busy, dispatch, memory, providers, stash]);
+
   const actions = useMemo<BodyAction[]>(() => {
     const ambient = ambientActions(snapshot.state);
     const merged =
@@ -344,9 +396,14 @@ export function useBarkly(): BarklyController {
     goTo,
     npcTalk,
     npcBubble,
+    dig,
+    stashItems,
+    thought,
     memorySnapshot: () => memory.snapshot(),
     forgetEverything: async () => {
       await memory.forgetAll();
+      await stash.clear();
+      setStashItems([]);
       setLastExchange(null);
     },
   };

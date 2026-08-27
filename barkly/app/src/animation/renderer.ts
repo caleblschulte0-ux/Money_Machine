@@ -15,4 +15,10 @@ export interface BarklyRenderProps {
   state: BarklyState;
   /** Body commands currently in effect (ambient + dialogue-chosen). */
   actions: BodyAction[];
+  /**
+   * Scene-motion hint from the stage (not the brain): which travel pose to
+   * hold while the stage moves him — running right, or carrying the ball
+   * back leftward. Renderers without matching art may ignore it.
+   */
+  variant?: 'runRight' | 'carryLeft' | null;
 }

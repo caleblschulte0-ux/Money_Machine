@@ -170,6 +170,8 @@ export default function BarklyRoom() {
   const [typed, setTyped] = useState('');
   const [heartBurst, setHeartBurst] = useState(0);
   const [fetching, setFetching] = useState(false);
+  const [digging, setDigging] = useState(false);
+  const [variant, setVariant] = useState<'runRight' | 'carryLeft' | null>(null);
 
   const { snapshot, actions, lastExchange, partialTranscript, error, busy, sttAvailable, location } = barkly;
   const listening = snapshot.state === 'listening';
@@ -188,6 +190,8 @@ export default function BarklyRoom() {
     prevLocation.current = location;
     sceneFade.setValue(0);
     walkX.setValue(-170);
+    setVariant('runRight');
+    setTimeout(() => setVariant(null), 760);
     Animated.parallel([
       Animated.timing(sceneFade, { toValue: 1, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(walkX, { toValue: 0, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }),
@@ -206,17 +210,24 @@ export default function BarklyRoom() {
   const chaseX = useRef(new Animated.Value(0)).current;
   const ballFlight = useRef(new Animated.Value(0)).current;
   const runFetch = () => {
-    if (fetching || busy) return;
+    if (fetching || busy || digging) return;
     setFetching(true);
     ballFlight.setValue(0);
+    Animated.timing(ballFlight, { toValue: 1, duration: 620, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+    setTimeout(() => setVariant('runRight'), 380);
     Animated.sequence([
-      Animated.timing(ballFlight, { toValue: 1, duration: 620, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.delay(560),
       Animated.timing(chaseX, { toValue: 88, duration: 480, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      Animated.delay(260),
-      Animated.timing(chaseX, { toValue: 0, duration: 520, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      // the grab: a quick nose-down dip
+      Animated.timing(hopY, { toValue: 12, duration: 130, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(hopY, { toValue: 0, duration: 150, easing: Easing.in(Easing.quad), useNativeDriver: true }),
     ]).start(() => {
-      barkly.play(); // stats + the playing beat
-      setFetching(false);
+      setVariant('carryLeft'); // ball in mouth, heading home
+      Animated.timing(chaseX, { toValue: 0, duration: 560, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start(() => {
+        setVariant(null);
+        barkly.play(); // stats + the playing beat
+        setFetching(false);
+      });
     });
   };
   const ballX = ballFlight.interpolate({ inputRange: [0, 1], outputRange: [0, 118] });
@@ -226,6 +237,24 @@ export default function BarklyRoom() {
     const text = typed;
     setTyped('');
     await barkly.submitText(text);
+  };
+
+  const digRotate = useRef(new Animated.Value(0)).current;
+  const runDig = () => {
+    if (digging || fetching || busy) return;
+    setDigging(true);
+    // fast little digging wiggle
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(digRotate, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(digRotate, { toValue: -1, duration: 90, useNativeDriver: true }),
+      ]),
+      { iterations: 8 },
+    ).start(async () => {
+      digRotate.setValue(0);
+      await barkly.dig();
+      setDigging(false);
+    });
   };
 
   const pet = () => {
@@ -252,7 +281,9 @@ export default function BarklyRoom() {
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* header: name + settings */}
         <View style={styles.header}>
-          <Text style={styles.wordmark}>Barkly</Text>
+          <View style={styles.wordmarkChip}>
+            <Text style={styles.wordmark}>Barkly</Text>
+          </View>
           <Pressable style={styles.gear} hitSlop={10} onPress={() => setSettingsOpen(true)}>
             <View style={styles.gearDot} />
             <View style={styles.gearDot} />
@@ -306,12 +337,20 @@ export default function BarklyRoom() {
               onPress={() => barkly.npcTalk(id)}
             />
           ))}
-          <Animated.View style={{ transform: [{ translateX: Animated.add(chaseX, walkX) }, { translateY: hopY }] }}>
+          <Animated.View
+            style={{
+              transform: [
+                { translateX: Animated.add(chaseX, walkX) },
+                { translateY: hopY },
+                { rotate: digRotate.interpolate({ inputRange: [-1, 1], outputRange: ['-7deg', '7deg'] }) },
+              ],
+            }}
+          >
             <Pressable onPress={pet} disabled={busy}>
-              <Renderer state={snapshot.state} actions={actions} />
+              <Renderer state={snapshot.state} actions={actions} variant={variant} />
             </Pressable>
           </Animated.View>
-          {fetching && (
+          {fetching && variant !== 'carryLeft' && (
             <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
               <Svg width={30} height={30} viewBox="0 0 30 30">
                 <Circle cx={15} cy={15} r={13} fill="#B3402E" />
@@ -319,6 +358,23 @@ export default function BarklyRoom() {
                 <Circle cx={10} cy={9} r={3.5} fill="#FFFFFF" opacity={0.35} />
               </Svg>
             </Animated.View>
+          )}
+          {location === 'park' && !asleep && (
+            <Pressable style={styles.digSpot} onPress={runDig} disabled={digging || fetching || busy} hitSlop={8}>
+              <Svg width={86} height={44} viewBox="0 0 86 44">
+                <Path d="M6 38 Q43 2 80 38 Z" fill="#8A6B3A" />
+                <Path d="M18 38 Q43 14 68 38 Z" fill="#75592F" />
+                <Circle cx={43} cy={34} r={7} fill="#5C4426" />
+              </Svg>
+              <Text style={styles.digHint}>{digging ? '…' : 'dig?'}</Text>
+            </Pressable>
+          )}
+          {barkly.thought && !bubbleText && (
+            <View style={styles.thought} pointerEvents="none">
+              <Text style={styles.thoughtText}>{barkly.thought}</Text>
+              <View style={styles.thoughtDot1} />
+              <View style={styles.thoughtDot2} />
+            </View>
           )}
           {snapshot.state === 'eating' && <FoodBowl />}
           {snapshot.state === 'playing' && !fetching && <Ball />}
@@ -387,6 +443,7 @@ export default function BarklyRoom() {
         onClose={() => setSettingsOpen(false)}
         memory={barkly.memorySnapshot()}
         stats={snapshot.stats}
+        stash={barkly.stashItems}
         dialogueProviderName={barkly.dialogueProviderName}
         sttAvailable={sttAvailable}
         onForgetEverything={barkly.forgetEverything}
@@ -432,7 +489,14 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingTop: 54, paddingBottom: 26, paddingHorizontal: 22 },
 
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  wordmark: { fontSize: 22, fontWeight: '800', color: INK, letterSpacing: 0.3 },
+  wordmarkChip: {
+    backgroundColor: 'rgba(255,253,247,0.85)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    ...(shadowCard as object),
+  },
+  wordmark: { fontSize: 20, fontWeight: '800', color: INK, letterSpacing: 0.3 },
   gear: {
     width: 38,
     height: 38,
@@ -501,6 +565,27 @@ const styles = StyleSheet.create({
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
 
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
+  digSpot: { position: 'absolute', left: 18, bottom: 26, alignItems: 'center', zIndex: 2 },
+  digHint: {
+    marginTop: 2, fontSize: 11, fontWeight: '800', color: INK_SOFT,
+    backgroundColor: 'rgba(255,253,247,0.8)', paddingHorizontal: 8, paddingVertical: 2,
+    borderRadius: 999, overflow: 'hidden',
+  },
+  thought: {
+    position: 'absolute', top: 0, alignSelf: 'center', maxWidth: 250,
+    backgroundColor: 'rgba(255,253,247,0.92)', borderRadius: 18,
+    paddingVertical: 9, paddingHorizontal: 14,
+    ...(shadowCard as object),
+  },
+  thoughtText: { fontSize: 13, fontStyle: 'italic', color: INK_SOFT, lineHeight: 18 },
+  thoughtDot1: {
+    position: 'absolute', bottom: -8, left: '46%', width: 9, height: 9, borderRadius: 5,
+    backgroundColor: 'rgba(255,253,247,0.92)',
+  },
+  thoughtDot2: {
+    position: 'absolute', bottom: -15, left: '52%', width: 5, height: 5, borderRadius: 3,
+    backgroundColor: 'rgba(255,253,247,0.85)',
+  },
   npcName: {
     marginTop: -4,
     fontSize: 11,

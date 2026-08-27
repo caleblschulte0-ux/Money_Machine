@@ -25,6 +25,8 @@ const RENDERS = {
   front: require('../../assets/barkly/renders/front.png'),
   sideSleep: require('../../assets/barkly/renders/side_sleep.png'), // eyes closed
   threeQuarter: require('../../assets/barkly/renders/three_quarter.png'),
+  threeQuarterR: require('../../assets/barkly/renders/three_quarter_r.png'),      // mirrored: facing right
+  threeQuarterBall: require('../../assets/barkly/renders/three_quarter_ball.png'), // carrying the ball, facing left
   face: require('../../assets/barkly/renders/face.png'),
 } as const;
 
@@ -56,6 +58,8 @@ const POSE_SIZE: Record<Pose, { width: number; height: number }> = {
   front: { width: 244, height: 305 },
   sideSleep: { width: 280, height: 313 },
   threeQuarter: { width: 260, height: 300 },
+  threeQuarterR: { width: 260, height: 300 },
+  threeQuarterBall: { width: 260, height: 300 },
   face: { width: 210, height: 170 },
 };
 
@@ -120,11 +124,14 @@ function SleepZs() {
   );
 }
 
-export default function BarklyPhotoView({ state, actions }: BarklyRenderProps) {
+export default function BarklyPhotoView({ state, actions, variant }: BarklyRenderProps) {
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
   const talking = has('MOUTH_MOVE');
-  const pose = poseFor(state);
+  const pose: Pose =
+    variant === 'runRight' ? 'threeQuarterR' :
+    variant === 'carryLeft' ? 'threeQuarterBall' :
+    poseFor(state);
   const size = POSE_SIZE[pose];
 
   // Jaw-flap: alternate open/closed mouth frames while speaking.

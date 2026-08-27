@@ -106,6 +106,11 @@ export function reduce(snap: BarklySnapshot, event: BarklyEvent): BarklySnapshot
         state: 'eating',
         stats: adjust(stats, { hunger: -30, mood: +8, energy: +5, affection: +3 }),
       };
+    case 'TREASURE': {
+      if (state === 'listening' || state === 'thinking' || state === 'speaking') return snap;
+      // Finding something in the dirt is the best thing that can happen to a dog.
+      return { ...snap, state: 'excited', stats: adjust(stats, { mood: +6, curiosity: -6, energy: -4 }) };
+    }
     case 'SOCIAL': {
       if (state === 'listening' || state === 'thinking' || state === 'speaking') return snap;
       if (event.friendly) {

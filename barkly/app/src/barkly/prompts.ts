@@ -30,6 +30,8 @@ export interface WorldContext {
   locationDescription: string;
   /** Other dogs present right now, with prompt-ready personality lines. */
   npcs: { name: string; relationship: 'friend' | 'rival'; personality: string }[];
+  /** Recent treasures in his stash (he's proud of these). */
+  stashItems?: string[];
 }
 
 export interface PromptContext {
@@ -62,6 +64,9 @@ export function buildSystemPrompt(ctx: PromptContext): string {
         lines.push(`- ${n.personality}`);
       }
       lines.push('You can mention them, react to them, or gossip about them when it fits.');
+    }
+    if (ctx.world.stashItems && ctx.world.stashItems.length > 0) {
+      lines.push(`Treasures in your stash (you dug these up and are very proud): ${ctx.world.stashItems.join('; ')}.`);
     }
     sections.push(lines.join('\n'));
   }

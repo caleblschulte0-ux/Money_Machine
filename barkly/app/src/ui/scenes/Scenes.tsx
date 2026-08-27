@@ -92,10 +92,10 @@ export function ParkScene({ hour }: { hour: number }) {
       <LinearGradient colors={SKY[band]} style={styles.fill} />
       {/* sky details */}
       <Svg width={420} height={190} style={styles.skyTop}>
-        {band === 'day' && <Circle cx={352} cy={96} r={30} fill="#F5DC8C" opacity={0.9} />}
-        {band === 'evening' && <Circle cx={352} cy={110} r={30} fill="#EFA35C" opacity={0.9} />}
-        {night && <Circle cx={348} cy={92} r={22} fill="#F2EAC8" />}
-        <Ellipse cx={92} cy={140} rx={46} ry={16} fill="#FFFFFF" opacity={night ? 0.14 : 0.75} />
+        {band === 'day' && <Circle cx={62} cy={96} r={30} fill="#F5DC8C" opacity={0.9} />}
+        {band === 'evening' && <Circle cx={62} cy={110} r={30} fill="#EFA35C" opacity={0.9} />}
+        {night && <Circle cx={60} cy={92} r={22} fill="#F2EAC8" />}
+        <Ellipse cx={150} cy={148} rx={46} ry={16} fill="#FFFFFF" opacity={night ? 0.14 : 0.75} />
         <Ellipse cx={250} cy={92} rx={36} ry={13} fill="#FFFFFF" opacity={night ? 0.1 : 0.6} />
       </Svg>
       {/* ground block, anchored to the bottom */}
