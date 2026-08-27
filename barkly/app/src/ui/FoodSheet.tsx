@@ -1,4 +1,5 @@
 import React from 'react';
+import ItemIcon, { BowlIcon } from './ItemIcon';
 import { color } from './theme';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { STORE, Wallet } from '../game/progression';
@@ -54,7 +55,7 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
             accessibilityLabel="Regular dinner"
             accessibilityHint="Feed him his ordinary food."
           >
-            <View style={styles.iconBubble}><Text style={styles.icon}>🥣</Text></View>
+            <View style={styles.iconBubble}><BowlIcon /></View>
             <View style={styles.copy}>
               <Text style={styles.name}>Regular dinner</Text>
               <Text style={styles.detail}>Reliable. Nutritionally uninteresting. Gets the job done.</Text>
@@ -92,7 +93,7 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
                 accessibilityLabel={`${item.name}, ${count} left`}
                 accessibilityHint="Give him this instead of dinner."
               >
-                <View style={styles.iconBubble}><Text style={styles.icon}>{item.icon}</Text></View>
+                <View style={styles.iconBubble}><ItemIcon id={item.id} tint={item.color} /></View>
                 <View style={styles.copy}>
                   <Text style={styles.name}>{item.name}</Text>
                   <Text style={styles.detail}>{item.blurb}</Text>
@@ -120,7 +121,6 @@ const styles = StyleSheet.create({
   meal: { marginTop: 16, minHeight: 76, borderRadius: 18, padding: 12, backgroundColor: color.fill, flexDirection: 'row', alignItems: 'center' },
   treat: { minHeight: 76, borderRadius: 18, padding: 12, marginBottom: 8, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, flexDirection: 'row', alignItems: 'center' },
   iconBubble: { width: 46, height: 46, borderRadius: 22, backgroundColor: color.well, alignItems: 'center', justifyContent: 'center' },
-  icon: { fontSize: 26 },
   copy: { flex: 1, marginLeft: 12 },
   name: { fontSize: 15, fontWeight: '800', color: color.ink },
   detail: { marginTop: 3, fontSize: 12, lineHeight: 17, color: color.inkSoft },

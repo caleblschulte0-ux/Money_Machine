@@ -60,3 +60,34 @@ export const BALL = {
   seam: '#8E2F20',
   gloss: '#FFFFFF',
 } as const;
+
+/**
+ * The things you can buy, drawn rather than typed.
+ *
+ * The shop used emoji — a red circle for the red collar, a football for the
+ * squeaky ball, a slice of cartoon cheese. Emoji render in the SYSTEM's art
+ * style, not the app's, so a photoreal soccer ball sat two rows below a
+ * hand-modelled dog and every row announced that nobody had drawn anything.
+ * These are the palette those drawings use; see ui/ItemIcon.tsx.
+ */
+export const ITEM = {
+  biscuit: '#EADCB6',
+  biscuitEdge: '#CBB68C',
+  cheese: '#E8C255',
+  cheeseEdge: '#C9A032',
+  cheeseHole: '#D4AC3E',
+  steak: '#B5584B',
+  steakFat: '#EBD9C4',
+  steakEdge: '#8E4038',
+  rope: '#D8C5A0',
+  ropeShade: '#B7A177',
+  bed: '#6B558A',
+  bedRim: '#4E3D63',
+  bedCushion: '#EFE3F2',
+  rug: '#B87860',
+  rugInner: '#D8A487',
+  rugEdge: '#9C5B4A',
+  glass: '#BFD9E4',
+  glassSill: '#C9AF7E',
+  leather: '#4A3A2C',
+} as const;

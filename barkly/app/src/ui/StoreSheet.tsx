@@ -11,7 +11,8 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { color } from './theme';
+import ItemIcon from './ItemIcon';
+import { color, radius } from './theme';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   isMultiSlot,
@@ -173,7 +174,7 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                         }
                         accessibilityState={{ disabled: locked }}
                       >
-                        <Text style={styles.icon}>{item.icon}</Text>
+                        <View style={styles.icon}><ItemIcon id={item.id} tint={item.color} /></View>
                         <View style={styles.itemText}>
                           <Text style={styles.itemName}>
                             {item.name}
@@ -262,7 +263,19 @@ const styles = StyleSheet.create({
   },
   itemLocked: { opacity: 0.55 },
   itemWorn: { borderColor: color.gold },
-  icon: { fontSize: 26 },
+  /**
+   * A well behind each drawing. Every row now starts with the same 40px round
+   * anchor, which is what makes a list of eleven different shapes scan as one
+   * list rather than eleven loose objects at eleven apparent sizes.
+   */
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: color.well,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   itemText: { flex: 1 },
   itemName: { fontSize: 15, fontWeight: '700', color: color.ink },
   itemBlurb: { fontSize: 13, color: color.inkSoft, marginTop: 2 },
