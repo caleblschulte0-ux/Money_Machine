@@ -23,6 +23,7 @@ import {
   withTreasure,
 } from '../barkly/character';
 import { nameFromFacts, welcomeBack } from '../barkly/greetings';
+import { Mishap, mishapLine } from '../barkly/mishaps';
 import { FEED_LINES, FULL_LINES, PLAY_LINES, pickLine, TIRED_LINES, WAKE_LINES } from '../barkly/lines';
 import { BarklyMemory, MemoryState } from '../barkly/memory';
 import {
@@ -128,6 +129,18 @@ export function useBarkly(): BarklyController {
   const [lastExchange, setLastExchange] = useState<Exchange | null>(null);
   const [partialTranscript, setPartialTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Everything a child can see about a failure goes through here, so a raw
+   * native message can never reach the screen and a repeated failure does not
+   * repeat the same sentence.
+   */
+  const lastMishap = useRef<string | null>(null);
+  const warnedUnwritable = useRef(false);
+  const sayMishap = useCallback((kind: Mishap) => {
+    const line = mishapLine(kind, lastMishap.current);
+    lastMishap.current = line;
+    setError(line);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [sttAvailable, setSttAvailable] = useState(false);
   const [location, setLocation] = useState<LocationId>('home');
@@ -168,6 +181,9 @@ export function useBarkly(): BarklyController {
     let cancelled = false;
     (async () => {
       let hoursAway = 0;
+      // Anything unreadable is not silently shrugged off: Barkly says he has
+      // forgotten something, because from the child's side that is the truth.
+      let lost = false;
       try {
         const raw = await asyncStorageStore.get(SNAPSHOT_KEY);
         if (!cancelled && raw) {
@@ -181,9 +197,16 @@ export function useBarkly(): BarklyController {
           setSnapshot(restored);
         }
       } catch {
-        // corrupt snapshot: keep the fresh one
+        lost = true; // corrupt snapshot: keep the fresh one
       }
-      const mem = await memory.load();
+      let mem: MemoryState;
+      try {
+        mem = await memory.load();
+      } catch {
+        // A storage layer that throws must not strand the app half-booted.
+        mem = memory.snapshot();
+        lost = true;
+      }
       // Away a while? Barkly noticed. Greet without a model call so it's
       // instant, then speak it (may be muted by autoplay policies — fine).
       if (!cancelled && hoursAway >= 6) {
@@ -195,17 +218,21 @@ export function useBarkly(): BarklyController {
         const savedLoc = await asyncStorageStore.get(LOCATION_KEY);
         if (!cancelled && savedLoc && savedLoc in LOCATIONS) setLocation(savedLoc as LocationId);
       } catch {
-        // keep home
+        lost = true; // keep home
       }
-      const items = await stash.load();
-      if (!cancelled) setStashItems(items);
+      try {
+        const items = await stash.load();
+        if (!cancelled) setStashItems(items);
+      } catch {
+        lost = true; // he keeps digging; the old treasures are gone
+      }
       try {
         const rawChar = await asyncStorageStore.get(CHARACTER_KEY);
         if (!cancelled && rawChar) {
           setCharacter(expireCharacter(JSON.parse(rawChar) as CharacterState, Date.now()));
         }
       } catch {
-        // keep a fresh character
+        lost = true; // keep a fresh character
       }
       // Mute is a parent's setting: it survives a relaunch.
       try {
@@ -219,13 +246,21 @@ export function useBarkly(): BarklyController {
       }
       // Anonymous per-install id so the backend can rate-limit and budget.
       await loadDeviceId(asyncStorageStore);
-      const available = await providers.stt.isAvailable();
-      if (!cancelled) setSttAvailable(available);
+      let available = false;
+      try {
+        available = await providers.stt.isAvailable();
+      } catch {
+        available = false; // no recognition here: the UI offers typing instead
+      }
+      if (!cancelled) {
+        setSttAvailable(available);
+        if (lost) sayMishap('memory_lost');
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [memory, providers, voiceEngine]);
+  }, [memory, providers, sayMishap, voiceEngine]);
 
   // --- Idle life: occasional small gestures so he never feels frozen ---
   const [idleAction, setIdleAction] = useState<BodyAction | null>(null);
@@ -253,8 +288,15 @@ export function useBarkly(): BarklyController {
 
   // --- Persist snapshot and character on change ---
   useEffect(() => {
-    asyncStorageStore.set(SNAPSHOT_KEY, JSON.stringify(snapshot)).catch(() => {});
-  }, [snapshot]);
+    asyncStorageStore.set(SNAPSHOT_KEY, JSON.stringify(snapshot)).catch(() => {
+      // A store that will not accept writes means nothing from this session
+      // survives. Say so once rather than losing it quietly.
+      if (!warnedUnwritable.current) {
+        warnedUnwritable.current = true;
+        sayMishap('memory_unwritable');
+      }
+    });
+  }, [snapshot, sayMishap]);
 
   useEffect(() => {
     asyncStorageStore.set(CHARACTER_KEY, JSON.stringify(character)).catch(() => {});
@@ -465,9 +507,13 @@ export function useBarkly(): BarklyController {
     if (busy) return;
     setError(null);
     if (!permissionGranted.current) {
-      permissionGranted.current = await providers.stt.requestPermissions();
+      try {
+        permissionGranted.current = await providers.stt.requestPermissions();
+      } catch {
+        permissionGranted.current = false;
+      }
       if (!permissionGranted.current) {
-        setError('Barkly needs the microphone to hear you.');
+        sayMishap('mic_denied');
         return;
       }
     }
@@ -475,25 +521,41 @@ export function useBarkly(): BarklyController {
     setPartialTranscript('');
     try {
       await providers.stt.start({ onPartial: setPartialTranscript });
-    } catch (e) {
+    } catch {
+      // A native speech-engine message is not something a child can act on.
       dispatch({ type: 'TALK_FAILED' });
-      setError(e instanceof Error ? e.message : 'Could not start listening.');
+      sayMishap('mic_broken');
     }
-  }, [busy, dispatch, providers]);
+  }, [busy, dispatch, providers, sayMishap]);
 
   const stopTalk = useCallback(async () => {
     if (snapshotRef.current.state !== 'listening') return;
-    const { transcript } = await providers.stt.stop();
+    let transcript = '';
+    try {
+      ({ transcript } = await providers.stt.stop());
+    } catch {
+      // Capture died between start and stop. Leaving him in 'listening'
+      // forever is the real failure here, so always come back to idle.
+      dispatch({ type: 'TALK_FAILED' });
+      setPartialTranscript('');
+      sayMishap('mic_broken');
+      return;
+    }
     if (!transcript) {
       dispatch({ type: 'TALK_FAILED' });
       setPartialTranscript('');
+      sayMishap('heard_nothing');
       return;
     }
     await runExchange(transcript);
-  }, [dispatch, providers, runExchange]);
+  }, [dispatch, providers, runExchange, sayMishap]);
 
   const cancelTalk = useCallback(async () => {
-    await providers.stt.cancel();
+    try {
+      await providers.stt.cancel();
+    } catch {
+      // Cancelling is best-effort; getting back to idle is not.
+    }
     dispatch({ type: 'TALK_FAILED' });
     setPartialTranscript('');
   }, [dispatch, providers]);

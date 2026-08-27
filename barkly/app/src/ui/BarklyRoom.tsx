@@ -164,6 +164,40 @@ function NpcDog({ id, onPress, bubble }: { id: NpcId; onPress: () => void; bubbl
   );
 }
 
+/** Speaker glyph. A slash through it when muted — never colour alone. */
+function SpeakerIcon({ muted }: { muted: boolean }) {
+  return (
+    <Svg width={20} height={20} viewBox="0 0 20 20">
+      {/* body + cone as one path: driver box on the left, cone flaring right */}
+      <Path
+        d="M3 7.5h3.2L10.5 4v12L6.2 12.5H3z"
+        fill={muted ? '#9A8C76' : INK_SOFT}
+      />
+      {!muted && (
+        <>
+          <Path
+            d="M13 7.2a4 4 0 0 1 0 5.6"
+            stroke={INK_SOFT}
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            fill="none"
+          />
+          <Path
+            d="M15.4 5.2a7 7 0 0 1 0 9.6"
+            stroke={INK_SOFT}
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            fill="none"
+          />
+        </>
+      )}
+      {muted && (
+        <Path d="M13 6.5l5 7M18 6.5l-5 7" stroke="#B3402E" strokeWidth={1.8} strokeLinecap="round" />
+      )}
+    </Svg>
+  );
+}
+
 export default function BarklyRoom() {
   const barkly = useBarkly();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -293,10 +327,9 @@ export default function BarklyRoom() {
               accessibilityState={{ checked: barkly.muted }}
               accessibilityLabel={barkly.muted ? 'Unmute Barkly' : 'Mute Barkly'}
             >
-              {/* A speaker, drawn rather than emoji so it matches the art. */}
-              <View style={styles.speakerBody} />
-              <View style={styles.speakerCone} />
-              {barkly.muted && <View style={styles.muteSlash} />}
+              {/* Drawn, not emoji, so it matches the art and never renders as
+                  a system glyph that varies by platform. */}
+              <SpeakerIcon muted={barkly.muted} />
             </Pressable>
             <Pressable
               style={styles.gear}
@@ -311,6 +344,19 @@ export default function BarklyRoom() {
             </Pressable>
           </View>
         </View>
+
+        {/* He is on his offline brain: say so once, quietly, in his words. */}
+        {barkly.degraded && (
+          <Pressable
+            style={styles.degraded}
+            onPress={barkly.dismissDegraded}
+            accessibilityRole="button"
+            accessibilityLabel={`${barkly.degraded}. Tap to dismiss.`}
+          >
+            <View style={styles.degradedDot} />
+            <Text style={styles.degradedText}>{barkly.degraded}</Text>
+          </Pressable>
+        )}
 
         {/* where-to tabs */}
         <View style={styles.tabs}>
@@ -343,7 +389,11 @@ export default function BarklyRoom() {
               {asleep ? 'shh — he’s sleeping' : sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
             </Text>
           )}
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error && (
+            <Text style={styles.error} accessibilityLiveRegion="polite">
+              {error}
+            </Text>
+          )}
         </View>
 
         {/* the stage: Barkly + neighbors + props */}
@@ -538,33 +588,21 @@ const styles = StyleSheet.create({
   },
   gearDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: INK_SOFT },
   headerButtons: { flexDirection: 'row', gap: 8 },
+  degraded: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'center',
+    marginTop: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#F0E4CC',
+  },
+  // Status is never colour alone: the dot has a shape and the text says it.
+  degradedDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#B98F3E' },
+  degradedText: { fontSize: 12, color: INK_SOFT, flexShrink: 1 },
   gearMuted: { backgroundColor: '#E6DCC8' },
-  speakerBody: {
-    width: 7,
-    height: 10,
-    borderRadius: 2,
-    backgroundColor: INK_SOFT,
-    marginRight: -1,
-  },
-  speakerCone: {
-    width: 0,
-    height: 0,
-    borderTopWidth: 8,
-    borderBottomWidth: 8,
-    borderLeftWidth: 9,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderLeftColor: INK_SOFT,
-    transform: [{ rotate: '180deg' }],
-  },
-  muteSlash: {
-    position: 'absolute',
-    width: 26,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: '#B3402E',
-    transform: [{ rotate: '-35deg' }],
-  },
 
   tabs: {
     flexDirection: 'row',
