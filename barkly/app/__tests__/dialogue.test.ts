@@ -14,12 +14,12 @@ async function makeEngine(provider: DialogueProvider) {
 describe('DialogueEngine', () => {
   it('runs a full round: reply parsed, turns recorded, memories merged', async () => {
     const { engine, memory } = await makeEngine(createScriptedDialogue());
-    const reply = await engine.converse('Hi! My name is Caleb', freshSnapshot(0));
+    const { reply } = await engine.converse('Hi! My name is Caleb', freshSnapshot(0));
     expect(reply.speech.length).toBeGreaterThan(0);
 
     const state = memory.snapshot();
     expect(state.turns.map((t) => t.role)).toEqual(['user', 'barkly']);
-    expect(state.userFacts.join(' ')).toContain('Caleb');
+    expect(memory.getFact('name')?.value).toBe('Caleb');
   });
 
   it('feeds prior facts back into the next prompt (Barkly remembers)', async () => {
@@ -31,14 +31,14 @@ describe('DialogueEngine', () => {
         seen.push(req.systemPrompt);
         return JSON.stringify({
           speech: 'Noted.',
-          remember: { user_facts: ["Your person's name is Caleb."], barkly_memories: [] },
+          remember: { facts: [{ key: 'name', value: 'Caleb' }], experiences: [] },
         });
       },
     };
     const { engine } = await makeEngine(spy);
     await engine.converse('my name is Caleb', freshSnapshot(0));
     await engine.converse('what is my name?', freshSnapshot(0));
-    expect(seen[1]).toContain("Your person's name is Caleb.");
+    expect(seen[1]).toContain('Caleb');
   });
 
   it('an empty transcript never reaches the provider', async () => {
@@ -48,7 +48,7 @@ describe('DialogueEngine', () => {
       complete: jest.fn(async () => 'nope'),
     };
     const { engine } = await makeEngine(provider);
-    const reply = await engine.converse('   ', freshSnapshot(0));
+    const { reply } = await engine.converse('   ', freshSnapshot(0));
     expect(reply.speech).toBe('');
     expect(provider.complete).not.toHaveBeenCalled();
   });
@@ -56,7 +56,7 @@ describe('DialogueEngine', () => {
   it('scripted provider output always satisfies the reply contract', async () => {
     const { engine } = await makeEngine(createScriptedDialogue());
     for (const text of ['hello', 'want a treat?', 'we got a cat', 'random words here']) {
-      const reply = await engine.converse(text, freshSnapshot(0));
+      const { reply } = await engine.converse(text, freshSnapshot(0));
       expect(reply.speech.length).toBeGreaterThan(0);
     }
   });

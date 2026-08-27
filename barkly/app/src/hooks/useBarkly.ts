@@ -12,15 +12,16 @@ import { AppState } from 'react-native';
 
 import { DialogueEngine } from '../barkly/dialogue';
 import { nameFromFacts, welcomeBack } from '../barkly/greetings';
+import { FEED_LINES, FULL_LINES, PLAY_LINES, pickLine, TIRED_LINES, WAKE_LINES } from '../barkly/lines';
 import { BarklyMemory, MemoryState } from '../barkly/memory';
 import {
   ambientActions,
+  currentSettleMs,
   freshSnapshot,
   isTransient,
   reduce,
-  settleDelayMs,
 } from '../barkly/state';
-import { BarklyEvent, BarklySnapshot, BodyAction } from '../barkly/types';
+import { BarklyEvent, BarklySnapshot, BodyAction, isBusy } from '../barkly/types';
 import { createProviders } from '../providers/registry';
 import { asyncStorageStore } from '../storage/asyncStorageStore';
 import { DEFAULT_PROFILE, profileKey } from '../storage/types';
@@ -55,9 +56,10 @@ export interface BarklyController {
   /** Keyboard fallback (Expo Go, or mic unavailable): same brain path, typed input. */
   submitText(text: string): Promise<void>;
 
-  feed(): void;
-  play(): void;
-  sleepToggle(): void;
+  /** All of these route through the one speaking lifecycle; they no-op while busy. */
+  feed(): Promise<void>;
+  play(): Promise<void>;
+  sleepToggle(): Promise<void>;
   /** User tapped Barkly — a pet/stroke. */
   pet(): void;
 
@@ -99,6 +101,7 @@ export function useBarkly(): BarklyController {
   const stash = useMemo(() => new Stash(asyncStorageStore, DEFAULT_PROFILE), []);
   const [stashItems, setStashItems] = useState<Treasure[]>([]);
   const [thought, setThought] = useState<string | null>(null);
+  const [pendingGreeting, setPendingGreeting] = useState<string | null>(null);
   const thoughtSeed = useRef(Math.floor(Math.random() * 1000));
 
   const snapshotRef = useRef(snapshot);
@@ -139,8 +142,8 @@ export function useBarkly(): BarklyController {
       // instant, then speak it (may be muted by autoplay policies — fine).
       if (!cancelled && hoursAway >= 6) {
         const line = welcomeBack(nameFromFacts(mem.userFacts), Math.floor(hoursAway));
-        setLastExchange({ userText: '', barklyText: line });
-        providers.tts.speak(line).catch(() => {});
+        // Queued rather than awaited: loading must not block on audio.
+        if (!cancelled) setPendingGreeting(line);
       }
       try {
         const savedLoc = await asyncStorageStore.get(LOCATION_KEY);
@@ -199,15 +202,62 @@ export function useBarkly(): BarklyController {
   useEffect(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
     if (isTransient(snapshot.state)) {
-      settleTimer.current = setTimeout(
-        () => dispatch({ type: 'SETTLE' }),
-        settleDelayMs(snapshot.state),
-      );
+      // currentSettleMs honors a caller-supplied REACTION durationMs, falling
+      // back to the per-state default.
+      settleTimer.current = setTimeout(() => dispatch({ type: 'SETTLE' }), currentSettleMs(snapshot));
     }
     return () => {
       if (settleTimer.current) clearTimeout(settleTimer.current);
     };
   }, [snapshot.state, dispatch]);
+
+  /**
+   * THE ONE SPEAKING LIFECYCLE.
+   *
+   * Every audible Barkly utterance — AI replies, NPC banter, treasure
+   * reactions, welcome-backs, feeding and fetch lines — goes through here:
+   *
+   *   caption + body actions -> SPEAK_START -> TTS -> SPEAK_END -> reaction
+   *
+   * Nothing else may call providers.tts.speak(). That rule is what keeps
+   * audio and animation from ever disagreeing about what Barkly is doing.
+   */
+  const speak = useCallback(
+    async (
+      text: string,
+      opts: {
+        /** Shown above the bubble as what the user said, when relevant. */
+        userText?: string;
+        /** Body commands to hold while speaking. */
+        actions?: BodyAction[];
+        /** Event dispatched once speech completes (stats + emotional beat). */
+        after?: BarklyEvent;
+      } = {},
+    ): Promise<void> => {
+      const line = text.trim();
+      if (!line) return;
+      setLastExchange({ userText: opts.userText ?? '', barklyText: line });
+      setReplyActions(opts.actions ?? []);
+      dispatch({ type: 'SPEAK_START' });
+      try {
+        await providers.tts.speak(line);
+      } catch {
+        // A silent Barkly beats a Barkly stuck mid-sentence.
+      }
+      dispatch({ type: 'SPEAK_END' });
+      setReplyActions([]);
+      if (opts.after) dispatch(opts.after);
+    },
+    [dispatch, providers],
+  );
+
+  // A welcome-back queued during load speaks once the hook is live, through
+  // the same lifecycle as everything else.
+  useEffect(() => {
+    if (!pendingGreeting) return;
+    setPendingGreeting(null);
+    speak(pendingGreeting, { actions: ['TAIL_WAG'] }).catch(() => {});
+  }, [pendingGreeting, speak]);
 
   // --- World context for the dialogue prompt: where he is, who's around ---
   const locationRef = useRef(location);
@@ -255,18 +305,17 @@ export function useBarkly(): BarklyController {
       setError(null);
       dispatch({ type: 'TALK_CAPTURED' }); // thinking
       try {
-        const reply = await engine.converse(userText, snapshotRef.current, worldContext());
+        const { reply } = await engine.converse(userText, snapshotRef.current, worldContext());
         if (!reply.speech) {
           dispatch({ type: 'TALK_FAILED' });
           return;
         }
-        setLastExchange({ userText, barklyText: reply.speech });
-        setReplyActions(reply.actions);
-        dispatch({ type: 'SPEAK_START' });
-        await providers.tts.speak(reply.speech);
-        dispatch({ type: 'SPEAK_END' });
-        setReplyActions([]);
-        if (reply.reaction) dispatch({ type: 'REACTION', state: reply.reaction });
+        await speak(reply.speech, {
+          userText,
+          actions: reply.actions,
+          // A model-chosen reaction can only ever be a ReactionState.
+          after: reply.reaction ? { type: 'REACTION', state: reply.reaction } : undefined,
+        });
       } catch (e) {
         dispatch({ type: 'TALK_FAILED' });
         setError(e instanceof Error ? e.message : 'Barkly got distracted. Try again.');
@@ -275,7 +324,7 @@ export function useBarkly(): BarklyController {
         setPartialTranscript('');
       }
     },
-    [dispatch, engine, providers],
+    [dispatch, engine, speak, worldContext],
   );
 
   const startTalk = useCallback(async () => {
@@ -332,38 +381,72 @@ export function useBarkly(): BarklyController {
 
   const npcTalk = useCallback(
     (id: NpcId): boolean => {
-      const s = snapshotRef.current.state;
-      if (busy || s === 'listening' || s === 'thinking' || s === 'speaking') return false;
+      if (busy || isBusy(snapshotRef.current.state)) return false;
       const npc = NPCS[id];
       const i = npcLineCounter.current++ % npc.lines.length;
-      const barklyLine = npc.barklyLines[i];
       setNpcBubble({ id, line: npc.lines[i] });
       if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
       npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 4500);
-      dispatch({ type: 'SOCIAL', friendly: npc.relationship === 'friend' });
-      setLastExchange({ userText: '', barklyText: barklyLine });
-      providers.tts.speak(barklyLine).catch(() => {});
+
+      // Barkly's comeback goes through the same lifecycle as everything else;
+      // the SOCIAL event (stats + emotional beat) lands after he finishes.
+      speak(npc.barklyLines[i], {
+        actions: ['MOUTH_MOVE', 'EAR_PERK'],
+        after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
+      }).catch(() => {});
+
       if (Math.random() < 0.3) {
         const mem = npc.memories[Math.floor(Math.random() * npc.memories.length)];
-        memory.remember([], [mem]).catch(() => {});
+        memory
+          .remember([], [mem], { where: LOCATIONS[locationRef.current].name, withWhom: [npc.name] })
+          .catch(() => {});
       }
       return true;
     },
-    [busy, dispatch, memory, providers],
+    [busy, memory, speak],
   );
 
   const dig = useCallback(async (): Promise<Treasure | null> => {
-    const s = snapshotRef.current.state;
-    if (busy || s === 'listening' || s === 'thinking' || s === 'speaking') return null;
+    if (busy || isBusy(snapshotRef.current.state)) return null;
     const found = await stash.dig();
     setStashItems(stash.list());
-    dispatch({ type: 'TREASURE' });
-    const line = `${found.name}?! MINE. This goes in the stash.`;
-    setLastExchange({ userText: '', barklyText: line });
-    providers.tts.speak(line).catch(() => {});
-    memory.remember([], [`Dug up ${found.name} at the park.`]).catch(() => {});
+    await speak(`${found.name}?! MINE. This goes in the stash.`, {
+      actions: ['MOUTH_MOVE', 'EXCITED'],
+      after: { type: 'TREASURE' },
+    });
+    memory
+      .remember([], [`Dug up ${found.name} at the park.`], { where: 'the park' })
+      .catch(() => {});
     return found;
-  }, [busy, dispatch, memory, providers, stash]);
+  }, [busy, memory, speak, stash]);
+
+  // --- feeding, playing and waking also speak, through the same lifecycle ---
+  const feed = useCallback(async () => {
+    if (busy || isBusy(snapshotRef.current.state)) return;
+    const full = snapshotRef.current.stats.hunger < 12;
+    await speak(pickLine(full ? FULL_LINES : FEED_LINES), {
+      actions: ['MOUTH_MOVE'],
+      after: { type: 'FEED' },
+    });
+  }, [busy, speak]);
+
+  const play = useCallback(async () => {
+    if (busy || isBusy(snapshotRef.current.state)) return;
+    const tired = snapshotRef.current.stats.energy < 15;
+    await speak(pickLine(tired ? TIRED_LINES : PLAY_LINES), {
+      actions: tired ? ['SLEEP'] : ['MOUTH_MOVE', 'EXCITED'],
+      after: { type: 'PLAY' },
+    });
+  }, [busy, speak]);
+
+  const sleepToggle = useCallback(async () => {
+    if (busy || isBusy(snapshotRef.current.state)) return;
+    if (snapshotRef.current.state === 'sleepy') {
+      await speak(pickLine(WAKE_LINES), { actions: ['MOUTH_MOVE'], after: { type: 'SLEEP_TOGGLE' } });
+      return;
+    }
+    dispatch({ type: 'SLEEP_TOGGLE' }); // going to sleep needs no commentary
+  }, [busy, dispatch, speak]);
 
   const actions = useMemo<BodyAction[]>(() => {
     const ambient = ambientActions(snapshot.state);
@@ -388,9 +471,9 @@ export function useBarkly(): BarklyController {
     stopTalk,
     cancelTalk,
     submitText,
-    feed: () => dispatch({ type: 'FEED' }),
-    play: () => dispatch({ type: 'PLAY' }),
-    sleepToggle: () => dispatch({ type: 'SLEEP_TOGGLE' }),
+    feed,
+    play,
+    sleepToggle,
     pet: () => dispatch({ type: 'PET' }),
     location,
     goTo,

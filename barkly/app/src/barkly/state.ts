@@ -4,6 +4,13 @@
  * One reducer owns every transition — no animation booleans scattered through
  * the UI. The UI dispatches BarklyEvents; this module decides what Barkly is
  * doing and how he feels about it.
+ *
+ * THE CONVERSATION LOCK LIVES HERE. While Barkly is listening, thinking, or
+ * speaking, every physical interaction (feed/play/pet/sleep/social/treasure)
+ * and every emotional reaction is rejected by the reducer. UI buttons are also
+ * disabled, but that is a convenience — correctness is enforced in the brain,
+ * so a stray tap, a queued gesture, or a future caller cannot desynchronize
+ * Barkly's body from what he is actually doing.
  */
 
 import {
@@ -12,6 +19,8 @@ import {
   BarklyState,
   BarklyStats,
   BodyAction,
+  INTERRUPTIBLE_EVENTS,
+  isBusy,
 } from './types';
 
 export const DEFAULT_STATS: BarklyStats = {
@@ -23,7 +32,7 @@ export const DEFAULT_STATS: BarklyStats = {
 };
 
 export function freshSnapshot(now: number): BarklySnapshot {
-  return { state: 'idle', stats: { ...DEFAULT_STATS }, updatedAt: now };
+  return { state: 'idle', stats: { ...DEFAULT_STATS }, updatedAt: now, settleMs: null };
 }
 
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
@@ -36,6 +45,11 @@ function adjust(stats: BarklyStats, delta: Partial<BarklyStats>): BarklyStats {
     affection: clamp(stats.affection + (delta.affection ?? 0)),
     curiosity: clamp(stats.curiosity + (delta.curiosity ?? 0)),
   };
+}
+
+/** Move to a new behavior state, clearing any custom settle duration. */
+function to(snap: BarklySnapshot, state: BarklyState, stats?: BarklyStats): BarklySnapshot {
+  return { ...snap, state, stats: stats ?? snap.stats, settleMs: null };
 }
 
 /**
@@ -79,74 +93,79 @@ export function isTransient(state: BarklyState): boolean {
 
 export function reduce(snap: BarklySnapshot, event: BarklyEvent): BarklySnapshot {
   const { state, stats } = snap;
+
+  // The conversation lock, applied once, for every interruptible event.
+  if (isBusy(state) && INTERRUPTIBLE_EVENTS.includes(event.type)) {
+    return snap;
+  }
+
   switch (event.type) {
     case 'TALK_START':
-      return { ...snap, state: 'listening' };
+      return to(snap, 'listening');
     case 'TALK_CAPTURED':
-      return { ...snap, state: 'thinking' };
+      return to(snap, 'thinking');
     case 'TALK_FAILED':
-      return { ...snap, state: baselineState(stats) };
+      return to(snap, baselineState(stats));
     case 'SPEAK_START':
-      return { ...snap, state: 'speaking' };
+      return to(snap, 'speaking');
     case 'SPEAK_END':
       // Talking to his person is the core bonding loop.
-      return {
-        ...snap,
-        state: baselineState(stats),
-        stats: adjust(stats, { affection: +2, mood: +2, curiosity: -2 }),
-      };
+      return to(snap, baselineState(stats), adjust(stats, { affection: +2, mood: +2, curiosity: -2 }));
+
     case 'FEED':
       if (state === 'eating') return snap; // no double-feeding spam
       if (stats.hunger < 12) {
         // A full dog turns his nose up at more food. That's character, not a bug.
-        return { ...snap, state: 'annoyed' };
+        return to(snap, 'annoyed');
       }
-      return {
-        ...snap,
-        state: 'eating',
-        stats: adjust(stats, { hunger: -30, mood: +8, energy: +5, affection: +3 }),
-      };
-    case 'TREASURE': {
-      if (state === 'listening' || state === 'thinking' || state === 'speaking') return snap;
+      return to(snap, 'eating', adjust(stats, { hunger: -30, mood: +8, energy: +5, affection: +3 }));
+
+    case 'TREASURE':
       // Finding something in the dirt is the best thing that can happen to a dog.
-      return { ...snap, state: 'excited', stats: adjust(stats, { mood: +6, curiosity: -6, energy: -4 }) };
-    }
-    case 'SOCIAL': {
-      if (state === 'listening' || state === 'thinking' || state === 'speaking') return snap;
+      return to(snap, 'excited', adjust(stats, { mood: +6, curiosity: -6, energy: -4 }));
+
+    case 'SOCIAL':
       if (event.friendly) {
-        return { ...snap, state: 'happy', stats: adjust(stats, { mood: +5, affection: +2, curiosity: -3, energy: -3 }) };
+        return to(snap, 'happy', adjust(stats, { mood: +5, affection: +2, curiosity: -3, energy: -3 }));
       }
       // Rival encounter: annoying, but a good feud is its own fun.
-      return { ...snap, state: 'annoyed', stats: adjust(stats, { mood: -2, curiosity: -2 }) };
-    }
-    case 'PET': {
-      // Never interrupt a conversation beat with a pet.
-      if (state === 'listening' || state === 'thinking' || state === 'speaking') return snap;
+      return to(snap, 'annoyed', adjust(stats, { mood: -2, curiosity: -2 }));
+
+    case 'PET':
       if (state === 'sleepy') {
         // Woken by petting: grumpy about it, secretly pleased.
-        return { ...snap, state: 'annoyed', stats: adjust(stats, { affection: +1 }) };
+        return to(snap, 'annoyed', adjust(stats, { affection: +1 }));
       }
-      return { ...snap, state: 'happy', stats: adjust(stats, { affection: +3, mood: +2 }) };
-    }
+      return to(snap, 'happy', adjust(stats, { affection: +3, mood: +2 }));
+
     case 'PLAY':
       if (stats.energy < 15) {
         // Too tired to play — that's a mood, not a bug.
-        return { ...snap, state: 'sleepy', stats: adjust(stats, { mood: -2 }) };
+        return to(snap, 'sleepy', adjust(stats, { mood: -2 }));
       }
-      return {
-        ...snap,
-        state: 'playing',
-        stats: adjust(stats, { energy: -15, mood: +10, affection: +4, hunger: +8 }),
-      };
-    case 'SLEEP_TOGGLE':
+      return to(snap, 'playing', adjust(stats, { energy: -15, mood: +10, affection: +4, hunger: +8 }));
+
+    case 'SLEEP_TOGGLE': {
       if (state === 'sleepy') {
-        return { ...snap, state: baselineState(adjust(stats, { energy: +40 })), stats: adjust(stats, { energy: +40, mood: +5 }) };
+        const rested = adjust(stats, { energy: +40, mood: +5 });
+        return to(snap, baselineState(rested), rested);
       }
-      return { ...snap, state: 'sleepy' };
-    case 'REACTION':
-      return { ...snap, state: event.state };
+      return to(snap, 'sleepy');
+    }
+
+    case 'REACTION': {
+      // Only ReactionState values can arrive here (see types.ts) — the model
+      // cannot put Barkly into a conversation or activity state.
+      const next = to(snap, event.state);
+      // A caller-supplied duration is honored by the settle timer.
+      return event.durationMs && event.durationMs > 0
+        ? { ...next, settleMs: event.durationMs }
+        : next;
+    }
+
     case 'SETTLE':
-      return isTransient(state) ? { ...snap, state: baselineState(stats) } : snap;
+      return isTransient(state) ? to(snap, baselineState(stats)) : snap;
+
     case 'TICK': {
       const decayed = decayStats(stats, event.now - snap.updatedAt);
       const next: BarklySnapshot = { ...snap, stats: decayed, updatedAt: event.now };
@@ -159,7 +178,7 @@ export function reduce(snap: BarklySnapshot, event: BarklyEvent): BarklySnapshot
   }
 }
 
-/** How long a transient beat holds before settling, per state. */
+/** Default hold time for a transient beat, per state. */
 export function settleDelayMs(state: BarklyState): number {
   switch (state) {
     case 'eating': return 4000;
@@ -169,6 +188,15 @@ export function settleDelayMs(state: BarklyState): number {
     case 'happy': return 3000;
     default: return 0;
   }
+}
+
+/**
+ * How long the CURRENT beat should hold: a caller-supplied duration when one
+ * was given (REACTION durationMs), otherwise the per-state default. This is
+ * the single place the settle timer should ask.
+ */
+export function currentSettleMs(snap: BarklySnapshot): number {
+  return snap.settleMs ?? settleDelayMs(snap.state);
 }
 
 /**
