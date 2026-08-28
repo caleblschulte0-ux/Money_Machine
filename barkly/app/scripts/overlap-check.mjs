@@ -23,15 +23,31 @@ import { resolve } from 'node:path';
  * like the CHECK is broken when only the install location moved.
  */
 async function loadChromium() {
-  for (const m of ['playwright-core', 'playwright', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
+  for (const m of ['playwright', 'playwright-core', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
     try {
       return (await import(m)).chromium;
     } catch {}
   }
-  console.error('playwright is not installed — npm i -D playwright-core, or install it globally.');
+  console.error('playwright is not installed — run `npm ci` (it is a devDependency).');
   process.exit(2);
 }
 const chromium = await loadChromium();
+
+/**
+ * Where the browser is.
+ *
+ * Playwright downloads its own Chromium; some environments (this repo's
+ * sandbox, some CI images) provide one instead and set PLAYWRIGHT_BROWSERS_PATH.
+ * Hardcoding a path meant this script only ran in the one place it was
+ * written, which for a check is the same as not running.
+ */
+function browserOptions() {
+  const args = ['--no-sandbox'];
+  for (const candidate of [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium']) {
+    if (candidate && existsSync(candidate)) return { executablePath: candidate, args };
+  }
+  return { args };
+}
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(name);
@@ -94,7 +110,7 @@ const overlap = (a, b) => {
   return x > 0 && y > 0 ? { x: Math.round(x), y: Math.round(y) } : null;
 };
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
+const browser = await chromium.launch(browserOptions());
 let failures = 0;
 
 for (const size of sizes) {

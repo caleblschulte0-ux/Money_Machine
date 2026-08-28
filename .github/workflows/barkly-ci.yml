@@ -57,3 +57,52 @@ jobs:
 
       - name: Server tests
         run: npm run test:server
+
+  ui:
+    name: Layout and accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: barkly/app
+
+    # A separate job on purpose. These two checks drive a real browser, so
+    # they cost a Chromium download and a couple of minutes; keeping them out
+    # of `validate` means typecheck and unit tests still report in under a
+    # minute. They were previously run by hand, which for a check is the same
+    # as not running: the 41 contrast failures and the 38px tap targets they
+    # found had accumulated over every screen built so far.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: barkly/app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Nothing may cover his face, and nothing may land on anything else,
+      # with every popup on screen at once. See src/ui/layout.ts.
+      - name: Layout contract
+        run: npm run check:layout
+
+      # Every control at least 44x44, every control labelled, every word
+      # clearing WCAG AA against what is actually behind it.
+      - name: Accessibility
+        run: node scripts/a11y-check.mjs
+
+      - name: Upload measured screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-check-screenshots
+          path: barkly/app/overlap-*.png
+          if-no-files-found: ignore
