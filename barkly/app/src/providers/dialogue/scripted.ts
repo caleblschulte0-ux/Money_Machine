@@ -233,8 +233,25 @@ export function createScriptedDialogue(): DialogueProvider {
       // are not thrown away — they are mixed IN. Roughly one matched topic in
       // three gets its bespoke line; the rest compose. (What was removed is
       // the four-line pool that everything else used to fall into.)
+      //
+      // EXCEPT when the sentence names a dog he has real history with and the
+      // topic only matched BECAUSE of that name. The 'dogs' pool says the
+      // same "Biscuit's alright" about a best friend of months, and 'food'
+      // matches the word "biscuit" — both are generic lines shadowing a
+      // relationship-specific one, which is the exact complaint. Strip the
+      // bonded names and re-test: if the topic no longer matches, the
+      // sentence was about the RELATIONSHIP, and the composer (which knows
+      // the bond) must answer instead.
+      const bondedNamed = Object.keys(c?.bonds ?? {}).filter((n) =>
+        new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text),
+      );
+      const textSansDogs = bondedNamed.reduce(
+        (s, n) => s.replace(new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), ' '),
+        text,
+      );
       const topic = TOPICS.find((t) => t.match.test(text));
-      if (topic && seed % 3 === 0) {
+      const aboutTheDog = topic && bondedNamed.length > 0 && !topic.match.test(textSansDogs);
+      if (topic && !aboutTheDog && seed % 3 === 0) {
         const line = pick(topic.id, topic.lines);
         if (!recent.includes(line.speech)) {
           seed++;
@@ -249,7 +266,9 @@ export function createScriptedDialogue(): DialogueProvider {
         }
       }
 
-      const cc = { ...(c ?? {}), avoid: recent };
+      // The raw sentence rides along so the composer can tell Biscuit the
+      // friend from a biscuit you eat — see compose.bondOn.
+      const cc = { ...(c ?? {}), avoid: recent, text };
       let built = compose(u, cc, seed++);
       for (let tries = 0; tries < 6 && recent.includes(built.speech); tries++) {
         built = compose(u, cc, seed++);

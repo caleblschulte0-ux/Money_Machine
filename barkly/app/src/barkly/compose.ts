@@ -29,6 +29,17 @@
 import { opinionOn, Stance, stanceOn, STANCE_MOOD } from './opinions';
 import { Feeling, looksLikePerson, Understanding } from './understand';
 
+/**
+ * A recurring dog he has real history with, keyed by lowercased name in
+ * `ComposeContext.bonds`. The label is the ladder rung ("best friend",
+ * "nemesis") so a reply can say where the relationship actually stands.
+ */
+export interface ComposeBond {
+  kind: 'friend' | 'rival';
+  encounters: number;
+  label: string;
+}
+
 export interface ComposeContext {
   /**
    * Lines he has said lately. Asides are checked against it: without this the
@@ -44,6 +55,19 @@ export interface ComposeContext {
   hour?: number;
   cues?: string[];
   stats?: { mood: number; energy: number; hunger: number; affection: number; curiosity: number };
+  /** The raw utterance, for disambiguation (Biscuit the friend vs a biscuit to eat). */
+  text?: string;
+  /**
+   * WHO HE IS RIGHT NOW — the character record, flattened for a composer that
+   * cannot read a prompt. Without these, weeks of Pack Book history composed
+   * exactly like day one: a best friend got the stranger's "I've decided I
+   * like them just now" line, because the composer had never been told.
+   */
+  bonds?: Record<string, ComposeBond>;
+  favoriteTreasure?: string;
+  obsession?: string;
+  grievance?: { who: string; what: string };
+  favoriteFriend?: string;
 }
 
 export interface Composed {
@@ -91,6 +115,13 @@ function join(opener: string, body: string): string {
 /** Things that are true right now. Used sparingly so they stay interesting. */
 function asides(c: ComposeContext): string[] {
   const out: string[] = [];
+  // His inner life leaks into ordinary sentences the way it does for anyone
+  // with an obsession — as an aside, never a status report. These read from
+  // the character record, so a Barkly with a duck rock and a Duke problem
+  // sounds like that Barkly even when you asked him about the weather.
+  if (c.obsession) out.push(`Unrelated: I have thought about ${c.obsession} nine times since you started talking.`);
+  if (c.grievance) out.push(`Also, ${c.grievance.who} and I are in a dispute right now. ${c.grievance.who} knows what ${c.grievance.who} did.`);
+  if (c.favoriteTreasure) out.push(`Status report nobody asked for: ${c.favoriteTreasure} is still the best thing I own.`);
   if (c.toy) out.push(`I'm saying all this with a ${c.toy.toLowerCase()} in my mouth, by the way.`);
   if (c.npcsPresent?.length) out.push(`${c.npcsPresent[0]} is pretending not to listen. ${c.npcsPresent[0]} is listening.`);
   if (c.treasures?.length) out.push(`Anyway I own ${c.treasures[c.treasures.length - 1]} now, so my week is going well.`);
@@ -156,6 +187,76 @@ const FEELING_REPLY: Record<Feeling, string[]> = {
     "Get better. I have things planned for you and they require you upright.",
   ],
 };
+
+// ------------------------------------------------------------ pack history
+
+/**
+ * A dog he has HISTORY with. This must outrank both the person branch and the
+ * hashed stance: "Established Barkly" had nine hangouts with Biscuit on
+ * record and still answered "biscuit?" with the stranger's "I've decided I
+ * like them just now" — because the mention routed to personReply, which
+ * knows nothing. The reply is built from the ladder rung, so a best friend, a
+ * buddy and a nemesis are three different conversations.
+ */
+function bondReply(name: string, bond: ComposeBond, c: ComposeContext, seed: number): Composed {
+  const who = opening(name);
+  const label = bond.label;
+  let shapes: string[];
+  if (bond.kind === 'friend') {
+    shapes =
+      bond.encounters >= 6
+        ? [
+            `${who}? That's my ${label}. Took me ${bond.encounters} hangouts to admit it and I'm not doing it twice.`,
+            `${who} is my ${label}. We have history. Most of it involves sticks.`,
+            `You know ${who} is my ${label}. Everyone knows. ${who} will not stop mentioning it.`,
+            `${who}. My ${label}. We don't say it out loud. I'm saying it out loud once.`,
+          ]
+        : bond.encounters >= 3
+          ? [
+              `${who}? That's an ${label} now. It's official. There was no ceremony, but it's official.`,
+              `${who} and I are at ${bond.encounters} hangouts. That's a real friendship. I keep count.`,
+              `${who} is alright. More than alright. We're ${label} level. Don't make it a thing.`,
+            ]
+          : [
+              `${who}. I know that dog. Not well. But I know that dog.`,
+              `${who}? We've met. I'm still deciding how embarrassing to be about it.`,
+            ];
+    return { speech: at(shapes, seed), reaction: 'happy', actions: ['TAIL_WAG', 'EAR_PERK'] };
+  }
+  const beef = c.grievance && c.grievance.who.toLowerCase() === name.toLowerCase() ? ` Latest: ${c.grievance.who} ${c.grievance.what}.` : '';
+  shapes =
+    bond.encounters >= 6
+      ? [
+          `${who}. My ${label}. ${bond.encounters} incidents on record. I keep the record.${beef}`,
+          `${who}? We're past rival. That is a full ${label} situation and honestly I'm thrilled.${beef}`,
+          `Do not say ${who} like it's a normal name. That's my ${label}.${beef}`,
+        ]
+      : bond.encounters >= 3
+        ? [
+            `${who} is an ${label}. There are receipts. I am the receipts.${beef}`,
+            `${who}. ${bond.encounters} incidents and counting. This is official now.${beef}`,
+          ]
+        : [
+            `${who}. I'm not saying that dog is a problem. I'm saying I have started noticing.`,
+            `${who}? On thin ice. The file is open.`,
+          ];
+  return { speech: at(shapes, seed), reaction: 'annoyed', actions: ['EAR_PERK', 'HEAD_TILT'] };
+}
+
+/**
+ * Whether the subject word means a dog from the pack rather than something
+ * else. The only real collision is Biscuit vs a biscuit you eat — when the
+ * sentence is plainly about food, the treat wins and the friend stays out of
+ * it.
+ */
+function bondOn(subject: string, c: ComposeContext): ComposeBond | undefined {
+  const bond = c.bonds?.[subject.trim().toLowerCase()];
+  if (!bond) return undefined;
+  if (subject.trim().toLowerCase() === 'biscuit' && /\b(eat|eats|ate|eating|treat|treats|snack|snacks|food|hungry|feed|tasty|crunchy|bake|baked)\b/i.test(c.text ?? '')) {
+    return undefined;
+  }
+  return bond;
+}
 
 /**
  * Somebody the player cares about. Never a hashed verdict — the hash put
@@ -308,6 +409,20 @@ export function compose(u: Understanding, c: ComposeContext, seed: number): Comp
       'Go on. I have literally nothing else scheduled.',
     ];
     return { speech: at(shapeless, seed) + tail, actions: ['HEAD_TILT'] };
+  }
+
+  // Recorded history FIRST. A dog he has a bond with must never fall through
+  // to the generic person branch (whose "I've decided I like them just now"
+  // is only true for strangers) or to a hashed stance verdict. Specific
+  // beats generic, always — this ordering is the rule.
+  const bond = bondOn(subject, c);
+  if (bond) {
+    const b = bondReply(subject, bond, c, seed);
+    // No aside that names the same dog the reply is already about — "Duke.
+    // My nemesis." followed by "Also, Duke and I are in a dispute" reads as
+    // a dog with a short memory, which is the opposite of the point.
+    const clean = tail.toLowerCase().includes(subject.toLowerCase()) ? '' : tail;
+    return { ...b, speech: b.speech + clean };
   }
 
   if (u.person) return personReply(opening(subject), c, seed);

@@ -9,7 +9,7 @@
  * Pure and deterministic: no React, no storage, no random loot tables.
  */
 
-import { CharacterState, friendshipStage, rivalryStage } from './character';
+import { bondEncounters, CharacterState, choicesFor, friendshipStage, rivalryStage } from './character';
 import { LadderProgress, ladderProgress } from './escalation';
 import { MemoryState } from './memory';
 import { sanitize } from './facts';
@@ -74,7 +74,10 @@ function signatureRoutine(memory: MemoryState) {
 }
 
 function bondCount(character: CharacterState, name: string): number {
-  return character.socialBonds?.[name]?.encounters ?? 0;
+  // Case-insensitive on purpose: a preset stores this dog as 'duke', live
+  // play as 'Duke'. A direct key read here is how "Duke Nemesis" produced a
+  // chapter-one encounter. See character.bondFor.
+  return bondEncounters(character, name);
 }
 
 function dukeEncounter(character: CharacterState, memory: MemoryState): SocialEncounter {
@@ -490,7 +493,7 @@ export function deriveSocialEncounter(input: EncounterInput): SocialEncounter {
   // player had no way to see.
   return {
     ...encounter,
-    eyebrow: `${ladder.stage.label.toUpperCase()} · CHAPTER ${((input.character.socialChoices?.[npc.name] ?? 0) + 1)}`,
+    eyebrow: `${ladder.stage.label.toUpperCase()} · CHAPTER ${(choicesFor(input.character, npc.name) + 1)}`,
     ladder,
   };
 }
@@ -503,6 +506,6 @@ export function deriveSocialEncounter(input: EncounterInput): SocialEncounter {
 export function shouldOfferEncounter(character: CharacterState, npcId: NpcId): boolean {
   const name = NPCS[npcId].name;
   const count = bondCount(character, name);
-  const chapters = character.socialChoices?.[name] ?? 0;
+  const chapters = choicesFor(character, name);
   return count >= 2 + chapters * 3;
 }

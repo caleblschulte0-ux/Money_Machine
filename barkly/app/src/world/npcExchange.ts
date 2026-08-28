@@ -25,12 +25,30 @@
  * Pure: state in, state out, injectable randomness.
  */
 
-import { Npc, NpcId } from './npcs';
+import { Npc, NpcId, NpcStagePool } from './npcs';
 
 /** Last index used per dog, per pool. Nothing else needs to persist. */
 export interface ExchangeMemory {
   line: Partial<Record<NpcId, number>>;
   reply: Partial<Record<NpcId, number>>;
+}
+
+/**
+ * The pool the CURRENT relationship earns: the highest stage at or below the
+ * bond's encounter count, or the base (acquaintance) pool below the first
+ * stage. This is the seam that was missing — pickExchange drew from one flat
+ * pool per dog, so "Biscuit Best Friend" (34 hangouts) and a fresh save got
+ * the same introductions, and a nemesis Duke opened with small talk. The
+ * thresholds are the escalation ladder's rungs; keeping them on the data
+ * (each stage's `at`) rather than hardcoded here means a new rung is a data
+ * change, not a logic change.
+ */
+export function poolFor(npc: Npc, encounters: number): Pick<NpcStagePool, 'lines' | 'barklyLines'> {
+  let best: NpcStagePool | undefined;
+  for (const stage of npc.stages ?? []) {
+    if (encounters >= stage.at && (!best || stage.at > best.at)) best = stage;
+  }
+  return best ?? { lines: npc.lines, barklyLines: npc.barklyLines };
 }
 
 export function freshExchangeMemory(): ExchangeMemory {
@@ -54,12 +72,24 @@ export interface Exchange {
   memory: ExchangeMemory;
 }
 
-export function pickExchange(npc: Npc, memory: ExchangeMemory, rng: () => number = Math.random): Exchange {
-  const lineIndex = pickFresh(npc.lines.length, memory.line[npc.id], rng);
-  const replyIndex = pickFresh(npc.barklyLines.length, memory.reply[npc.id], rng);
+/**
+ * `encounters` is the current bond count for this dog (0 for a stranger) and
+ * selects the stage pool — see poolFor. The remembered index carries across a
+ * stage change; pickFresh only uses it as "not this one", so at worst the
+ * first line after a promotion avoids an arbitrary slot.
+ */
+export function pickExchange(
+  npc: Npc,
+  memory: ExchangeMemory,
+  encounters = 0,
+  rng: () => number = Math.random,
+): Exchange {
+  const pool = poolFor(npc, encounters);
+  const lineIndex = pickFresh(pool.lines.length, memory.line[npc.id], rng);
+  const replyIndex = pickFresh(pool.barklyLines.length, memory.reply[npc.id], rng);
   return {
-    npcLine: npc.lines[lineIndex],
-    barklyLine: npc.barklyLines[replyIndex],
+    npcLine: pool.lines[lineIndex],
+    barklyLine: pool.barklyLines[replyIndex],
     memory: {
       line: { ...memory.line, [npc.id]: lineIndex },
       reply: { ...memory.reply, [npc.id]: replyIndex },

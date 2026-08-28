@@ -5,9 +5,10 @@
  * multi-step routines therefore still work offline and cost no model call.
  */
 
-import { CharacterState } from './character';
+import { CharacterState, friendshipStage, rivalryStage } from './character';
 import { BarklyMemory } from './memory';
 import { buildSystemPrompt, parseReply, WorldContext } from './prompts';
+import { recall } from './recall';
 import { looksLikeTrainingInstruction, parseLocalTrainingInstruction } from './training';
 import { BarklyReply, BarklySnapshot } from './types';
 import { DialogueProvider } from '../providers/types';
@@ -96,6 +97,41 @@ export class DialogueEngine {
     }
 
     const memState = this.memory.snapshot();
+
+    // Recorded history is answered FROM the record, before any provider —
+    // the same slot trained cues occupy, and for the same reason: these
+    // questions have a right answer. "Do you remember the duck rock" used to
+    // fall through to a generic story shape while a whole saga about that
+    // rock sat in his experiences; recall() searches the FULL stores (the
+    // ranked prompt window ages old sagas out — that is what made Pack Book
+    // memories unreachable from free conversation).
+    if (!isTeaching) {
+      const recalled = recall({
+        text,
+        facts: memState.facts,
+        experiences: memState.experiences,
+        character,
+        seed: Date.now() % 9973,
+      });
+      if (recalled) {
+        const reply: BarklyReply = {
+          speech: recalled.speech,
+          reaction: recalled.reaction,
+          actions: recalled.actions,
+          newUserFacts: [],
+          newBarklyMemories: [],
+          learnedTraining: [],
+        };
+        const now = Date.now();
+        await this.memory.addTurn({ role: 'user', text, at: now });
+        await this.memory.addTurn({ role: 'barkly', text: reply.speech, at: now });
+        // A memory that came up stays prompt-relevant — same rule as facts
+        // the model referenced.
+        await this.memory.touch(recalled.factIds);
+        return { reply, corrections: [] };
+      }
+    }
+
     const relevant = this.memory.relevant();
     const systemPrompt = buildSystemPrompt({
       snapshot,
@@ -107,6 +143,24 @@ export class DialogueEngine {
 
     // The situation as DATA as well as prose. A model reads the prompt; the
     // offline brain cannot, and without this it repeats itself forever.
+    //
+    // The character record rides along too — bonds flattened to (kind,
+    // encounters, rung label), keyed by lowercased name so the composer can
+    // find "biscuit" however the player typed it. Before these fields, the
+    // offline brain answered about a best friend of 34 hangouts exactly as
+    // it did about a stranger, because nothing told it otherwise.
+    const bonds = character?.socialBonds
+      ? Object.fromEntries(
+          Object.entries(character.socialBonds).map(([who, b]) => [
+            who.trim().toLowerCase(),
+            {
+              kind: b.kind,
+              encounters: b.encounters,
+              label: (b.kind === 'friend' ? friendshipStage(b.encounters) : rivalryStage(b.encounters)).label,
+            },
+          ]),
+        )
+      : undefined;
     const context = {
       state: snapshot.state,
       stats: snapshot.stats,
@@ -117,6 +171,13 @@ export class DialogueEngine {
       cues: memState.trainingRules.map((r) => r.cue),
       hour: new Date().getHours(),
       toy: world?.toy,
+      bonds,
+      favoriteTreasure: character?.favoriteTreasure,
+      obsession: character?.obsession?.topic,
+      grievance: character?.grievance
+        ? { who: character.grievance.who, what: character.grievance.what }
+        : undefined,
+      favoriteFriend: character?.favoriteFriend,
     };
 
     const raw = await this.provider.complete({

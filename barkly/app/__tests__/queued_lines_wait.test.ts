@@ -34,9 +34,51 @@ const drain = (() => {
   return hook.slice(at, hook.indexOf('}, [', at) + 40);
 })();
 
+/**
+ * The definition of "he is free" — the one shared conversation lock. The
+ * drain used to check its own subset (busy + speaking), which is how a
+ * level-up earned by greeting a dog landed while the NPC's bubble was still
+ * up and REPLACED the conclusion of that conversation.
+ */
+const lock = (() => {
+  const at = hook.indexOf('const conversationHeld =');
+  expect(at).toBeGreaterThan(-1);
+  return hook.slice(at, hook.indexOf(';', at));
+})();
+
 describe('a queued line waits its turn', () => {
-  it('does not speak while he is busy', () => {
-    expect(drain).toMatch(/if \(busy/);
+  it('does not speak while a conversation holds the floor', () => {
+    expect(drain).toMatch(/if \(conversationHeld\) return;/);
+  });
+
+  it('the lock covers the WHOLE conversation, not just his half', () => {
+    // Each of these was a hole the operator hit live: the NPC bubble is the
+    // other dog's closing line (a level-up used to talk over it); an open
+    // encounter or duel is a story scene mid-beat. `busy` alone was the old,
+    // failing order — these assertions fail against it.
+    expect(lock).toMatch(/busy/);
+    expect(lock).toMatch(/npcBubble/);
+    expect(lock).toMatch(/activeEncounter/);
+    expect(lock).toMatch(/pendingContest/);
+    expect(lock).toMatch(/isBusy\(snapshot.state\)/);
+  });
+
+  it('ambient thoughts respect the same lock — story scenes are not interrupted', () => {
+    // The thought timer used to consult only his BODY state, which reads
+    // 'idle' while an encounter sheet is open — so idle thoughts popped over
+    // story scenes. It must consult the shared lock, and via the ref, since
+    // the timer outlives renders.
+    const at = hook.indexOf('setThought(bronx(pickThought');
+    expect(at).toBeGreaterThan(-1);
+    const guard = hook.slice(hook.lastIndexOf('if (', at), at);
+    expect(guard).toMatch(/conversationHeldRef.current/);
+  });
+
+  it('unprompted initiatives respect it too', () => {
+    const at = hook.indexOf('pickInitiative({');
+    expect(at).toBeGreaterThan(-1);
+    const before = hook.slice(at - 600, at);
+    expect(before).toMatch(/conversationHeldRef.current/);
   });
 
   it('pauses after he is free, so the reply can be read first', () => {
@@ -47,15 +89,16 @@ describe('a queued line waits its turn', () => {
     expect(drain).toMatch(/clearTimeout\(/);
   });
 
-  it('re-runs when he stops being busy, so the line is not lost', () => {
-    // `pendingGreeting` is left SET when it bails, and `busy` is a dependency
-    // — that pair is what makes it a queue rather than a dropped message.
+  it('re-runs when the conversation lets go, so the line is not lost', () => {
+    // `pendingGreeting` is left SET when it bails, and the lock is a
+    // dependency — that pair is what makes it a queue rather than a dropped
+    // message.
     const deps = drain.slice(drain.lastIndexOf('}, ['));
-    expect(deps).toMatch(/busy/);
+    expect(deps).toMatch(/conversationHeld/);
     // The bail-out must come BEFORE the clear, or the line is thrown away.
     // Asserting the index is >= 0 first: `-1 < anything` passes vacuously when
     // the guard is missing entirely, which is exactly the regression.
-    const guard = drain.indexOf('if (busy');
+    const guard = drain.indexOf('if (conversationHeld');
     const clear = drain.indexOf('setPendingGreeting(null)');
     expect(guard).toBeGreaterThanOrEqual(0);
     expect(clear).toBeGreaterThanOrEqual(0);

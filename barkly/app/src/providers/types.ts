@@ -50,6 +50,22 @@ export interface DialogueContext {
   hour?: number;
   /** Cues you taught him, so an offline Barkly can still perform one. */
   cues?: string[];
+  /**
+   * WHO HE HAS BECOME — the character record, flattened. Same reasoning as
+   * the rest of this interface: the model reads it as prose in the prompt,
+   * but the offline brain cannot, and without these fields it greeted a
+   * best friend of months exactly like a stranger. Bond keys are lowercased
+   * dog names; `label` is the escalation-ladder rung ("best friend",
+   * "nemesis").
+   */
+  bonds?: Record<string, { kind: 'friend' | 'rival'; encounters: number; label: string }>;
+  /** The possession he treats as sacred, e.g. "a rock that looks like a duck". */
+  favoriteTreasure?: string;
+  /** What he cannot stop thinking about right now. */
+  obsession?: string;
+  /** His active beef. */
+  grievance?: { who: string; what: string };
+  favoriteFriend?: string;
 }
 
 export interface DialogueRequest {

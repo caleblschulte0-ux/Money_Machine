@@ -89,8 +89,39 @@ export function rivalryStage(encounters: number): SocialStage {
   return rungAt('rival', encounters);
 }
 
+/**
+ * Bond lookups are CASE-INSENSITIVE, through these helpers and nowhere else.
+ *
+ * The bug this closes was found on the "Duke Nemesis" saved life: presets
+ * store bonds under the NPC id ('duke'), while the running app writes and
+ * reads them under the display name ('Duke'). Every direct
+ * `socialBonds?.[npc.name]` lookup therefore saw ZERO encounters on a loaded
+ * save — so a dog with 18 recorded incidents got the stranger dialogue, the
+ * choice-moment gate never opened, and weeks of history sat in the Pack Book
+ * driving nothing. Matching by key text instead of key identity means both
+ * spellings of the same dog are the same dog.
+ */
+const sameDog = (a: string, b: string): boolean =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
+export function bondFor(c: CharacterState, who: string): SocialBond | undefined {
+  const bonds = c.socialBonds ?? {};
+  const key = Object.keys(bonds).find((k) => sameDog(k, who));
+  return key === undefined ? undefined : bonds[key];
+}
+
+export function bondEncounters(c: CharacterState, who: string): number {
+  return bondFor(c, who)?.encounters ?? 0;
+}
+
+export function choicesFor(c: CharacterState, who: string): number {
+  const choices = c.socialChoices ?? {};
+  const key = Object.keys(choices).find((k) => sameDog(k, who));
+  return key === undefined ? 0 : choices[key];
+}
+
 function socialCount(c: CharacterState, who: string): number {
-  return c.socialBonds?.[who]?.encounters ?? 0;
+  return bondEncounters(c, who);
 }
 
 // ------------------------------------------------------------- initiative
@@ -192,7 +223,7 @@ export function pickInitiative(ctx: InitiativeContext): Initiative | null {
 
   if (ctx.npcsPresent.length > 0 && rng() < 0.5) {
     const present = ctx.npcsPresent
-      .map((who) => ({ who, bond: character.socialBonds?.[who] }))
+      .map((who) => ({ who, bond: bondFor(character, who) }))
       .sort((a, b) => (b.bond?.encounters ?? 0) - (a.bond?.encounters ?? 0))[0];
     const count = present.bond?.encounters ?? 0;
     candidates.push({
@@ -283,9 +314,13 @@ export function contactSocialBond(
   now: number,
 ): ContactOutcome {
   const bonds = { ...(c.socialBonds ?? {}) };
-  const previous = bonds[who];
+  // Reuse whatever spelling the bond is already stored under ('duke' from a
+  // preset, 'Duke' from live play) — writing under a second casing would fork
+  // one relationship into two half-histories.
+  const existingKey = Object.keys(bonds).find((k) => sameDog(k, who)) ?? who;
+  const previous = bonds[existingKey];
   const result = applyContact(who, kind, previous?.encounters ?? 0, opts);
-  bonds[who] = {
+  bonds[existingKey] = {
     kind,
     encounters: result.encounters,
     firstSeenAt: previous?.firstSeenAt ?? now,
@@ -310,12 +345,12 @@ export function adjustSocialBond(
 
 /** Mark one authored choice chapter complete so it cannot immediately repeat. */
 export function noteSocialChoice(c: CharacterState, who: string): CharacterState {
+  const choices = { ...(c.socialChoices ?? {}) };
+  // Same casing rule as bonds: continue the count under its existing key.
+  const key = Object.keys(choices).find((k) => sameDog(k, who)) ?? who;
   return {
     ...c,
-    socialChoices: {
-      ...(c.socialChoices ?? {}),
-      [who]: (c.socialChoices?.[who] ?? 0) + 1,
-    },
+    socialChoices: { ...choices, [key]: (choices[key] ?? 0) + 1 },
   };
 }
 

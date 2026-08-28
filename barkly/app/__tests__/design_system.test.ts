@@ -36,7 +36,7 @@ const UI = join(__dirname, '..', 'src', 'ui');
  * matched). They keep their own sampled palettes, on purpose, and are named
  * here so the exemption is a decision rather than an oversight.
  */
-const ART = new Set(['theme.ts', 'artPalette.ts', 'BarklyView.tsx', 'StageProps.tsx', 'Scenes.tsx']);
+const ART = new Set(['theme.ts', 'artPalette.ts', 'BarklyView.tsx', 'StageProps.tsx', 'Scenes.tsx', 'depth.tsx']);
 
 function uiFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {

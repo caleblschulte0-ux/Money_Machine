@@ -9,6 +9,8 @@ import { AppState } from 'react-native';
 import { DialogueEngine } from '../barkly/dialogue';
 import { isInterruptible, isLocked } from '../barkly/types';
 import {
+  bondFor,
+  choicesFor,
   contactSocialBond,
   CharacterState,
   expireCharacter,
@@ -292,6 +294,27 @@ export function useBarkly(): BarklyController {
   const npcBubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastNpcCredit = useRef<Partial<Record<NpcId, number>>>({});
   const stash = useMemo(() => new Stash(asyncStorageStore, DEFAULT_PROFILE), []);
+
+  /**
+   * THE conversation lock — one derived answer to "is a conversation or scene
+   * holding the floor right now?", shared by everything that speaks or thinks
+   * unprompted (the queued-greeting drain, ambient thoughts, initiatives).
+   *
+   * It exists because each of those checked a different SUBSET: the greeting
+   * drain checked busy+speaking but not the NPC bubble, so a level-up earned
+   * mid-exchange replaced the conclusion of an NPC conversation; the thought
+   * timer checked only his body state, so idle thoughts popped over open
+   * story scenes (encounter sheets, duels). One definition, one ref for the
+   * long-lived timers — never a second ad-hoc copy of this condition.
+   */
+  const conversationHeld =
+    busy ||
+    activeEncounter !== null ||
+    pendingContest !== null ||
+    npcBubble !== null ||
+    isBusy(snapshot.state);
+  const conversationHeldRef = useRef(conversationHeld);
+  conversationHeldRef.current = conversationHeld;
 
   const [muted, setMutedState] = useState(false);
   const [onboarding, setOnboarding] = useState<OnboardingState | undefined>(undefined);
@@ -795,7 +818,12 @@ export function useBarkly(): BarklyController {
    */
   useEffect(() => {
     if (!pendingGreeting) return;
-    if (busy || isLocked(snapshot.state) || snapshot.state === 'speaking') return;
+    // The shared conversation lock, not a local subset of it. The subset
+    // (busy + speaking) let a level-up earned by greeting a dog land while
+    // the NPC's bubble was still up — replacing the CONCLUSION of that
+    // conversation with an announcement. A conversation includes the other
+    // dog's half and any open scene, so the queue waits for all of it.
+    if (conversationHeld) return;
     // ...and then it waits a beat longer.
     //
     // Waiting for "not busy" alone still cost you the answer: he replied, the
@@ -808,7 +836,7 @@ export function useBarkly(): BarklyController {
       speak(pendingGreeting, { actions: ['TAIL_WAG'] }).catch(() => {});
     }, 1900);
     return () => clearTimeout(t);
-  }, [pendingGreeting, busy, snapshot.state, speak]);
+  }, [pendingGreeting, conversationHeld, speak]);
 
   // --------------------------------------------------------------- world
   const locationRef = useRef(location);
@@ -835,7 +863,12 @@ export function useBarkly(): BarklyController {
     const schedule = () => {
       timer = setTimeout(() => {
         if (!alive) return;
-        if (IDLE_STATES.includes(snapshotRef.current.state)) {
+        // An idle body is not the same as an idle SCENE: his state reads
+        // 'idle' while an encounter sheet or duel is open, which is how
+        // ambient thoughts popped over story scenes mid-beat. The shared
+        // conversation lock (via ref — this timer outlives renders) is the
+        // whole answer; no second condition grows here.
+        if (IDLE_STATES.includes(snapshotRef.current.state) && !conversationHeldRef.current) {
           thoughtSeed.current += 1;
           // His inner voice has the same accent as his outer one.
           setThought(bronx(pickThought(locationRef.current, new Date().getHours(), thoughtSeed.current)));
@@ -861,7 +894,10 @@ export function useBarkly(): BarklyController {
         if (!alive) return;
         const snap = snapshotRef.current;
         const quiet = !isBusy(snap.state) && snap.state !== 'sleepy' && snap.state !== 'eating';
-        if (quiet && !activeEncounter) {
+        // Same shared lock as thoughts and queued lines: an initiative is an
+        // unprompted line, and unprompted lines wait for open scenes (duels,
+        // NPC bubbles) — not just for `activeEncounter`.
+        if (quiet && !conversationHeldRef.current) {
           const mem = memory.snapshot();
           const relevant = memory.relevant();
           const loc = LOCATIONS[locationRef.current];
@@ -889,7 +925,7 @@ export function useBarkly(): BarklyController {
       alive = false;
       clearTimeout(timer);
     };
-  }, [activeEncounter, memory, speak]);
+  }, [memory, speak]);
 
   // ---------------------------------------------------------- conversation
   const runExchange = useCallback(
@@ -1030,8 +1066,13 @@ export function useBarkly(): BarklyController {
       if (!claimTurn()) return false;
       const npc = NPCS[id];
       progressPlan({ kind: 'npc', target: npc.name });
-      const current = characterRef.current.socialBonds?.[npc.name]?.encounters ?? 0;
-      const chapters = characterRef.current.socialChoices?.[npc.name] ?? 0;
+      // Case-insensitive on purpose: preset saves store this dog under its id
+      // ('duke'), live play under its display name ('Duke'). The direct key
+      // read that used to be here saw 0 encounters on every loaded save, so
+      // a recorded nemesis got stranger dialogue and choice moments never
+      // unlocked. See character.bondFor.
+      const current = bondFor(characterRef.current, npc.name)?.encounters ?? 0;
+      const chapters = choicesFor(characterRef.current, npc.name);
       const nextChoiceAt = 2 + chapters * 3;
       if (current >= nextChoiceAt) {
         setActiveEncounter(deriveSocialEncounter({
@@ -1044,7 +1085,10 @@ export function useBarkly(): BarklyController {
 
       // Greeting and reply drawn INDEPENDENTLY, per dog, never repeating the
       // last one. See world/npcExchange for the three bugs this replaces.
-      const exchange = pickExchange(npc, exchangeMemory.current);
+      // The bond count selects the STAGE pool, so a best friend and a
+      // stranger cannot draw the same line — the flat pool was why weeks of
+      // recorded friendship still opened with introductions.
+      const exchange = pickExchange(npc, exchangeMemory.current, current);
       exchangeMemory.current = exchange.memory;
       setNpcBubble({ id, line: exchange.npcLine });
       if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);

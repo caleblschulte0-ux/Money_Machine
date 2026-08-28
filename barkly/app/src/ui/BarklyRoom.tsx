@@ -704,9 +704,9 @@ export default function BarklyRoom() {
         style={[styles.sceneLayer, { opacity: sceneFade }]}
       >
         {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={CONTENT_TOP + CHROME_BOTTOM} />}
-        {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} />}
-        {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} />}
-        {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} />}
+        {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
+        {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
+        {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
       </Animated.View>
       {asleep && <NightOverlay />}
 
