@@ -99,13 +99,46 @@ which brain answered — a degraded Barkly is visible, never silent.
 not tidiness: two places starting audio is how you get two Barklys talking
 over each other, and a mouth flapping to a line that already finished.
 
-The chain is **real voice → device voice → silent-but-timed**. His own voice
-is synthesized server-side (`server/lib/voice.mjs`) because the vendor key is
-a real secret AND because *which* voice is Barkly is a product decision — the
-app sends text and gets audio, and never names a voice, so a modified build
-cannot make him someone else. Clips are cached by a hash of (voice, text), so
-his repeated lines cost nothing and play instantly. Voice is billed per
-character, so it carries its own daily caps, separate from the token ones.
+The chain is **banked voice → proxy voice → device voice → silent-but-timed**.
+
+**Banked** is ~150 of his fixed lines, pre-recorded in the real voice and
+shipped inside the app (`app/assets/voice/`, wired by `app/src/audio/
+voiceBank.ts`). It exists because everything below it needs something he does
+not always have: the proxy needs a machine running it, and a published web
+artifact cannot reach one, so before the bank every demo anyone ever opened
+was the phone's screen-reader narrator wearing a dog costume. Greetings, feed
+and play reactions, idle thoughts, mishaps, the things he says to the other
+dogs and his level-ups are all in there — which is the whole first minute of
+the app and most of an ordinary session.
+
+The bank is keyed on the line **after `dialect.ts` has run over it**, because
+that is the text the voice engine is handed. Key it on the source spelling and
+every lookup misses silently and you ship two megabytes nobody hears; there is
+a test on exactly that. Rebuild it with `npm run voice:harvest && npm run
+voice:record && npm run voice:link`, and see `app/scripts/voice-bank.mjs` for
+the whole story.
+
+What is deliberately NOT banked: anything he composes out of your own words,
+your name, or the name of a treasure he just dug up. Those are infinite, so
+they fall through to the proxy — or, in the artifact, to the device voice. The
+demo is therefore mixed on purpose, and `npm run voice:check` prints the real
+split rather than a number somebody hoped for.
+
+**Proxy** voice is synthesized server-side (`server/lib/voice.mjs`) because the
+vendor key is a real secret AND because *which* voice is Barkly is a product
+decision — the app sends text and gets audio, and never names a voice, so a
+modified build cannot make him someone else. Clips are cached by a hash of
+(voice, text), so his repeated lines cost nothing and play instantly. Voice is
+billed per character, so it carries its own daily caps, separate from the token
+ones.
+
+**How he talks** is a separate layer from what makes the sound.
+`app/src/barkly/dialect.ts` runs over every line at the speaking funnel — the
+written ones and the ones the brain composes at runtime alike — and puts them
+in his mouth: he is from the Bronx. Whole-word rules only, capped at two strong
+markers a line, and idempotent, which took two goes: a line that will not
+settle collects another opener every time it is repeated, and has no stable key
+in the bank.
 
 Every failure in that chain ends in a quieter Barkly, never a frozen one. If
 the vendor is down he uses the device voice; if that fails too he mimes for a

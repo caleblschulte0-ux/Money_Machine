@@ -17,10 +17,15 @@
  *     node scripts/build-artifact.mjs [--out barkly.html]
  *
  * HONEST LIMIT, and it is worth restating every time: the artifact runs the
- * SCRIPTED brain and the DEVICE voice. A published page cannot reach the
- * proxy on your laptop, so the Claude CLI brain and the edge-tts voice are
- * not in it. What the artifact shows is the app's world, art, progression and
- * offline dialogue — not the real brain.
+ * SCRIPTED brain. A published page cannot reach the proxy on your laptop, so
+ * the Claude CLI brain is not in it, and neither is live synthesis.
+ *
+ * His VOICE is half in it. Every line he says from a fixed pool — greetings,
+ * feed and play reactions, idle thoughts, mishaps, level-ups — is a real
+ * recording of the real voice, bundled here as audio data. Anything he
+ * composes out of your own words is not, and falls back to the browser's
+ * narrator. So the demo is deliberately mixed, and it is worth saying which
+ * half somebody is hearing rather than letting them wonder.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -42,6 +47,10 @@ const MIME = {
   '.otf': 'font/otf',
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
+  // His voice. ~150 short recordings of his fixed lines, which is the only way
+  // a published artifact can sound like him at all — there is no proxy for a
+  // web page to reach. See scripts/voice-bank.mjs.
+  '.mp3': 'audio/mpeg',
 };
 
 function walk(dir, out = []) {

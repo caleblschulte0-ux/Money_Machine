@@ -342,7 +342,7 @@ export function useBarkly(): BarklyController {
   const [devMode, setDevModeState] = useState(process.env.EXPO_PUBLIC_BARKLY_DEV === '1');
   const devRef = useRef(devMode);
   const voiceEngine = useMemo(
-    () => createVoiceEngine({ voice: providers.voice, device: providers.tts }),
+    () => createVoiceEngine({ voices: providers.voices, device: providers.tts }),
     [providers],
   );
   const [stashItems, setStashItems] = useState<Treasure[]>([]);

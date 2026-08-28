@@ -19,6 +19,7 @@
 
 import { DialogueProvider, SpeechToTextProvider } from './types';
 import { BarklyVoice, createBarklyVoice } from './tts/barklyVoiceTts';
+import { createBankedVoice } from './tts/bankedVoice';
 import { createAnthropicDialogue } from './dialogue/anthropic';
 import { createResilientDialogue, DialogueStatus } from './dialogue/resilient';
 import { createScriptedDialogue } from './dialogue/scripted';
@@ -33,8 +34,12 @@ export interface ProviderSet {
   /** The device voice — the fallback link, not the one the UI calls directly. */
   /** The device voice, with its picker and shaping controls exposed. */
   tts: ExpoSpeechTts;
-  /** Barkly's own synthesized voice, via the proxy. Unavailable without one. */
-  voice: BarklyVoice;
+  /**
+   * Barkly's own voices, best first: the recordings bundled in the app, then
+   * the proxy for anything they do not cover. The device voice is the fallback
+   * BELOW these, and is `tts` above.
+   */
+  voices: BarklyVoice[];
   /** Which brain answered last, and why — for the settings screen and error copy. */
   dialogueStatus(): DialogueStatus;
   /** True when a real model is configured at all (vs. scripted-only build). */
@@ -65,13 +70,21 @@ export function createProviders(opts: ProviderOptions = {}): ProviderSet {
 
   // The voice is only ever real behind the proxy: the vendor key and the
   // choice of WHICH voice is Barkly both live server-side.
-  const voice = createBarklyVoice({
+  const proxyVoice = createBarklyVoice({
     baseURL: process.env.EXPO_PUBLIC_BARKLY_VOICE === 'off' ? undefined : baseURL,
     appToken,
     get deviceId() {
       return currentDeviceId();
     },
   });
+
+  /**
+   * The bank goes FIRST, and not only because it is free and instant. It is the
+   * only link in the chain that works in a published web artifact, where there
+   * is no proxy to reach — so without it every demo anyone has ever opened has
+   * been the phone's narrator rather than Barkly.
+   */
+  const bankedVoice = createBankedVoice();
 
   const scripted = createScriptedDialogue();
   const dialogue = createResilientDialogue(anthropic, scripted, {
@@ -88,7 +101,7 @@ export function createProviders(opts: ProviderOptions = {}): ProviderSet {
     stt,
     dialogue,
     tts: deviceTts,
-    voice,
+    voices: [bankedVoice, proxyVoice],
     dialogueStatus: () => dialogue.status(),
     modelConfigured: anthropic.isAvailable(),
   };

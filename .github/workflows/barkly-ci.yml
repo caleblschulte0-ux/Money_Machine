@@ -99,6 +99,13 @@ jobs:
       - name: Accessibility
         run: node scripts/a11y-check.mjs
 
+      # The banked voice fails silently: the recordings are in the file, the
+      # page looks fine, and he speaks in the browser's narrator because the
+      # audio never became a data: URI. Every unit test mocks the player, so
+      # only a real browser can tell.
+      - name: His own voice
+        run: node scripts/voice-check.mjs
+
       - name: Upload measured screenshots on failure
         if: failure()
         uses: actions/upload-artifact@v4

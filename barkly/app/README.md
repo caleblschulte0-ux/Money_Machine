@@ -52,6 +52,22 @@ the phone; only the text transcript goes to the dialogue provider).
 
 Speech-to-text and text-to-speech need **no credentials** (both on-device).
 
+### His voice
+
+Most of what you hear is a **recording**, not synthesis. His fixed lines —
+greetings, feed and play reactions, idle thoughts, mishaps, what he says to the
+other dogs, level-ups — are pre-rendered in his real voice and bundled in
+`assets/voice/`, so they sound like him with no server, no network and no key.
+Lines he composes out of your own words are synthesized through the proxy, or
+fall back to the phone's narrator when there is no proxy to reach.
+
+```bash
+npm run voice:check     # what is banked and what is not, by category
+npm run voice:harvest   # re-read his fixed lines out of the source
+npm run voice:record    # re-record the ones that changed (needs network)
+npm run voice:link      # regenerate src/audio/voiceBank.ts
+```
+
 > `EXPO_PUBLIC_*` values are bundled into the binary — never treat them as
 > secret, never ship a build with a real key. Production dialogue traffic goes
 > through the backend proxy.
@@ -61,6 +77,8 @@ Speech-to-text and text-to-speech need **no credentials** (both on-device).
 ```bash
 npm test            # jest — brain logic (state machine, memory, prompts, dialogue)
 npm run typecheck   # tsc --noEmit
+npm run check:ui    # build the web artifact, then check layout + accessibility
+npm run voice:check # how much of him is pre-recorded
 ```
 
 ## Code map

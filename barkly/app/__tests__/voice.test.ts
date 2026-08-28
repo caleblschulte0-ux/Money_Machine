@@ -160,21 +160,21 @@ describe('the voice engine', () => {
   it('prefers Barkly, falls back to the device, then to silence', async () => {
     const device = fakeDevice();
     const good = fakeVoice();
-    expect((await engineWith({ voice: good.provider, device }).speak('one')).route).toBe('barkly');
+    expect((await engineWith({ voices: [good.provider], device }).speak('one')).route).toBe('barkly');
     expect(good.played).toEqual(['one']);
 
     const broken = fakeVoice({ fail: true });
-    expect((await engineWith({ voice: broken.provider, device }).speak('two')).route).toBe('device');
+    expect((await engineWith({ voices: [broken.provider], device }).speak('two')).route).toBe('device');
     expect(device.said).toEqual(['two']);
 
     device.fail = true;
-    expect((await engineWith({ voice: broken.provider, device }).speak('three')).route).toBe('silent');
+    expect((await engineWith({ voices: [broken.provider], device }).speak('three')).route).toBe('silent');
   });
 
   it('never lets two utterances overlap — a new line cuts the old one off', async () => {
     const device = fakeDevice();
     const voice = fakeVoice({ ms: 10_000 });
-    const engine = engineWith({ voice: voice.provider, device });
+    const engine = engineWith({ voices: [voice.provider], device });
 
     const first = engine.speak('I was going to say something long');
     await new Promise((r) => setTimeout(r, 0)); // let the first player attach
@@ -191,7 +191,7 @@ describe('the voice engine', () => {
   it('stop() ends the current line immediately', async () => {
     const device = fakeDevice();
     const voice = fakeVoice({ ms: 10_000 });
-    const engine = engineWith({ voice: voice.provider, device });
+    const engine = engineWith({ voices: [voice.provider], device });
     const speaking = engine.speak('a long thought about squirrels');
     await new Promise((r) => setTimeout(r, 0));
     engine.stop();
@@ -202,7 +202,7 @@ describe('the voice engine', () => {
   it('backgrounding shuts him up — nobody wants a dog talking from a pocket', async () => {
     const device = fakeDevice();
     const voice = fakeVoice({ ms: 10_000 });
-    const engine = engineWith({ voice: voice.provider, device });
+    const engine = engineWith({ voices: [voice.provider], device });
     const speaking = engine.speak('still going');
     await new Promise((r) => setTimeout(r, 0));
     engine.onBackground();
@@ -215,7 +215,7 @@ describe('the voice engine', () => {
     const voice = fakeVoice();
     const waits: number[] = [];
     const engine = createVoiceEngine({
-      voice: voice.provider,
+      voices: [voice.provider],
       device,
       muted: true,
       wait: async (ms) => void waits.push(ms),
@@ -231,7 +231,7 @@ describe('the voice engine', () => {
   it('unmuting restores the real voice', async () => {
     const device = fakeDevice();
     const voice = fakeVoice();
-    const engine = engineWith({ voice: voice.provider, device, muted: true });
+    const engine = engineWith({ voices: [voice.provider], device, muted: true });
     await engine.speak('quiet one');
     engine.setMuted(false);
     await engine.speak('loud one');
@@ -256,7 +256,7 @@ describe('the voice engine', () => {
   it('resolves even when everything fails, so speaking is never a stuck state', async () => {
     const device = fakeDevice();
     device.fail = true;
-    const engine = engineWith({ voice: fakeVoice({ fail: true }).provider, device });
+    const engine = engineWith({ voices: [fakeVoice({ fail: true }).provider], device });
     await expect(engine.speak('anyone there')).resolves.toMatchObject({ route: 'silent' });
   });
 });

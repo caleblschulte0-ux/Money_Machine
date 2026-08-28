@@ -40,7 +40,12 @@
     "brain": "BARKLY_BRAIN=cli node ../server/index.mjs",
     "real": "EXPO_PUBLIC_BARKLY_BACKEND_URL=http://localhost:8787 expo start",
     "check:a11y": "node scripts/build-artifact.mjs && node scripts/a11y-check.mjs",
-    "check:ui": "node scripts/build-artifact.mjs && node scripts/overlap-check.mjs && node scripts/a11y-check.mjs"
+    "check:ui": "node scripts/build-artifact.mjs && node scripts/overlap-check.mjs && node scripts/a11y-check.mjs && node scripts/voice-check.mjs",
+    "voice:harvest": "node scripts/voice-bank.mjs harvest",
+    "voice:record": "python3 scripts/render-voice-bank.py",
+    "voice:link": "node scripts/voice-bank.mjs link",
+    "voice:check": "node scripts/voice-bank.mjs check",
+    "check:voice": "node scripts/voice-check.mjs"
   },
   "private": true,
   "jest": {

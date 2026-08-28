@@ -71,7 +71,12 @@ describe('it changes how he sounds, never what he means', () => {
       // "ain't" only ever replaces an existing negative, so a line with no
       // negation in it must not come back with one.
       expect(out).not.toMatch(/\bain't\b/);
-      expect(out).not.toMatch(/\bnot\b/);
+      // The SENTENCE, not the garnish. "I'm not gonna lie to ya." is a fixed
+      // opener that happens to contain the word; it modifies nothing after it.
+      // Checking the whole string here made this test pass or fail on which
+      // opener a hash happened to pick, which is not what it is for.
+      const body = out.replace(/^I'm not gonna lie to ya\. /, '');
+      expect(body).not.toMatch(/\bnot\b/);
     }
   });
 
@@ -128,10 +133,44 @@ describe('it is deterministic and bounded', () => {
     }
   });
 
-  it('running it twice changes nothing more', () => {
-    // A line can pass through here and be quoted back later; it must settle.
-    for (const line of ['That is not going to work, you know.', 'I have to tell you something.']) {
+  /**
+   * Idempotence, tested against a corpus rather than two examples.
+   *
+   * The two-example version of this test passed while 51 of his 146 real lines
+   * failed — a repeated greeting collected a second opener and a third marker
+   * each time it came back round. It was the pre-recorded voice bank that
+   * caught it, because the bank is keyed on the spoken form and a line that
+   * will not settle has no stable key. Two lines is not a corpus.
+   */
+  it('running it twice changes nothing more, over every line in the game', () => {
+    const corpus = [
+      ...TREASURES.map((t) => `I found ${t.name} and I am not sorry.`),
+      'That is not going to work, you know.',
+      'I have to tell you something.',
+      'There you are. I was about to start making decisions on my own.',
+      'The park. There are BIRDS there.',
+      'i can hear the fridge thinking about opening.',
+      'Boredom is just an unthrown ball. That is not a saying but it should be.',
+      'Oh. It is you. I mean — hey. Took you long enough.',
+      'Town. Loads of people. Loads of them have food.',
+      'what if treats… but bigger',
+    ];
+    for (const line of corpus) {
       const once = bronx(line);
+      expect(bronx(once)).toBe(once);
+    }
+  });
+
+  it('settles no matter what you throw at it', () => {
+    // Generated sentences reach this function too, so the property has to hold
+    // for text nobody has read.
+    const words = ['there', 'you', 'the', 'that', 'this', 'going to', 'is not', 'waiting',
+      'thing', 'ball', 'yes', 'very', 'them', 'your', 'a', 'dog'];
+    for (let i = 0; i < 500; i += 1) {
+      let line = '';
+      for (let j = 0; j < 6; j += 1) line += `${words[(i * 7 + j * 13) % words.length]} `;
+      line = `${line.trim()} ${i}.`;
+      const once = bronx(line[0].toUpperCase() + line.slice(1));
       expect(bronx(once)).toBe(once);
     }
   });
@@ -166,6 +205,23 @@ describe('it never produces broken English', () => {
     const out = bronx('There you are.');
     expect(out).not.toMatch(/you're/i);
     expect(out).toMatch(/ya are/i);
+  });
+
+  it('never doubles an apostrophe', () => {
+    // `\bsomething\b` matches inside "Something's", because the boundary sits
+    // right before the apostrophe — and the replacement ends in one. He shipped
+    // "Somethin''s gone from my head" to the voice recorder before anyone
+    // noticed. Any rule whose replacement ends in an apostrophe has this trap.
+    for (const line of [
+      "Something's gone from my head.",
+      "Nothing's here.",
+      "Everything's fine and the waiting's over.",
+      "That thing's mine.",
+    ]) {
+      expect(bronx(line)).not.toMatch(/''|\u2019\u2019|'\u2019|\u2019'/);
+    }
+    expect(bronx("Something's gone.")).toMatch(/Somethin's/);
+    expect(bronx("Nothing's here.")).toMatch(/Nuttin's/);
   });
 
   it('does not write "you\u2019ll not"', () => {

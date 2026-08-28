@@ -37,7 +37,13 @@ export interface SpeakResult {
 }
 
 export interface VoiceEngineOptions {
-  voice?: BarklyVoice;
+  /**
+   * His own voices, best first. Two of them today: the BANKED recordings that
+   * ship inside the app, then the live proxy for anything not in the bank.
+   * A voice that cannot say a particular line returns null and the next one
+   * gets its turn, which is why this is a list and not a flag.
+   */
+  voices?: BarklyVoice[];
   device: TextToSpeechProvider;
   muted?: boolean;
   now?: () => number;
@@ -121,11 +127,12 @@ export function createVoiceEngine(opts: VoiceEngineOptions) {
         return { route: 'silent', interrupted: stale() };
       }
 
-      // 1. Barkly's own voice.
-      if (opts.voice?.isAvailable()) {
+      // 1. Barkly's own voices, in order.
+      for (const voice of opts.voices ?? []) {
+        if (!voice.isAvailable()) continue;
         let playback: VoicePlayback | null = null;
         try {
-          playback = await opts.voice.play(line, { onStart: o.onStart });
+          playback = await voice.play(line, { onStart: o.onStart });
         } catch {
           playback = null; // treated exactly like "no voice": fall through
         }
