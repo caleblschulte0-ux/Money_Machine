@@ -20,7 +20,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useBarkly } from '../hooks/useBarkly';
 import AdventureSheet from './AdventureSheet';
 import BarklyPhotoView from './BarklyPhotoView';
@@ -60,6 +60,7 @@ import {
   SPEECH_MAX_LINES,
   SPRITE_FOOT,
   stageHeight,
+  TAP_MIN,
   spriteScale as scaleForScreen,
 } from './layout';
 import { NPCS, NpcId } from '../world/npcs';
@@ -287,6 +288,23 @@ function NpcDog({
  * ball rendered as a black disc. Two copies is how one edit misses one of
  * them; now there is one copy, and its colours are art, not tokens.
  */
+/**
+ * The padlock on a place he cannot go yet.
+ *
+ * It was the 🔒 EMOJI, added in the same pass that took emoji out of the shop
+ * for rendering in the operating system's art style rather than the app's.
+ * Six pixels of drawn shackle is not a hard thing to do and it stops one glyph
+ * on the screen being someone else's drawing.
+ */
+function LockGlyph() {
+  return (
+    <Svg width={11} height={12} viewBox="0 0 11 12" style={{ marginRight: 4 }}>
+      <Path d="M3 5 V3.4 a2.5 2.5 0 0 1 5 0 V5" stroke={color.inkFaint} strokeWidth={1.4} fill="none" />
+      <Rect x={1.4} y={5} width={8.2} height={6.2} rx={1.6} fill={color.inkFaint} />
+    </Svg>
+  );
+}
+
 function RubberBall({ size }: { size: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 30 30">
@@ -727,8 +745,9 @@ export default function BarklyRoom() {
                     be a second line of text inside the tab, which made that
                     one tab taller than its neighbours and pushed the whole
                     row past the edge of a 360px screen. */}
+                {areaLocked && <LockGlyph />}
                 <Text style={[styles.tabText, location === loc && styles.tabTextActive]} numberOfLines={1}>
-                  {areaLocked ? '\u{1F512} ' : ''}{LOCATIONS[loc].name.toLowerCase()}
+                  {LOCATIONS[loc].name.toLowerCase()}
                 </Text>
               </Pressable>
             );
@@ -1086,7 +1105,7 @@ const styles = StyleSheet.create({
   },
   planChip: {
     minWidth: 46,
-    height: 32,
+    height: TAP_MIN,
     paddingHorizontal: space.md,
     borderRadius: radius.pill,
     backgroundColor: color.card,
@@ -1098,9 +1117,9 @@ const styles = StyleSheet.create({
   planChipText: { ...type.caption, fontWeight: '900', color: color.inkSoft },
   planChipTextDone: { color: color.good },
   gear: {
-    width: 38,
-    height: 38,
-    borderRadius: 18,
+    width: TAP_MIN,
+    height: TAP_MIN,
+    borderRadius: radius.pill,
     backgroundColor: color.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1113,8 +1132,8 @@ const styles = StyleSheet.create({
   toyProp: { position: 'absolute', bottom: 16, right: 24 },
   walletTap: { flex: 1, marginHorizontal: 8 },
   packButton: {
-    minWidth: 43,
-    height: 38,
+    minWidth: 46,
+    height: TAP_MIN,
     borderRadius: 12,
     paddingHorizontal: 7,
     backgroundColor: color.ink,
@@ -1166,7 +1185,7 @@ const styles = StyleSheet.create({
   gearMuted: { backgroundColor: color.fill },
 
   tabs: { flex: 1, flexDirection: 'row', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 2, ...elevation.card },
-  tab: { flex: 1, paddingVertical: 7, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  tab: { flex: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   tabActive: { backgroundColor: color.ink },
   tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 },
   tabTextActive: { color: color.paper },
@@ -1217,8 +1236,8 @@ const styles = StyleSheet.create({
   talkText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
   typeRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13, fontSize: 15, color: color.ink, ...elevation.low },
-  send: { backgroundColor: color.ink, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', ...elevation.card },
+  input: { flex: 1, minHeight: TAP_MIN, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13, fontSize: 15, color: color.ink, ...elevation.low },
+  send: { minHeight: TAP_MIN, backgroundColor: color.ink, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', ...elevation.card },
   sendText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
   /**
    * "Nothing typed yet" is a RESTING state, not a broken one. Fading the dark
@@ -1227,15 +1246,17 @@ const styles = StyleSheet.create({
    * the bottom of the screen looking switched off.
    */
   sendIdle: { backgroundColor: color.fill, ...elevation.flat },
-  sendTextIdle: { color: color.inkFaint },
+  sendTextIdle: { color: color.inkSoft },
 
   actionsRow: { flexDirection: 'row', gap: 10 },
   actionWrap: { flex: 1 },
   action: {
     backgroundColor: color.card,
     borderRadius: 999,
+    minHeight: TAP_MIN,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: color.line,
     ...elevation.low,

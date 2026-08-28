@@ -13,6 +13,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ItemIcon from './ItemIcon';
 import { color, radius } from './theme';
+import { TAP_MIN } from './layout';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   isMultiSlot,
@@ -25,7 +26,6 @@ import {
   Wallet,
 } from '../game/progression';
 
-const COIN = color.gold;
 
 interface Props {
   visible: boolean;
@@ -229,7 +229,16 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   title: { fontSize: 24, fontWeight: '800', color: color.ink },
-  close: { fontSize: 18, color: color.inkSoft, paddingHorizontal: 4 },
+  /**
+   * The way out of a sheet, at a real tap size.
+   *
+   * Seven sheets each declared this separately and every one of them measured
+   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
+   * carried a comment saying the X was "the labelled way out", which was true
+   * and beside the point: it was the smallest target in the app, on the
+   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
+   */
+  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
   flash: {
     marginHorizontal: 20,
     marginBottom: 6,
@@ -247,7 +256,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.1,
-    color: color.inkFaint,
+    color: color.inkSoft,
     textTransform: 'uppercase',
   },
   item: {
@@ -279,8 +288,12 @@ const styles = StyleSheet.create({
   itemText: { flex: 1 },
   itemName: { fontSize: 15, fontWeight: '700', color: color.ink },
   itemBlurb: { fontSize: 13, color: color.inkSoft, marginTop: 2 },
-  price: { fontSize: 15, fontWeight: '800', color: COIN },
-  priceShort: { color: color.inkFaint },
+  // goldInk, not color.gold. color.gold is `color.gold` — the disc and the XP bar — and
+  // aliasing it to a local name is how it slipped past both the colour sweep
+  // and the contrast test's source scan while measuring 2.38:1 on every price
+  // in the shop. See __tests__/design_system.test.ts, which now bans the alias.
+  price: { fontSize: 15, fontWeight: '800', color: color.goldInk },
+  priceShort: { color: color.inkSoft },
   lockTag: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
   ownedTag: { fontSize: 13, fontWeight: '700', color: color.good },
   wornTag: { fontSize: 13, fontWeight: '800', color: color.goldInk },
@@ -309,18 +322,23 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: color.card,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    // 44 tall, because in the room this pill IS the shop button. See
+    // layout.TAP_MIN — hitSlop does not exist on React Native Web.
+    minHeight: TAP_MIN,
   },
   coin: {
     width: 20,
     height: 20,
     borderRadius: 12,
-    backgroundColor: COIN,
+    backgroundColor: color.gold,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  coinMark: { fontSize: 12, fontWeight: '900', color: color.goldInk },
+  // `ink`, not `goldInk`: the mark sits ON the gold disc, not on paper, and
+  // goldInk against gold measures 2.74:1. It is the one place in the app where
+  // the readable-gold token is the wrong gold.
+  coinMark: { fontSize: 12, fontWeight: '900', color: color.ink },
   coinCount: { fontSize: 15, fontWeight: '800', color: color.ink, flexShrink: 0 },
   levelWrap: { flex: 1, minWidth: 40, alignItems: 'flex-end' },
   levelText: { fontSize: 12, fontWeight: '700', color: color.inkSoft },
@@ -332,5 +350,5 @@ const styles = StyleSheet.create({
     marginTop: 3,
     overflow: 'hidden',
   },
-  levelFill: { height: 5, borderRadius: 8, backgroundColor: COIN },
+  levelFill: { height: 5, borderRadius: 8, backgroundColor: color.gold },
 });

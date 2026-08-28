@@ -12,42 +12,41 @@ export type DigSite = 'park' | 'beach';
 export interface Treasure {
   id: string;
   name: string;
-  icon: string; // emoji, for the stash list UI
   /** Which site turns this up. Missing means the park, which came first. */
   where?: DigSite;
 }
 
 export const TREASURES: Treasure[] = [
-  { id: 'sock', name: 'a sock (previously owned)', icon: '🧦' },
-  { id: 'half_ball', name: 'half a tennis ball', icon: '🎾' },
-  { id: 'duck_rock', name: 'a rock that looks like a duck', icon: '🪨' },
-  { id: 'good_stick', name: 'the good stick', icon: '🪵' },
-  { id: 'mystery_bone', name: 'a mysterious bone', icon: '🦴' },
-  { id: 'frisbee', name: "someone's frisbee (finders keepers)", icon: '🥏' },
-  { id: 'caps', name: 'a bottle cap collection (3 caps)', icon: '🔘' },
-  { id: 'acorn', name: 'an acorn (suspicious)', icon: '🌰' },
-  { id: 'glove', name: 'a glove that lost its person', icon: '🧤' },
-  { id: 'sandwich', name: 'a very old sandwich (do not ask)', icon: '🥪' },
-  { id: 'button', name: 'a shiny button', icon: '🪙' },
-  { id: 'feather', name: 'a feather (bird tax)', icon: '🪶' },
-  { id: 'tiny_duck', name: 'a tiny rubber duck', icon: '🦆' },
-  { id: 'map', name: 'a map? or trash? unclear', icon: '🗺️' },
+  { id: 'sock', name: 'a sock (previously owned)' },
+  { id: 'half_ball', name: 'half a tennis ball' },
+  { id: 'duck_rock', name: 'a rock that looks like a duck' },
+  { id: 'good_stick', name: 'the good stick' },
+  { id: 'mystery_bone', name: 'a mysterious bone' },
+  { id: 'frisbee', name: "someone's frisbee (finders keepers)" },
+  { id: 'caps', name: 'a bottle cap collection (3 caps)' },
+  { id: 'acorn', name: 'an acorn (suspicious)' },
+  { id: 'glove', name: 'a glove that lost its person' },
+  { id: 'sandwich', name: 'a very old sandwich (do not ask)' },
+  { id: 'button', name: 'a shiny button' },
+  { id: 'feather', name: 'a feather (bird tax)' },
+  { id: 'tiny_duck', name: 'a tiny rubber duck' },
+  { id: 'map', name: 'a map? or trash? unclear' },
 
   /**
    * The beach pool. Unlocking a new place has to give you something you
    * cannot get anywhere else, or the unlock is just a different background —
    * which is the fastest way to make progression feel like nothing.
    */
-  { id: 'shell', name: 'a spiral shell (the good kind)', icon: '🐚', where: 'beach' },
-  { id: 'sea_glass', name: 'a piece of sea glass, green', icon: '🟢', where: 'beach' },
-  { id: 'driftwood', name: 'driftwood shaped like a smaller stick', icon: '🪵', where: 'beach' },
-  { id: 'crab_claw', name: 'one crab claw (the crab was fine)', icon: '🦀', where: 'beach' },
-  { id: 'bottle', name: 'a bottle with a note nobody can read', icon: '🍾', where: 'beach' },
-  { id: 'starfish', name: 'a starfish (put back, then re-found)', icon: '⭐', where: 'beach' },
-  { id: 'flip_flop', name: 'exactly one flip-flop', icon: '🩴', where: 'beach' },
-  { id: 'kelp', name: 'a length of extremely rude seaweed', icon: '🌿', where: 'beach' },
-  { id: 'shark_tooth', name: 'a shark tooth, allegedly', icon: '🦈', where: 'beach' },
-  { id: 'pebble', name: 'a perfectly flat skipping stone', icon: '⚪', where: 'beach' },
+  { id: 'shell', name: 'a spiral shell (the good kind)', where: 'beach' },
+  { id: 'sea_glass', name: 'a piece of sea glass, green', where: 'beach' },
+  { id: 'driftwood', name: 'driftwood shaped like a smaller stick', where: 'beach' },
+  { id: 'crab_claw', name: 'one crab claw (the crab was fine)', where: 'beach' },
+  { id: 'bottle', name: 'a bottle with a note nobody can read', where: 'beach' },
+  { id: 'starfish', name: 'a starfish (put back, then re-found)', where: 'beach' },
+  { id: 'flip_flop', name: 'exactly one flip-flop', where: 'beach' },
+  { id: 'kelp', name: 'a length of extremely rude seaweed', where: 'beach' },
+  { id: 'shark_tooth', name: 'a shark tooth, allegedly', where: 'beach' },
+  { id: 'pebble', name: 'a perfectly flat skipping stone', where: 'beach' },
 ];
 
 export function treasuresAt(where: DigSite): Treasure[] {

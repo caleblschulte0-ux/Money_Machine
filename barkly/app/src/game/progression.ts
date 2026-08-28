@@ -182,29 +182,28 @@ export interface StoreItem {
   consumable?: boolean;
   /** Worn items carry a colour the renderer can tint with. */
   color?: string;
-  icon: string;
 }
 
 export const STORE: StoreItem[] = [
   // --- collars: the visible flex, and the cheapest thing to want ---
-  { id: 'collar_red', name: 'Red collar', blurb: 'Loud. He likes loud.', slot: 'collar', price: 60, level: 1, color: '#B3402E', icon: '🔴' },
-  { id: 'collar_blue', name: 'Blue collar', blurb: 'Calmer. He is not calmer.', slot: 'collar', price: 60, level: 1, color: '#3E6E9C', icon: '🔵' },
-  { id: 'collar_green', name: 'Green collar', blurb: 'The colour of grass, which he approves of.', slot: 'collar', price: 90, level: 2, color: '#4E7A46', icon: '🟢' },
-  { id: 'collar_gold', name: 'Gold collar', blurb: 'Absurd. He is thrilled.', slot: 'collar', price: 400, level: 6, color: '#C9A227', icon: '🟡' },
+  { id: 'collar_red', name: 'Red collar', blurb: 'Loud. He likes loud.', slot: 'collar', price: 60, level: 1, color: '#B3402E' },
+  { id: 'collar_blue', name: 'Blue collar', blurb: 'Calmer. He is not calmer.', slot: 'collar', price: 60, level: 1, color: '#3E6E9C' },
+  { id: 'collar_green', name: 'Green collar', blurb: 'The colour of grass, which he approves of.', slot: 'collar', price: 90, level: 2, color: '#4E7A46' },
+  { id: 'collar_gold', name: 'Gold collar', blurb: 'Absurd. He is thrilled.', slot: 'collar', price: 400, level: 6, color: '#C9A227' },
 
   // --- food: consumable, and the thing he will nag you about ---
-  { id: 'treat_biscuit', name: 'Biscuits', blurb: 'Fine. Ordinary. He will eat nine.', slot: 'treat', price: 20, level: 1, consumable: true, icon: '🦴' },
-  { id: 'treat_cheese', name: 'Cheese', blurb: 'The good stuff. He knows the difference.', slot: 'treat', price: 55, level: 2, consumable: true, icon: '🧀' },
-  { id: 'treat_steak', name: 'Steak', blurb: 'A birthday-level event.', slot: 'treat', price: 150, level: 5, consumable: true, icon: '🥩' },
+  { id: 'treat_biscuit', name: 'Biscuits', blurb: 'Fine. Ordinary. He will eat nine.', slot: 'treat', price: 20, level: 1, consumable: true },
+  { id: 'treat_cheese', name: 'Cheese', blurb: 'The good stuff. He knows the difference.', slot: 'treat', price: 55, level: 2, consumable: true },
+  { id: 'treat_steak', name: 'Steak', blurb: 'A birthday-level event.', slot: 'treat', price: 150, level: 5, consumable: true },
 
   // --- toys ---
-  { id: 'toy_ball', name: 'Squeaky ball', blurb: 'Squeaks. That is the entire feature.', slot: 'toy', price: 70, level: 1, icon: '⚽' },
-  { id: 'toy_rope', name: 'Rope', blurb: 'For arguments he intends to win.', slot: 'toy', price: 110, level: 3, icon: '🪢' },
+  { id: 'toy_ball', name: 'Squeaky ball', blurb: 'Squeaks. That is the entire feature.', slot: 'toy', price: 70, level: 1 },
+  { id: 'toy_rope', name: 'Rope', blurb: 'For arguments he intends to win.', slot: 'toy', price: 110, level: 3 },
 
   // --- home upgrades: the big-ticket goal ---
-  { id: 'home_bed', name: 'Proper bed', blurb: 'Deeper. Softer. He will not shut up about it.', slot: 'home', price: 220, level: 2, icon: '🛏️' },
-  { id: 'home_rug', name: 'Nice rug', blurb: 'Ties the room together, apparently.', slot: 'home', price: 300, level: 5, icon: '🟫' },
-  { id: 'home_window', name: 'Bigger window', blurb: 'More birds to be furious about.', slot: 'home', price: 500, level: 7, icon: '🪟' },
+  { id: 'home_bed', name: 'Proper bed', blurb: 'Deeper. Softer. He will not shut up about it.', slot: 'home', price: 220, level: 2 },
+  { id: 'home_rug', name: 'Nice rug', blurb: 'Ties the room together, apparently.', slot: 'home', price: 300, level: 5 },
+  { id: 'home_window', name: 'Bigger window', blurb: 'More birds to be furious about.', slot: 'home', price: 500, level: 7 },
 ];
 
 /** What is on the shelves at this level — locked items are shown, not hidden. */
@@ -418,6 +417,25 @@ export function grantEverything(wallet: Wallet): Wallet {
     equipped,
     pantry,
   };
+}
+
+/**
+ * What he SAYS when he levels up.
+ *
+ * Not what unlocked — that is the reward notice's job, and it is already on
+ * screen. He reacts; the card informs. When the two were the same string he
+ * answered "do you like the park?" with "Green collar is in the shop now",
+ * which is a shop reading itself aloud in a dog's voice.
+ */
+export function levelUpLine(level: number): string {
+  const lines = [
+    'Something just happened. I feel it. I am MORE dog than I was.',
+    "I levelled up. I don't know what that means but I'm claiming it.",
+    'Whatever that was, I did it. Probably. Mostly me.',
+    'That felt important. I have decided it was about me.',
+    'New level. Same dog. Slightly smugger dog.',
+  ];
+  return lines[level % lines.length];
 }
 
 /** Everything that just became available crossing into this level. */

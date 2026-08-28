@@ -70,6 +70,20 @@ describe('one palette', () => {
       expect(own ?? []).toEqual([]);
     });
 
+    /**
+     * ...and no ALIAS of a token either: `const COIN = color.gold;`
+     *
+     * That one line put the shop's prices at 2.38:1 and kept them there
+     * through a colour sweep and a contrast test, because both of them scan
+     * for `color: color.gold` and this reads `color: COIN`. An alias buys
+     * nothing — the token already has a name — and it costs the whole
+     * enforcement layer its grip.
+     */
+    it(`${short}: does not rename a token`, () => {
+      const alias = code(file).match(/const\s+[A-Z_]{2,}\s*=\s*color\.\w+;/g);
+      expect(alias ?? []).toEqual([]);
+    });
+
     it(`${short}: uses tokens, not raw hex`, () => {
       const raw = [...new Set(code(file).match(/#[0-9A-Fa-f]{6}\b/g) ?? [])];
       expect(raw).toEqual([]);

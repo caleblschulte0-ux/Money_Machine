@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: { backgroundColor: color.card, borderRadius: 28, padding: 22, width: '100%', maxWidth: 360 },
-  eyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: color.inkFaint },
+  eyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: color.inkSoft },
   title: { fontSize: 20, fontWeight: '800', color: color.ink, marginTop: 6, lineHeight: 26 },
   score: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 14 },
   scoreSide: { fontSize: 15, fontWeight: '800', color: color.ink },

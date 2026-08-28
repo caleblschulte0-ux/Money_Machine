@@ -16,6 +16,7 @@
 
 import React, { useState } from 'react';
 import { color } from './theme';
+import { TAP_MIN } from './layout';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ParentalGate from './ParentalGate';
 
@@ -167,7 +168,16 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   title: { fontSize: 24, fontWeight: '800', color: color.ink },
-  close: { fontSize: 18, color: color.inkSoft, paddingHorizontal: 6 },
+  /**
+   * The way out of a sheet, at a real tap size.
+   *
+   * Seven sheets each declared this separately and every one of them measured
+   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
+   * carried a comment saying the X was "the labelled way out", which was true
+   * and beside the point: it was the smallest target in the app, on the
+   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
+   */
+  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
   body: { paddingHorizontal: 22, paddingBottom: 34 },
   lead: { fontSize: 15, lineHeight: 22, color: color.ink, marginBottom: 6 },
   section: {
@@ -176,7 +186,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.1,
-    color: color.inkFaint,
+    color: color.inkSoft,
     textTransform: 'uppercase',
   },
   item: { backgroundColor: color.card, borderRadius: 18, padding: 14, marginBottom: 8 },

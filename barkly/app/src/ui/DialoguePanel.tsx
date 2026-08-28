@@ -121,13 +121,13 @@ const styles = StyleSheet.create({
   },
   who: {
     ...type.micro,
-    color: color.inkFaint,
+    color: color.inkSoft,
     marginBottom: space.xs,
   },
   whoNpc: { color: color.warm },
   youSaid: {
     ...type.caption,
-    color: color.inkFaint,
+    color: color.inkSoft,
     marginBottom: space.xs,
   },
   line: {
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   restingWrap: { alignItems: 'center' },
   resting: {
     ...type.body,
-    color: color.inkFaint,
+    color: color.inkSoft,
     textAlign: 'center',
   },
 });

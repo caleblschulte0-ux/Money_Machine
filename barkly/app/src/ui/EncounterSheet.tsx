@@ -1,5 +1,6 @@
 import React from 'react';
 import { color, elevation } from './theme';
+import { TAP_MIN } from './layout';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SocialEncounter } from '../barkly/encounters';
 import { NPCS } from '../world/npcs';
@@ -124,8 +125,17 @@ const styles = StyleSheet.create({
   topline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   eyebrowPill: { backgroundColor: color.goldWell, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },
   eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.2, color: color.goldInk },
-  close: { fontSize: 18, color: color.inkSoft, padding: 4 },
-  npcName: { marginTop: 18, fontSize: 12, fontWeight: '900', color: color.gold, letterSpacing: 1.4, textTransform: 'uppercase' },
+  /**
+   * The way out of a sheet, at a real tap size.
+   *
+   * Seven sheets each declared this separately and every one of them measured
+   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
+   * carried a comment saying the X was "the labelled way out", which was true
+   * and beside the point: it was the smallest target in the app, on the
+   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
+   */
+  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
+  npcName: { marginTop: 18, fontSize: 12, fontWeight: '900', color: color.goldInk, letterSpacing: 1.4, textTransform: 'uppercase' },
   title: { marginTop: 4, fontSize: 24, lineHeight: 31, fontWeight: '900', color: color.ink, letterSpacing: -0.7 },
   prompt: { marginTop: 10, fontSize: 15, lineHeight: 22, color: color.inkMid },
   divider: { height: 1, backgroundColor: color.line, marginTop: 18, marginBottom: 15 },
@@ -149,6 +159,6 @@ const styles = StyleSheet.create({
   choiceLabel: { fontSize: 15, fontWeight: '800', color: color.ink },
   choiceHint: { marginTop: 3, fontSize: 12, color: color.inkSoft },
   arrow: { fontSize: 26, lineHeight: 30, color: color.warmLine, marginLeft: 8 },
-  footer: { marginTop: 14, fontSize: 12, lineHeight: 17, color: color.inkFaint, textAlign: 'center' },
+  footer: { marginTop: 14, fontSize: 12, lineHeight: 17, color: color.inkSoft, textAlign: 'center' },
   disabled: { opacity: 0.48 },
 });

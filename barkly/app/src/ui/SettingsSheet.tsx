@@ -10,6 +10,7 @@
 
 import React, { useState } from 'react';
 import { color } from './theme';
+import { TAP_MIN } from './layout';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ParentalGate from './ParentalGate';
 import PrivacySheet from './PrivacySheet';
@@ -178,7 +179,11 @@ export default function SettingsSheet(props: Props) {
             <Text style={styles.section}>Barkly's stash</Text>
             {stash.length === 0 && <Text style={styles.empty}>Nothing yet. There's a dig spot at the park…</Text>}
             {stash.map((t) => (
-              <Text key={t.id} style={styles.row}>{t.icon}  {t.name}</Text>
+              // The names ARE the joke — "a rock that looks like a duck",
+              // "a very old sandwich (do not ask)". They carried an emoji each,
+              // which was both the system's drawing rather than ours and a
+              // second, worse punchline in front of the first.
+              <Text key={t.id} style={styles.row}>· {t.name}</Text>
             ))}
 
             <Text style={styles.section}>Providers</Text>
@@ -430,7 +435,16 @@ const styles = StyleSheet.create({
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '800', color: color.ink },
-  close: { fontSize: 18, color: color.ink },
+  /**
+   * The way out of a sheet, at a real tap size.
+   *
+   * Seven sheets each declared this separately and every one of them measured
+   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
+   * carried a comment saying the X was "the labelled way out", which was true
+   * and beside the point: it was the smallest target in the app, on the
+   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
+   */
+  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.ink },
   scroll: { marginTop: 8 },
   section: { marginTop: 16, marginBottom: 6, fontSize: 13, fontWeight: '800', color: color.inkSoft, textTransform: 'uppercase' },
   row: { fontSize: 15, color: color.ink, marginBottom: 4 },
@@ -445,11 +459,22 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+    minHeight: TAP_MIN,
+    justifyContent: 'center',
   },
-  forgetText: { color: 'white', fontWeight: '800', fontSize: 15 },
+  forgetText: { color: color.inkOn, fontWeight: '800', fontSize: 15 },
   factRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   factText: { flex: 1, fontSize: 13, color: color.inkMid, lineHeight: 21 },
-  factForget: { fontSize: 12, color: color.brand, paddingVertical: 3 },
+  // A 31x20 'forget' link next to each remembered fact — the control that
+  // deletes something Barkly knows about you, at two-thirds the minimum tap
+  // size. Destructive and hard to hit is the worst pair.
+  factForget: {
+    fontSize: 12,
+    color: color.brand,
+    lineHeight: TAP_MIN,
+    minWidth: TAP_MIN,
+    textAlign: 'center',
+  },
   voiceBlurb: { fontSize: 12, lineHeight: 17, color: color.inkSoft, marginBottom: 10 },
   voiceList: { gap: 6, marginBottom: 12 },
   voiceRow: {
@@ -470,8 +495,8 @@ const styles = StyleSheet.create({
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
   stepperLabel: { flex: 1, fontSize: 13, fontWeight: '700', color: color.ink },
   stepperBtn: {
-    width: 38,
-    height: 34,
+    width: TAP_MIN,
+    height: TAP_MIN,
     borderRadius: 12,
     backgroundColor: color.fill,
     alignItems: 'center',
@@ -482,13 +507,20 @@ const styles = StyleSheet.create({
   hearIt: {
     alignSelf: 'flex-start',
     marginTop: 4,
+    minHeight: TAP_MIN,
+    justifyContent: 'center',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: color.ink,
   },
   hearItText: { color: color.card, fontSize: 13, fontWeight: '800' },
-  voiceReset: { alignSelf: 'flex-start', paddingVertical: 10 },
+  voiceReset: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    minHeight: TAP_MIN,
+    justifyContent: 'center',
+  },
   voiceResetText: { fontSize: 13, color: color.inkSoft, textDecorationLine: 'underline' },
   devRow: {
     flexDirection: 'row',
@@ -514,6 +546,8 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     alignItems: 'center',
     backgroundColor: color.fill,
+    minHeight: TAP_MIN,
+    justifyContent: 'center',
   },
   parentsText: { fontSize: 15, fontWeight: '700', color: color.inkMid },
   note: { marginTop: 14, marginBottom: 24, fontSize: 12, color: color.inkSoft, lineHeight: 17 },

@@ -32,11 +32,31 @@ import { Platform, TextStyle, ViewStyle } from 'react-native';
 export const color = {
   /** Primary text and the dark UI fill. */
   ink: '#3E3428',
-  /** Secondary text: labels, blurbs, anything supporting. */
-  inkSoft: '#8A7A5F',
+  /**
+   * Tertiary text: hints, counts, blurbs — the lightest text in the app.
+   *
+   * It was #8A7A5F, measured at 4.10:1 on card and 3.22:1 on a filled chip.
+   * WCAG AA wants 4.5:1 for text this size, and this is an app for children,
+   * where the argument for "readable enough" is weakest. #70634B is the
+   * lightest warm brown of this hue that clears 4.5 on EVERY surface the app
+   * ever sets text on — including the tinted notice wells, where the first
+   * attempt at this fix still missed by a tenth.
+   *
+   * Enforced by __tests__/contrast.test.ts, which is what makes this comment
+   * a fact rather than a claim: the previous version of this file said
+   * inkFaint "still passes on paper", and it measured 2.69.
+   */
+  inkSoft: '#70634B',
   /** Between ink and inkSoft: secondary headings, strong-but-not-primary. */
   inkMid: '#5C4F3E',
-  /** Tertiary: hints, counts, disabled text. Still passes on paper. */
+  /**
+   * NOT A TEXT COLOUR. A hairline, an inactive glyph, a disabled fill.
+   *
+   * At 2.77:1 on card it cannot carry text, and it was carrying it in
+   * sixteen places — the speaker name on the dialogue panel, every price,
+   * the level counter. Those all moved up to `inkSoft`. The contrast test
+   * fails the build if this token appears after `color:` again.
+   */
   inkFaint: '#A8987C',
   /** Reversed text, on ink or on a photo. */
   inkOn: '#FFF9EC',
@@ -52,6 +72,10 @@ export const color = {
   line: '#E7D9BE',
 
   /** Coins, levels, anything you earn. */
+  /**
+   * Gold as a SURFACE: the coin disc, the XP bar, a "worn" border. At 2.38:1
+   * it is not legible as text — `goldInk` is the readable one.
+   */
   gold: '#C9A227',
   goldSoft: '#E2C471',
   goldInk: '#72591E',

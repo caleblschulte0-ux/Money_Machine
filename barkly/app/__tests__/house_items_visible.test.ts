@@ -56,9 +56,23 @@ describe('everything you can buy is visible', () => {
     expect(ROOM).toMatch(/barkly\.toy/);
   });
 
-  it('every store item has an icon and a blurb, so no row is a blank', () => {
+  /**
+   * Every store item is DRAWN.
+   *
+   * This used to assert `item.icon.length > 0` against an emoji field. That
+   * field is gone — the shop and the food picker render ui/ItemIcon — so the
+   * check has to follow the drawing, not the data that used to stand in for
+   * it. Otherwise adding a twelfth item ships a row whose picture is the
+   * fallback rug, and nothing says so.
+   */
+  it('every store item has a drawing, a blurb and a name', () => {
+    const icons = readFileSync(join(__dirname, '..', 'src', 'ui', 'ItemIcon.tsx'), 'utf8');
+    const drawn = icons.slice(icons.indexOf('const BY_ID'), icons.indexOf('};', icons.indexOf('const BY_ID')));
     for (const item of STORE) {
-      expect(item.icon.length).toBeGreaterThan(0);
+      // Collars are one shape in four tints, handled by id prefix.
+      if (!item.id.startsWith('collar_')) {
+        expect(drawn).toMatch(new RegExp(`\\b${item.id}:`));
+      }
       expect(item.blurb.length).toBeGreaterThan(4);
       expect(item.name.length).toBeGreaterThan(2);
     }

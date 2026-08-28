@@ -55,6 +55,7 @@ import {
   grantLevel,
   levelFor,
   STORE,
+  levelUpLine,
   unlockedAt,
   Wallet,
 } from '../game/progression';
@@ -163,7 +164,7 @@ export interface BarklyController {
   placedHome: string[];
   hasHome(itemId: string): boolean;
   /** The toy he is holding, if any — it drives what "play" actually does. */
-  toy: { id: string; name: string; icon: string } | null;
+  toy: { id: string; name: string } | null;
 
   /** The legible answer to "what kind of Barkly did I create?" */
   relationship: RelationshipProfile;
@@ -351,8 +352,12 @@ export function useBarkly(): BarklyController {
         : note;
       setReward({ ...result.gained, note: rewardNote });
       if (result.leveledTo) {
-        const unlocked = unlockedAt(result.leveledTo);
-        if (unlocked.length > 0) setPendingGreeting(unlocked[0].line);
+        // What he SAYS is his reaction to levelling up. What the notice says
+        // is which thing opened. They used to be the identical sentence, so
+        // asking him a question could be answered with "Green collar is in
+        // the shop now" — the same line already sitting on screen in the
+        // reward card. An advert is not a reply.
+        setPendingGreeting(levelUpLine(result.leveledTo));
       }
       return result.wallet;
     });
@@ -404,8 +409,7 @@ export function useBarkly(): BarklyController {
           : 'plan complete';
         setReward({ ...PLAN_REWARD, note });
         if (leveled) {
-          const unlocked = unlockedAt(after);
-          if (unlocked.length > 0) setPendingGreeting(unlocked[0].line);
+          setPendingGreeting(levelUpLine(after));
         } else {
           setPendingGreeting('Plan complete. Disturbingly productive. We should probably do something pointless now.');
         }
@@ -736,11 +740,35 @@ export function useBarkly(): BarklyController {
     [speak],
   );
 
+  /**
+   * A queued line — a welcome-back, a level-up, a finished plan — waits its
+   * turn.
+   *
+   * This used to fire the instant it was set, which meant a level earned by
+   * answering a question replaced the ANSWER: you asked him something, and he
+   * announced the shop. It also cut off whatever he was already saying, since
+   * `speak` is the one lifecycle and a second call pre-empts the first.
+   *
+   * The queue is not dropped while he is busy — `pendingGreeting` stays set
+   * and `busy` is a dependency, so the effect re-runs and the line lands the
+   * moment he is free.
+   */
   useEffect(() => {
     if (!pendingGreeting) return;
-    setPendingGreeting(null);
-    speak(pendingGreeting, { actions: ['TAIL_WAG'] }).catch(() => {});
-  }, [pendingGreeting, speak]);
+    if (busy || isLocked(snapshot.state) || snapshot.state === 'speaking') return;
+    // ...and then it waits a beat longer.
+    //
+    // Waiting for "not busy" alone still cost you the answer: he replied, the
+    // turn ended, and the queued line overwrote the reply in the panel about
+    // 300ms later — so the question you asked was answered to nobody. A pause
+    // lets the reply be read, and it is also just how it goes: you answer the
+    // question, then you mention the other thing.
+    const t = setTimeout(() => {
+      setPendingGreeting(null);
+      speak(pendingGreeting, { actions: ['TAIL_WAG'] }).catch(() => {});
+    }, 1900);
+    return () => clearTimeout(t);
+  }, [pendingGreeting, busy, snapshot.state, speak]);
 
   // --------------------------------------------------------------- world
   const locationRef = useRef(location);
@@ -1283,6 +1311,11 @@ export function useBarkly(): BarklyController {
       await speak(pickLine(WAKE_LINES), { actions: ['MOUTH_MOVE'], after: { type: 'SLEEP_TOGGLE' } });
       return;
     }
+    // Whatever he last said, he is not saying it any more — he is asleep. The
+    // dialogue panel keeps showing the last exchange until something clears
+    // it, so without this he naps under a speech panel still quoting him
+    // shouting about a rock that looks like a duck.
+    setLastExchange(null);
     dispatch({ type: 'SLEEP_TOGGLE' });
   }, [claimTurn, dispatch, speak]);
 
@@ -1424,7 +1457,7 @@ export function useBarkly(): BarklyController {
     hasHome: (itemId: string) => isPlaced(wallet, itemId),
     toy: (() => {
       const t = equippedItem(wallet, 'toy');
-      return t ? { id: t.id, name: t.name, icon: t.icon } : null;
+      return t ? { id: t.id, name: t.name } : null;
     })(),
     devMode,
     setDevMode: setDevModeState,

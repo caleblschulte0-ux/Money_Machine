@@ -44,11 +44,19 @@
  */
 export const CONTENT_TOP = 54;
 
-/** Status row: coins, level, pack, mute, settings. */
-export const STATUS_HEIGHT = 44;
-
-/** Places row, directly under it. */
-export const PLACES_HEIGHT = 40;
+/**
+ * The two chrome rows, sized so every control in them is a 44px TAP TARGET.
+ *
+ * They were 44 and 40, holding 38x38 round buttons and 29px-tall tabs, with
+ * `hitSlop` making up the difference. React Native Web IGNORES hitSlop — so on
+ * the web build, and in the browser audit that found this, those were 38px
+ * and 29px targets against a 44px minimum (WCAG 2.5.5, Apple HIG). Padding is
+ * the fix that works on both platforms, and it is not a detail here: this is
+ * an app aimed at children, whose aim is worse than ours, not better.
+ */
+export const TAP_MIN = 44;
+export const STATUS_HEIGHT = TAP_MIN;
+export const PLACES_HEIGHT = TAP_MIN + 10;
 
 /** Everything above this is chrome. Measured from the top of the content view. */
 export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 12;

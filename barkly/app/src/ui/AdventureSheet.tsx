@@ -1,5 +1,6 @@
 import React from 'react';
 import { color } from './theme';
+import { TAP_MIN } from './layout';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AdventureState, adventureProgress, PLAN_REWARD } from '../game/adventure';
 
@@ -92,9 +93,18 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.7, color: color.gold },
+  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.7, color: color.goldInk },
   title: { marginTop: 3, maxWidth: 290, fontSize: 24, lineHeight: 28, fontWeight: '900', color: color.ink, letterSpacing: -0.5 },
-  close: { fontSize: 18, color: color.inkSoft, padding: 4 },
+  /**
+   * The way out of a sheet, at a real tap size.
+   *
+   * Seven sheets each declared this separately and every one of them measured
+   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
+   * carried a comment saying the X was "the labelled way out", which was true
+   * and beside the point: it was the smallest target in the app, on the
+   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
+   */
+  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
   subtitle: { marginTop: 9, fontSize: 13, lineHeight: 20, color: color.inkSoft },
   progressCard: {
     marginTop: 17,
@@ -110,7 +120,7 @@ const styles = StyleSheet.create({
   progressBig: { fontSize: 24, lineHeight: 27, fontWeight: '900', color: color.paper },
   progressSmall: { marginTop: 2, fontSize: 10, fontWeight: '900', letterSpacing: 1.3, color: color.line },
   progressRight: { alignItems: 'flex-end' },
-  rewardLabel: { fontSize: 10, color: color.inkFaint },
+  rewardLabel: { fontSize: 10, color: color.inkSoft },
   reward: { marginTop: 2, fontSize: 12, fontWeight: '800', color: color.goldSoft },
   goals: { marginTop: 14, gap: 9 },
   goal: {
@@ -136,5 +146,5 @@ const styles = StyleSheet.create({
   verdict: { marginTop: 16, borderRadius: 18, padding: 15, backgroundColor: color.goodWell },
   verdictTitle: { fontSize: 12, fontWeight: '900', letterSpacing: 1, color: color.inkMid, textTransform: 'uppercase' },
   verdictText: { marginTop: 5, fontSize: 13, lineHeight: 20, color: color.inkMid },
-  footer: { marginTop: 15, fontSize: 12, lineHeight: 17, color: color.inkFaint, textAlign: 'center' },
+  footer: { marginTop: 15, fontSize: 12, lineHeight: 17, color: color.inkSoft, textAlign: 'center' },
 });

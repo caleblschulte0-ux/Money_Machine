@@ -397,5 +397,5 @@ const styles = StyleSheet.create({
   stage: { alignItems: 'center', justifyContent: 'flex-end' },
   preload: { position: 'absolute', width: 1, height: 1, opacity: 0 },
   zzzWrap: { position: 'absolute', top: 8, right: 34, width: 60, height: 60 },
-  zzz: { position: 'absolute', bottom: 0, color: color.inkFaint, fontWeight: '800' },
+  zzz: { position: 'absolute', bottom: 0, color: color.inkSoft, fontWeight: '800' },
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import ItemIcon, { BowlIcon } from './ItemIcon';
 import { color } from './theme';
+import { TAP_MIN } from './layout';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { STORE, Wallet } from '../game/progression';
 
@@ -114,9 +115,18 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(29,24,18,0.48)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: color.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 28 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 },
-  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, color: color.gold },
+  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, color: color.goldInk },
   title: { marginTop: 4, maxWidth: 300, fontSize: 24, lineHeight: 27, fontWeight: '900', color: color.ink, letterSpacing: -0.5 },
-  close: { fontSize: 18, color: color.inkSoft, padding: 4 },
+  /**
+   * The way out of a sheet, at a real tap size.
+   *
+   * Seven sheets each declared this separately and every one of them measured
+   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
+   * carried a comment saying the X was "the labelled way out", which was true
+   * and beside the point: it was the smallest target in the app, on the
+   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
+   */
+  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
   section: { marginTop: 18, marginBottom: 7, fontSize: 12, fontWeight: '900', letterSpacing: 1.2, color: color.inkSoft, textTransform: 'uppercase' },
   meal: { marginTop: 16, minHeight: 76, borderRadius: 18, padding: 12, backgroundColor: color.fill, flexDirection: 'row', alignItems: 'center' },
   treat: { minHeight: 76, borderRadius: 18, padding: 12, marginBottom: 8, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, flexDirection: 'row', alignItems: 'center' },
@@ -124,7 +134,7 @@ const styles = StyleSheet.create({
   copy: { flex: 1, marginLeft: 12 },
   name: { fontSize: 15, fontWeight: '800', color: color.ink },
   detail: { marginTop: 3, fontSize: 12, lineHeight: 17, color: color.inkSoft },
-  arrow: { fontSize: 26, color: color.inkFaint, marginLeft: 8 },
+  arrow: { fontSize: 26, color: color.inkSoft, marginLeft: 8 },
   countPill: { minWidth: 36, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: color.fill, alignItems: 'center' },
   count: { fontSize: 12, fontWeight: '900', color: color.goldInk },
   empty: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.line, padding: 15 },
@@ -139,5 +149,5 @@ const styles = StyleSheet.create({
     backgroundColor: color.ink,
   },
   emptyCtaText: { color: color.paper, fontSize: 13, fontWeight: '800' },
-  footer: { marginTop: 15, fontSize: 12, lineHeight: 17, textAlign: 'center', color: color.inkFaint },
+  footer: { marginTop: 15, fontSize: 12, lineHeight: 17, textAlign: 'center', color: color.inkSoft },
 });

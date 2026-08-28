@@ -1,5 +1,6 @@
 import React from 'react';
 import { color } from './theme';
+import { TAP_MIN } from './layout';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RelationshipProfile } from '../barkly/relationship';
 
@@ -160,9 +161,18 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(28,24,19,0.48)', justifyContent: 'flex-end' },
   sheet: { maxHeight: '91%', backgroundColor: color.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 18 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
-  eyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 2.1, color: color.gold },
+  eyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 2.1, color: color.goldInk },
   title: { marginTop: 2, fontSize: 24, fontWeight: '900', color: color.ink, letterSpacing: -0.4 },
-  close: { fontSize: 18, color: color.ink, padding: 4 },
+  /**
+   * The way out of a sheet, at a real tap size.
+   *
+   * Seven sheets each declared this separately and every one of them measured
+   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
+   * carried a comment saying the X was "the labelled way out", which was true
+   * and beside the point: it was the smallest target in the app, on the
+   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
+   */
+  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.ink },
   scrollContent: { paddingBottom: 34 },
 
   hero: { backgroundColor: color.ink, borderRadius: 22, paddingHorizontal: 20, paddingVertical: 20, marginTop: 4 },
@@ -171,7 +181,11 @@ const styles = StyleSheet.create({
   tagline: { marginTop: 7, fontSize: 15, lineHeight: 21, color: color.fill },
   bondTrack: { height: 7, borderRadius: 999, backgroundColor: color.inkMid, overflow: 'hidden', marginTop: 17 },
   bondFill: { height: 7, borderRadius: 999, backgroundColor: color.goldSoft },
-  stageBlurb: { marginTop: 9, fontSize: 12, lineHeight: 18, color: color.inkFaint },
+  // `goldSoft`, because the hero card behind it is `color.ink`. It was
+  // `inkSoft` — a DARK token on a DARK surface, 2.07:1 — which the contrast
+  // test did not catch because that test only checked the light surfaces.
+  // It checks both directions now.
+  stageBlurb: { marginTop: 9, fontSize: 12, lineHeight: 18, color: color.goldSoft },
 
   explainer: { marginTop: 15, fontSize: 13, lineHeight: 20, color: color.inkSoft },
   section: { marginTop: 23, marginBottom: 9, fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: color.inkSoft, textTransform: 'uppercase' },
@@ -190,7 +204,7 @@ const styles = StyleSheet.create({
   traitCard: { backgroundColor: color.card, borderRadius: 18, padding: 14, marginBottom: 9 },
   traitHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   traitLabel: { fontSize: 15, fontWeight: '800', color: color.ink },
-  traitScore: { fontSize: 13, fontWeight: '900', color: color.gold },
+  traitScore: { fontSize: 13, fontWeight: '900', color: color.goldInk },
   traitTrack: { height: 6, borderRadius: 999, backgroundColor: color.fill, overflow: 'hidden', marginTop: 9 },
   traitFill: { height: 6, borderRadius: 999, backgroundColor: color.gold },
   traitDetail: { marginTop: 8, fontSize: 12, lineHeight: 18, color: color.inkSoft },
@@ -208,7 +222,7 @@ const styles = StyleSheet.create({
   signature: { fontSize: 10, fontWeight: '900', letterSpacing: 1.1, color: color.goldInk },
 
   memoryRow: { flexDirection: 'row', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: color.fill },
-  memoryNumber: { width: 24, fontSize: 12, fontWeight: '900', letterSpacing: 1.1, color: color.inkFaint, paddingTop: 2 },
+  memoryNumber: { width: 24, fontSize: 12, fontWeight: '900', letterSpacing: 1.1, color: color.inkSoft, paddingTop: 2 },
   memoryCopy: { flex: 1 },
   memoryText: { fontSize: 13, lineHeight: 20, fontWeight: '600', color: color.ink },
   memoryWhere: { marginTop: 3, fontSize: 12, color: color.inkSoft, textTransform: 'uppercase', letterSpacing: 0.7 },
