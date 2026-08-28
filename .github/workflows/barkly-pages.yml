@@ -101,6 +101,33 @@ jobs:
         with:
           path: barkly/app/dist
 
+      # If the deploy below is rejected, it is rejected BEFORE any step of it
+      # runs — one second, no log, nothing to read. That is what an environment
+      # gate looks like, and it is indistinguishable from a broken workflow
+      # unless somebody already knows. So the build says what to check, in the
+      # run itself, where the person looking at the failure is looking.
+      - name: What to check if the deploy is rejected
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'NOTE'
+          ## The build is fine — the deploy is a settings gate
+
+          This job passed and uploaded the site. If the `deploy` job below failed
+          in about a second with no steps, it never started: something rejected
+          it, and none of it is in this repository. Check, in order:
+
+          1. **Settings → Environments → `github-pages` → Deployment branches**
+             GitHub creates this environment restricted to the default branch.
+             Barkly deploys from `claude/barkley-mvp-mobile-qbegtj`, so add that
+             branch (or choose "All branches").
+          2. **Settings → Pages → Source** must be **GitHub Actions**, not
+             "Deploy from a branch".
+          3. **Settings → Actions → General → Workflow permissions** must allow
+             read *and write*, or the `pages: write` this workflow asks for is
+             refused.
+
+          Then re-run this workflow. Nothing needs rebuilding.
+          NOTE
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
