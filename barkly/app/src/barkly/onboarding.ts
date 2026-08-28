@@ -147,10 +147,19 @@ export function advance(
   }
 }
 
-/** The first thing he says once onboarding is over, so the app never opens cold. */
+/**
+ * The first thing he says once onboarding is over, so the app never opens cold.
+ *
+ * The name is its OWN sentence, deliberately. It used to be "Right, <name>. Ask
+ * me something" — same words, one comma different, and that comma cost him his
+ * voice: the pre-recorded bank cannot hold a line with a child's name welded
+ * into the middle of a sentence, so the very first thing he ever said came out
+ * in the browser's screen-reader narrator. Split off in front, the rest of the
+ * line is a recording he has, and the name is the only part the narrator says.
+ * See providers/tts/bankedVoice.
+ */
+const OPENING = 'Ask me something. Or feed me. Your call, honestly.';
+
 export function openingLine(state: OnboardingState): string {
-  if (state.name) {
-    return `Right, ${state.name}. Ask me something. Or feed me. Your call, honestly.`;
-  }
-  return 'Right. Ask me something. Or feed me. Your call, honestly.';
+  return state.name ? `${state.name}. ${OPENING}` : `Right. ${OPENING}`;
 }

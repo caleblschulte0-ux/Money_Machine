@@ -51,17 +51,37 @@ const LINES_JSON = join(BANK_DIR, 'lines.json');
 const GENERATED_TS = join(APP, 'src', 'audio', 'voiceBank.ts');
 
 /**
- * Where his fixed lines live. An allowlist, not a sweep: a sweep would pick up
- * button labels, store blurbs and error copy, and spend a hundred kilobytes
- * each recording a voice saying "Buy".
+ * Where his fixed lines live.
+ *
+ * An allowlist, not a sweep, because `src/ui/` is full of button labels and
+ * store blurbs and a sweep would spend a hundred kilobytes recording a voice
+ * saying "Buy". But the FIRST version of this list was seven files chosen by
+ * hand, and driving the real artifact through a real session found him falling
+ * back to the browser narrator for lines like "Plan complete. Disturbingly
+ * productive." — a fixed string, in a file nobody thought to list. Guessing
+ * which files hold his voice does not work; the brain and the world are the
+ * places his words come from, so take them whole and let `isSpeech` filter.
+ *
+ * Over-recording is cheap: a line nobody looks up costs 15 KB and sits there.
+ * Under-recording is the browser narrator interrupting him mid-conversation.
  */
 const SOURCES = [
   { file: 'src/barkly/lines.ts', tag: 'reactions' },
   { file: 'src/barkly/mishaps.ts', tag: 'mishaps' },
   { file: 'src/barkly/greetings.ts', tag: 'greetings' },
-  { file: 'src/world/thoughts.ts', tag: 'thoughts' },
-  { file: 'src/world/npcs.ts', tag: 'npcs', only: ['barklyLines'] },
+  { file: 'src/barkly/onboarding.ts', tag: 'onboarding' },
   { file: 'src/barkly/compose.ts', tag: 'talk' },
+  { file: 'src/world/thoughts.ts', tag: 'thoughts' },
+  { file: 'src/hooks/useBarkly.ts', tag: 'hook' },
+  // Scoped to the property that is actually SPOKEN. These files also hold
+  // journal entries, badge labels and %s headlines — text that is read, not
+  // said. A sweep recorded 114 of them out of encounters.ts alone, 1.3 MB of a
+  // voice narrating a scrapbook nobody will ever hear it narrate.
+  { file: 'src/world/npcs.ts', tag: 'npcs', only: ['barklyLines'] },
+  { file: 'src/barkly/escalation.ts', tag: 'escalation', only: ['line'] },
+  { file: 'src/barkly/training.ts', tag: 'training', only: ['speech'] },
+  { file: 'src/game/contest.ts', tag: 'contest', only: ['line'] },
+  { file: 'src/barkly/character.ts', tag: 'initiative', only: ['pickInitiative'] },
   { file: 'src/game/progression.ts', tag: 'progression', only: ['levelUpLine', 'AREA_UNLOCKS'] },
 ];
 
@@ -77,6 +97,9 @@ function isSpeech(text) {
   if (/^https?:/.test(text)) return false;
   if (/^[#.][\w-]/.test(text)) return false;              // a selector
   if (/\{|\}|<\/|=>/.test(text)) return false;            // markup or code
+  // A shape, not a line: something is substituted into it at runtime, so no
+  // recording can ever match what he actually says.
+  if (/%s|\$\{/.test(text)) return false;
   // Two real words minimum. "TAIL_WAG" and "toy rope" both have a separator;
   // only one of them is English.
   const words = text.split(/\s+/).filter((w) => /[a-z]{2}/i.test(w));

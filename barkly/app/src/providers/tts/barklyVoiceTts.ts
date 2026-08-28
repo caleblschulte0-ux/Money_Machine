@@ -38,6 +38,14 @@ export interface BarklyVoice {
   isAvailable(): boolean;
   /** null when this line could not be synthesized — caller falls back. */
   play(text: string, opts?: { onStart?: () => void }): Promise<VoicePlayback | null>;
+  /**
+   * The nearest form of this line this voice can actually say, or null.
+   *
+   * Only a voice with a FIXED repertoire implements this — a synthesizer can
+   * say anything, so leaving it off is how the engine tells the two apart. See
+   * `voiceEngine.speakable`.
+   */
+  nearest?(text: string): string | null;
   warm(text: string): Promise<void>;
   clearCache(): void;
 }

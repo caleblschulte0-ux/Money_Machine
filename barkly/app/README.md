@@ -54,7 +54,8 @@ Speech-to-text and text-to-speech need **no credentials** (both on-device).
 
 ### His voice
 
-Most of what you hear is a **recording**, not synthesis. His fixed lines —
+Most of what you hear is a **recording**, not synthesis — 71% of a real session,
+measured in a browser by `npm run check:voice`. His fixed lines —
 greetings, feed and play reactions, idle thoughts, mishaps, what he says to the
 other dogs, level-ups — are pre-rendered in his real voice and bundled in
 `assets/voice/`, so they sound like him with no server, no network and no key.

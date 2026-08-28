@@ -90,6 +90,29 @@ export function createVoiceEngine(opts: VoiceEngineOptions) {
       return lastRoute;
     },
 
+    /**
+     * The form of this line he can actually say IN HIS OWN VOICE.
+     *
+     * Only ever narrows when there is nothing left that can synthesize — with
+     * the proxy reachable he says exactly what he was given. Without it, all he
+     * has is a fixed set of recordings, and the choice is between a line he can
+     * say and a line the phone's narrator says. The narrator loses.
+     *
+     * The caller shows what comes back as the caption, so the screen and the
+     * audio stay the same sentence.
+     */
+    speakable(text: string): string {
+      const available = (opts.voices ?? []).filter((v) => v.isAvailable());
+      // A voice with no `nearest` is a synthesizer: it can say anything, so
+      // there is nothing to degrade to.
+      if (available.length === 0 || available.some((v) => !v.nearest)) return text;
+      for (const voice of available) {
+        const near = voice.nearest?.(text);
+        if (near) return near;
+      }
+      return text;
+    },
+
     setMuted(next: boolean): void {
       muted = next;
       if (next) cancel();

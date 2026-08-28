@@ -133,6 +133,38 @@ const FLAVOUR: [RegExp, string][] = [
 const MAX_FLAVOUR = 2;
 
 /**
+ * Words that can be a whole first sentence and still MEAN something. Anything
+ * else standing alone in front of a line is, in practice, the name of the
+ * person he is talking to — that is the only single word the app ever puts
+ * there.
+ */
+const REAL_OPENERS = new Set([
+  'ay', 'yo', 'hey', 'hi', 'hello', 'no', 'nope', 'yes', 'yeah', 'okay', 'ok',
+  'right', 'fine', 'wow', 'look', 'listen', 'wait', 'stop', 'exactly', 'anyway',
+  'nice', 'good', 'oh', 'well', 'sure', 'again', 'please', 'sorry', 'done',
+]);
+
+/**
+ * Split "Caleb. Dere ya are." into the name and the rest.
+ *
+ * Lives here rather than in the voice layer because two separate things need
+ * the same answer and must never disagree about it: this file, so his accent
+ * does not change depending on what a child is called, and the pre-recorded
+ * voice bank, which can hold the body of that line and can never hold the name.
+ */
+export function splitLeadingName(text: string): [string | null, string] {
+  // Unicode-aware on purpose: a child called Zoë or José has a name too, and an
+  // ASCII-only pattern silently stopped recognising it — which cost them the
+  // recorded voice on every line he greets them by name.
+  // \p{M} matters as much as \p{L}: a name typed on a phone can arrive
+  // DECOMPOSED, so the í in Aísha is an i followed by a combining accent — a
+  // Mark, not a Letter. Without it the pattern sees "A" and gives up.
+  const m = text.match(/^(\p{Lu}[\p{L}\p{M}'\u2019-]{1,15})[.,!]\s+(\S[\s\S]*)$/u);
+  if (!m || REAL_OPENERS.has(m[1].toLowerCase())) return [null, text];
+  return [m[1], m[2]];
+}
+
+/**
  * Everything the strong markers can produce. Used to count what a line ALREADY
  * carries before spending any of the budget on it — which is what makes the cap
  * a real cap and the whole transform idempotent. See `bronx` below.
@@ -264,6 +296,14 @@ export function bronx(text: string, opts: VoiceOptions = {}): string {
    * exactly what the first pass hashed.
    */
   let body = out.trimStart();
+  /**
+   * The name he is addressing you by is not part of the sentence for this
+   * purpose. Without this, "Mateo. Ask me somethin'." and "Caleb. Ask me
+   * somethin'." hash differently and one of them picks up a closer the other
+   * does not — so his accent would depend on what a child is called, and the
+   * recording of the body would stop matching for half of them.
+   */
+  body = splitLeadingName(body)[1];
   const worn = OPENERS.find((o) => body.startsWith(o));
   if (worn) body = body.slice(worn.length).trimStart();
   body = body.trimEnd();
@@ -278,6 +318,9 @@ export function bronx(text: string, opts: VoiceOptions = {}): string {
   // are overheard). A capitalised "Ay." bolted to the front breaks that.
   const spokenAloud = /^[A-Z]/.test(body);
 
+  // `body` dropped the name for hashing; the line still starts with it.
+  const [addressed] = splitLeadingName(out.trimStart());
+  const prefix = addressed ? `${addressed}. ` : '';
   out = body;
   if (strength >= 1 && garnish === 0 && spokenAloud) {
     out = `${OPENERS[bodySeed % OPENERS.length]} ${out}`;
@@ -286,5 +329,5 @@ export function bronx(text: string, opts: VoiceOptions = {}): string {
     out = `${/[.!?]$/.test(out) ? out : `${out}.`} ${closer}`;
   }
 
-  return out;
+  return prefix + out;
 }

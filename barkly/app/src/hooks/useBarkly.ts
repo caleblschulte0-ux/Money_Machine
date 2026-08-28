@@ -706,7 +706,13 @@ export function useBarkly(): BarklyController {
        * transform at the funnel covers the pools, the composer and any model
        * output alike. See barkly/dialect.
        */
-      const line = bronx(text.trim());
+      /**
+       * ...and then, if his own voice is all recordings and this exact line is
+       * not one of them, the nearest line that IS. Only bites when there is no
+       * synthesizer left — see voiceEngine.speakable. The caption below is set
+       * from the same string, so he says what the screen says.
+       */
+      const line = voiceEngine.speakable(bronx(text.trim()));
       if (!line) return;
       setLastExchange({ userText: opts.userText ?? '', barklyText: line });
       setReplyActions(opts.actions ?? []);

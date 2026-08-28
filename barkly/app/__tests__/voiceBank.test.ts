@@ -151,6 +151,57 @@ describe('a line it does not have falls through instead of failing', () => {
   });
 });
 
+describe('the nearest line he can actually say', () => {
+  const bankOf = (...lines: string[]) =>
+    createBankedVoice({ bank: Object.fromEntries(lines.map((l, i) => [l, i + 1])) });
+
+  it('offers the body of a line his name is stuck to the front of', () => {
+    // "Caleb. Dere ya are…" is the greeting, and the name in front of it is
+    // whatever a child typed. Before this it missed the bank entirely and his
+    // most characteristic line came out in the browser narrator.
+    const v = bankOf('Dere ya are. I was about to start makin\' decisions on my own.');
+    expect(v.nearest!("Caleb. Dere ya are. I was about to start makin' decisions on my own.")).toBe(
+      "Dere ya are. I was about to start makin' decisions on my own.",
+    );
+  });
+
+  it('does not eat a word that MEANS something', () => {
+    // "No." and "Exactly." are the line, not a name in front of one.
+    const v = bankOf('Lie down. I have decided.');
+    expect(v.nearest!('No. Lie down. I have decided.')).toBeNull();
+    expect(v.nearest!('Exactly. Lie down. I have decided.')).toBeNull();
+    expect(v.nearest!('Yo. Lie down. I have decided.')).toBeNull();
+  });
+
+  it('will not invent a line it does not have', () => {
+    const v = bankOf('a banked line.');
+    expect(v.nearest!('Caleb. Something he made up just now.')).toBeNull();
+    expect(v.nearest!('a banked line.')).toBe('a banked line.');
+  });
+
+  it('only narrows when there is nothing left that can synthesize', () => {
+    const bank = bankOf('Dere ya are.');
+    const proxy = {
+      name: 'proxy',
+      isAvailable: () => true,
+      warm: async () => {},
+      clearCache: () => {},
+      play: async () => ({ done: Promise.resolve(), stop: () => {} }),
+    };
+    const device = { speak: async () => {}, stop: async () => {} } as never;
+
+    // With the proxy reachable he says exactly what he was handed — a voice
+    // with no `nearest` can say anything, so there is nothing to degrade to.
+    const online = createVoiceEngine({ voices: [bank, proxy], device, wait: async () => {} });
+    expect(online.speakable('Caleb. Dere ya are.')).toBe('Caleb. Dere ya are.');
+
+    // The artifact: recordings and the browser narrator, nothing else.
+    const offline = createVoiceEngine({ voices: [bank], device, wait: async () => {} });
+    expect(offline.speakable('Caleb. Dere ya are.')).toBe('Dere ya are.');
+    expect(offline.speakable('Something nobody recorded.')).toBe('Something nobody recorded.');
+  });
+});
+
 describe('the chain: bank, then proxy, then the phone', () => {
   const fakeVoice = (name: string, knows: string[], log: string[]) => ({
     name,

@@ -108,9 +108,9 @@ if (!(await fed.count())) {
   process.exit(1);
 }
 
-for (const testid of ['kit-feed', 'kit-play', 'kit-sleep', 'kit-sleep']) {
+const tap = async (testid) => {
   const control = page.locator(`[data-testid="${testid}"]`).first();
-  if (!(await control.count()) || !(await control.isEnabled())) continue;
+  if (!(await control.count()) || !(await control.isEnabled())) return;
   await control.click();
   await page.waitForTimeout(1200);
   // Feeding opens a picker; take whatever it offers.
@@ -120,7 +120,29 @@ for (const testid of ['kit-feed', 'kit-play', 'kit-sleep', 'kit-sleep']) {
     await page.waitForTimeout(1200);
   }
   await page.waitForTimeout(3200);
+};
+const type = async (text) => {
+  const input = page.locator('input:visible').first();
+  if (!(await input.count())) return;
+  await input.fill(text);
+  await input.press('Enter');
+  await page.waitForTimeout(5000);
+};
+
+await tap('kit-feed');
+await tap('kit-play');
+await type('hello barkly');
+await type('do you like squirrels');
+await type('what is a skateboard');
+for (const where of [/park/i, /town/i, /home/i]) {
+  const t = page.getByRole('tab').filter({ hasText: where }).first();
+  if (await t.count()) {
+    await t.click();
+    await page.waitForTimeout(4500);
+  }
 }
+await tap('kit-sleep');
+await page.waitForTimeout(8000); // let an idle thought surface
 
 const played = await page.evaluate('window.__PLAYED || []');
 const spoke = await page.evaluate('window.__SPOKE || []');
@@ -133,7 +155,7 @@ const total = banked.length + spoke.length;
 console.log(`his own voice:  ${banked.length}/${total} lines` + (total ? ` (${Math.round((banked.length / total) * 100)}%)` : ''));
 console.log(`the narrator:   ${spoke.length}/${total} lines`);
 if (broken.length) console.log(`not inlined:   ${broken.join('\n               ')}`);
-if (spoke.length) console.log(`narrator said: ${spoke.join(' | ')}`);
+for (const line of spoke) console.log(`  narrator: ${line}`);
 
 if (banked.length === 0) {
   console.error(

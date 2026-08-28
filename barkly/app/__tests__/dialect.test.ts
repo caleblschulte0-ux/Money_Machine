@@ -19,7 +19,7 @@
  *   IT IS BOUNDED        strong markers are capped, or he becomes a parody
  */
 
-import { bronx } from '../src/barkly/dialect';
+import { bronx, splitLeadingName } from '../src/barkly/dialect';
 import { TREASURES } from '../src/world/stash';
 
 describe('it never damages a word it was not aiming at', () => {
@@ -186,6 +186,42 @@ describe('it is deterministic and bounded', () => {
  * app's real output rather than by unit tests. They are cheap to reintroduce
  * and embarrassing in a toy, so they are pinned.
  */
+describe('the person he is talking to is not part of his accent', () => {
+  const BODY = 'Ask me something. Or feed me. Your call, honestly.';
+
+  it('sounds the same whoever you are', () => {
+    // The garnish is chosen by hashing the line. With the name inside that
+    // hash, "Mateo. Ask me somethin'." picked up a closer that "Caleb. Ask me
+    // somethin'." did not — his accent varying by what a child is called, and
+    // the recording of the body matching for only some of them.
+    const alone = bronx(BODY);
+    for (const name of ['Caleb', 'Ava', 'Mateo', 'Zoe', 'Thibault', 'Heather', 'Xavier']) {
+      expect(splitLeadingName(bronx(`${name}. ${BODY}`))[1]).toBe(alone);
+    }
+  });
+
+  it('knows a name from a word that means something', () => {
+    expect(splitLeadingName('Caleb. Lie down.')[0]).toBe('Caleb');
+    for (const word of ['No', 'Exactly', 'Yo', 'Right', 'Oh', 'Wait', 'Anyway']) {
+      expect(splitLeadingName(`${word}. Lie down.`)[0]).toBeNull();
+    }
+  });
+
+  it('recognises a name that is not spelled in ASCII', () => {
+    // An ASCII-only pattern quietly stopped seeing these, and a child called
+    // Zoë or José lost the recorded voice on every line he greets them by
+    // name — the one place the app says who you are.
+    for (const name of ['Zoë', 'José', 'Søren', 'Aísha']) {
+      expect(splitLeadingName(`${name}. Lie down.`)[0]).toBe(name);
+    }
+  });
+
+  it('leaves a line with no name in front of it alone', () => {
+    expect(splitLeadingName('Lie down. I have decided.')).toEqual([null, 'Lie down. I have decided.']);
+    expect(splitLeadingName('')).toEqual([null, '']);
+  });
+});
+
 describe('it never produces broken English', () => {
   it('does not write "ya are"', () => {
     // `you` → `ya` in front of an auxiliary is not an accent, it is an error.

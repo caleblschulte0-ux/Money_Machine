@@ -22,6 +22,7 @@
 import { createAudioPlayer } from 'expo-audio';
 import { VOICE_BANK, BANKED_LINE_COUNT } from '../../audio/voiceBank';
 import { estimateDurationMs } from '../../audio/voiceEngine';
+import { splitLeadingName } from '../../barkly/dialect';
 import type { BarklyVoice, VoicePlayback } from './barklyVoiceTts';
 
 /**
@@ -54,6 +55,23 @@ function lookupKey(text: string): string {
   return text.replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * "Caleb. Dere ya are. I was about to start makin' decisions on my own."
+ *
+ * The BODY of that is recorded. The name in front of it is not, and never can
+ * be — it is whatever a child typed at the welcome screen. Before this, the
+ * whole line missed and he greeted you in the browser's narrator: his single
+ * most characteristic line, in the one voice this feature exists to avoid.
+ *
+ * So when the name is the entire first sentence, offer the rest. The caller
+ * shows the caption it gets back, so what is on screen is what he says — this
+ * drops the name from BOTH, it does not desync them.
+ */
+function withoutLeadingName(text: string): string | null {
+  const [name, rest] = splitLeadingName(text);
+  return name ? rest : null;
+}
+
 export function createBankedVoice(opts: BankedVoiceOptions = {}): BarklyVoice {
   const bank = opts.bank ?? VOICE_BANK;
   const makePlayer = opts.createPlayer ?? createAudioPlayer;
@@ -65,6 +83,13 @@ export function createBankedVoice(opts: BankedVoiceOptions = {}): BarklyVoice {
     /** An empty bank is not a broken voice, it is simply nothing to say yet. */
     isAvailable(): boolean {
       return size > 0;
+    },
+
+    nearest(text: string): string | null {
+      if (bank[lookupKey(text)] !== undefined) return text;
+      const stripped = withoutLeadingName(text);
+      if (stripped && bank[lookupKey(stripped)] !== undefined) return stripped;
+      return null;
     },
 
     async play(text: string, o: { onStart?: () => void } = {}): Promise<VoicePlayback | null> {

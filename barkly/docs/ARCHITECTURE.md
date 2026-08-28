@@ -101,7 +101,7 @@ over each other, and a mouth flapping to a line that already finished.
 
 The chain is **banked voice → proxy voice → device voice → silent-but-timed**.
 
-**Banked** is ~150 of his fixed lines, pre-recorded in the real voice and
+**Banked** is ~180 of his fixed lines, pre-recorded in the real voice and
 shipped inside the app (`app/assets/voice/`, wired by `app/src/audio/
 voiceBank.ts`). It exists because everything below it needs something he does
 not always have: the proxy needs a machine running it, and a published web
@@ -109,7 +109,24 @@ artifact cannot reach one, so before the bank every demo anyone ever opened
 was the phone's screen-reader narrator wearing a dog costume. Greetings, feed
 and play reactions, idle thoughts, mishaps, the things he says to the other
 dogs and his level-ups are all in there — which is the whole first minute of
-the app and most of an ordinary session.
+the app and, measured in a real browser, 71% of a real session.
+
+Which files it reads is an ALLOWLIST, and both halves of that are load-bearing.
+A hand-picked list of seven files missed fixed lines living in files nobody
+thought of, and he fell back to the narrator mid-conversation. A sweep of
+everything recorded 114 journal entries out of `encounters.ts` alone — a voice
+narrating a scrapbook nobody hears it narrate. The list now takes the brain and
+the world whole, and scopes the mixed files to the property that is actually
+spoken (`line`, `speech`, `barklyLines`).
+
+When a line is not banked and there is no synthesizer left, the engine asks for
+the nearest form he CAN say (`voiceEngine.speakable`). Today that is one rule:
+a line with your NAME as its first sentence offers its body, which is recorded.
+That is his greeting — before the rule it missed the bank every time and his
+most characteristic line came out in the narrator. The caller shows what comes
+back as the caption, so the screen and the audio stay the same sentence, and the
+rule only bites when there is nothing better; with the proxy reachable he says
+exactly what he was handed.
 
 The bank is keyed on the line **after `dialect.ts` has run over it**, because
 that is the text the voice engine is handed. Key it on the source spelling and
@@ -138,7 +155,10 @@ written ones and the ones the brain composes at runtime alike — and puts them
 in his mouth: he is from the Bronx. Whole-word rules only, capped at two strong
 markers a line, and idempotent, which took two goes: a line that will not
 settle collects another opener every time it is repeated, and has no stable key
-in the bank.
+in the bank. It is also deliberately BLIND to who you are — the name he is
+addressing you by is split off before the accent is seeded, so his voice does
+not change depending on whether a child is called Caleb or Mateo, and the
+recording of the body matches for all of them.
 
 Every failure in that chain ends in a quieter Barkly, never a frozen one. If
 the vendor is down he uses the device voice; if that fails too he mimes for a

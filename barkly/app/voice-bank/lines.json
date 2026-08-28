@@ -2,6 +2,12 @@
   "generated": "scripts/voice-bank.mjs harvest",
   "entries": [
     {
+      "key": "0022ba44365c2264",
+      "spoken": "One more thing. I'd rather hear ya than read you. Can I?",
+      "source": "One more thing. I'd rather hear you than read you. Can I?",
+      "tag": "onboarding"
+    },
+    {
       "key": "01db897f8616b195",
       "spoken": "Lemme tell ya. I've got maybe four percent battery. Ask da couch.",
       "source": "I've got maybe four percent battery. Ask the couch.",
@@ -32,6 +38,18 @@
       "tag": "progression"
     },
     {
+      "key": "07ca66ddf9b94e37",
+      "spoken": "Ask me somethin'. Or feed me. Ya call, honestly.",
+      "source": "Ask me something. Or feed me. Your call, honestly.",
+      "tag": "onboarding"
+    },
+    {
+      "key": "08f7cda0909a0f3f",
+      "spoken": "I'm Barkly. What do I call ya? I'm just sayin'.",
+      "source": "I'm Barkly. What do I call you?",
+      "tag": "onboarding"
+    },
+    {
       "key": "0a5006bc51351dbf",
       "spoken": "Nuttin' gets past me. I've been practisin' on da vacuum.",
       "source": "Nothing gets past me. I've been practising on the vacuum.",
@@ -48,6 +66,12 @@
       "spoken": "I heard nuttin'. Which is fine. Rude, but fine.",
       "source": "I heard nothing. Which is fine. Rude, but fine.",
       "tag": "mishaps"
+    },
+    {
+      "key": "0ca02630339d74ed",
+      "spoken": "Food. Lemme tell ya. My favorite thing that ain't ya. Close second though.",
+      "source": "Food. My favorite thing that is not you. Close second though.",
+      "tag": "reactions"
     },
     {
       "key": "0d1e745b0b8b5044",
@@ -68,6 +92,12 @@
       "tag": "thoughts"
     },
     {
+      "key": "116f0e0be445b088",
+      "spoken": "You said somethin' earlier about playin'. I'm just leavin' that dere.",
+      "source": "You said something earlier about playing. I'm just leaving that there.",
+      "tag": "initiative"
+    },
+    {
       "key": "120add40fc5e166a",
       "spoken": "My ears are switched off, apparently. Not my choice.",
       "source": "My ears are switched off, apparently. Not my choice.",
@@ -86,16 +116,34 @@
       "tag": "greetings"
     },
     {
+      "key": "141296458568f058",
+      "spoken": "Chased da waves at the beach and declared it a win.",
+      "source": "Chased the waves at the beach and declared it a win.",
+      "tag": "hook"
+    },
+    {
       "key": "146cd471f613f9fa",
       "spoken": "Exactly. Glad we agree. We do agree, right?",
       "source": "Exactly. Glad we agree. We do agree, right?",
       "tag": "talk"
     },
     {
+      "key": "14959059391d6d1f",
+      "spoken": "Biscuit. I'm not gonna lie to ya. Buddy. That's da same stick as yesterday. ...Okay it's a great stick.",
+      "source": "Biscuit. Buddy. That's the same stick as yesterday. ...Okay it's a great stick.",
+      "tag": "npcs"
+    },
+    {
       "key": "16d0b51f3faa979e",
       "spoken": "i can hear da fridge thinkin' about openin'.",
       "source": "i can hear the fridge thinking about opening.",
       "tag": "thoughts"
+    },
+    {
+      "key": "16ee62d4b430ddaf",
+      "spoken": "Once. dere was a dog. Extremely handsome. Some say the best. He found a stick. The end.",
+      "source": "Once, there was a dog. Extremely handsome. Some say the best. He found a stick. The end.",
+      "tag": "talk"
     },
     {
       "key": "179f25cc2d520477",
@@ -108,6 +156,12 @@
       "spoken": "someone dropped a crumb here in 2019. i remember.",
       "source": "someone dropped a crumb here in 2019. i remember.",
       "tag": "thoughts"
+    },
+    {
+      "key": "1ad3e63a59d970aa",
+      "spoken": "Cool. cool. I marked da fire hydrant. The BIG one. Checkmate.",
+      "source": "Cool, cool. I marked the fire hydrant. The BIG one. Checkmate.",
+      "tag": "npcs"
     },
     {
       "key": "1c0be089a0261806",
@@ -152,6 +206,18 @@
       "tag": "talk"
     },
     {
+      "key": "23cf06a8efb136dc",
+      "spoken": "It ran away. It always runs away. I am UNDEFEATED and also soaked.",
+      "source": "It ran away. It always runs away. I am UNDEFEATED and also soaked.",
+      "tag": "hook"
+    },
+    {
+      "key": "242163a85faf7eea",
+      "spoken": "Cheese. See, dis is why I keep you around.",
+      "source": "Cheese. See, this is why I keep you around.",
+      "tag": "hook"
+    },
+    {
       "key": "25eb8f00fdb0ed26",
       "spoken": "Okay. Deep breath. Then we go and look at somethin' loudly.",
       "source": "Okay. Deep breath. Then we go and look at something loudly.",
@@ -170,6 +236,12 @@
       "tag": "npcs"
     },
     {
+      "key": "29931d3f0b4d90b6",
+      "spoken": "Lemme tell ya. Wave: retreated. Barkly: victorious. Paws: regrettably wet.",
+      "source": "Wave: retreated. Barkly: victorious. Paws: regrettably wet.",
+      "tag": "hook"
+    },
+    {
       "key": "29a60d15d94c9df8",
       "spoken": "Formin' an opinion. Listen to her. I just bark at things and hope. I'm just sayin'.",
       "source": "Forming an opinion. Listen to her. I just bark at things and hope.",
@@ -182,10 +254,28 @@
       "tag": "talk"
     },
     {
+      "key": "2b72da350674aee4",
+      "spoken": "Lemme tell ya. I am not sayin' he is a problem. I am sayin' I have started noticin'.",
+      "source": "I am not saying he is a problem. I am saying I have started noticing.",
+      "tag": "escalation"
+    },
+    {
+      "key": "2bb48d01d8933439",
+      "spoken": "We met. I asked their name. I'm just sayin'.",
+      "source": "We met. I asked their name.",
+      "tag": "hook"
+    },
+    {
       "key": "2dc12c8f96e22381",
       "spoken": "That was a long one. I have a lot to tell ya and none of it is important.",
       "source": "That was a long one. I have a lot to tell you and none of it is important.",
       "tag": "greetings"
+    },
+    {
+      "key": "2e9783efb5d4aae2",
+      "spoken": "won da duel",
+      "source": "won the duel",
+      "tag": "hook"
     },
     {
       "key": "32767a9643eae172",
@@ -206,6 +296,12 @@
       "tag": "reactions"
     },
     {
+      "key": "37574718c532c3ee",
+      "spoken": "We have passed rival. Dis is a nemesis situation. I am honestly thrilled. I'm just sayin'.",
+      "source": "We have passed rival. This is a nemesis situation. I am honestly thrilled.",
+      "tag": "escalation"
+    },
+    {
       "key": "380e9086c2211ae5",
       "spoken": "You're back. I had almost finished the speech I was gonna give ya.",
       "source": "You're back. I had almost finished the speech I was going to give you.",
@@ -216,12 +312,6 @@
       "spoken": "New level. Same dog. Slightly smugger dog.",
       "source": "New level. Same dog. Slightly smugger dog.",
       "tag": "progression"
-    },
-    {
-      "key": "3eadd6fef3dc29b9",
-      "spoken": "Ay, yo. Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
-      "source": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
-      "tag": "talk"
     },
     {
       "key": "4052902e0b192258",
@@ -242,6 +332,12 @@
       "tag": "greetings"
     },
     {
+      "key": "419091c330b92138",
+      "spoken": "I'm not gonna lie to ya. Hey. Dis is me. Say it back and I will judge you.",
+      "source": "Hey. This is me. Say it back and I will judge you.",
+      "tag": "hook"
+    },
+    {
       "key": "4200a650ccb626ba",
       "spoken": "somewhere out there is da perfect stick.",
       "source": "somewhere out there is the perfect stick.",
@@ -254,16 +350,16 @@
       "tag": "talk"
     },
     {
-      "key": "451ad10fe599bad6",
-      "spoken": "Ball. Air. Me. In dat order. Go.",
-      "source": "Ball. Air. Me. In that order. Go.",
-      "tag": "reactions"
-    },
-    {
       "key": "4541fbe9b6031499",
       "spoken": "You said a lot of words and none of dem were about food. Bold.",
       "source": "You said a lot of words and none of them were about food. Bold.",
       "tag": "talk"
+    },
+    {
+      "key": "487b7adf9289a572",
+      "spoken": "favorite toy time",
+      "source": "favorite toy time",
+      "tag": "hook"
     },
     {
       "key": "493af98e1e1024e4",
@@ -278,10 +374,28 @@
       "tag": "talk"
     },
     {
+      "key": "49fe9c33d05be5a7",
+      "spoken": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
+      "source": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
+      "tag": "talk"
+    },
+    {
       "key": "4d07fb7845c1f0da",
       "spoken": "Then you're stayin' still and I'm stayin' on you. Doze are the rules.",
       "source": "Then you're staying still and I'm staying on you. Those are the rules.",
       "tag": "talk"
+    },
+    {
+      "key": "4dc1f28b79c347a6",
+      "spoken": "Ay. Dat settles it. He is official now. I will be keepin' records.",
+      "source": "That settles it. He is official now. I will be keeping records.",
+      "tag": "escalation"
+    },
+    {
+      "key": "4e532756ce1b6585",
+      "spoken": "Oh. Hello. You're new.",
+      "source": "Oh. Hello. You're new.",
+      "tag": "onboarding"
     },
     {
       "key": "4effe95377a32002",
@@ -332,10 +446,28 @@
       "tag": "thoughts"
     },
     {
+      "key": "538a9a0b11582258",
+      "spoken": "Showtime. Ya made me learn choreography. I'm just sayin'.",
+      "source": "Showtime. You made me learn choreography.",
+      "tag": "training"
+    },
+    {
+      "key": "559538eea383d821",
+      "spoken": "Fine, be mysterious. I'll work it out.",
+      "source": "Fine, be mysterious. I'll work it out.",
+      "tag": "onboarding"
+    },
+    {
       "key": "56213b9095638a58",
       "spoken": "Ay, yo. You're my favourite, which is why I tell ya these things.",
       "source": "You're my favourite, which is why I tell you these things.",
       "tag": "talk"
+    },
+    {
+      "key": "584ef07f58c8cdad",
+      "spoken": "Every time I get close it leaves. This is da most interestin' thing here.",
+      "source": "Every time I get close it leaves. This is the most interesting thing here.",
+      "tag": "hook"
     },
     {
       "key": "585264f35ecbbb3e",
@@ -350,16 +482,34 @@
       "tag": "thoughts"
     },
     {
+      "key": "5961b50545a61f16",
+      "spoken": "Mm. I'll allow it.",
+      "source": "Mm. I'll allow it.",
+      "tag": "talk"
+    },
+    {
       "key": "5b6176eaae0466e8",
       "spoken": "A NOON crumb? And ya didn't call me? We're supposed to be a team.",
       "source": "A NOON crumb? And you didn't call me? We're supposed to be a team.",
       "tag": "npcs"
     },
     {
+      "key": "5bce8c899bd89946",
+      "spoken": "See. this is my favourite kinda news. Tell me da whole thing.",
+      "source": "See, this is my favourite kind of news. Tell me the whole thing.",
+      "tag": "talk"
+    },
+    {
       "key": "5cf41154ac2a404a",
       "spoken": "I had almost moved on. Almost. Sit down.",
       "source": "I had almost moved on. Almost. Sit down.",
       "tag": "greetings"
+    },
+    {
+      "key": "5d5438146c776864",
+      "spoken": "I'm hungry. This is ya problem now.",
+      "source": "I'm hungry. This is your problem now.",
+      "tag": "initiative"
     },
     {
       "key": "5dd01768507d36ba",
@@ -374,6 +524,12 @@
       "tag": "talk"
     },
     {
+      "key": "5f4a6444dcda32a1",
+      "spoken": "Town. Yo. Loads of people. Loads of dem have food.",
+      "source": "Town. Loads of people. Loads of them have food.",
+      "tag": "progression"
+    },
+    {
       "key": "5fc9c67ad8dcb961",
       "spoken": "Ay, yo. I am runnin' on about four percent, so take dat as you'll.",
       "source": "I am running on about four percent, so take that as you will.",
@@ -383,12 +539,6 @@
       "key": "60df3d109fa13217",
       "spoken": "She has met me. She said 'oh no, dis one.' I'm choosin' to take it well.",
       "source": "She has met me. She said 'oh no, this one.' I'm choosing to take it well.",
-      "tag": "npcs"
-    },
-    {
-      "key": "68d357120c219884",
-      "spoken": "Biscuit. Buddy. That's da same stick as yesterday. ...Okay it's a great stick.",
-      "source": "Biscuit. Buddy. That's the same stick as yesterday. ...Okay it's a great stick.",
       "tag": "npcs"
     },
     {
@@ -402,6 +552,12 @@
       "spoken": "sand gets in everythin'. i respect da commitment. I'm just sayin'.",
       "source": "sand gets in everything. i respect the commitment.",
       "tag": "thoughts"
+    },
+    {
+      "key": "6d02d0a366f74e3a",
+      "spoken": "Okay. Dat is a friend. I am admittin' it out loud, once.",
+      "source": "Okay. That is a friend. I am admitting it out loud, once.",
+      "tag": "escalation"
     },
     {
       "key": "7071a2516a28c243",
@@ -422,16 +578,28 @@
       "tag": "greetings"
     },
     {
+      "key": "7783107f6c433b06",
+      "spoken": "Pepper. Lemme tell ya. You say dat like it's not a compliment.",
+      "source": "Pepper. You say that like it's not a compliment.",
+      "tag": "npcs"
+    },
+    {
       "key": "791bb73b9c6054f2",
       "spoken": "pigeons: overconfident. always. I'm just sayin'.",
       "source": "pigeons: overconfident. always.",
       "tag": "thoughts"
     },
     {
-      "key": "7a109bdb017f0b2e",
-      "spoken": "Biscuit, I have thought about dis more than you've and I still have nuttin'.",
-      "source": "Biscuit, I have thought about this more than you have and I still have nothing.",
-      "tag": "npcs"
+      "key": "791d1455e4e40839",
+      "spoken": "let him hear",
+      "source": "let him hear",
+      "tag": "onboarding"
+    },
+    {
+      "key": "7c22d96c521faff3",
+      "spoken": "Our grandchildren will inherit dis. I hope they are ready.",
+      "source": "Our grandchildren will inherit this. I hope they are ready.",
+      "tag": "escalation"
     },
     {
       "key": "7c4158648dc21d79",
@@ -449,24 +617,6 @@
       "key": "7cf5ac07771c15da",
       "spoken": "Bored? I've got a stick, a hole, and no supervision. Pick one.",
       "source": "Bored? I've got a stick, a hole, and no supervision. Pick one.",
-      "tag": "talk"
-    },
-    {
-      "key": "7e94c250e86172e6",
-      "spoken": "Ay. Finally. I was about to file a complaint.",
-      "source": "Finally. I was about to file a complaint.",
-      "tag": "reactions"
-    },
-    {
-      "key": "82db0e1dbbc9f54c",
-      "spoken": "Cool, cool. I marked da fire hydrant. The BIG one. Checkmate.",
-      "source": "Cool, cool. I marked the fire hydrant. The BIG one. Checkmate.",
-      "tag": "npcs"
-    },
-    {
-      "key": "8478ce102c05cfa4",
-      "spoken": "We are doin' %s now?",
-      "source": "We are doing %s now?",
       "tag": "talk"
     },
     {
@@ -500,16 +650,22 @@
       "tag": "reactions"
     },
     {
+      "key": "8d6eda9cafe7bfc7",
+      "spoken": "Best friend. Don't make it weird. It is already a little weird.",
+      "source": "Best friend. Do not make it weird. It is already a little weird.",
+      "tag": "escalation"
+    },
+    {
       "key": "8f4656d5b8f48515",
       "spoken": "night smells different. better? different.",
       "source": "night smells different. better? different.",
       "tag": "thoughts"
     },
     {
-      "key": "91f23de3ce486f1b",
-      "spoken": "Ay, yo. Town. Loads of people. Loads of dem have food.",
-      "source": "Town. Loads of people. Loads of them have food.",
-      "tag": "progression"
+      "key": "93245067f0723480",
+      "spoken": "Finally. I was about to file a complaint.",
+      "source": "Finally. I was about to file a complaint.",
+      "tag": "reactions"
     },
     {
       "key": "93309c70500875a3",
@@ -540,6 +696,12 @@
       "spoken": "I don't have advice. I have a whole side of me you can lean on. I'm just sayin'.",
       "source": "I don't have advice. I have a whole side of me you can lean on.",
       "tag": "talk"
+    },
+    {
+      "key": "98a2c5ad7e797013",
+      "spoken": "No. Nap. I have made my decision. I'm just sayin'.",
+      "source": "No. Nap. I have made my decision.",
+      "tag": "initiative"
     },
     {
       "key": "98eb3cd4c64f15c1",
@@ -578,10 +740,10 @@
       "tag": "reactions"
     },
     {
-      "key": "a847eac2336983eb",
-      "spoken": "Did ya say %s?",
-      "source": "Did you say %s?",
-      "tag": "talk"
+      "key": "a7939fd10129427a",
+      "spoken": "Biscuit. I have thought about dis more than you've and I still have nuttin'.",
+      "source": "Biscuit, I have thought about this more than you have and I still have nothing.",
+      "tag": "npcs"
     },
     {
       "key": "abbe626ba88233d6",
@@ -590,16 +752,22 @@
       "tag": "thoughts"
     },
     {
-      "key": "af31c529de4cdca2",
-      "spoken": "See, this is my favourite kinda news. Tell me da whole thing.",
-      "source": "See, this is my favourite kind of news. Tell me the whole thing.",
-      "tag": "talk"
+      "key": "abfb0bba2b1f4e75",
+      "spoken": "Just checkin' you're still dere.",
+      "source": "Just checking you're still there.",
+      "tag": "initiative"
     },
     {
       "key": "af7826bf099e4159",
       "spoken": "Tired is just pre-nap. I'm an expert. Follow me.",
       "source": "Tired is just pre-nap. I'm an expert. Follow me.",
       "tag": "talk"
+    },
+    {
+      "key": "afe62865adb8b793",
+      "spoken": "Biscuit. Classic. Hand it over.",
+      "source": "Biscuit. Classic. Hand it over.",
+      "tag": "hook"
     },
     {
       "key": "b0b05375818fda55",
@@ -638,27 +806,27 @@
       "tag": "reactions"
     },
     {
+      "key": "b63c6748339a52f5",
+      "spoken": "Ball. Air. Me. In dat order. Go. I'm just sayin'.",
+      "source": "Ball. Air. Me. In that order. Go.",
+      "tag": "reactions"
+    },
+    {
+      "key": "ba83665864111fb0",
+      "spoken": "was bein' insufferable at da park. I'm just sayin'.",
+      "source": "was being insufferable at the park",
+      "tag": "hook"
+    },
+    {
       "key": "bd0663bf92f7ec1c",
       "spoken": "A ball went under da sofa. Nobody has seen it since. I think about it most days.",
       "source": "A ball went under the sofa. Nobody has seen it since. I think about it most days.",
       "tag": "talk"
     },
     {
-      "key": "bdaced528996eca3",
-      "spoken": "Lemme tell ya. Food. My favorite thing that ain't ya. Close second though.",
-      "source": "Food. My favorite thing that is not you. Close second though.",
-      "tag": "reactions"
-    },
-    {
       "key": "c083529477f6728e",
       "spoken": "Lemme tell ya. No. Lie down. I'll be a real heavy blanket about it.",
       "source": "No. Lie down. I'll be a very heavy blanket about it.",
-      "tag": "talk"
-    },
-    {
-      "key": "c092cf4fe05e13e6",
-      "spoken": "Once, dere was a dog. Extremely handsome. Some say the best. He found a stick. The end.",
-      "source": "Once, there was a dog. Extremely handsome. Some say the best. He found a stick. The end.",
       "tag": "talk"
     },
     {
@@ -716,12 +884,6 @@
       "tag": "mishaps"
     },
     {
-      "key": "cbe740e6495c9384",
-      "spoken": "Ay. Pepper. You say dat like it's not a compliment.",
-      "source": "Pepper. You say that like it's not a compliment.",
-      "tag": "npcs"
-    },
-    {
       "key": "cf166d38c344d8a8",
       "spoken": "I'm not gonna lie to ya. I'm gonna need a noun. Any noun. Throw me one.",
       "source": "I'm going to need a noun. Any noun. Throw me one.",
@@ -738,12 +900,6 @@
       "spoken": "It is definitely ya. I have never been wrong about a time in my life. I'm just sayin'.",
       "source": "It is definitely you. I have never been wrong about a time in my life.",
       "tag": "npcs"
-    },
-    {
-      "key": "d3306a75cd25de54",
-      "spoken": "Mm. I'll allow it. I'm just sayin'.",
-      "source": "Mm. I'll allow it.",
-      "tag": "talk"
     },
     {
       "key": "d5f1fa3de012accb",
@@ -782,6 +938,12 @@
       "tag": "reactions"
     },
     {
+      "key": "df9a5c6e7e44c922",
+      "spoken": "I know dat dog. Not well. But I know that dog. I'm just sayin'.",
+      "source": "I know that dog. Not well. But I know that dog.",
+      "tag": "escalation"
+    },
+    {
       "key": "e05ab53f44f38812",
       "spoken": "Dat one's not stickin'. My head's full or somethin'. I'm just sayin'.",
       "source": "That one's not sticking. My head's full or something.",
@@ -792,6 +954,12 @@
       "spoken": "da window shows outside. i own outside.",
       "source": "the window shows outside. i own outside.",
       "tag": "thoughts"
+    },
+    {
+      "key": "e7dc520193994a49",
+      "spoken": "Plan complete. Disturbingly productive. We should probably do somethin' pointless now.",
+      "source": "Plan complete. Disturbingly productive. We should probably do something pointless now.",
+      "tag": "hook"
     },
     {
       "key": "ead5c3874f996e7f",
@@ -812,10 +980,28 @@
       "tag": "npcs"
     },
     {
+      "key": "ec2a9f502593327f",
+      "spoken": "Dat one is family now. They came with the house. I don't make the rules.",
+      "source": "That one is family now. They came with the house. I do not make the rules.",
+      "tag": "escalation"
+    },
+    {
+      "key": "ec498424670412d6",
+      "spoken": "STEAK? Okay. Nobody move. I need to experience dis correctly.",
+      "source": "STEAK? Okay. Nobody move. I need to experience this correctly.",
+      "tag": "hook"
+    },
+    {
       "key": "edfea2d705b23a91",
       "spoken": "Go on. I have literally nuttin' else scheduled.",
       "source": "Go on. I have literally nothing else scheduled.",
       "tag": "talk"
+    },
+    {
+      "key": "ef1beeb3ac2c48eb",
+      "spoken": "I have chased dat water back into the sea. You're welcome, everyone.",
+      "source": "I have chased that water back into the sea. You are welcome, everyone.",
+      "tag": "hook"
     },
     {
       "key": "f1beb5655ca54da1",
@@ -864,6 +1050,18 @@
       "spoken": "The park. Dere are BIRDS there.",
       "source": "The park. There are BIRDS there.",
       "tag": "progression"
+    },
+    {
+      "key": "fd3e468c6702e8c8",
+      "spoken": "Ay, yo. I bit da sea. The sea did nuttin'. Cowardly.",
+      "source": "I bit the sea. The sea did nothing. Cowardly.",
+      "tag": "hook"
+    },
+    {
+      "key": "fe2bd2cd0abb2e30",
+      "spoken": "Right. I remember dis one. I'm just sayin'.",
+      "source": "Right. I remember this one.",
+      "tag": "training"
     },
     {
       "key": "fe4af74c47844eb4",
