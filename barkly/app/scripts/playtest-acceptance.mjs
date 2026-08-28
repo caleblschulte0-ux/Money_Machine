@@ -28,10 +28,27 @@ if (!url) {
 
 function browserOptions() {
   const args = ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'];
+  const opts = { args };
   for (const c of [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium']) {
-    if (c && existsSync(c)) return { executablePath: c, args };
+    if (c && existsSync(c)) {
+      opts.executablePath = c;
+      break;
+    }
   }
-  return { args };
+  /**
+   * A sandboxed runner reaches the internet through an egress proxy that curl
+   * and node pick up from the environment and Chromium does not. Without this,
+   * the deployed URL comes back ERR_CONNECTION_RESET — which reads exactly like
+   * "the site is down" when the site is fine.
+   *
+   * Loopback is exempt: sending a local address through an egress proxy is how
+   * a working local check becomes a confusing one.
+   */
+  const proxy = process.env.HTTPS_PROXY || process.env.https_proxy;
+  if (proxy && !/^https?:\/\/(localhost|127\.|\[::1\])/.test(url)) {
+    opts.proxy = { server: proxy };
+  }
+  return opts;
 }
 
 const results = [];
