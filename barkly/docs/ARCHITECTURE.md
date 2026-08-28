@@ -93,6 +93,52 @@ circuit breaker so the next turns skip the doomed call instead of making a
 child wait out the timeout again; it closes on its own. Settings always says
 which brain answered — a degraded Barkly is visible, never silent.
 
+## How Barkly moves — the rig
+
+`app/src/ui/BarklyRig.tsx` draws his front pose as a PUPPET: head, both ears
+and body as separate layers that move independently. Before it, every physical
+thing he did was a transform on the whole dog — a head tilt rotated his legs, an
+ear flick was a full-body wobble, and looking at something was impossible, so
+the interface had to TELL you he was hungry with a badge.
+
+The layers are cut from the approved render by `app/scripts/build-rig.py`, which
+**refuses to write anything unless stacking them back up reproduces
+`renders/front.png` pixel for pixel.** That is what makes this a rig and not a
+redesign, and it is a real gate: at rest he is the same drawing, and the build
+fails the moment he stops being.
+
+Three things in there are load-bearing and were each found the hard way:
+
+- **The ears are CHILDREN of the head.** A head cock carries them; only their
+  own extra swing is theirs. Parented in world space instead, a head turn slides
+  his skull out from under them and tears a seam across the top — which looks
+  perfectly fine standing still.
+- **One scale transform for the whole rig, anchored top-left.** Scaling each
+  layer's box separately makes every part round its own fractional size, and the
+  background shows through the cracks as hairline seams along his jaw and ears.
+- **Layers overlap only where both are solid, and the render tops out at alpha
+  254.** Testing for a literal 255 made that overlap 31 pixels instead of
+  thousands, so the layers butted edge-to-edge and seamed as soon as the browser
+  scaled them. The 1:1 check passed the whole time — an exact tiling is exact.
+
+His face variants (blink, half-lid, wide, smile, squint, jaw-open) are cut the
+same way, so he still blinks and emotes; he just does it on a head that can also
+turn. Only the FRONT pose is rigged — three-quarter, side-lie and the closeup
+are still whole images, and `BarklyPhotoView` keeps using them.
+
+## What Barkly is looking at
+
+`app/src/ui/attention.ts` is the dictionary between the world and his neck, and
+it is why there is no "hungry" badge. He glances at his bowl, then back at you,
+then at the bowl — and the looking-BACK is the half that carries the meaning:
+checking the bowl is information, checking you is a question.
+
+Priority order is deliberate: **someone speaking outranks his own appetite**, because
+a character who does not turn when addressed reads as furniture. The decision is
+pure and tested (`__tests__/attention.test.ts`); only the alternation clock lives
+in `useAttention.ts`. Directions, never coordinates — he knows the bowl is down
+and to his left, which is all a look needs to read.
+
 ## How Barkly speaks
 
 `app/src/audio/voiceEngine.ts` is the ONE place the app makes a sound. That is

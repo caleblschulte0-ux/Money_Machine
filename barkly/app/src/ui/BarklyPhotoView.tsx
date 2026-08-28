@@ -21,6 +21,7 @@ import { color } from './theme';
 import { Animated, Easing, Image, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { BarklyRenderProps } from '../animation/renderer';
 import { BarklyState, BodyAction } from '../barkly/types';
+import BarklyRig from './BarklyRig';
 
 const RENDERS = {
   front: require('../../assets/barkly/renders/front.png'),
@@ -41,6 +42,9 @@ const FRONT_SQUINT = require('../../assets/barkly/renders/front_squint.png'); //
 const FRONT_HALF = require('../../assets/barkly/renders/front_half.png');     // mid-blink / heavy-lidded
 
 type Pose = keyof typeof RENDERS;
+
+/** The rig is cut from the full-size render; the front pose is drawn smaller. */
+const RIG_CANVAS_WIDTH = 416;
 
 function poseFor(state: BarklyState): Pose {
   switch (state) {
@@ -163,7 +167,7 @@ export function faceFrame({
   }
 }
 
-export default function BarklyPhotoView({ state, actions, variant, collarId, scale = 1 }: BarklyRenderProps) {
+export default function BarklyPhotoView({ state, actions, variant, collarId, scale = 1, look: lookAt }: BarklyRenderProps) {
   const collarArt = collarId ? COLLAR_ART[collarId] : undefined;
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
@@ -288,6 +292,19 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
   const prevSize = shown.prev ? POSE_SIZE[shown.prev] : size;
 
   /**
+   * The front pose is a PUPPET now, not a picture (see BarklyRig).
+   *
+   * Only the front pose: the three-quarter, side-lie and closeup renders are
+   * still whole images, and everything below still drives them. So this is a
+   * swap of one frame for a rig that happens to look identical standing still,
+   * which is exactly the property scripts/build-rig.py enforces.
+   *
+   * Not while a pose is crossfading — the outgoing image needs something the
+   * same shape to dissolve against, and a rig mid-blink is not that.
+   */
+  const rigged = shown.current === 'front' && !shown.prev;
+
+  /**
    * He is drawn to fit the stage he was given.
    *
    * The sprite used to be a fixed 300x322 box, so on a short phone the
@@ -303,12 +320,16 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
             { scale },
             { translateY: Animated.add(talkBob, bounceLift) },
             { translateX: lookShift },
-            { rotate: driftRotate },
+            // The rig breathes and tilts with the parts that should move —
+            // his chest, his head — so the whole-body versions of those come
+            // off. Rotating the entire dog to nod was the thing the rig exists
+            // to stop; leaving both on would just do it twice.
+            { rotate: rigged ? '0deg' : driftRotate },
             { rotate: swayRotate },
-            { rotate: tiltRotate },
-            { rotate: talkNod },
+            { rotate: rigged ? '0deg' : tiltRotate },
+            { rotate: rigged ? '0deg' : talkNod },
             { rotate: sleepDroop },
-            { scale: Animated.multiply(breatheScale, enterScale) },
+            { scale: Animated.multiply(rigged ? 1 : breatheScale, enterScale) },
             { scaleX: Animated.multiply(squashX, bounceSquash) },
             { scaleY: squashY },
           ],
@@ -322,11 +343,22 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
               resizeMode="contain"
             />
           )}
-          <Animated.Image
-            source={shown.current === 'front' ? faceFrame({ talking, jawOpen, lid, state }) : RENDERS[shown.current]}
-            style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
-            resizeMode="contain"
-          />
+          {rigged ? (
+            <BarklyRig
+              state={state}
+              actions={actions}
+              look={lookAt}
+              speaking={talking}
+              collarArt={collarArt}
+              scale={size.width / RIG_CANVAS_WIDTH}
+            />
+          ) : (
+            <Animated.Image
+              source={shown.current === 'front' ? faceFrame({ talking, jawOpen, lid, state }) : RENDERS[shown.current]}
+              style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
+              resizeMode="contain"
+            />
+          )}
           {/* The bought collar, as ART.
 
               This was a translucent rectangle — square ends, no shading, laid
@@ -336,7 +368,7 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
               highlight and stitch intact and the brass left brass. Same
               dimensions as the sprite, so it lines up at any scale and rides
               the same transform stack he does. */}
-          {collarArt && FRONT_POSES.has(shown.current) && (
+          {collarArt && !rigged && FRONT_POSES.has(shown.current) && (
             <Image
               source={collarArt}
               style={[styles.collarArt, { width: size.width, height: size.height }]}

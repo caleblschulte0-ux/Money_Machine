@@ -36,4 +36,12 @@ export interface BarklyRenderProps {
    */
   /** STORE id of the collar he is wearing, e.g. `collar_red`. */
   collarId?: string | null;
+  /**
+   * What he is paying attention to, as a direction: x and y in -1..1, where
+   * (0,0) is you. The stage knows where his bowl is; he does not.
+   *
+   * This is how he stops needing a badge to say he is hungry — he looks at the
+   * thing. A renderer with no separable head may ignore it.
+   */
+  look?: { x: number; y: number } | null;
 }

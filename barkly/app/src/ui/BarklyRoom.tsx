@@ -37,6 +37,7 @@ import DialoguePanel from './DialoguePanel';
 import SettingsSheet from './SettingsSheet';
 import { Ball, FoodBowl } from './StageProps';
 import BarklyKit, { KitAction } from './BarklyKit';
+import { useAttention } from './useAttention';
 import { feel, setFeelMuted } from './feel';
 import {
   BeachScene,
@@ -554,6 +555,21 @@ export default function BarklyRoom() {
             ? 'play'
             : null;
 
+  /**
+   * WHERE HE IS LOOKING — and the reason there is no "hungry" badge.
+   *
+   * `wants` used to do exactly one thing: lift the matching object an inch. The
+   * app was pointing at the bowl on his behalf. Now he looks at it, then at
+   * you, then at it again, and a child reads that without being told. Same
+   * signal, no chrome. See ui/attention.ts.
+   */
+  const look = useAttention({
+    wants,
+    npcSpeaking: npcBubble ? npcBubble.id : null,
+    speaking: snapshot.state === 'speaking',
+    asleep,
+  });
+
   const onKit = (action: KitAction) => {
     if (action === 'feed') {
       feel('touch');
@@ -865,7 +881,7 @@ export default function BarklyRoom() {
               testID="barkly-sprite"
               accessibilityHint="Tap to pet him."
             >
-              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} scale={spriteScale} />
+              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} />
             </Pressable>
           </Animated.View>
           {/* After the dog, so the near rim overlaps his lower body. */}
