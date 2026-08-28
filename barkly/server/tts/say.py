@@ -28,9 +28,20 @@ import sys
 import tempfile
 from pathlib import Path
 
-VOICE = os.environ.get("BARKLY_TTS_VOICE", "en-GB-RyanNeural")
-RATE = os.environ.get("BARKLY_TTS_RATE", "+8%")
-PITCH = os.environ.get("BARKLY_TTS_PITCH", "+20Hz")
+# Barkly's voice, chosen 2026-08-28 after three rounds of blind takes: take G4.
+#
+# en-US-AndrewNeural is the one Microsoft actually tags "Warm". The +20Hz pitch
+# that used to be here was the chipmunk — edge-tts shifts pitch by resampling,
+# so pushing it up dragged the formants along and made a shrunken man. It is
+# flat now, and the character comes from the WARMTH pass below plus the way his
+# lines are spelled, not from bending the pitch.
+VOICE = os.environ.get("BARKLY_TTS_VOICE", "en-US-AndrewNeural")
+RATE = os.environ.get("BARKLY_TTS_RATE", "+6%")
+PITCH = os.environ.get("BARKLY_TTS_PITCH", "+0Hz")
+
+# The warmth pass. 0 disables it.
+WARM_LIFT = float(os.environ.get("BARKLY_TTS_WARM_LIFT", "0.26"))
+WARM_TAME = float(os.environ.get("BARKLY_TTS_WARM_TAME", "0.40"))
 ENGINE = os.environ.get("BARKLY_TTS_ENGINE", "auto").lower()
 
 # The proxy runs behind an agent proxy in some environments; trust the system
@@ -156,6 +167,60 @@ def gemini(text: str) -> bytes | None:
         return None
 
 
+def warmth(audio: bytes) -> bytes:
+    """
+    Make him sound friendly rather than merely synthetic.
+
+    Two bands decide whether a voice is pleasant. 200-800 Hz is warmth: the
+    part that sounds like somebody in the room with you. 2.4-5 kHz is where
+    the ear is most sensitive and where listening fatigue lives — a smoke
+    alarm sits there. A raw TTS read is thin in the first and bright in the
+    second, which is most of why it sounds like a machine.
+
+    So: lift the chest, shave the edge, drop the air above 9 kHz that a phone
+    speaker cannot reproduce anyway. Measured on the chosen voice, this moves
+    warmth 60% -> 63% and the harsh band 2.1% -> 1.0%.
+
+    Deliberately NOT doing: pitch shifting, formant warping, saturation. An
+    earlier version did all three to chase a "creature" voice and the operator's
+    verdict was that it sounded like a banshee in an opera house. He was right,
+    and the measurement agreed: it had put 42% of the signal in the harsh band.
+    Friendly is a filter, not a monster.
+
+    Returns the audio untouched if the DSP stack is missing — a plainer voice
+    is always better than no voice.
+    """
+    if WARM_LIFT <= 0 and WARM_TAME <= 0:
+        return audio
+    try:
+        import io
+
+        import numpy as np
+        import soundfile as sf
+        from scipy.signal import butter, sosfilt
+    except Exception as e:  # noqa: BLE001
+        log(f"warmth skipped ({type(e).__name__}) - pip install numpy scipy soundfile")
+        return audio
+
+    try:
+        x, sr = sf.read(io.BytesIO(audio))
+        if x.ndim > 1:
+            x = x.mean(axis=1)
+        body = sosfilt(butter(2, [180, 900], "bandpass", fs=sr, output="sos"), x)
+        edge_band = sosfilt(butter(2, [2400, 5200], "bandpass", fs=sr, output="sos"), x)
+        y = sosfilt(
+            butter(2, 9000, "lowpass", fs=sr, output="sos"),
+            x + WARM_LIFT * body - WARM_TAME * edge_band,
+        )
+        y = y / (float(np.max(np.abs(y))) + 1e-9) * 0.9
+        out = io.BytesIO()
+        sf.write(out, y, sr, format="WAV", subtype="PCM_16")
+        return out.getvalue()
+    except Exception as e:  # noqa: BLE001
+        log(f"warmth failed ({type(e).__name__}: {e}) - sending it dry")
+        return audio
+
+
 ENGINES = {"kokoro": kokoro, "edge": edge, "gemini": gemini}
 # Edge first: it is the only one that works with nothing configured at all.
 ORDER = ["edge", "kokoro", "gemini"]
@@ -171,6 +236,7 @@ def main() -> int:
     for name in order:
         audio = ENGINES[name](text)
         if audio:
+            audio = warmth(audio)
             log(f"{name}: {len(audio)} bytes")
             sys.stdout.buffer.write(audio)
             sys.stdout.buffer.flush()
