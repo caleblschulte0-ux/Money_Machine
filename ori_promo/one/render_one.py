@@ -509,7 +509,7 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
         d = ImageDraw.Draw(img)
         showing = False       # is any generated figure on screen right now?
 
-        for (src, _fx, hpx, t0, build, sdep, mtch, toff, shw), path, cut in zip(
+        for (src, _fx, hpx, t0, build, sdep, mtch, toff, shw, ct), path, cut in zip(
                 figs, fpaths, cuts):
             foot = path[min(i, len(path) - 1)]
             lt = t - t0
@@ -544,7 +544,7 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
             base = PL.place(base, cut, foot, hpx, k=k,
                             depth=dep0, subj_depth=sdep,
                             reveal=(toff is None and k < 1.0), match=mtch,
-                            shadow_strength=shw)
+                            shadow_strength=shw, contact=ct)
 
         if lab and lpath:
             (_, title, sub, t0, off) = lab
@@ -705,7 +705,7 @@ def main(only=None):
     # which is precisely the kind of thing a person checking by eye keeps
     # missing and arithmetic never does.
     for b, c, tin, dur in rows:
-        for (src, foot, hpx, t0, build, sdep, mtch, toff, shw) in figures(b):
+        for (src, foot, hpx, t0, build, sdep, mtch, toff, shw, ct) in figures(b):
             top, feet = foot[1] - hpx, foot[1]
             if top < SAFE_T or feet > SAFE_B:
                 raise SystemExit(

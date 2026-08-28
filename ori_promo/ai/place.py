@@ -120,7 +120,8 @@ def light_match(rgb, alpha, plate_patch, amount=0.55):
     return out
 
 
-def shadow(plate, foot, w, h, sun=(-0.55, 0.35), strength=0.62, alpha=None):
+def shadow(plate, foot, w, h, sun=(-0.55, 0.35), strength=0.62, alpha=None,
+           contact=None):
     """Ground shadow: CAST + CORE, and the cast one is the figure's shape.
 
     Three parts, because hard midday light does three separate things and a
@@ -197,18 +198,69 @@ def shadow(plate, foot, w, h, sun=(-0.55, 0.35), strength=0.62, alpha=None):
     pool = cv2.GaussianBlur(pool, (0, 0), max(3.0, ex * 0.11))
     m = np.maximum(m, pool * (0.32 if alpha is not None else 1.0))
 
+    # ---- CORE: contact where the figure ACTUALLY meets the ground.
+    # One centred ellipse is a biped assumption, and it is wrong the moment
+    # the subject is not a biped. A mammoth's feet are at the four corners
+    # of its footprint and its base line runs through open ground between
+    # them, so the core landed in empty snow and the animal floated no
+    # matter how dense the shadow got -- r94: "its feet do not establish
+    # enough contact with the shelf ... reads as a softened cutout placed
+    # in front of the snow". Read the contact off the ALPHA instead: for
+    # every column, the lowest opaque pixel is where that part of the
+    # figure meets the ground, and columns whose lowest pixel sits within a
+    # small band of the base line are the ones touching it. Four feet, two
+    # boots, or a skirt hem all come out right because none of it is
+    # assumed -- the silhouette is asked.
     core = np.zeros((H, W), np.float32)
-    cex, cey = max(4, int(w * 0.30)), max(3, int(h * 0.016))
-    cv2.ellipse(core, (int(foot[0]), int(foot[1])), (cex, cey), 0, 0, 360, 1.0, -1)
-    core = cv2.GaussianBlur(core, (0, 0), max(2.0, cex * 0.22))
+    if alpha is not None and alpha.size:
+        occ = alpha > 128
+        col = occ.any(axis=0)
+        # h-1-argmax over the flipped column = index of the lowest opaque row
+        lowest = np.where(col, h - 1 - occ[::-1].argmax(axis=0), -1)
+        band = max(3.0, h * 0.030)
+        touch = col & ((h - 1 - lowest) <= band)
+        cm = np.zeros((h, w), np.float32)
+        cols = np.where(touch)[0]
+        if cols.size:
+            th = max(2, int(h * 0.014))
+            base_v = lowest[cols]
+            for dv in range(-th, th + 1):
+                cm[np.clip(base_v + dv, 0, h - 1), cols] = 1.0
+            cm = cv2.GaussianBlur(cm, (0, 0), max(2.0, w * 0.008))
+            if cm.max() > 1e-6:
+                cm /= cm.max()
+            cx0, cy0 = int(foot[0] - w / 2), int(foot[1] - h)
+            sx0, sy0 = max(0, -cx0), max(0, -cy0)
+            dx0, dy0 = max(0, cx0), max(0, cy0)
+            dx1, dy1 = min(W, cx0 + w), min(H, cy0 + h)
+            if dx1 > dx0 and dy1 > dy0:
+                core[dy0:dy1, dx0:dx1] = cm[sy0:sy0 + (dy1 - dy0),
+                                            sx0:sx0 + (dx1 - dx0)]
+    else:
+        cex, cey = max(4, int(w * 0.30)), max(3, int(h * 0.016))
+        cv2.ellipse(core, (int(foot[0]), int(foot[1])), (cex, cey), 0, 0, 360, 1.0, -1)
+        core = cv2.GaussianBlur(core, (0, 0), max(2.0, cex * 0.22))
 
-    m = np.clip(m + core * 0.85, 0, 1.0) * strength
+    # CONTACT IS NOT THE SAME QUANTITY AS CAST DENSITY, and tying them
+    # together is what left the mammoth floating. Its cast shadow is
+    # projected from a 560px alpha, so at any density that reads under the
+    # feet the projection becomes a black slick lying across white ice --
+    # the reason `strength` was dropped to 0.34 in the first place. That
+    # bought a clean slick and paid for it with the one thing the eye uses
+    # to decide something is standing on the ground. `contact` lets the
+    # patch under the feet be dark while the cast stays soft. Defaulting it
+    # to None reproduces the previous formula EXACTLY, clip ceiling
+    # included, so no existing composite moves.
+    if contact is None:
+        m = np.clip(m + core * 0.85, 0, 1.0) * strength
+    else:
+        m = np.clip(m * strength + core * contact, 0.0, 1.0)
     return plate * (1.0 - m[..., None])
 
 
 def place(plate, rgba, foot, height_px, k=1.0, sun=(-0.55, 0.35),
           depth=None, subj_depth=0.55, reveal=True, match=0.55,
-          shadow_strength=0.62):
+          shadow_strength=0.62, contact=None):
     """Composite one figure. `foot` is where its feet meet the ground.
 
     k drives the AR reveal: 0 nothing, 1 fully present.
@@ -239,9 +291,11 @@ def place(plate, rgba, foot, height_px, k=1.0, sun=(-0.55, 0.35),
         return plate
     fig = fig[sy0:sy0 + (dy1 - dy0), sx0:sx0 + (dx1 - dx0)]
 
+    kk = min(1.0, k * 1.4)
     out = shadow(plate, foot, nw, nh, sun,
-                 strength=shadow_strength * min(1.0, k * 1.4),
-                 alpha=full_alpha)
+                 strength=shadow_strength * kk,
+                 alpha=full_alpha,
+                 contact=None if contact is None else contact * kk)
 
     patch = out[dy0:dy1, dx0:dx1]
     # `match` is per-subject on purpose. 0.55 is right for a FIGURE, which

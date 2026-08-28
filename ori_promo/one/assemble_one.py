@@ -110,7 +110,7 @@ def marks():
         if i < n:
             a[i:i+len(sig)] += sig[:max(0, n-i)]
     for b, clip, tin, st, d, note in BEATS:
-        for (_src, _foot, _h, t0, _build, _sd, _m, _off) in figures(b):
+        for (_src, _foot, _h, t0, _build, _sd, _m, _off, _sh, _ct) in figures(b):
             put(st+t0-0.55, _tick(int(0.20*SR), 520, 380, 0.055, 17.0))
             put(st+t0,      _tick(int(0.34*SR), 250, 150, 0.20, 8.0))
     a = a[:int(TOTAL*SR)]

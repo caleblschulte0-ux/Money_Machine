@@ -92,7 +92,7 @@ TITLES = {
 }
 
 # beat: (image, foot_xy, height_px, appear_t, build, subj_depth, match
-#        [, out_t][, shadow])
+#        [, out_t][, shadow][, contact])
 # Heights stay in the 300-390 band on the two figure plates. The mammoth
 # is smaller because it stands on the FAR ledge across the water, and at
 # that distance an animal reads by silhouette.
@@ -116,6 +116,35 @@ FIGURES = {
  # 942. I fixed one collision and created another, and r92 caught it:
  # "their feet are scope-clipped". render_one now asserts every figure
  # fits inside the scope frame.
+ # THE PALE AREA AROUND THIS GROUP IS THE MILL RUIN. IT IS NOT AN
+ # ARTIFACT, AND IT IS NOT MINE TO REMOVE.
+ # r94 read it as "a rectangular local plate or erased region extending
+ # toward the right edge" and asked for it to be cleaned up. It is the
+ # quartzite foundation of the mill and the ring of sun-bleached dead
+ # grass around it, photographed. Three measurements settle it, and they
+ # are recorded here so nobody spends another round on it:
+ #   1. Differencing the composited frame against the same graded plate
+ #      shows changed pixels ONLY inside the figures' silhouette and their
+ #      cast shadow. Nothing outside is touched.
+ #   2. Sampling rings outward from the alpha, the composite makes every
+ #      ring DARKER (-6.2, -7.9, -13.4, -6.8, -0.9 luma at 0-6, 6-16,
+ #      16-30, 30-60, 60-110 px). It never lightens anything.
+ #   3. The plate's own luminance in those same rings is 180, 175, 167,
+ #      142, 116. The pale region is in the photograph and falls off with
+ #      distance from the group -- because the group is standing on it.
+ # So the honest description is a PLACEMENT fact, not a defect: they are
+ # standing on the brightest ground in that corner, and the eye reads
+ # figure-plus-bright-surround as one pasted object. Moving them onto
+ # continuous lawn is the fix, and it is BLOCKED, for two stated reasons:
+ # at this depth the only ground clear of the era rail's scrim IS the ruin
+ # apron (see the x=1600 note above), and standing them further back needs
+ # a ground-plane scale this plate cannot supply -- the only human in the
+ # shot is on the elevated walkway above the retaining wall, not on the
+ # lawn, so there is no same-plane reference to solve the horizon from.
+ # Guessing a height here is the mistake that produced "the mammoth size
+ # is shit". It needs a locked-off plate, or the operator's call.
+ # It is also, for what it is worth, the right place for them to be
+ # standing in a beat captioned BEFORE THE MILL.
  "more": [("ai/era/dak_s3.jpg",  (1600, 930), 300, 1.0, 1.2, 0.30, 0.45)],
  # 560px, not 320. OPERATOR: "the mammoth size is shit" -- and it was,
  # measurably. The Dakota family on THIS PLATE is 385px at y=745 and he
@@ -133,7 +162,23 @@ FIGURES = {
  # top bar since scope came in, and it also collided with the disclosure
  # band. r92 is explicit that the SCALE is right and must not go back, so
  # the animal moves down the shelf instead of shrinking.
- "mam": [("ai/era/mam41f.jpg",  (1330, 730), 560, 2.2, 1.0, 0.30, 0.45, None, 0.34)],
+ # match 0.22, not 0.45. r94: the animal "is uniformly soft and milky
+ # compared with the rock plane". That was arithmetic, not taste. The
+ # light match pulls the cutout toward the mean and spread of the plate it
+ # lands on, and this plate is SNOW: subject mean ~75, plate mean ~191. At
+ # 0.45 the animal's mean was lifted to ~127 and its contrast scaled by
+ # ~0.86 -- a milky veil and a flattening, applied on purpose by a
+ # function whose whole job is to stop the sticker look. Matching a dark
+ # heavy animal to a white background is the one case where the cure is
+ # the disease: in snow a mammoth genuinely IS much darker than
+ # everything around it, and that contrast is the realism. 0.22 keeps the
+ # cool bounce a real animal would take from the snow and nothing else.
+ # The 10th field is CONTACT, split out from shadow strength because the
+ # two wanted opposite things here. See ai/place.py: at 560px the cast
+ # projection becomes a slick across white ice at any density that would
+ # read under the feet, so shadow strength stays at the 0.34 that keeps
+ # the slick soft, and contact carries the ground patch at 0.72.
+ "mam": [("ai/era/mam41f.jpg",  (1330, 730), 560, 2.2, 1.0, 0.30, 0.22, None, 0.34, 0.72)],
 }
 
 LABELS = {
@@ -207,16 +252,20 @@ SCORE = {
  "warm":   "now",
 }
 def figures(beat):
-    """FIGURES rows, normalised to 8 fields.
+    """FIGURES rows, normalised to 10 fields.
 
     (image, foot_xy, height_px, appear_t, build, subj_depth, match,
-     out_t, shadow)
+     out_t, shadow, contact)
 
     out_t is when the figure leaves; None means it stays to the end of the
-    beat. shadow is the ground-shadow strength, default 0.62. Both are
-    OPTIONAL trailing fields so shorter rows keep working untouched --
-    three modules unpack these tuples and widening them all at once is how
-    a positional-argument bug renders fine and means something else.
+    beat. shadow is the ground-shadow strength, default 0.62. contact is
+    the density of the patch directly under the feet, and None means "tie
+    it to shadow", which is what every figure did before the mammoth
+    needed the two separated. All three are OPTIONAL trailing fields so
+    shorter rows keep working untouched -- FOUR modules unpack these
+    tuples (render_one twice, assemble_one, timeline_one) and widening
+    them all at once is how a positional-argument bug renders fine and
+    means something else.
     """
     out = []
     for f in FIGURES.get(beat, []):
@@ -225,6 +274,8 @@ def figures(beat):
             f = f + (None,)
         if len(f) < 9:
             f = f + (0.62,)
+        if len(f) < 10:
+            f = f + (None,)
         out.append(f)
     return out
 

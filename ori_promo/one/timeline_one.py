@@ -63,11 +63,12 @@ def main():
     L.append("FIGURES PLACED — the generated imagery, and where it stands")
     L.append("")
     for b, clip, tin, st, d, note in BEATS:
-        for (src, foot, hpx, t0, build, sdep, mtch, toff, shw) in figures(b):
+        for (src, foot, hpx, t0, build, sdep, mtch, toff, shw, ct) in figures(b):
             L.append(f"  {st+t0:5.1f}s  {os.path.basename(src)}")
             L.append(f"           feet at {foot}, {hpx}px tall, builds over {build:.1f}s")
             L.append(f"           light-match {mtch:.2f}, occlusion depth {sdep:.2f}, "
-                     f"shadow {shw:.2f}")
+                     f"shadow {shw:.2f}, contact "
+                     + ("tied to shadow" if ct is None else f"{ct:.2f}"))
             if toff is not None:
                 L.append(f"           LEAVES at {st+toff:5.1f}s, gone by {st+toff+0.3:.1f}s")
     L.append("")
