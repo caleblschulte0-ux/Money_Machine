@@ -145,7 +145,31 @@ FIGURES = {
  # is shit". It needs a locked-off plate, or the operator's call.
  # It is also, for what it is worth, the right place for them to be
  # standing in a beat captioned BEFORE THE MILL.
- "more": [("ai/era/dak_s3.jpg",  (1600, 930), 300, 1.0, 1.2, 0.30, 0.45)],
+ # 529px at y=830, not 300px at y=930. OPERATOR, on v14: "This is bad
+ # sizing on the ai image they are the size of a dog." He was right and it
+ # is measurable, and the measurement is the thing I said in r95 this
+ # plate could not give me. I was wrong: I looked only at the FRAME the
+ # beat cuts from, where the only human stands on the elevated walkway.
+ # The CLIP is 93 seconds long and barely moves (0.2% drift), so the whole
+ # of it is the same camera. Background-differencing against an empty
+ # frame finds real people walking the near lawn and path:
+ #     14s  464px tall, feet at y=773
+ #     44s  544px tall, feet at y=848
+ #     50s  273px tall, feet at y=670
+ # Least squares through those three gives a horizon at y=488 and a scale
+ # of 1.547px per row, so an adult standing at y=930 is 684px. The group
+ # was 300px -- 44% of human size, which is very close to half, which is
+ # why it read as animals rather than people.
+ # THE FEET GO TO 830, NOT 930, and that is the rail's doing, not taste.
+ # At the correct 684px the group is 438px wide, so clearing the scrim
+ # (which covers y 832-928 across x 470-1450) needs x>=1669, and that puts
+ # its right edge 32px off the frame -- jammed into the corner r94 already
+ # called "visually fragile". Standing them one row band further back is
+ # the same geometry honestly applied: 830 is the last row whose figure
+ # ends ABOVE the scrim, and 1.547*(830-488) = 529.
+ # Verify the plane before changing this: scripts are not needed, just
+ # diff any frame of IMG_6805 against t=80s and measure who is walking.
+ "more": [("ai/era/dak_s3.jpg",  (1600, 830), 529, 1.0, 1.2, 0.30, 0.45)],
  # 560px, not 320. OPERATOR: "the mammoth size is shit" -- and it was,
  # measurably. The Dakota family on THIS PLATE is 385px at y=745 and he
  # approved that as human scale, so the ground plane is known: at y=690 a
@@ -183,7 +207,9 @@ FIGURES = {
 
 LABELS = {
  "dak":  ((1032, 752), "BEFORE THE MILL", "VISUALISATION", 2.9, (-40, -410)),
- "more": ((1470, 962), "SAME DAY",        "VISUALISATION", 2.4, (-70, -330)),
+ # anchor follows the group up the bank -- it pointed at y=962, which is
+ # now empty ground below a figure that starts at 830.
+ "more": ((1430, 846), "SAME DAY",        "VISUALISATION", 2.4, (-70, -300)),
  "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
 }
 
