@@ -91,8 +91,15 @@ def main():
     L.append("")
     L.append("STANDING DISCLOSURE")
     L.append(f"    {disclosure()}")
-    L.append("  shown on every beat that places generated imagery, and the")
-    L.append("  end card carries VISUAL INTENTION ONLY.")
+    # The renderer's tag tracks the FIGURES, not the beat (v6). Saying
+    # "on every beat that places generated imagery" was true of the old
+    # rule and would now be a generated file describing code that no
+    # longer exists.
+    L.append("  shown WHILE GENERATED IMAGERY IS ON SCREEN — the tag follows the")
+    L.append("  figures, not the beat, so it clears when the last one leaves and")
+    L.append("  the film's final unmodified frames carry no claim about imagery")
+    L.append("  that is not there. The end card carries VISUAL INTENTION ONLY as")
+    L.append("  its own separate disclosure.")
     L.append("  No date, no measurement, no attribution is asserted anywhere.")
     print("\n".join(L))
 
