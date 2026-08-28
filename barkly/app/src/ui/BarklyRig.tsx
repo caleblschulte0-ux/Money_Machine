@@ -32,6 +32,8 @@ import { BarklyState, BodyAction } from '../barkly/types';
 
 const ART = {
   body: require('../../assets/barkly/rig/body.png'),
+  pupil_l: require('../../assets/barkly/rig/pupil_l.png'),
+  pupil_r: require('../../assets/barkly/rig/pupil_r.png'),
   ear_l: require('../../assets/barkly/rig/ear_l.png'),
   ear_r: require('../../assets/barkly/rig/ear_r.png'),
   head: require('../../assets/barkly/rig/head.png'),
@@ -44,6 +46,9 @@ const ART = {
 } as const;
 
 type HeadArt = Extract<keyof typeof ART, `head${string}`>;
+
+/** Faces whose eyes are the resting ones, so the pupil layers belong on them. */
+const NEUTRAL_EYES = new Set<HeadArt>(['head', 'head_smile', 'head_mouth_open']);
 
 const CANVAS = rig.canvas;
 const L = rig.layers;
@@ -59,6 +64,23 @@ export interface LookTarget {
   y: number;
 }
 
+/**
+ * A one-shot physical reaction to something that just happened.
+ *
+ * The rig existed and almost nothing used it: he could cock his head, and the
+ * only thing that ever asked him to was a line of dialogue. Everything else a
+ * person does to him — petting him, being refused, arriving somewhere new,
+ * being handed something — went past without his body noticing.
+ *
+ * `at` is a timestamp, not a boolean, so the same beat can fire twice in a row.
+ * Petting him three times should be three reactions, not one.
+ */
+export type BeatKind = 'pet' | 'refuse' | 'arrive' | 'delight';
+export interface Beat {
+  kind: BeatKind;
+  at: number;
+}
+
 export interface RigProps {
   state: BarklyState;
   actions: BodyAction[];
@@ -72,29 +94,151 @@ export interface RigProps {
    * over the whole rig instead, it would sit still while his chest moved.
    */
   collarArt?: number | null;
+  /** Something just happened to him. See Beat. */
+  beat?: Beat | null;
 }
 
-/** How far each part is allowed to go. Measured, not guessed — see the notes. */
+/**
+ * How far each part may go — and the shape of the fix for "the animations look
+ * goofy", which they did.
+ *
+ * THE HEAD WAS SLIDING. A look was 13px of horizontal translation plus a tilt,
+ * and a front-view head cannot be turned by sliding it: his skull visibly came
+ * unscrewed and swam over his collar. Watching twelve frames of it side by side
+ * is unambiguous.
+ *
+ * A real look is mostly EYES. So the pupils carry it, fast and small; the head
+ * leans a few degrees after them; the body leans a fraction of that, later
+ * still. Nothing translates. The head's hinge is down inside the collar, so a
+ * tilt already swings the top of his skull through an arc — that arc is the
+ * sideways motion, and it is attached to a neck.
+ */
 const LIMITS = {
-  /** Degrees of head cock. Past ~14 the collar stops hiding the neck seam. */
-  tilt: 11,
-  /** Pixels the head slides to follow a look. It is a turn, faked by a shift. */
-  slide: 13,
-  nod: 9,
-  /**
-   * Degrees of ear swing. The build reconstructs the shoulder of his skull
-   * behind each ear root, and measuring the exposure across 0..30 degrees put
-   * the worst case at 18 pixels — so this is limited by taste, not by tearing.
-   */
-  ear: 17,
+  /** Pixels of pupil travel. Small: past this they climb onto his cheek. */
+  eyeX: 4.5,
+  eyeY: 2.6,
+  /** Degrees the head leans into a look. A deliberate head-cock gets more. */
+  lean: 5,
+  cock: 9,
+  /** Pixels of nod. Vertical reads honestly from the front; sideways does not. */
+  nod: 5,
+  /** How much of the head's lean the body picks up, a beat later. */
+  bodyFollow: 0.22,
+  /** Degrees of ear swing. Held poses, not a permanent wobble. */
+  ear: 14,
+  /** A flick is a quick twitch of ONE ear, and it is an event, not a loop. */
+  flick: 7,
 };
 
-function useSpringy(target: number, tension = 60): Animated.Value {
+/**
+ * A damped move to a value.
+ *
+ * `friction` matters more than it looks. At 9 every change overshot and settled
+ * with a visible wobble, and a dog whose head boings after every glance reads as
+ * a bobblehead. These are tuned to arrive and stop.
+ */
+function useSpringy(target: number, tension = 50, friction = 13): Animated.Value {
   const v = useRef(new Animated.Value(target)).current;
   useEffect(() => {
-    Animated.spring(v, { toValue: target, tension, friction: 9, useNativeDriver: true }).start();
-  }, [target, tension, v]);
+    Animated.spring(v, { toValue: target, tension, friction, useNativeDriver: true }).start();
+  }, [target, tension, friction, v]);
   return v;
+}
+
+/**
+ * How each beat moves him. Degrees and pixels, added on top of whatever else he
+ * is doing, so a reaction reads even mid-sentence.
+ *
+ *   PET      leans in and half-closes his eyes. The head goes DOWN and toward
+ *            the hand; ears fall back. This is the one that has to feel good.
+ *   REFUSE   pulls back and up, ears flat. Short and sharp — a flinch, not a
+ *            sulk, because he is unimpressed rather than hurt.
+ *   ARRIVE   a look around: eyes lead left, then right, head trailing.
+ *   DELIGHT  ears up, chin up, and a hop the body layer picks up.
+ */
+const BEATS: Record<BeatKind, { tilt: number; nod: number; ear: number; eye: number; ms: number }> = {
+  pet: { tilt: -4, nod: 5, ear: -7, eye: 1.5, ms: 900 },
+  refuse: { tilt: 3, nod: -5, ear: -11, eye: -1.5, ms: 520 },
+  arrive: { tilt: 0, nod: -2, ear: 8, eye: -4, ms: 1200 },
+  delight: { tilt: 0, nod: -4, ear: 13, eye: -2, ms: 700 },
+};
+
+/** Fire once per `beat.at`, then settle back to nothing. */
+function useBeat(beat: Beat | null | undefined): { v: Animated.Value; kind: BeatKind } {
+  const v = useRef(new Animated.Value(0)).current;
+  const [kind, setKind] = React.useState<BeatKind>('pet');
+  const last = useRef(0);
+  useEffect(() => {
+    if (!beat || beat.at === last.current) return;
+    last.current = beat.at;
+    setKind(beat.kind);
+    const shape = BEATS[beat.kind];
+    v.setValue(0);
+    Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: shape.ms * 0.28, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0, duration: shape.ms * 0.72, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]).start();
+  }, [beat, v]);
+  return { v, kind };
+}
+
+/**
+ * A GESTURE: in fast, then most of the way back, then hold.
+ *
+ * This is the difference between body language and a frozen pose. A head-cock
+ * used to be a boolean — the brain put HEAD_TILT on a reply and he held nine
+ * degrees of lean for the entire six-second line, which does not read as
+ * curious, it reads as broken. Measuring it made it obvious: his nose sat
+ * 11.7px off centre for eight consecutive frames and then snapped back.
+ *
+ * A real dog cocks his head, holds it for a beat, and mostly straightens while
+ * keeping a trace of it. So: peak, decay to a residual, and only fall to zero
+ * when the beat is over.
+ */
+function useGesture(active: boolean, residual = 0.22): Animated.Value {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!active) {
+      Animated.timing(v, { toValue: 0, duration: 420, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start();
+      return;
+    }
+    Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: 220, easing: Easing.out(Easing.back(1.2)), useNativeDriver: true }),
+      Animated.delay(520),
+      Animated.timing(v, { toValue: residual, duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]).start();
+  }, [active, residual, v]);
+  return v;
+}
+
+/**
+ * An ear flick: one ear, once, quickly, then back.
+ *
+ * It used to be a sine loop running the whole time he was awake, with the two
+ * ears on different spring tensions so they never lined up — which is why they
+ * flapped continuously and out of phase, like a windsock. Real ears are still
+ * most of the time and then twitch at something.
+ */
+function useEarFlick(active: boolean): { l: Animated.Value; r: Animated.Value } {
+  const l = useRef(new Animated.Value(0)).current;
+  const r = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!active) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        const which = Math.random() < 0.5 ? l : r;
+        Animated.sequence([
+          Animated.timing(which, { toValue: 1, duration: 90, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(which, { toValue: 0, duration: 220, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        ]).start();
+        schedule();
+      }, 4200 + Math.random() * 5200);
+    };
+    schedule();
+    return () => clearTimeout(timer);
+  }, [active, l, r]);
+  return { l, r };
 }
 
 /** A 0→1→0 loop while `active`, eased back to rest when not. */
@@ -199,7 +343,7 @@ function faceFor(state: BarklyState, speaking: boolean, jawOpen: boolean, blink:
   }
 }
 
-export default function BarklyRig({ state, actions, look, speaking = false, scale = 1, collarArt }: RigProps) {
+export default function BarklyRig({ state, actions, look, speaking = false, scale = 1, collarArt, beat }: RigProps) {
   const has = (a: BodyAction) => actions.includes(a);
 
   // ------------------------------------------------------------------ blink
@@ -254,22 +398,53 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
   const nudged = look ?? (has('LOOK_LEFT') ? { x: -0.7, y: 0 } : has('LOOK_RIGHT') ? { x: 0.7, y: 0 } : null);
   const lx = Math.max(-1, Math.min(1, nudged?.x ?? 0));
   const ly = Math.max(-1, Math.min(1, nudged?.y ?? 0));
-  const slide = useSpringy(lx * LIMITS.slide);
-  const nod = useSpringy(ly * LIMITS.nod);
-  const tiltDeg = useSpringy(
-    // He cocks his head when something is odd — a look off to the side, or a
-    // question he is chewing on.
-    (has('HEAD_TILT') ? 1 : 0) * LIMITS.tilt + lx * LIMITS.tilt * 0.45,
+  // EYES FIRST, and quickly — this is the part that actually reads as looking.
+  const eyeXBase = useSpringy(lx * LIMITS.eyeX, 170, 16);
+  const eyeYBase = useSpringy(ly * LIMITS.eyeY, 170, 16);
+  // Then the neck leans after them, less far and more slowly.
+  const nodBase = useSpringy(ly * LIMITS.nod, 45, 14);
+  // The lean he holds while looking somewhere, plus the cock he does as a beat.
+  const lookLean = useSpringy(lx * LIMITS.lean, 42, 14);
+  const cock = useGesture(has('HEAD_TILT'));
+  const react = useBeat(beat);
+  const shape = BEATS[react.kind];
+  // ARRIVE sweeps the eyes across rather than holding them somewhere, which is
+  // what looking around a new place actually is.
+  const eyeX = Animated.add(
+    eyeXBase,
+    react.v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, shape.eye, -shape.eye * 0.6] }),
   );
+  const eyeY = Animated.add(eyeYBase, react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.eye * 0.3] }));
+  const tiltDeg = Animated.add(
+    Animated.add(lookLean, cock.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.cock] })),
+    react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.tilt] }),
+  );
+  // And his shoulders come round last. Without this the head leans off a body
+  // that has not noticed, which is most of what "goofy" meant.
+  const bodyTiltDeg = Animated.multiply(tiltDeg, LIMITS.bodyFollow);
 
   // ---------------------------------------------------------------- ears
   const perk = has('EAR_PERK') || state === 'listening' || state === 'excited';
   const droop = state === 'sleepy' || state === 'hungry';
-  const earBase = droop ? -LIMITS.ear * 0.8 : perk ? LIMITS.ear : 0;
-  // One ear leads. A dog that moves both ears in perfect unison is a toy.
-  const earLDeg = useSpringy(earBase, 70);
-  const earRDeg = useSpringy(earBase * 0.82, 55);
-  const flick = useLoop(!droop && !speaking, 2600);
+  const earBase = droop ? -LIMITS.ear * 0.8 : 0;
+  // A held pose, with one ear a touch shyer than the other so he is not
+  // symmetrical — but they arrive together. Running them on different spring
+  // tensions made them drift permanently out of phase, which is what made him
+  // look like he had two windsocks stapled on.
+  const earSettle = useSpringy(earBase, 55, 12);
+  // Perking is a beat too: up sharply, then most of the way down again. Held
+  // permanently, both ears standing to attention is a hood ornament.
+  const perked = useGesture(perk, 0.35);
+  const beatEar = react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.ear] });
+  const earLDeg = Animated.add(
+    Animated.add(earSettle, perked.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.ear] })),
+    beatEar,
+  );
+  const earRDeg = Animated.add(
+    Animated.add(earSettle, perked.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.ear * 0.86] })),
+    beatEar,
+  );
+  const flick = useEarFlick(!droop);
 
   // ---------------------------------------------------------------- body
   const breathe = useLoop(true, state === 'sleepy' ? 2600 : 1700);
@@ -282,18 +457,29 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
         { translateY: breathe.interpolate({ inputRange: [0, 1], outputRange: [0, -2.5] }) },
         { scaleY: breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.012] }) },
         { rotate: wag.interpolate({ inputRange: [0, 1], outputRange: ['-0.7deg', '0.7deg'] }) },
+        ...hinge(
+          P.head.x,
+          // Shoulders, not neck: the body pivots low, around where his chest
+          // meets the floor, so a follow-through leans him rather than swings
+          // him.
+          CANVAS.h - 40,
+          0,
+          0,
+          CANVAS.w,
+          CANVAS.h,
+          bodyTiltDeg.interpolate({ inputRange: [-90, 90], outputRange: ['-90deg', '90deg'] }),
+        ),
       ],
     }),
-    [breathe, wag],
+    [breathe, wag, bodyTiltDeg],
   );
 
   const headStyle = useMemo(
     () => ({
       transform: [
-        { translateX: slide },
         {
           translateY: Animated.add(
-            nod,
+            Animated.add(nodBase, react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.nod] })),
             breathe.interpolate({ inputRange: [0, 1], outputRange: [0, -3.4] }),
           ),
         },
@@ -308,13 +494,17 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
         ),
       ],
     }),
-    [slide, nod, breathe, tiltDeg],
+    [nodBase, breathe, tiltDeg, react.v, shape.nod],
   );
 
-  const ear = (side: 'l' | 'r', deg: Animated.Value, lead: number) => {
+  const ear = (side: 'l' | 'r', deg: Animated.Animated, lead: number) => {
     const box = side === 'l' ? L.ear_l : L.ear_r;
     const piv = side === 'l' ? P.ear_l : P.ear_r;
-    const total = Animated.add(deg, flick.interpolate({ inputRange: [0, 1], outputRange: [0, lead] }));
+    const twitch = side === 'l' ? flick.l : flick.r;
+    const total = Animated.add(
+      deg,
+      twitch.interpolate({ inputRange: [0, 1], outputRange: [0, lead] }),
+    );
     return (
       <Part
         key={side}
@@ -352,6 +542,14 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
         {/* Head group: the ears ride on it, which is the point. */}
         <Animated.View style={[StyleSheet.absoluteFill, headStyle]}>
           <Part art={ART[face]} box={L.head} />
+        {/* His pupils, on the three faces that keep his resting eyes. The other
+            faces redraw them — a blink has no pupil to move. */}
+        {NEUTRAL_EYES.has(face) && (
+          <>
+            <Part art={ART.pupil_l} box={L.pupil_l} style={{ transform: [{ translateX: eyeX }, { translateY: eyeY }] }} />
+            <Part art={ART.pupil_r} box={L.pupil_r} style={{ transform: [{ translateX: eyeX }, { translateY: eyeY }] }} />
+          </>
+        )}
           {ear('l', earLDeg, 5)}
           {ear('r', earRDeg, -6)}
         </Animated.View>

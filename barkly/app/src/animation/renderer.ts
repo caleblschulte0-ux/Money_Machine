@@ -44,4 +44,10 @@ export interface BarklyRenderProps {
    * thing. A renderer with no separable head may ignore it.
    */
   look?: { x: number; y: number } | null;
+  /**
+   * Something just happened to him and his body should say so — he was petted,
+   * refused, handed something, or has just walked into somewhere new. A
+   * timestamp rather than a flag, so the same thing twice reads as twice.
+   */
+  beat?: { kind: 'pet' | 'refuse' | 'arrive' | 'delight'; at: number } | null;
 }

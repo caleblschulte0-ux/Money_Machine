@@ -123,8 +123,44 @@ Three things in there are load-bearing and were each found the hard way:
 
 His face variants (blink, half-lid, wide, smile, squint, jaw-open) are cut the
 same way, so he still blinks and emotes; he just does it on a head that can also
-turn. Only the FRONT pose is rigged — three-quarter, side-lie and the closeup
-are still whole images, and `BarklyPhotoView` keeps using them.
+turn. His PUPILS are their own layers, with the sockets behind them rebuilt from
+the sclera, so he can glance. Only the FRONT pose is rigged — three-quarter,
+side-lie and the closeup are still whole images, and `BarklyPhotoView` keeps
+using them.
+
+### How the motion is built, and what made it look goofy
+
+Three rules, each of which replaced something that read as wrong on screen:
+
+- **A look is mostly EYES.** A front-view head cannot be turned by sliding it
+  sideways — 13px of translation made his skull visibly come unscrewed and swim
+  over his collar. The pupils carry a look, fast and small; the neck leans a few
+  degrees after them; his shoulders pick up a fifth of that, later still.
+  Nothing translates. The head's hinge is inside the collar, so a lean already
+  swings the top of his skull through an arc — and that arc is attached to a
+  neck.
+- **Body language is punctuation, not a pose.** `HEAD_TILT` used to be a
+  boolean: the brain put it on a reply and he held nine degrees of lean for the
+  whole six-second line. Measured, his nose sat 11.7px off centre for eight
+  straight frames. Gestures now peak, decay to a trace, and release — a cock, a
+  perk, a flick.
+- **Ears are still, then twitch.** They ran on a permanent sine loop with the
+  two sides on different spring tensions, so they never lined up and flapped
+  like windsocks. One ear, occasionally, quickly.
+
+The whole-body versions of all this came OFF at the same time: the old talk-bob,
+sway and `lookShift` were the same motion done twice, fighting the rig instead of
+adding to it. A jump is still a jump, so the bounce stayed.
+
+### Beats — the part that uses it
+
+`Beat` is a one-shot physical reaction with a timestamp (not a flag, so petting
+him three times is three reactions). Pet leans him in with his eyes half closing;
+refuse is a short flinch; arrive sweeps his eyes across a new place; delight
+snaps his ears up. The rig could do all of this from the day it landed and almost
+nothing asked it to — the only thing that ever moved him on purpose was a line of
+dialogue. A dog that does not react to being touched is the least alive thing in
+an app about a dog.
 
 ## What Barkly is looking at
 

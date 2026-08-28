@@ -63,9 +63,15 @@ DOME_CORNER_Y = 106          # where the corner curve meets the straight sides
 CORNER_RX = 61               # x=150 and x=270 are where the flat top ends
 CORNER_RY = DOME_CORNER_Y - DOME_TOP
 
-# How far the ear root reaches back into the dome. Enough to pivot on, little
-# enough that a swing never exposes its far edge.
-EAR_ROOT_BITE = 18
+# How far the ear root reaches back into the dome.
+#
+# Enough to pivot on and to stay covering the rebuilt skull underneath at full
+# swing; no more than that, because every pixel of bite is a pixel of his head
+# that has to be INVENTED, and invented skull is slightly lighter than the real
+# thing. At 18 the rebuilt patch was big enough to read as a pale wedge whenever
+# an ear lifted. The rig caps ear swing at 14 degrees and the root edge sits
+# ~35px from the pivot, so 35*sin(14) = 8.5px of travel — 10 covers it.
+EAR_ROOT_BITE = 10
 EAR_MAX_Y = 130              # no ear pixels below this; that is face
 
 # The collar's top edge, so the head can tuck under it.
@@ -101,49 +107,71 @@ def grow(mask: np.ndarray, k: int) -> np.ndarray:
     return out
 
 
+def fill_round(rgba: np.ndarray, hole: np.ndarray) -> np.ndarray:
+    """
+    Fill a hole that is surrounded on every side, by growing the edge inward.
+
+    Right for an eye socket and wrong for the top of his head: a pupil sits in
+    the middle of a small pool of sclera whose shading runs in every direction
+    at once, so averaging the ring inward reproduces it. (The skull is the
+    opposite case and is done by columns — see rebuild_dome.)
+    """
+    out = rgba.astype(float)
+    known = (rgba[:, :, 3] > 0) & ~hole
+    todo = hole.copy()
+    while todo.any():
+        acc = np.zeros_like(out)
+        cnt = np.zeros(out.shape[:2])
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)):
+            acc += np.roll(np.roll(out, dy, axis=0), dx, axis=1) * np.roll(
+                np.roll(known, dy, axis=0), dx, axis=1
+            )[:, :, None]
+            cnt += np.roll(np.roll(known, dy, axis=0), dx, axis=1)
+        edge = todo & (cnt > 0)
+        if not edge.any():
+            break
+        out[edge] = acc[edge] / cnt[edge][:, None]
+        known |= edge
+        todo &= ~edge
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
 def rebuild_dome(rgba: np.ndarray, hole: np.ndarray, known: np.ndarray) -> np.ndarray:
     """
-    Redraw the top of his head where an ear was standing in front of it.
+    Redraw the top corners of his head, where an ear was standing in front of
+    them, from the NEAREST real pixel in any direction.
 
-    Column by column, upward. That direction is not a detail — it is the whole
-    trick. Two earlier versions got it wrong in ways that were invisible until
-    an ear moved:
+    Three versions of this shipped before the right one, and each was wrong in a
+    way that only showed when an ear lifted off:
 
-      ALONG THE ROW pulled from the nearest same-row pixel, which near the top
-      of his skull is the cream blaze running up the middle of his face. It
-      painted pale streaks across his head.
+      ALONG THE ROW took the nearest pixel on the same line, which near the top
+      of his skull is the cream blaze up the middle of his face. Pale streaks.
 
-      GROWING INWARD from all sides averaged each new ring with the last, so by
-      the time it reached the top it had diffused into a washed-out band.
+      GROWING INWARD averaged each new ring with the last, so it diffused into a
+      washed-out band by the time it reached the middle.
 
-    His head shades vertically and its colour changes horizontally — mustard at
-    the sides, cream up the middle. So copying each column straight up from the
-    last real pixel below it keeps both: the right colour for that column, the
-    shading continuing the way it was going. A short vertical blur afterwards
-    stops the copied row reading as a seam.
+      STRAIGHT UP THE COLUMN kept the right colour but copied one row of it
+      forever, so each corner came out as a flat vertical smear with a hard edge
+      where the real art resumed. That is the version you could see.
+
+    True nearest-neighbour keeps the texture and the shading gradient, because
+    for a corner the closest real pixel is the curve of the dome just inside it —
+    which is exactly the material that belongs there. A short blur afterwards,
+    inside the invented area only, stops the tiling from reading as a pattern.
     """
-    out = rgba.astype(float).copy()
-    h, w, _ = rgba.shape
-    for x in range(w):
-        holes = np.nonzero(hole[:, x])[0]
-        if len(holes) == 0:
-            continue
-        valid = np.nonzero(known[:, x])[0]
-        if len(valid) == 0:
-            continue
-        for y in holes:
-            below = valid[valid > y]
-            above = valid[valid < y]
-            src_y = below[0] if len(below) else above[-1]
-            out[y, x] = out[src_y, x]
+    from scipy import ndimage
 
-    # Soften the join, but only inside what we invented, and only its COLOUR.
-    # Blurring the alpha too dragged transparency in from just above his head
-    # and left the top edge of his skull dotted and moth-eaten.
+    _, (iy, ix) = ndimage.distance_transform_edt(~known, return_indices=True)
+    out = rgba.astype(float).copy()
+    out[hole] = rgba[iy[hole], ix[hole]]
+
     alpha = out[:, :, 3].copy()
     blurred = out.copy()
-    for _ in range(3):
-        stack = (np.roll(blurred, 1, axis=0) + blurred + np.roll(blurred, -1, axis=0)) / 3.0
+    for _ in range(2):
+        stack = (
+            np.roll(blurred, 1, axis=0) + np.roll(blurred, -1, axis=0)
+            + np.roll(blurred, 1, axis=1) + np.roll(blurred, -1, axis=1)
+        ) / 4.0
         blurred = np.where(hole[:, :, None], stack, blurred)
     blurred[:, :, 3] = alpha
     return np.clip(blurred, 0, 255).astype(np.uint8)
@@ -181,6 +209,23 @@ def bleed(rgba: np.ndarray, rings: int = 6) -> np.ndarray:
         known = known | edge
     return np.clip(out, 0, 255).astype(np.uint8)
 
+
+# His pupils, measured off the render: two dark discs on cream sclera.
+#
+# They exist as their own layers so he can GLANCE. A front-view head cannot be
+# turned by sliding it sideways — that reads as the head coming unscrewed, which
+# is exactly what it looked like — so the eyes have to carry most of a look and
+# the neck only leans into it. Travel is small on purpose; the socket behind is
+# rebuilt from the sclera around it, and a pupil that walks past the white would
+# end up on his cheek.
+PUPILS = [
+    {"name": "pupil_l", "cx": 145, "cy": 161, "r": 16},
+    {"name": "pupil_r", "cx": 272, "cy": 160, "r": 16},
+]
+
+# Faces that keep the resting eyes, so the pupil layers belong on top of them.
+# Blink, half, wide and squint REDRAW the eyes; their art carries its own.
+NEUTRAL_EYES = {"head", "head_smile", "head_mouth_open"}
 
 MARGIN = 6  # room for the colour bleed to live in
 
@@ -255,9 +300,16 @@ def main() -> int:
 
     body_area = opaque & (ys >= COLLAR_TOP)
 
-    def cut_head(image: np.ndarray) -> np.ndarray:
+    # The eye sockets, as masks on the canvas.
+    sockets = np.zeros((h, w), bool)
+    for pu in PUPILS:
+        sockets |= ((xs - pu["cx"]) ** 2 + (ys - pu["cy"]) ** 2) <= pu["r"] ** 2
+
+    def cut_head(image: np.ndarray, blank_eyes: bool) -> np.ndarray:
         out = np.where(keep[:, :, None], image, 0).astype(np.uint8)
         out = rebuild_dome(out, hidden, head_area & dome)
+        if blank_eyes:
+            out = fill_round(out, sockets & keep)
         out[~keep] = 0
         return out
 
@@ -268,9 +320,14 @@ def main() -> int:
         ("ear_l", ear_l),
         ("ear_r", ear_r),
     ):
-        rgba = cut_head(src) if name == "head" else np.where(mask[:, :, None], src, 0).astype(np.uint8)
+        rgba = cut_head(src, True) if name == "head" else np.where(mask[:, :, None], src, 0).astype(np.uint8)
         piece, x0, y0 = trim(rgba)
         layers[name] = {"x": x0, "y": y0, "w": int(piece.shape[1]), "h": int(piece.shape[0]), "img": piece}
+
+    for pu in PUPILS:
+        disc = ((xs - pu["cx"]) ** 2 + (ys - pu["cy"]) ** 2) <= pu["r"] ** 2
+        piece, x0, y0 = trim(np.where(disc[:, :, None], src, 0).astype(np.uint8))
+        layers[pu["name"]] = {"x": x0, "y": y0, "w": int(piece.shape[1]), "h": int(piece.shape[0]), "img": piece}
 
     for face in FACES:
         path = RENDERS / f"front_{face}.png"
@@ -280,7 +337,7 @@ def main() -> int:
         variant = np.array(Image.open(path).convert("RGBA"))
         if variant.shape != src.shape:
             raise SystemExit(f"front_{face}.png is not the same size as front.png")
-        piece, x0, y0 = trim(cut_head(variant))
+        piece, x0, y0 = trim(cut_head(variant, f"head_{face}" in NEUTRAL_EYES))
         # Same cut, so it must land in the same place, or the face would jump
         # sideways every time he blinks.
         if (x0, y0) != (layers["head"]["x"], layers["head"]["y"]):
@@ -291,7 +348,7 @@ def main() -> int:
     # Stack them back up in draw order and demand the original back. This is the
     # promise that the rig is the approved character and not a new drawing.
     canvas = np.zeros_like(src, dtype=float)
-    for name in ("head", "ear_l", "ear_r", "body"):
+    for name in ("head", "pupil_l", "pupil_r", "ear_l", "ear_r", "body"):
         L = layers[name]
         tile = L["img"].astype(float)
         sub = canvas[L["y"]:L["y"] + L["h"], L["x"]:L["x"] + L["w"]]
@@ -332,6 +389,7 @@ def main() -> int:
         manifest["layers"][name] = {k: L[k] for k in ("x", "y", "w", "h")}
 
     # Pivots, in canvas coordinates: where each part is hinged to its parent.
+    manifest["neutral_eyes"] = sorted(NEUTRAL_EYES)
     manifest["pivots"] = {
         # Each ear hinges at its root, on the dome's shoulder.
         "ear_l": {"x": 128, "y": 104},

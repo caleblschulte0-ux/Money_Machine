@@ -570,6 +570,18 @@ export default function BarklyRoom() {
     asleep,
   });
 
+  /**
+   * His body's reply to things that are not dialogue.
+   *
+   * The rig could do all of this and almost nothing asked it to: the only thing
+   * that ever moved him on purpose was a line of scripted body actions attached
+   * to a reply. Petting him, being told no, arriving somewhere, being handed
+   * something — all of it went past without him reacting at all. A dog that
+   * does not respond to being touched is the least alive thing in the app.
+   */
+  const [beat, setBeat] = useState<{ kind: 'pet' | 'refuse' | 'arrive' | 'delight'; at: number } | null>(null);
+  const react = (kind: 'pet' | 'refuse' | 'arrive' | 'delight') => setBeat({ kind, at: Date.now() });
+
   const onKit = (action: KitAction) => {
     if (action === 'feed') {
       feel('touch');
@@ -585,7 +597,12 @@ export default function BarklyRoom() {
   };
 
   const runPlay = () => {
-    if (fetching || tugging || locked || digging) return;
+    // A tap that cannot happen used to do nothing at all, silently. He shrugs
+    // it off now, which at least tells you he heard you.
+    if (fetching || tugging || locked || digging) {
+      react('refuse');
+      return;
+    }
     if (routine === 'waves') {
       runChase(() => void barkly.chaseWaves());
       return;
@@ -629,6 +646,7 @@ export default function BarklyRoom() {
 
   const pet = () => {
     feel('touch');
+    react('pet');
     barkly.pet();
     if (snapshot.state !== 'sleepy') setHeartBurst((b) => b + 1);
   };
@@ -821,7 +839,7 @@ export default function BarklyRoom() {
                 key={loc}
                 style={[styles.tab, location === loc && styles.tabActive, areaLocked && styles.tabLocked]}
                 disabled={locked || fetching}
-                onPress={() => barkly.goTo(loc)}
+                onPress={() => { react('arrive'); barkly.goTo(loc); }}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: location === loc }}
                 accessibilityLabel={areaLocked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}. Tap and he will say so.` : LOCATIONS[loc].name}
@@ -881,7 +899,7 @@ export default function BarklyRoom() {
               testID="barkly-sprite"
               accessibilityHint="Tap to pet him."
             >
-              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} />
+              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} />
             </Pressable>
           </Animated.View>
           {/* After the dog, so the near rim overlaps his lower body. */}
@@ -1064,7 +1082,7 @@ export default function BarklyRoom() {
         hungry={snapshot.stats.hunger > 45}
         onFeed={(itemId) => void barkly.feed(itemId)}
       />
-      <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={barkly.buy} onEquip={barkly.equip} devMode={barkly.devMode} />
+      <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={(id) => { const r = barkly.buy(id); if (r?.ok) react('delight'); return r; }} onEquip={barkly.equip} devMode={barkly.devMode} />
       <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} />
       <AdventureSheet visible={planOpen} onClose={() => setPlanOpen(false)} adventure={barkly.adventure} />
       <EncounterSheet

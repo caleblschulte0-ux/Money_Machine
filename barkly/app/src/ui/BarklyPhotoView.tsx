@@ -167,7 +167,7 @@ export function faceFrame({
   }
 }
 
-export default function BarklyPhotoView({ state, actions, variant, collarId, scale = 1, look: lookAt }: BarklyRenderProps) {
+export default function BarklyPhotoView({ state, actions, variant, collarId, scale = 1, look: lookAt, beat }: BarklyRenderProps) {
   const collarArt = collarId ? COLLAR_ART[collarId] : undefined;
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
@@ -263,7 +263,18 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
     if (pose === shown.current) return;
     setShown({ current: pose, prev: shown.current });
     cross.setValue(0);
-    Animated.spring(cross, { toValue: 1, friction: 8, tension: 90, useNativeDriver: true }).start(({ finished }) => {
+    /**
+     * FAST, because a dissolve between two drawings of the same dog is a
+     * double exposure — for a few frames there are two Barklys with four ears,
+     * and at the old spring's pace you could read it. Short enough to be a
+     * transition rather than a picture.
+     */
+    Animated.timing(cross, {
+      toValue: 1,
+      duration: 170,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
       if (finished) setShown((s) => ({ ...s, prev: null }));
     });
   }, [pose]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -282,10 +293,12 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
     outputRange: has('LOOK_LEFT') && has('LOOK_RIGHT') ? [-8, 8] : has('LOOK_LEFT') ? [0, -10] : [0, 10],
   });
   const enterScale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
-  const squashX = squash.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] });
-  const squashY = squash.interpolate({ inputRange: [0, 1], outputRange: [1, 0.93] });
+  // Halved for the rig. A 7% squash of the whole dog on every mood change was
+  // reading as a wobble on top of a body that now moves by itself.
+  const squashX = squash.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] });
+  const squashY = squash.interpolate({ inputRange: [0, 1], outputRange: [1, 0.965] });
   const crossIn = cross.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  const crossOut = cross.interpolate({ inputRange: [0, 0.65, 1], outputRange: [1, 0, 0] });
+  const crossOut = cross.interpolate({ inputRange: [0, 0.45, 1], outputRange: [1, 0, 0] });
   const crossScale = cross.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
   const sleepDroop = asleep ? '2deg' : '0deg';
 
@@ -318,14 +331,24 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
           opacity: enter,
           transform: [
             { scale },
-            { translateY: Animated.add(talkBob, bounceLift) },
-            { translateX: lookShift },
+            /**
+             * WHOLE-BODY moves only, and only the ones that really are.
+             *
+             * The rig nods with his head and wags with his chest now, so the
+             * old whole-dog talk-bob and sway are the same motion done twice —
+             * and `lookShift` slid the entire animal sideways to suggest a
+             * glance he can now actually make with his eyes. Every one of them
+             * fought the rig instead of adding to it. A jump is still a jump,
+             * so the bounce stays.
+             */
+            { translateY: rigged ? bounceLift : Animated.add(talkBob, bounceLift) },
+            { translateX: rigged ? 0 : lookShift },
             // The rig breathes and tilts with the parts that should move —
             // his chest, his head — so the whole-body versions of those come
             // off. Rotating the entire dog to nod was the thing the rig exists
             // to stop; leaving both on would just do it twice.
             { rotate: rigged ? '0deg' : driftRotate },
-            { rotate: swayRotate },
+            { rotate: rigged ? '0deg' : swayRotate },
             { rotate: rigged ? '0deg' : tiltRotate },
             { rotate: rigged ? '0deg' : talkNod },
             { rotate: sleepDroop },
@@ -350,6 +373,7 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
               look={lookAt}
               speaking={talking}
               collarArt={collarArt}
+              beat={beat}
               scale={size.width / RIG_CANVAS_WIDTH}
             />
           ) : (

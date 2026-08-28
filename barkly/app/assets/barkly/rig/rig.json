@@ -30,6 +30,18 @@
       "w": 216,
       "h": 136
     },
+    "pupil_l": {
+      "x": 123,
+      "y": 139,
+      "w": 45,
+      "h": 45
+    },
+    "pupil_r": {
+      "x": 250,
+      "y": 138,
+      "w": 45,
+      "h": 45
+    },
     "head_blink": {
       "x": 81,
       "y": 61,
@@ -67,6 +79,11 @@
       "h": 281
     }
   },
+  "neutral_eyes": [
+    "head",
+    "head_mouth_open",
+    "head_smile"
+  ],
   "pivots": {
     "ear_l": {
       "x": 128,
