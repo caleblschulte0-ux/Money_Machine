@@ -13,7 +13,7 @@ sys.path.insert(0, "..")
 
 import shotqc
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, figures,
-                      W, H, FPS, TOTAL)
+                      SCRUB_STOPS, SCRUB_KEYS, W, H, FPS, TOTAL)
 
 RAW = "../raw"
 
@@ -105,6 +105,41 @@ def main():
                      f"{_starts[b]+o0:.1f}–{_starts[b]+o1:.1f}s, so the cut off "
                      f"this beat lands between two present-day frames")
     L.append("")
+    # THE ERA RAIL. It is the mechanism the film now turns on, and a
+    # reviewer checking the cut against this document would not have known
+    # it existed. A generated timeline that omits the load-bearing element
+    # is the same failure as one that describes a rule the code dropped.
+    L.append("")
+    L.append("THE ERA RAIL — the scrub the wearer drives. The marker moves")
+    L.append("FIRST; the world answers behind it. That ordering is the whole")
+    L.append("point, so it is stated here as times you can check.")
+    L.append("")
+    L.append("  stops: " + "  ".join(f"{lab} @{p:.2f}" for lab, p in SCRUB_STOPS))
+    for t, p in SCRUB_KEYS:
+        lab = next((l for l, q in SCRUB_STOPS if abs(q - p) < 1e-6), f"{p:.2f}")
+        L.append(f"  {t:5.1f}s  marker at {lab}")
+    L.append("")
+
+    # NARRATION. Read out of vo_one.py, not retyped -- an earlier round
+    # had me appending the script to the UPLOADED copy of this file by
+    # hand, which turns a generated document into a hand-written one that
+    # still claims to be generated.
+    try:
+        import vo_one
+        L.append("NARRATION, VERBATIM (synthesized offline, piper en_US-ryan;")
+        L.append("no licensed or cloned voice. Location audio removed entirely.)")
+        L.append("")
+        for beat, off, text in vo_one.LINES:
+            st = next(b[3] for b in BEATS if b[0] == beat)
+            L.append(f"  {st + off:5.1f}s  \"{text}\"")
+        L.append("")
+        L.append("  No date, no measurement, no attribution, and no claim about")
+        L.append("  what is deployed today — the same standard as the copy above.")
+        L.append("")
+    except Exception as e:                      # never fail the timeline over VO
+        L.append(f"NARRATION: could not be read from vo_one.py ({e})")
+        L.append("")
+
     L.append("STANDING DISCLOSURE")
     L.append(f"    {disclosure()}")
     # The renderer's tag tracks the FIGURES, not the beat (v6). Saying
