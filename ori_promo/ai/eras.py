@@ -124,6 +124,27 @@ SHOTS = {
         "figures, no modern buildings, " + LIGHT),
 }
 
+# THE GENERATOR IS NOT THE ONE THAT MADE THE LOCKED ASSETS ANY MORE.
+# Measured 2026-08-28, and it is silent:
+#   GET /models              -> ["sana"]           (flux is gone)
+#   model=flux / sana / turbo / flux-realism, same prompt and seed
+#                            -> BYTE-IDENTICAL output, md5 equal
+# The `model=` parameter below is accepted and ignored. Every call since
+# the swap has been served by sana while asking for flux and getting a 200,
+# which is the worst shape of failure: no error, no warning, different
+# pictures. dak_s17 / fam3_s3 / mam_s41 were generated when flux was real
+# and CANNOT be reproduced or matched by this endpoint now.
+# It also partly explains the two failed replacement passes recorded in
+# one/spec_one.py. I put those down entirely to my prompts giving the model
+# a scene; the prompts were a real fault, but I was also generating against
+# a different model and could not see it.
+# Image conditioning is gone too: model=kontext with an image= URL returns
+# HTTP 500, so any two-stage "pose sheet then reference it" method is not
+# executable here regardless of how it is prompted.
+# CONSEQUENCE: replacement human figures have to come from somewhere else.
+# ChatGPT generates images in this system already (docs/EXCHANGE_PIPELINE
+# makes it the AI-image path); asking it for the finished PNGs is the
+# supported route, not handing it a prompt for me to run.
 BASE = "https://image.pollinations.ai/prompt/"
 
 
