@@ -39,10 +39,14 @@ LINES = [
     # Rewritten for the era rail. The old lines described what the viewer
     # was seeing; these follow the ACTION, because the picture now has one.
     ("open", 1.2, "This is Falls Park, in Sioux Falls. Now run it backwards."),
-    ("dak",  1.6, "Before the mill, people lived along this water."),
+    ("dak",  1.9, "Before the mill, people lived along this water."),
+    # the rail does not move for this one -- he turned his head, he did
+    # not change the year, and the line has to say so or the beat reads as
+    # a second unrelated tableau
+    ("more", 1.6, "Same day. Further up the bank."),
     ("ice",  0.9, "Further back."),
     ("mam",  1.6, "The whole valley under ice, and the animals that crossed it."),
-    ("now",  1.8, "Then back. One place. Every time."),
+    ("now",  2.1, "Then back. One place. Every time."),
 ]
 
 

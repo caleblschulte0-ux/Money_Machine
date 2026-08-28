@@ -39,16 +39,37 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 30.5
+TOTAL = 34.5
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
  ("open", "6806",  6.0,  0.0, 5.0, "the falls as they are. the system comes up, the era rail appears"),
- ("dak",  "6804", 10.0,  5.0, 7.0, "the scrub reaches BEFORE THE MILL and the family answers"),
- ("ice",  "6791", 14.0, 12.0, 4.0, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 16.0, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 22.0, 5.0, "the scrub returns to NOW, the thaw, the closing line"),
- ("end",   None,   0.0, 27.0, 3.5, "held from now's last frame — which is PRESENT DAY"),
+ ("dak",  "6804", 10.0,  5.0, 6.5, "the scrub reaches BEFORE THE MILL and the family answers"),
+ # SAME ERA, DIFFERENT PLACE. The operator asked for "one more that has
+ # Indians and shit", and the useful way to add it is not a second
+ # unrelated tableau -- it is to LOOK AROUND inside the era already
+ # selected. The rail does not move on this beat, which is the point: the
+ # wearer has not changed time, he has turned his head, and the past is
+ # still there when he does. That is a product claim the film had not yet
+ # made.
+ # PLATE CHANGED, and the reason is a rule now enforced in code.
+ # OPERATOR on v11: "The Indian one looks like shit ... don't use a
+ # panning shot for the ai overlays." IMG_6687@24 drifts 16.7% over this
+ # beat. I picked it on composition and never looked at the drift I had
+ # already measured. A tracked figure on a panning plate slides against
+ # ground that is itself moving, and no amount of anchoring hides it.
+ # render_one now REFUSES to render a beat that places a figure on a
+ # plate over FIGURE_MAX_DRIFT.
+ # Sweeping all 34 clips for genuinely static windows turned up an
+ # uncomfortable fact worth recording: the good-looking park vistas --
+ # the falls, the shelf, the valley -- were all shot as PANS. The only
+ # static plates with ground at figure scale are the hero shelf (6804)
+ # and this lawn below the mill ruin (6805, 0.2% drift).
+ ("more", "6805", 70.3, 11.5, 4.5, "same era, a second group up by the mill ruin"),
+ ("ice",  "6791", 14.0, 16.0, 4.0, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 20.0, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 26.0, 5.0, "the scrub returns to NOW, the thaw, the closing line"),
+ ("end",   None,   0.0, 31.0, 3.5, "held from now's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -70,17 +91,44 @@ TITLES = {
  "now":  ("ONE PLACE", "EVERY TIME", 2.2, 1.3),
 }
 
-# beat: (image, foot_xy, height_px, appear_t, build, subj_depth, match[, out_t])
+# beat: (image, foot_xy, height_px, appear_t, build, subj_depth, match
+#        [, out_t][, shadow])
 # Heights stay in the 300-390 band on the two figure plates. The mammoth
 # is smaller because it stands on the FAR ledge across the water, and at
 # that distance an animal reads by silhouette.
 FIGURES = {
- "dak": [("ai/era/dak_s17.jpg", (1150, 745), 385, 1.2, 1.4, 0.30, 0.55)],
- "mam": [("ai/era/mam41f.jpg",  (1330, 690), 320, 2.2, 1.0, 0.30, 0.45)],
+ "dak":  [("ai/era/dak_s17.jpg", (1150, 745), 385, 1.4, 1.4, 0.30, 0.55)],
+ # dak_s3, not a reuse of s17 and not dak_s41 -- s41's headwear reads as
+ # ceremonial and r78 was explicit that this depiction stays ordinary and
+ # non-spectacle. s3 is the same register as s17: mixed ages, plain
+ # garments, everyone's feet on the rock.
+ # beside the quartzite outcrop rather than adrift on mown grass -- the
+ # settlers failed on this same plate partly by standing in open lawn
+ # with nothing to be near.
+ # x=1600, clear of the era rail. At (1320, 930) the rail's scrim -- it
+ # covers y 832-928 across x 470-1450 -- cut straight through the group's
+ # legs and hid their feet, which is the one part of a composite that has
+ # to be visible. The HUD sits at the bottom of a 2.39 frame and figures
+ # standing on near ground sit there too; they have to be kept out of
+ # each other's way by placement, since the HUD is drawn over everything.
+ "more": [("ai/era/dak_s3.jpg",  (1600, 955), 310, 1.0, 1.2, 0.30, 0.45)],
+ # 560px, not 320. OPERATOR: "the mammoth size is shit" -- and it was,
+ # measurably. The Dakota family on THIS PLATE is 385px at y=745 and he
+ # approved that as human scale, so the ground plane is known: at y=690 a
+ # person is ~308px, and a mammoth stands about twice a person, so ~600px.
+ # 320 was half the size of the animal it claimed to be, which is why it
+ # read as a large dog on a rock shelf.
+ # The 9th field is SHADOW STRENGTH, and it is here because scale broke
+ # it: the cast shadow is projected from the figure's own alpha, so at
+ # 560px it grew into a 240px black slick lying across white ice. 0.34
+ # keeps the ground contact and loses the bar. Snow takes a far softer
+ # shadow than sunlit quartzite does.
+ "mam": [("ai/era/mam41f.jpg",  (1330, 690), 560, 2.2, 1.0, 0.30, 0.45, None, 0.34)],
 }
 
 LABELS = {
- "dak": ((1032, 752), "BEFORE THE MILL", "VISUALISATION", 2.9, (-40, -410)),
+ "dak":  ((1032, 752), "BEFORE THE MILL", "VISUALISATION", 2.9, (-40, -410)),
+ "more": ((1470, 962), "SAME DAY",        "VISUALISATION", 2.4, (-70, -330)),
  "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
 }
 
@@ -96,7 +144,7 @@ ICE = {
  # LAST ICE before the world answers, not after.
  "ice": (0.5, 2.3, None, None),
  "mam": (-1.0, 0.0, None, None),
- "now": (-1.0, 0.0, 0.2, 1.8),
+ "now": (-1.0, 0.0, 0.8, 2.4),
 }
 
 # ---- THE ERA RAIL: the thing that was missing.
@@ -115,32 +163,60 @@ SCRUB_STOPS = [("NOW", 0.0), ("BEFORE THE MILL", 0.5), ("THE LAST ICE", 1.0)]
 
 # (film_time, position). Linear between keys; the marker always arrives
 # BEFORE the beat it causes.
+# EVERY ARRIVAL GETS 0.5s OF UNCONTESTED LEAD. r90: "the documented
+# 0.1-0.2 second marker lead is only 3-6 frames at 30 fps. That is too
+# brief for a first viewer to register 'the wearer selected a time, then
+# the world responded'." Correct, and one of the three was worse than
+# brief -- it was BACKWARDS. The thaw began at 22.2 while the marker was
+# still travelling and did not reach NOW until 23.4, so the world changed
+# and then the control caught up with it. The order the viewer must see is
+# marker moves -> marker SETTLES -> world changes, and it now reads:
+#     arrives 5.9  settles 6.05  family resolves 6.4   (0.50s lead)
+#     arrives 12.0 settles 12.15 valley freezes 12.5   (0.50s lead)
+#     arrives 22.3 settles 22.45 thaw begins 22.8      (0.50s lead)
+# The time comes out of the holds, not out of the running time.
 SCRUB_KEYS = [
- (0.0, 0.0), (5.2, 0.0),          # sits at NOW while the falls establish
- (6.0, 0.5),                       # ...then travels back. family resolves at 6.2
- (11.9, 0.5),
- (12.4, 1.0),                      # reaches deep time. the valley freezes at 12.5
- (22.0, 1.0),
- (23.4, 0.0),                      # returns to NOW. the thaw runs 22.2-23.8
+ (0.0, 0.0), (5.4, 0.0),
+ (5.9, 0.5),                       # family resolves 6.4  (0.50s lead)
+ (15.5, 0.5),                      # ...and does NOT move across `more`
+ (16.0, 1.0),                      # valley freezes 16.5  (0.50s lead)
+ (25.6, 1.0),
+ (26.3, 0.0),                      # thaw begins 26.8     (0.50s lead)
 ]
-SCRUB_FADE = (2.0, 1.0)            # (film time it appears, fade seconds)
+# (appear, fade-in, start of fade-out, fade-out length). r90: "keep the
+# rail through the NOW settle and the first beat of thaw, then fade it."
+SCRUB_FADE = (2.0, 1.0, 27.6, 0.9)
+SCRUB_SETTLE = 0.15                # marker pulses this long on arrival
 
 SCORE = {
  "start":  "open",
  "arrive": "dak",
  "lift":   "dak",
- "hold":   "dak",
+ "hold":   "more",
  "cold":   "ice",
  "warm":   "now",
 }
 def figures(beat):
     """FIGURES rows, normalised to 8 fields.
 
-    (image, foot_xy, height_px, appear_t, build, subj_depth, match, out_t)
+    (image, foot_xy, height_px, appear_t, build, subj_depth, match,
+     out_t, shadow)
+
     out_t is when the figure leaves; None means it stays to the end of the
-    beat. Optional eighth field so every 7-field row keeps working.
+    beat. shadow is the ground-shadow strength, default 0.62. Both are
+    OPTIONAL trailing fields so shorter rows keep working untouched --
+    three modules unpack these tuples and widening them all at once is how
+    a positional-argument bug renders fine and means something else.
     """
-    return [f if len(f) == 8 else f + (None,) for f in FIGURES.get(beat, [])]
+    out = []
+    for f in FIGURES.get(beat, []):
+        f = tuple(f)
+        if len(f) < 8:
+            f = f + (None,)
+        if len(f) < 9:
+            f = f + (0.62,)
+        out.append(f)
+    return out
 
 
 def timeline():

@@ -207,7 +207,8 @@ def shadow(plate, foot, w, h, sun=(-0.55, 0.35), strength=0.62, alpha=None):
 
 
 def place(plate, rgba, foot, height_px, k=1.0, sun=(-0.55, 0.35),
-          depth=None, subj_depth=0.55, reveal=True, match=0.55):
+          depth=None, subj_depth=0.55, reveal=True, match=0.55,
+          shadow_strength=0.62):
     """Composite one figure. `foot` is where its feet meet the ground.
 
     k drives the AR reveal: 0 nothing, 1 fully present.
@@ -238,7 +239,8 @@ def place(plate, rgba, foot, height_px, k=1.0, sun=(-0.55, 0.35),
         return plate
     fig = fig[sy0:sy0 + (dy1 - dy0), sx0:sx0 + (dx1 - dx0)]
 
-    out = shadow(plate, foot, nw, nh, sun, strength=0.62 * min(1.0, k * 1.4),
+    out = shadow(plate, foot, nw, nh, sun,
+                 strength=shadow_strength * min(1.0, k * 1.4),
                  alpha=full_alpha)
 
     patch = out[dy0:dy1, dx0:dx1]

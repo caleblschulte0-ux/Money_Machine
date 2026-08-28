@@ -30,10 +30,11 @@ import arlabel as AR
 import labelkit as LK
 import shotqc
 import shotnorm
+import filmlook as FL
 from ai import place as PL
 import depthtools as DT
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
-                      SCRUB_STOPS, SCRUB_KEYS, SCRUB_FADE,
+                      SCRUB_STOPS, SCRUB_KEYS, SCRUB_FADE, SCRUB_SETTLE,
                       figures, W, H, FPS, TOTAL)
 
 RAW = "../raw"
@@ -309,7 +310,7 @@ def draw_title(d, t, dur, title, sub, t0, scale=1.0):
         a = int(150 * k * (i / band) ** 1.6)
         if a:
             d.line([(0, H - band + i), (W, H - band + i)], fill=(5, 8, 11, a))
-    x, y = 96, H - 150
+    x, y = 96, SAFE_B - 74
     f1, f2 = LK.inter(int(58 * scale)), mono(int(28 * scale))
     sub_dy = int(46 * scale)
     d.rectangle([x - 26, y - int(46 * scale), x - 22, y + sub_dy + 14],
@@ -321,21 +322,37 @@ def draw_title(d, t, dur, title, sub, t0, scale=1.0):
 
 
 def frame_cue(d, t, dur):
-    cue = AR.ease(min(1.0, t / 0.8)) * (1.0 if t < dur - 0.5 else max(0.0, (dur - t) / 0.5))
-    c = int(115 * cue)
-    for (x0, y0, x1, y1) in [(64, 64, 150, 67), (64, 64, 67, 150),
-                             (W - 150, 64, W - 64, 67), (W - 67, 64, W - 64, 150),
-                             (64, H - 67, 150, H - 64), (64, H - 150, 67, H - 64),
-                             (W - 150, H - 67, W - 64, H - 64),
-                             (W - 67, H - 150, W - 64, H - 64)]:
-        d.rectangle([x0, y0, x1, y1], fill=INK + (c,))
+    """DELETED, deliberately, and left here saying so.
+
+    This drew eight corner brackets around the frame. It is the single
+    most recognisable amateur "hi-tech overlay" cliche there is, it was
+    doing no work the 2.39 frame does not now do better, and it was part
+    of what the operator meant by "it still looks like a middle school
+    iMovie". The scope bars frame the picture; brackets on top of bars is
+    two framing devices arguing.
+    """
+    return
 
 
 DISSOLVE = 0.5          # seconds of cross-dissolve into each beat
+FIGURE_MAX_DRIFT = 0.03  # a plate carrying a figure must be this static
 
 
 # ---- the era rail -------------------------------------------------------
-RAIL_X0, RAIL_X1, RAIL_Y = 620, 1300, 968
+# The HUD lives inside the 2.39 frame now. Anything at the old y-positions
+# would be drawn into the black bars and simply vanish.
+SAFE_T, SAFE_B = FL.safe_area(H, W)
+RAIL_X0, RAIL_X1, RAIL_Y = 620, 1300, SAFE_B - 66
+
+_ARRIVALS = [t for (pt, pp), (t, p) in zip(SCRUB_KEYS, SCRUB_KEYS[1:]) if p != pp]
+
+
+def _settle(tf):
+    """1.0 for SCRUB_SETTLE seconds after the marker lands, else 0."""
+    for t in _ARRIVALS:
+        if 0.0 <= tf - t <= SCRUB_SETTLE:
+            return 1.0 - (tf - t) / SCRUB_SETTLE
+    return 0.0
 
 
 def _scrub_pos(tf):
@@ -360,46 +377,58 @@ def draw_rail(d, tf):
 
     It is deliberately plain: a rail, three stops, a marker. Anything more
     decorative would read as a video-editor timeline pasted over a park,
-    and the point is that a person wearing these is scrubbing TIME, not
-    driving an NLE.
+    and the point is that a person wearing these is scrubbing TIME.
     """
-    t0, fade = SCRUB_FADE
+    t0, fade, out_t, out_len = SCRUB_FADE
     k = AR.ease(min(1.0, max(0.0, (tf - t0) / fade)))
-    k *= min(1.0, max(0.0, (TOTAL - 3.9 - tf) / 0.6))     # gone before the end card
+    k *= min(1.0, max(0.0, 1.0 - (tf - out_t) / out_len))
     if k <= 0.004:
         return
     a = int(210 * k)
     # A SCRIM, for the same reason the location title needed one. Measured
-    # on the finished v9: on the wide-valley plate the rail runs across
+    # on a finished render: on the wide-valley plate the rail runs across
     # sunlit quartzite that is the same luminance as the type, and it
-    # effectively disappeared at 12.4s -- on the one beat where the marker
-    # is travelling to deep time, which is the single moment the whole
-    # device exists to show. Legibility cannot depend on what the camera
-    # happened to be pointed at.
-    band_t, band_b = RAIL_Y - 44, RAIL_Y + 52
+    # effectively disappeared -- on the one beat where the marker is
+    # travelling to deep time, which is the single moment the whole device
+    # exists to show. Legibility cannot depend on what the camera happened
+    # to be pointed at.
+    band_t, band_b = RAIL_Y - 44, min(RAIL_Y + 52, SAFE_B - 2)
     for yy in range(band_t, band_b):
-        u = (yy - band_t) / float(band_b - band_t)
-        aa = int(150 * k * (1.0 - abs(u - 0.42) * 1.7))
+        u = (yy - band_t) / float(max(1, band_b - band_t))
+        aa = int(195 * k * (1.0 - abs(u - 0.42) * 1.7))
         if aa > 0:
             d.line([(RAIL_X0 - 150, yy), (RAIL_X1 + 150, yy)], fill=(5, 8, 11, aa))
-    d.line([(RAIL_X0, RAIL_Y), (RAIL_X1, RAIL_Y)], fill=INK + (int(120 * k),), width=2)
+    # a dark keyline under the rule and every label. r90: the "pale
+    # inactive labels and fine rule sit against sunlit quartzite" and the
+    # centre label "visually tangles with the textured background".
+    d.line([(RAIL_X0, RAIL_Y + 1), (RAIL_X1, RAIL_Y + 1)], fill=(5, 8, 11, int(150 * k)), width=3)
+    d.line([(RAIL_X0, RAIL_Y), (RAIL_X1, RAIL_Y)], fill=INK + (int(150 * k),), width=2)
     fn = mono(21)
     pos = _scrub_pos(tf)
     for label, p in SCRUB_STOPS:
         x = int(RAIL_X0 + (RAIL_X1 - RAIL_X0) * p)
-        near = 1.0 - min(1.0, abs(pos - p) * 3.6)          # brightens as the marker nears
+        near = 1.0 - min(1.0, abs(pos - p) * 3.6)
         d.line([(x, RAIL_Y - 9), (x, RAIL_Y + 9)],
                fill=INK + (int((95 + 160 * near) * k),), width=2)
         tw = d.textlength(label, font=fn)
         col = CYAN if near > 0.55 else INK
-        d.text((x - tw / 2, RAIL_Y + 20), label, font=fn,
-               fill=col + (int((120 + 135 * near) * k),))
+        la = int((78 + 175 * near) * k)
+        d.text((x - tw / 2 + 1, RAIL_Y + 21), label, font=fn, fill=(5, 8, 11, int(la * 0.85)))
+        d.text((x - tw / 2, RAIL_Y + 20), label, font=fn, fill=col + (la,))
     mx = int(RAIL_X0 + (RAIL_X1 - RAIL_X0) * pos)
+    # THE SETTLE. r90 asked for the marker to hold or pulse at its
+    # destination inside the lead, so the viewer sees three separate
+    # events -- marker moves, marker SETTLES, world changes.
+    st = _settle(tf)
+    if st > 0:
+        r = int(9 + 16 * (1.0 - st))
+        d.ellipse([mx - r, RAIL_Y - r, mx + r, RAIL_Y + r],
+                  outline=CYAN + (int(a * st * 0.85),), width=2)
     d.ellipse([mx - 7, RAIL_Y - 7, mx + 7, RAIL_Y + 7], outline=CYAN + (a,), width=2)
     d.ellipse([mx - 2, RAIL_Y - 2, mx + 2, RAIL_Y + 2], fill=CYAN + (a,))
 
 
-def compose(beat, dur, frames, prev_last=None):
+def compose(beat, dur, frames, prev_last=None, global_i=0):
     beat_start = {b[0]: b[3] for b in BEATS}[beat]
     gray = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
     figs = figures(beat)
@@ -428,14 +457,24 @@ def compose(beat, dur, frames, prev_last=None):
     # go wrong. Frames 0-2s of e3 were clean and by 4s the warm band was
     # back, because a static mask only fits the frame it was measured on.
     # 0.6s per frame, ~110s per ice beat, and it retires the entire class.
-    ice_dep = None
-    if icespec:
-        ice_dep = [DT.depth(f) for f in frames]
+    # DEPTH IS COMPUTED PER FRAME, NOT PRECOMPUTED INTO A LIST.
+    # It used to build `[DT.depth(f) for f in frames]` up front, which on
+    # a six-second ice beat is 180 float32 depth maps held at once -- 1.4
+    # GB, on top of the frames, the greys, and the float copies the film
+    # look makes. v12 died silently part-way through encoding `ice`: no
+    # traceback, no error line, the log simply stopping after "more
+    # composed". That is what an OOM kill looks like from the inside, and
+    # it is the same failure this renderer had once before when it tried
+    # to hold every plate at once. The depth pass is per-frame work
+    # anyway; holding the results bought nothing.
 
     tag_a = 0.0
     for i, f in enumerate(frames):
         t = i / FPS
-        base = f.astype(np.float32)
+        # The photographic layer is graded BEFORE anything is drawn on
+        # it, so the HUD stays clean while the plate gets the look.
+        plate = FL.grade(f.astype(np.float32))
+        base = plate.copy()
 
         if icespec:
             # FULL ENVELOPE, not a direction. v6's ICE was (direction, a0,
@@ -450,7 +489,7 @@ def compose(beat, dur, frames, prev_last=None):
             if o0 is not None:
                 k_ice *= 1.0 - AR.ease(min(1.0, max(0.0, (t - o0) / max(1e-6, o1 - o0))))
             if k_ice > 0.002:
-                dpi = ice_dep[i]
+                dpi = DT.depth(f)
                 gi = gray[i].astype(np.float32) / 255.0
                 # NO WEARER, NO WEARER MASK. The mask is a depth threshold
                 # and it always returns SOMETHING -- on the wide valley
@@ -470,7 +509,7 @@ def compose(beat, dur, frames, prev_last=None):
         d = ImageDraw.Draw(img)
         showing = False       # is any generated figure on screen right now?
 
-        for (src, _fx, hpx, t0, build, sdep, mtch, toff), path, cut in zip(
+        for (src, _fx, hpx, t0, build, sdep, mtch, toff, shw), path, cut in zip(
                 figs, fpaths, cuts):
             foot = path[min(i, len(path) - 1)]
             lt = t - t0
@@ -504,7 +543,8 @@ def compose(beat, dur, frames, prev_last=None):
             showing = True
             base = PL.place(base, cut, foot, hpx, k=k,
                             depth=dep0, subj_depth=sdep,
-                            reveal=(toff is None and k < 1.0), match=mtch)
+                            reveal=(toff is None and k < 1.0), match=mtch,
+                            shadow_strength=shw)
 
         if lab and lpath:
             (_, title, sub, t0, off) = lab
@@ -534,9 +574,9 @@ def compose(beat, dur, frames, prev_last=None):
                 fn = mono(28)
                 s = "VISUALISATION — NOT A PHOTOGRAPH"
                 tw = d.textlength(s, font=fn)
-                d.rectangle([W / 2 - tw / 2 - 20, 96, W / 2 + tw / 2 + 20, 140],
+                d.rectangle([W / 2 - tw / 2 - 20, SAFE_T + 26, W / 2 + tw / 2 + 20, SAFE_T + 70],
                             fill=(6, 9, 12, int(165 * tg)))
-                d.text((W / 2, 119), s, font=fn, fill=AMBER + (int(240 * tg),),
+                d.text((W / 2, SAFE_T + 49), s, font=fn, fill=AMBER + (int(240 * tg),),
                        anchor="mm")
 
         if beat not in UI_OFF:
@@ -555,9 +595,12 @@ def compose(beat, dur, frames, prev_last=None):
         if beat == LAST_BEAT:
             rel = min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
             if rel < 1.0:
-                out = out * rel + f.astype(np.float32) * (1.0 - rel)
+                # release to the GRADED plate, not the raw one -- releasing
+                # to `f` would have thrown the whole film look off in the
+                # last half second and the assertion would have enforced it
+                out = out * rel + plate * (1.0 - rel)
             if i == len(frames) - 1:
-                assert rel == 0.0 and np.array_equal(out.astype(np.uint8), f), (
+                assert rel == 0.0 and np.allclose(out, plate, atol=1.0), (
                     f"{beat}: final frame still carries overlay (rel={rel:.4f})")
 
         # CROSS-DISSOLVE INTO THIS BEAT. Operator on v6: "It's not the
@@ -577,6 +620,8 @@ def compose(beat, dur, frames, prev_last=None):
         if prev_last is not None and i < int(DISSOLVE * FPS):
             a = AR.ease((i + 1) / (DISSOLVE * FPS))
             out = out * a + prev_last.astype(np.float32) * (1.0 - a)
+        # vignette, moving grain, scope bars -- last thing that touches it
+        out = FL.finish(out, global_i + i)
         yield out.astype(np.uint8)
 
 
@@ -617,6 +662,31 @@ def main(only=None):
     print("  GATE FLAGGED A PLATE" if flagged else
           "  footage gate: all plates pass", flush=True)
 
+    # A FIGURE MAY NOT STAND ON A PANNING PLATE.
+    # OPERATOR, on v11: "The Indian one looks like shit ... don't use a
+    # panning shot for the ai overlays." He is right and it is not a taste
+    # call, it is geometry: a composited figure is tracked to the plate,
+    # and every pixel of tracking error shows up as the figure SLIDING
+    # against ground that is itself moving. On a static plate an error of
+    # two pixels is invisible; on a plate drifting 17% of frame width it
+    # reads as the figure swimming.
+    # I chose IMG_6687 for the second Dakota group off its composition
+    # without looking at the drift I had already measured -- 16.7% -- so
+    # this is now checked at render time rather than left to my judgement.
+    for b, c, tin, dur in rows:
+        if not figures(b):
+            continue
+        m = shotqc.motion(c, tin, dur, raw=RAW)
+        if m and m["drift"] > FIGURE_MAX_DRIFT:
+            raise SystemExit(
+                f"REFUSING TO RENDER: beat {b!r} places a figure on IMG_{c} "
+                f"@{tin}s, which drifts {m['drift']*100:.1f}% over {dur}s. "
+                f"Figures require a static plate (under "
+                f"{FIGURE_MAX_DRIFT*100:.0f}%). Pick a different plate or "
+                f"move the figure.")
+    print(f"  figure plates: all under {FIGURE_MAX_DRIFT*100:.0f}% drift",
+          flush=True)
+
     # SHOTNORM WORKS IN FLOAT 0..1 AT BOTH ENDS. Passing it uint8 does not
     # raise -- measure() just takes percentiles over a 0..255 range, so the
     # whole plan comes out garbage, and apply() then returns float 0..1
@@ -649,12 +719,14 @@ def main(only=None):
     # it None for the first beat rendered, which is correct: that beat has
     # no predecessor in THIS run to dissolve from.
     prev_last = None
+    gi = 0          # running frame index, so the grain keeps moving across cuts
     for (b, c, tin, dur), p in zip(rows, params):
         if only and b not in only:
             continue
         fr = [(np.clip(shotnorm.apply(f.astype(np.float32) / 255.0, p), 0, 1) * 255
                ).astype(np.uint8) for f in frames_of(c, tin, dur)]
-        prev_last = encode(compose(b, dur, fr, prev_last), f"{OUT}/{b}_t.mp4")
+        prev_last = encode(compose(b, dur, fr, prev_last, gi), f"{OUT}/{b}_t.mp4")
+        gi += len(fr)
         del fr
         print(f"  {b} composed", flush=True)
 
