@@ -1,0 +1,191 @@
+/**
+ * The accent runs over every word he says, so the risk is damage, not taste.
+ *
+ * This transform sits at the speaking funnel, which means it also runs over
+ * text it did not write: your NAME, the word you just typed at him, the name
+ * of a treasure he dug up. A dialect rule that reaches inside words would turn
+ * Matthew into Maddew and Heather into Header, and it would do it to a child's
+ * own name, in a toy, permanently.
+ *
+ * So the tests here are mostly adversarial. Taste is checked by ear; this is
+ * checked by machine:
+ *
+ *   NOTHING IS MANGLED   real names, real words that merely contain the
+ *                        letters of a rule, and every treasure in the game
+ *   MEANING IS STABLE    a rule may change spelling, never sense — nothing is
+ *                        negated, nothing is added that asserts anything
+ *   IT IS DETERMINISTIC  the same sentence sounds the same every time, which
+ *                        is the difference between a character and a shuffler
+ *   IT IS BOUNDED        strong markers are capped, or he becomes a parody
+ */
+
+import { bronx } from '../src/barkly/dialect';
+import { TREASURES } from '../src/world/stash';
+
+describe('it never damages a word it was not aiming at', () => {
+  const NAMES = [
+    'Matthew', 'Heather', 'Thomas', 'Ruth', 'Athena', 'Theo', 'Bethany',
+    'Nathan', 'Catherine', 'Arthur', 'Yousef', 'Yourke', 'Thibault',
+  ];
+  for (const name of NAMES) {
+    it(`leaves ${name} alone`, () => {
+      expect(bronx(`Hello ${name}, good to see you.`)).toContain(name);
+    });
+  }
+
+  const WORDS = ['thing', 'king', 'ring', 'string', 'bring', 'nothingness', 'author', 'python', 'thistle'];
+  for (const w of WORDS) {
+    it(`does not chew up "${w}"`, () => {
+      // Either untouched, or changed by a rule that legitimately owns the word.
+      const out = bronx(`I found a ${w} today.`);
+      expect(out).toMatch(new RegExp(`\\b${w}\\b|\\b${w.replace(/ing$/, "in'")}\\b`, 'i'));
+    });
+  }
+
+  it('leaves every treasure name recognisable', () => {
+    for (const t of TREASURES) {
+      const out = bronx(`I found ${t.name}.`);
+      // The distinctive noun in each treasure name survives.
+      // Skip modifiers — "a very old sandwich" legitimately becomes "a real
+      // old sandwich", and picking "very" as the noun tests the wrong word.
+      const SKIP = new Set(['very', 'that', 'this', 'with', 'from', 'some', 'good', 'half']);
+      const noun = t.name
+        .replace(/[^a-z ]/gi, ' ')
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w.length > 3 && !SKIP.has(w.toLowerCase()))[0];
+      if (noun) expect(out.toLowerCase()).toContain(noun.toLowerCase().slice(0, 4));
+    }
+  });
+
+  it('does not touch a user word it is quoting back', () => {
+    expect(bronx('Skateboard? Skateboard is a real word?')).toContain('Skateboard');
+  });
+});
+
+describe('it changes how he sounds, never what he means', () => {
+  it('never negates a sentence', () => {
+    const positives = ['I love this.', 'I am happy.', 'That is the best thing.', 'I will do it.'];
+    for (const p of positives) {
+      const out = bronx(p);
+      // "ain't" only ever replaces an existing negative, so a line with no
+      // negation in it must not come back with one.
+      expect(out).not.toMatch(/\bain't\b/);
+      expect(out).not.toMatch(/\bnot\b/);
+    }
+  });
+
+  it("only turns an existing negative into ain't", () => {
+    expect(bronx('That is not a stick.')).toMatch(/ain't/);
+    expect(bronx('It is a stick.')).not.toMatch(/ain't/);
+  });
+
+  it('adds nothing that makes a claim', () => {
+    // Every garnish is a discourse marker: it carries tone, not information.
+    const seen = new Set<string>();
+    for (let i = 0; i < 400; i += 1) seen.add(bronx(`Line number ${i} about a ball.`));
+    const added = [...seen].join(' ');
+    expect(added).not.toMatch(/\bnever\b|\balways\b|\bpromise\b|\bhate\b/i);
+  });
+
+  it('stays clean — it is a children\'s app', () => {
+    const all = Array.from({ length: 300 }, (_, i) => bronx(`He looked at the ${i} thing and thought about it.`)).join(' ');
+    expect(all).not.toMatch(/damn|hell|crap|stupid|idiot|shut up/i);
+  });
+});
+
+describe('it is deterministic and bounded', () => {
+  it('the same line always sounds the same', () => {
+    const line = 'That is the thing about this park, you know.';
+    const first = bronx(line);
+    for (let i = 0; i < 25; i += 1) expect(bronx(line)).toBe(first);
+  });
+
+  it('caps the strong markers, so he is an accent and not an impression', () => {
+    // A line stuffed with every trigger word must not come back as all of them.
+    const stuffed = 'The that this these those them there you your the that this.';
+    const out = bronx(stuffed);
+    const markers = (out.match(/\b(da|dat|dis|dese|doze|dem|dere|ya)\b/gi) ?? []).length;
+    expect(markers).toBeLessThanOrEqual(2);
+  });
+
+  it('adds at most one garnish, never an opener AND a closer', () => {
+    for (let i = 0; i < 200; i += 1) {
+      const out = bronx(`Something happened on day ${i}.`);
+      // Non-capturing: a capture group makes `.match` return [full, group]
+      // and every single match counts as two.
+      const openers = /^(?:Ay\.|Yo\.|Ay, yo\.|Lemme tell ya\.|I'm not gonna lie to ya\.)/.test(out) ? 1 : 0;
+      const closers = /(?:awright\?|I'm just sayin'\.|Capisce\?)$/.test(out) ? 1 : 0;
+      expect(openers + closers).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('leaves his lowercase inner voice lowercase', () => {
+    // Thoughts are overheard, not spoken — a capitalised "Ay." breaks that.
+    for (let i = 0; i < 60; i += 1) {
+      const out = bronx(`the ${i} squirrel is back and i am furious about it.`);
+      expect(out[0]).toBe(out[0].toLowerCase());
+    }
+  });
+
+  it('running it twice changes nothing more', () => {
+    // A line can pass through here and be quoted back later; it must settle.
+    for (const line of ['That is not going to work, you know.', 'I have to tell you something.']) {
+      const once = bronx(line);
+      expect(bronx(once)).toBe(once);
+    }
+  });
+
+  it('handles empty and whitespace without throwing', () => {
+    expect(bronx('')).toBe('');
+    expect(bronx('   ')).toBe('   ');
+  });
+});
+
+/**
+ * The grammar traps, each of which shipped once and was caught by reading the
+ * app's real output rather than by unit tests. They are cheap to reintroduce
+ * and embarrassing in a toy, so they are pinned.
+ */
+describe('it never produces broken English', () => {
+  it('does not write "ya are"', () => {
+    // `you` → `ya` in front of an auxiliary is not an accent, it is an error.
+    expect(bronx('You are marginally better.')).not.toMatch(/\bya are\b/i);
+    expect(bronx('You are marginally better.')).toMatch(/you're/i);
+  });
+
+  it('does not write "ya\u2019re"', () => {
+    // `\byou\b` matches inside "you're", because an apostrophe is a
+    // non-word character.
+    expect(bronx("You're going to like this.")).not.toMatch(/ya're/i);
+  });
+
+  it('does not contract a stressed "you are"', () => {
+    // "There you are" cannot become "there you're" — and it is the line he
+    // greets you with, so it was the first thing he ever said wrong.
+    const out = bronx('There you are.');
+    expect(out).not.toMatch(/you're/i);
+    expect(out).toMatch(/ya are/i);
+  });
+
+  it('does not write "you\u2019ll not"', () => {
+    // A vicar, not a dog from the Bronx. The negative has to contract first.
+    const out = bronx('You will not believe what I found.');
+    expect(out).not.toMatch(/'ll not/i);
+    expect(out).toMatch(/won't/i);
+  });
+});
+
+describe('it actually does the job', () => {
+  it('voices a plain line', () => {
+    const out = bronx('You are not going to believe this thing.');
+    expect(out).toMatch(/ain't|gonna/);
+  });
+
+  it('clips -ing endings', () => {
+    expect(bronx('I am waiting and watching.')).toBe(
+      bronx('I am waiting and watching.'),
+    );
+    expect(bronx('I am waiting and watching.')).toMatch(/waitin'/);
+  });
+});

@@ -99,6 +99,7 @@ import { DigSite, Stash, Treasure } from '../world/stash';
 import { HydrationGate } from '../storage/hydration';
 import { VoiceShape } from '../providers/tts/expoSpeechTts';
 import { pickThought } from '../world/thoughts';
+import { bronx } from '../barkly/dialect';
 
 const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
 const LOCATION_KEY = profileKey(DEFAULT_PROFILE, 'location-v1');
@@ -381,7 +382,9 @@ export function useBarkly(): BarklyController {
   }, []);
 
   const sayMishap = useCallback((kind: Mishap) => {
-    const line = mishapLine(kind, lastMishap.current);
+    // Errors are in HIS voice, so they get the accent too — they just do not
+    // travel through `speak`, they go to the notice strip.
+    const line = bronx(mishapLine(kind, lastMishap.current));
     lastMishap.current = line;
     setError(line);
   }, []);
@@ -694,7 +697,16 @@ export function useBarkly(): BarklyController {
       text: string,
       opts: { userText?: string; actions?: BodyAction[]; after?: BarklyEvent } = {},
     ): Promise<void> => {
-      const line = text.trim();
+      /**
+       * HIS ACCENT GOES ON HERE, at the one place every utterance passes.
+       *
+       * Not in the line pools: most of what you hear is composed at runtime
+       * from your own words (barkly/compose), so voicing only the written
+       * pools would leave the generated majority speaking flat English. One
+       * transform at the funnel covers the pools, the composer and any model
+       * output alike. See barkly/dialect.
+       */
+      const line = bronx(text.trim());
       if (!line) return;
       setLastExchange({ userText: opts.userText ?? '', barklyText: line });
       setReplyActions(opts.actions ?? []);
@@ -814,7 +826,8 @@ export function useBarkly(): BarklyController {
         if (!alive) return;
         if (IDLE_STATES.includes(snapshotRef.current.state)) {
           thoughtSeed.current += 1;
-          setThought(pickThought(locationRef.current, new Date().getHours(), thoughtSeed.current));
+          // His inner voice has the same accent as his outer one.
+          setThought(bronx(pickThought(locationRef.current, new Date().getHours(), thoughtSeed.current)));
           setTimeout(() => alive && setThought(null), 5200);
         }
         firstThought = false;
