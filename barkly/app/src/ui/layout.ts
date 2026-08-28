@@ -111,7 +111,13 @@ export function stageHeight(screenHeight: number): number {
  * sit 54px above the bottom of the stage.
  */
 export const SPRITE_HEIGHT = 322;
-export const SPRITE_FOOT = 54;
+/**
+ * He stands further back now, because the floor IN FRONT of him is his — the
+ * bowl, the toy and the bed live there (ui/BarklyKit). A foreground shelf is
+ * also the depth cue the stage never had: something nearer the camera than
+ * the subject is what stops a scene reading as a flat backdrop.
+ */
+export const SPRITE_FOOT = 78;
 /** How far the notice band reaches down into the stage from its top. */
 export const NOTICE_BAND = 10 + NOTICE_MAX_HEIGHT;
 

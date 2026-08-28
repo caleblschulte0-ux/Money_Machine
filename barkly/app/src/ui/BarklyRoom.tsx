@@ -36,6 +36,8 @@ import BarklyView from './BarklyView';
 import DialoguePanel from './DialoguePanel';
 import SettingsSheet from './SettingsSheet';
 import { Ball, FoodBowl } from './StageProps';
+import BarklyKit, { KitAction } from './BarklyKit';
+import { feel, setFeelMuted } from './feel';
 import {
   BeachScene,
   DogBedBack,
@@ -319,6 +321,21 @@ function NpcDog({
  * Six pixels of drawn shackle is not a hard thing to do and it stops one glyph
  * on the screen being someone else's drawing.
  */
+/** The "type instead" affordance. Drawn, like everything else in here. */
+function KeyboardGlyph() {
+  return (
+    <Svg width={22} height={16} viewBox="0 0 22 16">
+      <Rect x={0.9} y={0.9} width={20.2} height={14.2} rx={3} stroke={color.inkMid} strokeWidth={1.6} fill="none" />
+      {[4, 8, 12, 16].map((x) => (
+        <Rect key={x} x={x - 0.9} y={4} width={2.6} height={2.4} rx={0.8} fill={color.inkMid} />
+      ))}
+      <Rect x={3.1} y={9} width={2.6} height={2.4} rx={0.8} fill={color.inkMid} />
+      <Rect x={7.1} y={9} width={7.8} height={2.4} rx={1.2} fill={color.inkMid} />
+      <Rect x={16.3} y={9} width={2.6} height={2.4} rx={0.8} fill={color.inkMid} />
+    </Svg>
+  );
+}
+
 function LockGlyph() {
   return (
     <Svg width={11} height={12} viewBox="0 0 11 12" style={{ marginRight: 4 }}>
@@ -380,6 +397,8 @@ export default function BarklyRoom() {
   const [heartBurst, setHeartBurst] = useState(0);
   const [fetching, setFetching] = useState(false);
   const [tugging, setTugging] = useState(false);
+  /** The keyboard is a choice, not a fallback — see the input block below. */
+  const [typing, setTyping] = useState(false);
   const tugX = useRef(new Animated.Value(0)).current;
   const [digging, setDigging] = useState(false);
   const [variant, setVariant] = useState<'runRight' | 'carryLeft' | null>(null);
@@ -416,6 +435,10 @@ export default function BarklyRoom() {
    * measures the boxes in a browser and fails on any collision.
    */
   const showcase = barkly.showcase;
+
+  // Muting the dog mutes his BODY too: a toy you have silenced should not
+  // still buzz in your pocket. See ui/feel.
+  useEffect(() => setFeelMuted(barkly.muted), [barkly.muted]);
 
   const shownPromo = barkly.promotion ?? SHOWCASE_PROMOTION;
 
@@ -515,6 +538,36 @@ export default function BarklyRoom() {
    * never disagree about what he is doing. The animation is chosen from the
    * SAME `routine` the label was rendered from.
    */
+  /**
+   * What he would like, if anything. Drives the small lift on the matching
+   * object — the one thing the button row did better than a bare world, which
+   * is telling a child where to tap next.
+   */
+  const wants: KitAction | null =
+    asleep
+      ? null
+      : snapshot.stats.hunger > 68
+        ? 'feed'
+        : snapshot.stats.energy < 22
+          ? 'sleep'
+          : snapshot.stats.mood < 42
+            ? 'play'
+            : null;
+
+  const onKit = (action: KitAction) => {
+    if (action === 'feed') {
+      feel('touch');
+      openOnly(setFoodOpen);
+      return;
+    }
+    if (action === 'sleep') {
+      feel(asleep ? 'touch' : 'act');
+      void barkly.sleepToggle();
+      return;
+    }
+    runPlay();
+  };
+
   const runPlay = () => {
     if (fetching || tugging || locked || digging) return;
     if (routine === 'waves') {
@@ -522,10 +575,12 @@ export default function BarklyRoom() {
       return;
     }
     if (routine === 'tug') {
+      feel('act');
       runTug();
       void barkly.play();
       return;
     }
+    feel('act');
     runChase(() => void barkly.play());
   };
 
@@ -541,6 +596,7 @@ export default function BarklyRoom() {
   const digRotate = useRef(new Animated.Value(0)).current;
   const runDig = () => {
     if (digging || fetching || locked) return;
+    feel('act');
     setDigging(true);
     Animated.loop(
       Animated.sequence([
@@ -556,6 +612,7 @@ export default function BarklyRoom() {
   };
 
   const pet = () => {
+    feel('touch');
     barkly.pet();
     if (snapshot.state !== 'sleepy') setHeartBurst((b) => b + 1);
   };
@@ -654,16 +711,6 @@ export default function BarklyRoom() {
             >
               <Text style={styles.packLabel}>PACK</Text>
               <Text style={styles.packLevel}>{barkly.relationship.stage.level}</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.gear, barkly.muted && styles.gearMuted]}
-              hitSlop={10}
-              onPress={barkly.toggleMuted}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: barkly.muted }}
-              accessibilityLabel={barkly.muted ? 'Unmute Barkly' : 'Mute Barkly'}
-            >
-              <SpeakerIcon muted={barkly.muted} />
             </Pressable>
             <Pressable style={styles.gear} hitSlop={10} onPress={() => openOnly(setSettingsOpen)} accessibilityRole="button" accessibilityLabel="Settings">
               <View style={styles.gearDot} />
@@ -866,31 +913,24 @@ export default function BarklyRoom() {
           )}
           {/* A bought toy is IN THE ROOM, not a line on a receipt. It sits
               off to the side when idle and vanishes while it is in play. */}
-          {/* Not while he is USING it — a rope lying on the grass during a
-              tug-of-war reads as a second rope. */}
-          {barkly.toy && !fetching && !tugging && !asleep && (
-            <View style={styles.toyProp} pointerEvents="none">
-              {barkly.toy.id === 'toy_ball' ? (
-                <RubberBall size={34} />
-              ) : (
-                <Svg width={58} height={26} viewBox="0 0 58 26">
-                  <Path
-                    d="M8 13 q 10 -8 20 0 q 10 8 22 0"
-                    stroke={BRASS.mid}
-                    strokeWidth={9}
-                    strokeLinecap="round"
-                    fill="none"
-                  />
-                  <Path d="M4 13 l -2 -6 M4 13 l -2 6 M54 13 l 2 -6 M54 13 l 2 6"
-                    stroke={BRASS.pale} strokeWidth={3} strokeLinecap="round" />
-                </Svg>
-              )}
-            </View>
-          )}
           {snapshot.state === 'eating' && <FoodBowl />}
           {/* Same rule: no ball unless a ball is what he is playing with. */}
           {snapshot.state === 'playing' && !fetching && routine === 'ball' && <Ball />}
           <HeartBurst burst={heartBurst} />
+          {/*
+            His things, on the floor in front of him. This replaced the
+            PLAY | FEED | SLEEP row — see ui/BarklyKit for why a button row was
+            the wrong ending for a screen whose subject is a dog.
+          */}
+          <BarklyKit
+            toyId={barkly.toy?.id ?? null}
+            playLabel={playLabel}
+            asleep={asleep}
+            wants={wants}
+            disabled={locked || fetching || tugging || digging}
+            onPress={onKit}
+          />
+
           {(stateLabel || showcase) && (
             <View style={styles.chip}>
               {(listening || snapshot.state === 'thinking') && <View style={styles.chipDot} />}
@@ -922,19 +962,39 @@ export default function BarklyRoom() {
         />
 
         <View style={styles.controls}>
-          {sttAvailable ? (
-            <Pressable
-              style={({ pressed }) => [styles.talk, listening && styles.talkActive, (locked || pressed) && styles.pressed, locked && styles.disabled]}
-              disabled={locked}
-              onPressIn={barkly.startTalk}
-              onPressOut={barkly.stopTalk}
-              accessibilityRole="button"
-              accessibilityLabel={listening ? 'Listening. Release to send.' : 'Hold to talk to Barkly'}
-              accessibilityState={{ disabled: locked, busy: listening }}
-            >
-              <View style={[styles.micDot, listening && styles.micDotLive]} />
-              <Text style={styles.talkText}>{listening ? 'listening — release to send' : 'hold to talk'}</Text>
-            </Pressable>
+          {/*
+            BOTH ways in, always.
+
+            It used to be `sttAvailable ? holdToTalk : typeRow` — an either/or,
+            decided by the device. So on a phone with speech recognition there
+            was no way to type, which is the wrong answer on a bus, in a
+            waiting room, next to a sleeping baby, or for anyone who would
+            simply rather write. The mic stays primary where it exists; the
+            keyboard is one tap away and remembers that you chose it.
+          */}
+          {sttAvailable && !typing ? (
+            <View style={styles.typeRow}>
+              <Pressable
+                style={({ pressed }) => [styles.talk, listening && styles.talkActive, (locked || pressed) && styles.pressed, locked && styles.disabled]}
+                disabled={locked}
+                onPressIn={barkly.startTalk}
+                onPressOut={barkly.stopTalk}
+                accessibilityRole="button"
+                accessibilityLabel={listening ? 'Listening. Release to send.' : 'Hold to talk to Barkly'}
+                accessibilityState={{ disabled: locked, busy: listening }}
+              >
+                <View style={[styles.micDot, listening && styles.micDotLive]} />
+                <Text style={styles.talkText}>{listening ? 'listening — release to send' : 'hold to talk'}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.swap}
+                onPress={() => setTyping(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Type to Barkly instead"
+              >
+                <KeyboardGlyph />
+              </Pressable>
+            </View>
           ) : (
             <View style={styles.typeRow}>
               <TextInput
@@ -949,6 +1009,16 @@ export default function BarklyRoom() {
                 accessibilityLabel="Say something to Barkly"
                 accessibilityHint="Type a message, then press talk."
               />
+              {sttAvailable && (
+                <Pressable
+                  style={styles.swap}
+                  onPress={() => setTyping(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Talk to Barkly out loud instead"
+                >
+                  <View style={styles.micDot} />
+                </Pressable>
+              )}
               <Pressable
                 style={({ pressed }) => [styles.send, pressed && styles.pressed, (locked || !typed.trim()) && styles.sendIdle]}
                 disabled={locked || !typed.trim()}
@@ -961,36 +1031,6 @@ export default function BarklyRoom() {
               </Pressable>
             </View>
           )}
-
-          <View style={styles.actionsRow}>
-            <ActionButton
-              label={playLabel}
-              testLabel="play-action"
-              hint={
-                routine === 'tug'
-                  ? 'Take one end of the rope. He will not let go.'
-                  : routine === 'waves'
-                    ? 'Send him at the sea. He will not win.'
-                    : routine === 'ball'
-                      ? 'Throw the ball and let him chase it.'
-                      : 'Play with whatever he can find.'
-              }
-              onPress={runPlay}
-              disabled={locked || fetching || tugging}
-            />
-            <ActionButton
-              label="feed"
-              onPress={() => openOnly(setFoodOpen)}
-              disabled={locked || fetching}
-              hint="Give him something to eat."
-            />
-            <ActionButton
-              label={asleep ? 'wake' : 'sleep'}
-              hint={asleep ? 'Wake him up.' : 'Send him to bed.'}
-              onPress={barkly.sleepToggle}
-              disabled={locked || fetching}
-            />
-          </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -1031,6 +1071,7 @@ export default function BarklyRoom() {
         }}
         modelConfigured={barkly.modelConfigured}
         voice={{ route: barkly.voiceRoute, muted: barkly.muted }}
+        onToggleMuted={barkly.toggleMuted}
         sttAvailable={sttAvailable}
         onForgetFact={barkly.forgetFact}
         devMode={barkly.devMode}
@@ -1050,11 +1091,8 @@ export default function BarklyRoom() {
   );
 }
 
-/**
- * A primary action. It had no accessibility role and no label, so with
- * VoiceOver or TalkBack the three controls the whole app runs on announced
- * nothing and could not be found at all.
- */
+
+
 /** Stand-in used only by the stress mode, so the tallest notice is measurable. */
 const SHOWCASE_PROMOTION = {
   who: 'Duke',
@@ -1064,43 +1102,6 @@ const SHOWCASE_PROMOTION = {
   fromLabel: 'annoying dog',
   toLabel: 'official rival',
 };
-
-function ActionButton({
-  label,
-  onPress,
-  disabled,
-  hint,
-  testLabel,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  hint?: string;
-  /** Stable handle for the overlap checker; the visible label changes by place. */
-  testLabel?: string;
-}) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const springTo = (v: number) => Animated.spring(scale, { toValue: v, friction: 5, tension: 300, useNativeDriver: true }).start();
-  return (
-    <Pressable
-      style={styles.actionWrap}
-      onPressIn={() => springTo(0.94)}
-      onPressOut={() => springTo(1)}
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityHint={hint}
-      testID={testLabel}
-      accessibilityState={{ disabled: Boolean(disabled) }}
-    >
-      <Animated.View style={[styles.action, disabled && styles.disabled, { transform: [{ scale }] }]}>
-        <Text style={styles.actionText}>{label}</Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
 
 const styles = StyleSheet.create({
   room: { flex: 1, backgroundColor: color.well },
@@ -1163,7 +1164,6 @@ const styles = StyleSheet.create({
   },
   gearDot: { width: 4, height: 4, borderRadius: 8, backgroundColor: color.inkSoft },
   headerButtons: { flexDirection: 'row', gap: 7 },
-  toyProp: { position: 'absolute', bottom: 16, right: 24 },
   walletTap: { flex: 1, marginHorizontal: 8 },
   packButton: {
     minWidth: 46,
@@ -1216,7 +1216,6 @@ const styles = StyleSheet.create({
   degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: color.fill },
   degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished },
   degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
-  gearMuted: { backgroundColor: color.fill },
 
   tabs: { flex: 1, flexDirection: 'row', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 2, ...elevation.card },
   tab: { flex: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
@@ -1247,7 +1246,12 @@ const styles = StyleSheet.create({
   heart: { position: 'absolute', fontSize: 24, color: color.danger },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
-  digSpot: { position: 'absolute', left: 18, bottom: 26, alignItems: 'center', zIndex: 2 },
+  /**
+   * A place in the world, not part of his kit — so it sits between the shelf
+   * (his bowl, toy and bed, at the very front) and the other dogs (further
+   * back). At 104 it landed under Biscuit's name.
+   */
+  digSpot: { position: 'absolute', left: 6, bottom: 72, alignItems: 'center', zIndex: 2 },
   /**
    * Labels that live IN the world — a dog's name, "dig?" — share one
    * treatment: dark, translucent, small caps, sitting on the ground under the
@@ -1258,18 +1262,34 @@ const styles = StyleSheet.create({
   digHint: { marginTop: 2, ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
 
-  chip: { position: 'absolute', bottom: 8, zIndex: 3, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
+  /**
+   * "listening" / "thinking", above the shelf.
+   *
+   * It sat at bottom 8, which is exactly where his toy now lies — the state
+   * chip and the play object were sharing a square inch of floor.
+   */
+  chip: { position: 'absolute', bottom: 72, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
 
   controls: { gap: 9 },
-  talk: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.ink, borderRadius: 999, paddingVertical: 18, ...elevation.card },
+  talk: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.ink, borderRadius: 999, paddingVertical: 18, ...elevation.card },
   talkActive: { backgroundColor: color.brand },
   micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT },
   micDotLive: { backgroundColor: color.dangerWell },
   talkText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
   typeRow: { flexDirection: 'row', gap: 10 },
+  /** Swap between talking and typing. Same height as what it sits beside. */
+  swap: {
+    width: TAP_MIN,
+    minHeight: TAP_MIN,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.low,
+  },
   input: { flex: 1, minHeight: TAP_MIN, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13, fontSize: 15, color: color.ink, ...elevation.low },
   send: { minHeight: TAP_MIN, backgroundColor: color.ink, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', ...elevation.card },
   sendText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
@@ -1282,20 +1302,6 @@ const styles = StyleSheet.create({
   sendIdle: { backgroundColor: color.fill, ...elevation.flat },
   sendTextIdle: { color: color.inkSoft },
 
-  actionsRow: { flexDirection: 'row', gap: 10 },
-  actionWrap: { flex: 1 },
-  action: {
-    backgroundColor: color.card,
-    borderRadius: 999,
-    minHeight: TAP_MIN,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: color.line,
-    ...elevation.low,
-  },
   pressed: { transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },
-  actionText: { fontWeight: '800', color: color.inkMid, fontSize: 15, letterSpacing: 0.4 },
 });

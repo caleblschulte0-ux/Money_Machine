@@ -90,4 +90,7 @@ export const ITEM = {
   glass: '#BFD9E4',
   glassSill: '#C9AF7E',
   leather: '#4A3A2C',
+  /** The stick he already owns. Bark, not floor. */
+  stick: '#6E5232',
+  stickLight: '#8A6A44',
 } as const;

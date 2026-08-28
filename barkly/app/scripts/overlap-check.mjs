@@ -75,7 +75,7 @@ const TARGETS = [
   // through "Lv 1" at 360px was invisible to a whole-header measurement.
   ['coin-pill', '[aria-label^="Shop."]'],
   ['pack', '[aria-label^="Pack Book"]'],
-  ['mute', '[aria-label$="Barkly"][role="switch"]'],
+
   ['settings', '[aria-label="Settings"]'],
   ['tabs', '[aria-label="Park"]'],
   ['plan', '[aria-label^="Barkly\'s plan"]'],
@@ -83,7 +83,12 @@ const TARGETS = [
   ['dialogue', '[data-testid="dialogue-panel"]'],
   ['state-chip', 'text=/^listening$/'],
   ['input', 'input'],
-  ['action-play', '[data-testid="play-action"]'],
+  // His things, on the floor in front of him. These replaced the PLAY | FEED |
+  // SLEEP row; the middle one landed between his front paws on the first cut,
+  // which is why they are measured against the dog below.
+  ['kit-feed', '[data-testid="kit-feed"]'],
+  ['kit-play', '[data-testid="kit-play"]'],
+  ['kit-sleep', '[data-testid="kit-sleep"]'],
 ];
 
 /**
@@ -95,7 +100,22 @@ const TARGETS = [
  * single pixel of intersection fails. If a future change floats something over
  * the stage again, this is what says so.
  */
-const NEVER_OVER_THE_DOG = ['dialogue', 'notice', 'input', 'action-play'];
+const NEVER_OVER_THE_DOG = ['dialogue', 'notice', 'input'];
+
+/**
+ * His things are FOREGROUND, and foreground is allowed to overlap him.
+ *
+ * The shelf sits nearer the camera than he does, so it legitimately covers the
+ * bottom of his bounding box — most of which is the transparent padding under
+ * a contain-fitted sprite anyway. Forbidding that outright would forbid depth.
+ *
+ * What is never allowed is a bowl reaching his FACE. So the rule for these is
+ * the top of the object must stay below the dog's midline: they may sit around
+ * his paws, they may not climb his body. That is the honest version of "speech
+ * must never cover anyone's face" applied to something that is meant to be in
+ * front of him.
+ */
+const BELOW_HIS_MIDLINE = ['kit-feed', 'kit-play', 'kit-sleep'];
 
 
 /**
@@ -188,6 +208,19 @@ for (const size of sizes) {
       }
     }
   }
+  // His things may be in front of him, but never up at his face.
+  if (dog) {
+    const midline = dog.y + dog.height * 0.5;
+    for (const b of boxes.filter((x) => BELOW_HIS_MIDLINE.includes(x.name))) {
+      if (b.y < midline) {
+        failures++;
+        console.log(
+          `  CLIMBING HIM: ${b.name} top is ${Math.round(midline - b.y)}px above the dog's midline`,
+        );
+      }
+    }
+  }
+
   // The rule: nothing lands on him.
   if (dog) {
     for (const b of boxes.filter((x) => NEVER_OVER_THE_DOG.includes(x.name))) {

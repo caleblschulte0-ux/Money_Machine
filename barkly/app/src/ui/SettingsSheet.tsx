@@ -44,6 +44,7 @@ interface Props {
   brain: { using: 'primary' | 'fallback'; breakerOpen: boolean; lastFailure?: string };
   modelConfigured: boolean;
   voice: { route: 'barkly' | 'device' | 'silent' | null; muted: boolean };
+  onToggleMuted: () => void;
   sttAvailable: boolean;
   /** Remove one learned fact/trick without wiping everything. */
   onForgetFact?: (id: string) => Promise<void>;
@@ -124,6 +125,7 @@ export default function SettingsSheet(props: Props) {
     brain,
     modelConfigured,
     voice,
+    onToggleMuted,
     sttAvailable,
     onForgetFact,
     onForgetEverything,
@@ -214,6 +216,35 @@ export default function SettingsSheet(props: Props) {
                       ? 'silent — no speech engine here'
                       : 'not used yet'}
             </Text>
+
+            <Text style={styles.section}>Sound</Text>
+            {/*
+              The mute switch LIVES here now.
+              
+              It used to be a permanent button in the header, next to the
+              coins and the settings gear — a control most people set once, on
+              a screen whose subject is supposed to be a dog. Moving it out is
+              part of shrinking the HUD; putting a real toggle here (rather
+              than only the read-out that used to be below) is what stops that
+              from making it unreachable.
+            */}
+            <Pressable
+              style={[styles.devRow, !voice.muted && styles.devRowOn]}
+              onPress={onToggleMuted}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: !voice.muted }}
+              accessibilityLabel={voice.muted ? 'Sound is off. Turn it on.' : 'Sound is on. Turn it off.'}
+            >
+              <View style={styles.devRowText}>
+                <Text style={styles.devTitle}>{voice.muted ? 'Sound off' : 'Sound on'}</Text>
+                <Text style={styles.devBlurb}>
+                  {voice.muted
+                    ? 'He is silent, and the phone will not buzz for him either.'
+                    : 'He speaks out loud, and you feel it when he does something.'}
+                </Text>
+              </View>
+              <Text style={styles.devState}>{voice.muted ? 'off' : 'on'}</Text>
+            </Pressable>
 
             <Text style={styles.section}>His voice</Text>
             <Text style={styles.voiceBlurb}>
