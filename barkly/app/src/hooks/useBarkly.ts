@@ -92,6 +92,18 @@ import { barklyLineFor, DialogueError } from '../providers/errors';
 import { createProviders } from '../providers/registry';
 import { asyncStorageStore } from '../storage/asyncStorageStore';
 import { DEFAULT_PROFILE, profileKey } from '../storage/types';
+import {
+  ADVENTURE_KEY,
+  CHARACTER_KEY,
+  DEV_KEY,
+  LOCATION_KEY,
+  MUTE_KEY,
+  ONBOARDING_DONE,
+  ONBOARDING_KEY,
+  SNAPSHOT_KEY,
+  VOICE_KEY,
+  WALLET_KEY,
+} from '../storage/keys';
 import { LOCATIONS, LocationId } from '../world/locations';
 import { NPCS, NpcId } from '../world/npcs';
 import { freshExchangeMemory, pickExchange } from '../world/npcExchange';
@@ -101,15 +113,8 @@ import { VoiceShape } from '../providers/tts/expoSpeechTts';
 import { pickThought } from '../world/thoughts';
 import { bronx } from '../barkly/dialect';
 
-const SNAPSHOT_KEY = profileKey(DEFAULT_PROFILE, 'snapshot-v1');
-const LOCATION_KEY = profileKey(DEFAULT_PROFILE, 'location-v1');
-const CHARACTER_KEY = profileKey(DEFAULT_PROFILE, 'character-v1');
-const MUTE_KEY = profileKey(DEFAULT_PROFILE, 'mute-v1');
-const ONBOARDING_KEY = profileKey(DEFAULT_PROFILE, 'onboarding-v1');
-const WALLET_KEY = profileKey(DEFAULT_PROFILE, 'wallet-v1');
-const VOICE_KEY = profileKey(DEFAULT_PROFILE, 'voice-v1');
-const DEV_KEY = profileKey(DEFAULT_PROFILE, 'dev-v1');
-const ADVENTURE_KEY = profileKey(DEFAULT_PROFILE, 'adventure-v1');
+// Every persisted key lives in storage/keys.ts — the playtester writes the
+// same list, and a second copy here is how those two silently drift apart.
 
 /** Which play routine ran, so the stage can animate the matching one. */
 import { playRoutineFor, PlayRoutine } from '../game/play';
@@ -505,7 +510,7 @@ export function useBarkly(): BarklyController {
       }
       try {
         const done = await asyncStorageStore.get(ONBOARDING_KEY);
-        if (!cancelled) setOnboarding(done === 'done' ? { step: 'done', micOffered: true } : freshOnboarding());
+        if (!cancelled) setOnboarding(done === ONBOARDING_DONE ? { step: 'done', micOffered: true } : freshOnboarding());
       } catch {
         if (!cancelled) setOnboarding({ step: 'done', micOffered: true });
       }
@@ -1377,7 +1382,7 @@ export function useBarkly(): BarklyController {
           });
       }
       if (result.finished) {
-        gate.write(ONBOARDING_KEY, 'done').catch(() => {});
+        gate.write(ONBOARDING_KEY, ONBOARDING_DONE).catch(() => {});
         setPendingGreeting(openingLine(result.state));
       }
     },

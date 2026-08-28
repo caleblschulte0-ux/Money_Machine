@@ -37,6 +37,10 @@ import DialoguePanel from './DialoguePanel';
 import SettingsSheet from './SettingsSheet';
 import { Ball, FoodBowl } from './StageProps';
 import BarklyKit, { KitAction } from './BarklyKit';
+import PlaytestSheet from './PlaytestSheet';
+import { playtestAllowed } from '../dev/playtest';
+import { asyncStorageStore } from '../storage/asyncStorageStore';
+import { activeSlot } from '../dev/saveSlots';
 import { useAttention } from './useAttention';
 import { feel, setFeelMuted } from './feel';
 import {
@@ -579,6 +583,21 @@ export default function BarklyRoom() {
    * something — all of it went past without him reacting at all. A dog that
    * does not respond to being touched is the least alive thing in the app.
    */
+  /**
+   * PLAYTEST. The badge IS the button — a dev build needs to say so, and a
+   * tester needs a way in, and those are the same one-line pill rather than a
+   * banner plus a hidden gesture. It sits in the row of place tabs, in normal
+   * flow, so it cannot land on Barkly; in a production build `playtestAllowed`
+   * is false and none of it renders at all.
+   */
+  const playtest = playtestAllowed();
+  const [playtestOpen, setPlaytestOpen] = useState(false);
+  const [slotName, setSlotName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!playtest) return;
+    void activeSlot(asyncStorageStore).then((s) => setSlotName(s?.name ?? null));
+  }, [playtest, playtestOpen]);
+
   const [beat, setBeat] = useState<{ kind: 'pet' | 'refuse' | 'arrive' | 'delight'; at: number } | null>(null);
   const react = (kind: 'pet' | 'refuse' | 'arrive' | 'delight') => setBeat({ kind, at: Date.now() });
 
@@ -831,6 +850,17 @@ export default function BarklyRoom() {
         )}
 
         <View style={styles.places}>
+          {playtest && (
+            <Pressable
+              onPress={() => setPlaytestOpen(true)}
+              style={styles.playtest}
+              accessibilityRole="button"
+              accessibilityLabel={slotName ? `Playtest build. Now playing ${slotName}. Open save slots.` : 'Playtest build. Open save slots.'}
+              testID="playtest-badge"
+            >
+              <Text style={styles.playtestText} numberOfLines={1}>PLAYTEST</Text>
+            </Pressable>
+          )}
           <View style={styles.tabs}>
           {LOCATION_ORDER.map((loc: LocationId) => {
             const areaLocked = !barkly.isUnlocked(loc);
@@ -1082,6 +1112,7 @@ export default function BarklyRoom() {
         hungry={snapshot.stats.hunger > 45}
         onFeed={(itemId) => void barkly.feed(itemId)}
       />
+      {playtest && <PlaytestSheet visible={playtestOpen} onClose={() => setPlaytestOpen(false)} />}
       <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={(id) => { const r = barkly.buy(id); if (r?.ok) react('delight'); return r; }} onEquip={barkly.equip} devMode={barkly.devMode} />
       <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} />
       <AdventureSheet visible={planOpen} onClose={() => setPlanOpen(false)} adventure={barkly.adventure} />
@@ -1165,6 +1196,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.sm,
   },
+  playtest: {
+    marginTop: 10,
+    minHeight: TAP_MIN,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: color.ink,
+  },
+  playtestText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, color: color.inkOn },
   places: {
     height: PLACES_HEIGHT,
     flexDirection: 'row',

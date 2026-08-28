@@ -1,0 +1,112 @@
+# Publish a playable Barkly to GitHub Pages.
+#
+# WHY THIS EXISTS. Evaluating whether Barkly is any good means playing him, and
+# until now playing him meant checking out the repo and running a dev server.
+# This puts a URL in front of anyone with a browser, free, and updates it every
+# time the branch moves.
+#
+# WHAT IT PUBLISHES. Two copies of the same build:
+#
+#   /            the normal player experience. No dev affordances at all.
+#   /playtest/   the same game, plus the Playtester save-slot menu, so a tester
+#                can jump between realistic stages of Barkly's life instead of
+#                spending six months getting there.
+#
+# The difference is one build-time environment variable, and the gate lives in
+# app/src/dev/playtest.ts: without it there is no code path from anywhere to the
+# menu, so the root deploy cannot be talked into showing it.
+#
+# NO SECRETS. Nothing here needs one. The build is entirely offline: the brain
+# falls back to the scripted dialogue engine and the voice comes from the
+# recordings bundled in the app, so the page works with no proxy behind it.
+#
+# ONE-TIME SETUP, and it needs a repo admin: Settings -> Pages -> Source:
+# "GitHub Actions". Until that is set this workflow will run and fail at the
+# deploy step, because a workflow cannot enable Pages for a repository.
+
+name: Barkly playable build
+
+on:
+  push:
+    branches: [claude/barkley-mvp-mobile-qbegtj]
+    paths:
+      - 'barkly/app/**'
+      - '.github/workflows/barkly-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a queued run is superseded rather than racing.
+concurrency:
+  group: barkly-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: barkly/app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: barkly/app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      # For the gate check below, which decides in a browser rather than by
+      # grepping a minified bundle.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # The single-file build inlines every asset as a data: URI, including the
+      # ~180 recordings of his voice. That is why the deployed page sounds like
+      # Barkly with nothing running behind it.
+      - name: Build the player experience
+        run: node scripts/build-artifact.mjs --out dist/index.html
+
+      - name: Build the playtest experience
+        env:
+          EXPO_PUBLIC_BARKLY_PLAYTEST: always
+        run: node scripts/build-artifact.mjs --out dist/playtest/index.html
+
+      # Pages serves this repo at /Money_Machine/, and an underscore-prefixed
+      # path would be eaten by Jekyll. Nothing here needs Jekyll.
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
+
+      - name: Confirm the root build has no playtest controls
+        run: node scripts/no-playtest-check.mjs dist/index.html dist/playtest/index.html
+
+      # Play the build before publishing it. Not a judge of whether Barkly is
+      # any good — that is the tester's job — but of whether the tester can get
+      # at him: every surface opens, every preset loads, a loaded save survives
+      # a refresh. Served over HTTP because the app persists through
+      # localStorage, which does not behave the same on a file:// origin.
+      - name: Play the build
+        run: |
+          python3 -m http.server 8099 --directory dist &
+          for i in $(seq 1 20); do curl -sf http://localhost:8099/playtest/ >/dev/null && break; sleep 1; done
+          node scripts/playtest-acceptance.mjs http://localhost:8099/playtest/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: barkly/app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

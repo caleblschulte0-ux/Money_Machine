@@ -29,7 +29,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -122,6 +122,10 @@ try {
   for (const [url, data] of assets) html = html.split(url).join(data);
   html = html.replace(/<link[^>]+rel="(icon|shortcut icon)"[^>]*>/g, '');
 
+  // --out may name a directory that does not exist yet: the Pages deploy writes
+  // dist/index.html and dist/playtest/index.html, and only one of those has a
+  // parent already.
+  mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, html);
   const kb = Math.round(Buffer.byteLength(html) / 1024);
   console.log(`wrote ${outPath} (${kb} KB, ${inlined} script${inlined === 1 ? '' : 's'} inlined)`);
