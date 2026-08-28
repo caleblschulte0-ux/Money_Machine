@@ -141,6 +141,28 @@ def main():
         L.append(f"NARRATION: could not be read from vo_one.py ({e})")
         L.append("")
 
+    # THE LOOK. New in v12 and it touches every frame in the film, so a
+    # reviewer checking the cut against this document has to be told it
+    # exists. Read from filmlook, not retyped -- same rule as the rail
+    # and the narration.
+    try:
+        import filmlook as _FL
+        bar_t, bar_b = _FL.safe_area(H, W)
+        L.append("THE LOOK — applied to every frame, not per shot")
+        L.append("")
+        L.append(f"  scope        {_FL.SCOPE}:1  (bars above {bar_t} and below {bar_b})")
+        pts = "  ".join(f"{int(x*255)}->{int(y*255)}"
+                        for x, y in zip(_FL._CP_X, _FL._CP_Y))
+        L.append(f"  tone curve   {pts}")
+        L.append("  plus split tone (cool shadows, warm highlights), fine")
+        L.append("  MOVING grain, and a light vignette. The plate is graded")
+        L.append("  BEFORE anything is drawn on it, so the HUD stays crisp")
+        L.append("  while the footage stops looking like a phone.")
+        L.append("")
+    except Exception as e:
+        L.append(f"THE LOOK: could not be read from filmlook.py ({e})")
+        L.append("")
+
     L.append("STANDING DISCLOSURE")
     L.append(f"    {disclosure()}")
     # The renderer's tag tracks the FIGURES, not the beat (v6). Saying

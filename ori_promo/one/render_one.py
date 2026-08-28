@@ -571,13 +571,22 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
             tg = AR.ease(tag_a)
             tg *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
             if tg > 0:
+                # TOP LEFT, not centred. Centred, it sat directly across
+                # the mammoth's head and back once the animal was sized
+                # correctly (r92: "its head and back collide with
+                # VISUALISATION — NOT A PHOTOGRAPH"). The left column is
+                # empty on every beat -- the titles live bottom-left and
+                # the figures live right of centre -- so the disclosure
+                # goes where nothing else is rather than where the frame
+                # happens to be symmetric.
                 fn = mono(28)
                 s = "VISUALISATION — NOT A PHOTOGRAPH"
                 tw = d.textlength(s, font=fn)
-                d.rectangle([W / 2 - tw / 2 - 20, SAFE_T + 26, W / 2 + tw / 2 + 20, SAFE_T + 70],
-                            fill=(6, 9, 12, int(165 * tg)))
-                d.text((W / 2, SAFE_T + 49), s, font=fn, fill=AMBER + (int(240 * tg),),
-                       anchor="mm")
+                x0 = 96
+                d.rectangle([x0 - 18, SAFE_T + 26, x0 + tw + 18, SAFE_T + 70],
+                            fill=(6, 9, 12, int(175 * tg)))
+                d.text((x0, SAFE_T + 49), s, font=fn, fill=AMBER + (int(240 * tg),),
+                       anchor="lm")
 
         if beat not in UI_OFF:
             frame_cue(d, t, dur)
@@ -686,6 +695,26 @@ def main(only=None):
                 f"move the figure.")
     print(f"  figure plates: all under {FIGURE_MAX_DRIFT*100:.0f}% drift",
           flush=True)
+
+    # EVERY FIGURE MUST FIT INSIDE THE SCOPE FRAME.
+    # Moving the second Dakota group clear of the rail's scrim put its
+    # feet at y=955, and the 2.39 active picture ends at 942 -- so the
+    # feet, the one part of a composite that has to be visible, were
+    # inside the black bar. The mammoth had the mirror problem at the top.
+    # Both were fixes for a different constraint that violated this one,
+    # which is precisely the kind of thing a person checking by eye keeps
+    # missing and arithmetic never does.
+    for b, c, tin, dur in rows:
+        for (src, foot, hpx, t0, build, sdep, mtch, toff, shw) in figures(b):
+            top, feet = foot[1] - hpx, foot[1]
+            if top < SAFE_T or feet > SAFE_B:
+                raise SystemExit(
+                    f"REFUSING TO RENDER: {os.path.basename(src)} on beat "
+                    f"{b!r} spans y {top}-{feet}, outside the 2.39 active "
+                    f"picture ({SAFE_T}-{SAFE_B}). "
+                    f"{'Its head is in the top bar. ' if top < SAFE_T else ''}"
+                    f"{'Its feet are in the bottom bar.' if feet > SAFE_B else ''}")
+    print("  figures: all inside the scope frame", flush=True)
 
     # SHOTNORM WORKS IN FLOAT 0..1 AT BOTH ENDS. Passing it uint8 does not
     # raise -- measure() just takes percentiles over a 0..255 range, so the

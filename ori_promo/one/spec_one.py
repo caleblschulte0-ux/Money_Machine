@@ -111,7 +111,12 @@ FIGURES = {
  # to be visible. The HUD sits at the bottom of a 2.39 frame and figures
  # standing on near ground sit there too; they have to be kept out of
  # each other's way by placement, since the HUD is drawn over everything.
- "more": [("ai/era/dak_s3.jpg",  (1600, 955), 310, 1.0, 1.2, 0.30, 0.45)],
+ # y=930, not 955. Moving this group clear of the rail's scrim pushed
+ # its FEET INTO THE BOTTOM LETTERBOX BAR -- the active picture ends at
+ # 942. I fixed one collision and created another, and r92 caught it:
+ # "their feet are scope-clipped". render_one now asserts every figure
+ # fits inside the scope frame.
+ "more": [("ai/era/dak_s3.jpg",  (1600, 930), 300, 1.0, 1.2, 0.30, 0.45)],
  # 560px, not 320. OPERATOR: "the mammoth size is shit" -- and it was,
  # measurably. The Dakota family on THIS PLATE is 385px at y=745 and he
  # approved that as human scale, so the ground plane is known: at y=690 a
@@ -123,7 +128,12 @@ FIGURES = {
  # 560px it grew into a 240px black slick lying across white ice. 0.34
  # keeps the ground contact and loses the bar. Snow takes a far softer
  # shadow than sunlit quartzite does.
- "mam": [("ai/era/mam41f.jpg",  (1330, 690), 560, 2.2, 1.0, 0.30, 0.45, None, 0.34)],
+ # feet at 730, not 690. At 560px tall its head reached y=130 and the
+ # active picture starts at 138 -- the mammoth has been decapitated by the
+ # top bar since scope came in, and it also collided with the disclosure
+ # band. r92 is explicit that the SCALE is right and must not go back, so
+ # the animal moves down the shelf instead of shrinking.
+ "mam": [("ai/era/mam41f.jpg",  (1330, 730), 560, 2.2, 1.0, 0.30, 0.45, None, 0.34)],
 }
 
 LABELS = {

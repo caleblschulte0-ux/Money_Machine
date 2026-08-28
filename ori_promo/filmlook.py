@@ -48,8 +48,14 @@ SCOPE = 2.39
 # So: shadows go down, mids stay honest, highlights roll off. Written as
 # points so the mapping can be read and argued with instead of tuned by
 # feel through an opaque formula.
+# r92: "pale quartzite and water lose texture ... preserve another step of
+# texture in the upper midtones/highlights". The shoulder was too hard --
+# 191->202 and 229->237 pushed the bright rock and the falls toward the
+# same pale value, so the two stopped being distinguishable. Softened at
+# the top while the toe and the midtone contrast, which are what put depth
+# into flat phone footage, stay exactly as they were.
 _CP_X = np.float32([0.00, 0.05, 0.20, 0.40, 0.55, 0.75, 0.90, 1.00])
-_CP_Y = np.float32([0.00, 0.028, 0.165, 0.395, 0.570, 0.795, 0.932, 0.986])
+_CP_Y = np.float32([0.00, 0.028, 0.165, 0.395, 0.565, 0.772, 0.902, 0.972])
 
 
 def _curve(x):
@@ -68,9 +74,22 @@ def grade(bgr, strength=1.0, warm=1.0):
     y = y + shadow * np.float32([0.030, 0.006, -0.016]) * warm
     y = y + high * np.float32([-0.020, 0.004, 0.026]) * warm
 
-    # a touch of saturation back, since the curve eats some
+    # SATURATION. r92: "at 11.9-14.0 seconds the grass is unnaturally
+    # vivid ... reduce yellow-green saturation more strongly". The first
+    # half is right; the second half is not implementable on this footage
+    # and I tried before deciding that.
+    # NO HUE KEY. Measured on the actual plates: the mown lawn sits at hue
+    # 60-73 and the quartzite outcrop three metres from it at 38-138 --
+    # they overlap. render_one already carries a note recording three
+    # failed attempts to key vegetation on this footage for the ice grade,
+    # for the same reason: this is high midday sun on yellow-green grass
+    # beside warm pink rock, and nothing separates them by colour. A hue
+    # band tuned to kill the lawn desaturates the rock with it.
+    # So the lawn is tamed the only way that is honest here -- globally,
+    # accepting slightly less colour in the rock as the price. That is the
+    # same conclusion the ice grade reached by the same evidence.
     g = (0.114 * y[..., 0] + 0.587 * y[..., 1] + 0.299 * y[..., 2])[..., None]
-    y = g + (y - g) * 1.06
+    y = g + (y - g) * 0.88
 
     out = np.clip(y, 0, 1) * 255.0
     return bgr * (1.0 - strength) + out * strength
