@@ -33,6 +33,7 @@ import shotnorm
 from ai import place as PL
 import depthtools as DT
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
+                      SCRUB_STOPS, SCRUB_KEYS, SCRUB_FADE,
                       figures, W, H, FPS, TOTAL)
 
 RAW = "../raw"
@@ -333,7 +334,73 @@ def frame_cue(d, t, dur):
 DISSOLVE = 0.5          # seconds of cross-dissolve into each beat
 
 
+# ---- the era rail -------------------------------------------------------
+RAIL_X0, RAIL_X1, RAIL_Y = 620, 1300, 968
+
+
+def _scrub_pos(tf):
+    """Marker position 0..1 at film time tf, linear between keyframes."""
+    ks = SCRUB_KEYS
+    if tf <= ks[0][0]:
+        return ks[0][1]
+    for (t0, p0), (t1, p1) in zip(ks, ks[1:]):
+        if tf <= t1:
+            u = (tf - t0) / max(1e-6, t1 - t0)
+            return p0 + (p1 - p0) * AR.ease(u)
+    return ks[-1][1]
+
+
+def draw_rail(d, tf):
+    """The scrub the wearer is driving. Drawn UI only — no new assets.
+
+    This is the answer to r88's "the overlays arrive as demonstrations
+    instead of consequences of an action". The marker moves FIRST and the
+    world answers behind it, which is the whole difference between a demo
+    reel and something that feels operated.
+
+    It is deliberately plain: a rail, three stops, a marker. Anything more
+    decorative would read as a video-editor timeline pasted over a park,
+    and the point is that a person wearing these is scrubbing TIME, not
+    driving an NLE.
+    """
+    t0, fade = SCRUB_FADE
+    k = AR.ease(min(1.0, max(0.0, (tf - t0) / fade)))
+    k *= min(1.0, max(0.0, (TOTAL - 3.9 - tf) / 0.6))     # gone before the end card
+    if k <= 0.004:
+        return
+    a = int(210 * k)
+    # A SCRIM, for the same reason the location title needed one. Measured
+    # on the finished v9: on the wide-valley plate the rail runs across
+    # sunlit quartzite that is the same luminance as the type, and it
+    # effectively disappeared at 12.4s -- on the one beat where the marker
+    # is travelling to deep time, which is the single moment the whole
+    # device exists to show. Legibility cannot depend on what the camera
+    # happened to be pointed at.
+    band_t, band_b = RAIL_Y - 44, RAIL_Y + 52
+    for yy in range(band_t, band_b):
+        u = (yy - band_t) / float(band_b - band_t)
+        aa = int(150 * k * (1.0 - abs(u - 0.42) * 1.7))
+        if aa > 0:
+            d.line([(RAIL_X0 - 150, yy), (RAIL_X1 + 150, yy)], fill=(5, 8, 11, aa))
+    d.line([(RAIL_X0, RAIL_Y), (RAIL_X1, RAIL_Y)], fill=INK + (int(120 * k),), width=2)
+    fn = mono(21)
+    pos = _scrub_pos(tf)
+    for label, p in SCRUB_STOPS:
+        x = int(RAIL_X0 + (RAIL_X1 - RAIL_X0) * p)
+        near = 1.0 - min(1.0, abs(pos - p) * 3.6)          # brightens as the marker nears
+        d.line([(x, RAIL_Y - 9), (x, RAIL_Y + 9)],
+               fill=INK + (int((95 + 160 * near) * k),), width=2)
+        tw = d.textlength(label, font=fn)
+        col = CYAN if near > 0.55 else INK
+        d.text((x - tw / 2, RAIL_Y + 20), label, font=fn,
+               fill=col + (int((120 + 135 * near) * k),))
+    mx = int(RAIL_X0 + (RAIL_X1 - RAIL_X0) * pos)
+    d.ellipse([mx - 7, RAIL_Y - 7, mx + 7, RAIL_Y + 7], outline=CYAN + (a,), width=2)
+    d.ellipse([mx - 2, RAIL_Y - 2, mx + 2, RAIL_Y + 2], fill=CYAN + (a,))
+
+
 def compose(beat, dur, frames, prev_last=None):
+    beat_start = {b[0]: b[3] for b in BEATS}[beat]
     gray = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
     figs = figures(beat)
     lab = LABELS.get(beat)
@@ -474,6 +541,7 @@ def compose(beat, dur, frames, prev_last=None):
 
         if beat not in UI_OFF:
             frame_cue(d, t, dur)
+            draw_rail(d, beat_start + t)
         if ttl:
             draw_title(d, t, dur, ttl[0], ttl[1], ttl[2],
                        scale=(ttl[3] if len(ttl) > 3 else 1.0))

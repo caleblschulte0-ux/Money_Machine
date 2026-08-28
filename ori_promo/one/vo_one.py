@@ -36,11 +36,13 @@ VOICE = "../vo/voices/en_US-ryan-high.onnx"
 
 # (beat, seconds into that beat, line)
 LINES = [
-    ("open", 1.1, "This is Falls Park, in Sioux Falls."),
-    ("dak",  1.9, "Look at the rock, and it shows you who stood here before the mill."),
-    ("ice",  1.6, "Further back, the whole valley was ice."),
-    ("mam",  1.9, "And the animals that crossed it."),
-    ("now",  1.4, "One place. Every time."),
+    # Rewritten for the era rail. The old lines described what the viewer
+    # was seeing; these follow the ACTION, because the picture now has one.
+    ("open", 1.2, "This is Falls Park, in Sioux Falls. Now run it backwards."),
+    ("dak",  1.6, "Before the mill, people lived along this water."),
+    ("ice",  0.9, "Further back."),
+    ("mam",  1.6, "The whole valley under ice, and the animals that crossed it."),
+    ("now",  1.8, "Then back. One place. Every time."),
 ]
 
 

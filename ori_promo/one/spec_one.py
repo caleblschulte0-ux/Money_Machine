@@ -39,16 +39,16 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 33.5
+TOTAL = 30.5
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
- ("open", "6806",  6.0,  0.0, 5.0, "the falls as they are. the system comes up"),
- ("dak",  "6804", 10.0,  5.0, 7.0, "BEFORE THE MILL — a Dakota family on the quartzite"),
- ("ice",  "6791", 14.0, 12.0, 6.5, "THE LAST ICE — the whole valley frozen, nobody in it"),
- ("mam",  "6804", 26.0, 18.5, 6.5, "the same shelf under the ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 25.0, 5.0, "the thaw, and the closing line"),
- ("end",   None,   0.0, 30.0, 3.5, "held from now's last frame — which is PRESENT DAY"),
+ ("open", "6806",  6.0,  0.0, 5.0, "the falls as they are. the system comes up, the era rail appears"),
+ ("dak",  "6804", 10.0,  5.0, 7.0, "the scrub reaches BEFORE THE MILL and the family answers"),
+ ("ice",  "6791", 14.0, 12.0, 4.0, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 16.0, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 22.0, 5.0, "the scrub returns to NOW, the thaw, the closing line"),
+ ("end",   None,   0.0, 27.0, 3.5, "held from now's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -89,10 +89,41 @@ LABELS = {
 # between two shots of the same era), and leaves on `now` so the film
 # returns to the present on screen rather than on a cut.
 ICE = {
- "ice": (0.3, 2.3, None, None),
+ # r88: 13 of 33.5 seconds were ice, "38.8% of the film in two
+ # consecutive, visually similar blue-white beats". Now 10 of 30.5 --
+ # 4s for the transformation, 6s for the payoff.
+ # The freeze also STARTS LATE (0.5s in) so the scrub marker reaches THE
+ # LAST ICE before the world answers, not after.
+ "ice": (0.5, 2.3, None, None),
  "mam": (-1.0, 0.0, None, None),
  "now": (-1.0, 0.0, 0.2, 1.8),
 }
+
+# ---- THE ERA RAIL: the thing that was missing.
+# r88, and it is the best note this film has had: "The overlays arrive as
+# DEMONSTRATIONS INSTEAD OF CONSEQUENCES OF AN ACTION. The missing feeling
+# is agency, anticipation, and payoff: notice the rock, choose or scrub an
+# era, watch the place answer, then return changed to the present."
+# The structure was present / image / ice / animal / present. Nothing on
+# screen ever DID anything -- eras simply appeared because the edit said
+# so. A drawn scrub rail fixes that with no new assets: the marker MOVES
+# FIRST and the world answers behind it, so every era is caused rather
+# than delivered, and the return to now is an action the viewer watches
+# rather than a cut they are handed.
+# stops: label and x position along the rail, 0..1 from NOW to deep time.
+SCRUB_STOPS = [("NOW", 0.0), ("BEFORE THE MILL", 0.5), ("THE LAST ICE", 1.0)]
+
+# (film_time, position). Linear between keys; the marker always arrives
+# BEFORE the beat it causes.
+SCRUB_KEYS = [
+ (0.0, 0.0), (5.2, 0.0),          # sits at NOW while the falls establish
+ (6.0, 0.5),                       # ...then travels back. family resolves at 6.2
+ (11.9, 0.5),
+ (12.4, 1.0),                      # reaches deep time. the valley freezes at 12.5
+ (22.0, 1.0),
+ (23.4, 0.0),                      # returns to NOW. the thaw runs 22.2-23.8
+]
+SCRUB_FADE = (2.0, 1.0)            # (film time it appears, fade seconds)
 
 SCORE = {
  "start":  "open",
