@@ -66,16 +66,25 @@ export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 12;
  * the stage below never reflows when a reward appears.
  */
 export const NOTICE_TOP = CONTENT_TOP + CHROME_BOTTOM + 10;
-export const NOTICE_MAX_HEIGHT = 86;
+/**
+ * A slim strip, not a card.
+ *
+ * This was 86, so 96px of the stage was permanently reserved — for a notice
+ * that is on screen for about five seconds. Everything the sprite is scaled
+ * against subtracts this number, so it was the single biggest reason the dog
+ * had been shrinking: he was being sized around a rivalry banner that is not
+ * there 99% of the time. The banner is one line now and this is what it needs.
+ */
+export const NOTICE_MAX_HEIGHT = 46;
 
 /**
  * The dialogue panel. Fixed height so the stage above it is a constant, and
  * tall enough for three lines plus a speaker name.
  */
-export const DIALOGUE_HEIGHT = 108;
+export const DIALOGUE_HEIGHT = 100;
 
 /** Text field + the three action buttons + the padding under them. */
-export const CONTROLS_HEIGHT = 128;
+export const CONTROLS_HEIGHT = 122;
 
 /** Hard cap on lines of dialogue. Three fits the panel at every size. */
 export const SPEECH_MAX_LINES = 3;
@@ -106,9 +115,18 @@ export const SPRITE_FOOT = 54;
 /** How far the notice band reaches down into the stage from its top. */
 export const NOTICE_BAND = 10 + NOTICE_MAX_HEIGHT;
 
+/**
+ * The cap was 1.0 and it should not have been.
+ *
+ * 1.0 is just "the size the PNG happens to be exported at", which is not a
+ * design decision about how big a dog should look on a phone. He is the
+ * subject of the screen; if the stage has room, he uses it. The floor stays,
+ * because on a short screen something has to give and it is better that he is
+ * small than that a notice lands on his face.
+ */
 export function spriteScale(screenHeight: number): number {
   const room = stageHeight(screenHeight) - SPRITE_FOOT - NOTICE_BAND - 8;
-  return Math.max(0.62, Math.min(1, room / SPRITE_HEIGHT));
+  return Math.max(0.72, Math.min(1.3, room / SPRITE_HEIGHT));
 }
 
 /**

@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useBarkly } from '../hooks/useBarkly';
+import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
 import BarklyPhotoView from './BarklyPhotoView';
 import EncounterSheet from './EncounterSheet';
@@ -205,10 +206,24 @@ const GROUND_SHADOW: Record<LocationId, string> = {
  * instead of one.
  */
 const SHADOW_LAYERS = [
-  { w: 1.24, h: 0.215, o: 0.05 },
-  { w: 1.02, h: 0.175, o: 0.06 },
-  { w: 0.8, h: 0.14, o: 0.08 },
-  { w: 0.56, h: 0.1, o: 0.1 },
+  { w: 1.12, h: 0.2, o: 0.05 },
+  { w: 1.02, h: 0.175, o: 0.07 },
+  { w: 0.8, h: 0.14, o: 0.1 },
+  { w: 0.56, h: 0.1, o: 0.14 },
+  /**
+   * THE CONTACT CORE, and the reason the other dogs looked like they were
+   * hovering.
+   *
+   * The four-step falloff above replaced two hard stadiums and was right about
+   * the EDGE — but it dropped the darkest value from 0.17 to 0.10 and spread
+   * it over a wide ellipse. On Barkly, 300px across, that still reads. On an
+   * NPC at 80px it is a faint smudge, and a character whose shadow you cannot
+   * see is a character standing in mid-air.
+   *
+   * A shadow does two jobs: it falls off softly at the rim AND it is dark
+   * where the feet actually touch. Only the first was being done.
+   */
+  { w: 0.34, h: 0.062, o: 0.2 },
 ];
 
 function GroundShadow({ location, width, style }: { location: LocationId; width: number; style?: object }) {
@@ -258,8 +273,18 @@ function NpcDog({
   }, [breathe]);
   const breathScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
   return (
+    /*
+     * The container's bottom edge IS the ground line under this dog.
+     *
+     * It used to also contain the name, as the last child in a column — so the
+     * container bottom was the bottom of the NAME CHIP, roughly twenty pixels
+     * below his paws, and the shadow (positioned against that bottom) drew
+     * itself under the label instead of under the dog. He stood on nothing.
+     * The name is out of the flow now, hanging below the line, so the anchor
+     * means what its name says.
+     */
     <View style={[styles.npc, { left: spot.left, right: spot.right, bottom: spot.bottom * scale }]}>
-      <GroundShadow location={location} width={spot.size * 0.92 * scale} style={{ bottom: 16 * scale }} />
+      <GroundShadow location={location} width={spot.size * 0.92 * scale} style={{ bottom: 0 }} />
       <Pressable
         onPress={onPress}
         hitSlop={8}
@@ -271,10 +296,8 @@ function NpcDog({
           <Image source={NPC_ART[id]} style={{ width: spot.size * scale, height: spot.size * 1.25 * scale }} resizeMode="contain" />
         </Animated.View>
       </Pressable>
-      {/* On the GROUND, under his feet — not a sticker across his chest. A
-          name tag pasted over the art is the single loudest "this is a web
-          page" tell in the whole scene. */}
-      <Text style={styles.npcName}>{NPCS[id].name.toUpperCase()}</Text>
+      {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
+      <Text style={[styles.npcName, { bottom: -19 * scale }]}>{NPCS[id].name.toUpperCase()}</Text>
     </View>
   );
 }
@@ -472,13 +495,8 @@ export default function BarklyRoom() {
    * actually holding: a ball gets thrown and chased, a rope gets a tug, and
    * with nothing he improvises. Fetch at the park is the same chase.
    */
-  const runPlay = async () => {
-    if (fetching || locked || digging) return;
-    const routine = await barkly.play();
-    if (routine === 'ball') {
-      runChase(() => {});
-    } else if (routine === 'tug') {
-      setTugging(true);
+  const runTug = () => {
+    setTugging(true);
       Animated.sequence([
         ...Array.from({ length: 5 }, (_, i) =>
           Animated.timing(tugX, {
@@ -489,24 +507,28 @@ export default function BarklyRoom() {
           }),
         ),
         Animated.spring(tugX, { toValue: 0, friction: 5, useNativeDriver: true }),
-      ]).start(() => setTugging(false));
-    }
-  };
-
-  const runFetch = () => {
-    if (fetching || locked || digging) return;
-    runChase(() => void barkly.play());
+    ]).start(() => setTugging(false));
   };
 
   /**
-   * The beach's own verb. Same chase animation, no ball: he runs at the water,
-   * the water leaves, he claims victory. Beaches are for chasing something
-   * that cannot be caught, which suits him.
+   * One entry point for the play button, so the animation and the line can
+   * never disagree about what he is doing. The animation is chosen from the
+   * SAME `routine` the label was rendered from.
    */
-  const runWaves = () => {
-    if (fetching || locked || digging) return;
-    runChase(() => void barkly.chaseWaves());
+  const runPlay = () => {
+    if (fetching || tugging || locked || digging) return;
+    if (routine === 'waves') {
+      runChase(() => void barkly.chaseWaves());
+      return;
+    }
+    if (routine === 'tug') {
+      runTug();
+      void barkly.play();
+      return;
+    }
+    runChase(() => void barkly.play());
   };
+
   const ballX = ballFlight.interpolate({ inputRange: [0, 1], outputRange: [0, 118] });
   const ballY = ballFlight.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -120, -8] });
 
@@ -544,20 +566,14 @@ export default function BarklyRoom() {
       ? `“${partialTranscript}”`
       : lastExchange?.barklyText;
 
-  const playLabel =
-    location === 'park'
-      ? fetching
-        ? 'fetching…'
-        : 'fetch'
-      : location === 'beach'
-      ? fetching
-        ? 'chasing…'
-        : 'waves'
-      : fetching || tugging
-        ? 'playing…'
-        : barkly.toy
-          ? barkly.toy.name.toLowerCase().split(' ').slice(-1)[0] // "ball", "rope"
-          : 'play';
+  /**
+   * What playing is right now, and what the button is called.
+   *
+   * Both come from game/play, which is where the precedence lives: a toy in
+   * his mouth beats the location, always. See that file for why.
+   */
+  const routine = playRoutineFor(barkly.toy?.id, location);
+  const playLabel = playLabelFor(routine, location, fetching || tugging);
 
   if (barkly.onboarding === undefined) return <View style={styles.room} />;
   if (barkly.onboarding.step !== 'done') {
@@ -706,13 +722,20 @@ export default function BarklyRoom() {
                 accessibilityLiveRegion="polite"
                 accessibilityLabel={`${shownPromo.headline}. From ${shownPromo.fromLabel} to ${shownPromo.toLabel}.`}
               >
+                {/*
+                  One line, not three.
+                  
+                  It was an eyebrow, a two-line headline and a "from → to"
+                  footer — an 86px card, which is 86px of the stage the DOG
+                  cannot have, permanently, for a notice that shows for five
+                  seconds. The eyebrow still carries the meaning without the
+                  colour (a rivalry and a friendship must not differ by tint
+                  alone), it just sits beside the headline instead of above it.
+                */}
                 <Text style={styles.promoEyebrow}>
-                  {shownPromo.kind === 'rival' ? 'RIVALRY ESCALATED' : 'FRIENDSHIP DEEPENED'}
+                  {shownPromo.kind === 'rival' ? 'RIVALRY' : 'FRIENDSHIP'}
                 </Text>
-                <Text style={styles.promoHeadline} numberOfLines={2}>{shownPromo.headline}</Text>
-                <Text style={styles.promoStep}>
-                  {shownPromo.fromLabel} → {shownPromo.toLabel}
-                </Text>
+                <Text style={styles.promoHeadline} numberOfLines={1}>{shownPromo.headline}</Text>
               </View>
             )}
             {notice === 'reward' && barkly.reward && (
@@ -773,7 +796,7 @@ export default function BarklyRoom() {
         </View>
 
         <View style={[styles.stageArea, { height: stageHeight(screenH) }]}>
-          {!asleep && <GroundShadow location={location} width={230 * spriteScale} style={{ bottom: 18 }} />}
+          {!asleep && <GroundShadow location={location} width={196 * spriteScale} style={{ bottom: 20 }} />}
           {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
           {npcsHere.map((id) => (
             <NpcDog key={id} id={id} location={location} scale={spriteScale} onPress={() => barkly.npcTalk(id)} />
@@ -800,7 +823,13 @@ export default function BarklyRoom() {
           </Animated.View>
           {/* After the dog, so the near rim overlaps his lower body. */}
           {asleep && location === 'home' && <DogBedFront upgraded={barkly.hasHome('home_bed')} />}
-          {fetching && location !== 'beach' && variant !== 'carryLeft' && (
+          {/*
+            The thing in the air is the thing he OWNS. It was always a ball,
+            so buying the rope produced a chase after a ball that is not in
+            your inventory. `routine` is the same value the button was
+            labelled from, so the prop cannot disagree with the verb.
+          */}
+          {fetching && routine === 'ball' && variant !== 'carryLeft' && (
             <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
               <RubberBall size={30} />
             </Animated.View>
@@ -837,7 +866,9 @@ export default function BarklyRoom() {
           )}
           {/* A bought toy is IN THE ROOM, not a line on a receipt. It sits
               off to the side when idle and vanishes while it is in play. */}
-          {barkly.toy && !fetching && !asleep && (
+          {/* Not while he is USING it — a rope lying on the grass during a
+              tug-of-war reads as a second rope. */}
+          {barkly.toy && !fetching && !tugging && !asleep && (
             <View style={styles.toyProp} pointerEvents="none">
               {barkly.toy.id === 'toy_ball' ? (
                 <RubberBall size={34} />
@@ -857,7 +888,8 @@ export default function BarklyRoom() {
             </View>
           )}
           {snapshot.state === 'eating' && <FoodBowl />}
-          {snapshot.state === 'playing' && !fetching && <Ball />}
+          {/* Same rule: no ball unless a ball is what he is playing with. */}
+          {snapshot.state === 'playing' && !fetching && routine === 'ball' && <Ball />}
           <HeartBurst burst={heartBurst} />
           {(stateLabel || showcase) && (
             <View style={styles.chip}>
@@ -935,13 +967,15 @@ export default function BarklyRoom() {
               label={playLabel}
               testLabel="play-action"
               hint={
-                location === 'park'
-                  ? 'Throw the ball and let him chase it.'
-                  : location === 'beach'
+                routine === 'tug'
+                  ? 'Take one end of the rope. He will not let go.'
+                  : routine === 'waves'
                     ? 'Send him at the sea. He will not win.'
-                    : 'Play with whatever he is holding.'
+                    : routine === 'ball'
+                      ? 'Throw the ball and let him chase it.'
+                      : 'Play with whatever he can find.'
               }
-              onPress={location === 'park' ? runFetch : location === 'beach' ? runWaves : runPlay}
+              onPress={runPlay}
               disabled={locked || fetching || tugging}
             />
             <ActionButton
@@ -1165,19 +1199,19 @@ const styles = StyleSheet.create({
   // "from → to" line say what happened without relying on the tint.
   promo: {
     alignSelf: 'center',
-    marginTop: 0,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 18,
-    borderWidth: 1.5,
+    flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: '92%',
+    gap: space.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    maxWidth: '100%',
   },
   promoRival: { backgroundColor: color.warmWell, borderColor: color.warmLine },
   promoFriend: { backgroundColor: color.goodWell, borderColor: color.goodLine },
-  promoEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.4, color: color.inkSoft },
-  promoHeadline: { marginTop: 3, fontSize: 15, fontWeight: '900', color: color.ink, textAlign: 'center' },
-  promoStep: { marginTop: 2, fontSize: 12, color: color.inkSoft },
+  promoEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.2, color: color.inkSoft },
+  promoHeadline: { fontSize: 13, fontWeight: '900', color: color.ink, flexShrink: 1 },
   rewardText: { fontSize: 13, fontWeight: '800', color: color.goldInk },
   degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: color.fill },
   degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished },
@@ -1222,7 +1256,7 @@ const styles = StyleSheet.create({
    * illustration. Chrome is light on the world; the world labels itself dark.
    */
   digHint: { marginTop: 2, ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
-  npcName: { marginTop: 3, ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
+  npcName: { position: 'absolute', ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
 
   chip: { position: 'absolute', bottom: 8, zIndex: 3, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },

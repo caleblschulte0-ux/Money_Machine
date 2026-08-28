@@ -111,7 +111,8 @@ const DEV_KEY = profileKey(DEFAULT_PROFILE, 'dev-v1');
 const ADVENTURE_KEY = profileKey(DEFAULT_PROFILE, 'adventure-v1');
 
 /** Which play routine ran, so the stage can animate the matching one. */
-export type PlayRoutine = 'ball' | 'tug' | 'none';
+import { playRoutineFor, PlayRoutine } from '../game/play';
+export type { PlayRoutine };
 
 export interface Exchange {
   userText: string;
@@ -1302,9 +1303,11 @@ export function useBarkly(): BarklyController {
       return 'none';
     }
 
+    // The same decision the button was labelled from — see game/play. It used
+    // to be a second copy of the rule here, which is how the screen and the
+    // hook were able to disagree about what he was doing.
     const toy = equippedItem(walletRef.current, 'toy');
-    const routine: PlayRoutine =
-      toy?.id === 'toy_ball' ? 'ball' : toy?.id === 'toy_rope' ? 'tug' : 'none';
+    const routine: PlayRoutine = playRoutineFor(toy?.id, locationRef.current);
     const line =
       routine === 'ball'
         ? pickLine(BALL_LINES)
