@@ -297,6 +297,22 @@ export function useBarkly(): BarklyController {
   const [voiceShape, setVoiceShapeState] = useState<VoiceShape>(() => providers.tts.getShape());
 
   // The installed voices, once, after boot. Enumerating them can be slow and
+  /**
+   * The NPC bubble's timer outlives the screen.
+   *
+   * It is a ref, cleared and re-set on each exchange, but nothing cancels it
+   * on unmount — so a bubble started 200ms before you close the app fires its
+   * `setNpcBubble(null)` into a component that is gone. Harmless today, and
+   * exactly the kind of thing that stops being harmless when this hook is
+   * mounted twice or a screen is remounted on navigation.
+   */
+  useEffect(
+    () => () => {
+      if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+    },
+    [],
+  );
+
   // occasionally never settles, so the provider races it against a timeout.
   useEffect(() => {
     let alive = true;
