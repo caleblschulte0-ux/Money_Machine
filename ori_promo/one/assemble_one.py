@@ -79,21 +79,13 @@ def end_card(d_sec):
     enc.stdin.close(); enc.wait()
 
 
-def bed():
-    ins, filt, labs = [], [], []
-    k = 0
-    for b, clip, tin, st, d, note in BEATS:
-        src, s_in = (clip, tin) if clip else ("6791", 4.5)
-        ins += ["-ss", f"{s_in}", "-t", f"{d:.2f}", "-i", f"{RAWD}/IMG_{src}.MOV"]
-        filt.append(f"[{k}:a]atrim=0:{d:.2f},asetpts=N/SR/TB,"
-                    f"afade=in:st=0:d=0.2,afade=out:st={d-0.2:.2f}:d=0.2[s{k}]")
-        labs.append(f"[s{k}]"); k += 1
-    f = (";".join(filt) + ";" + "".join(labs) + f"concat=n={k}:v=0:a=1,"
-         "highpass=f=80,lowpass=f=6500,afftdn=nr=11:nf=-36,"
-         "acompressor=threshold=0.06:ratio=3:attack=30:release=500,"
-         f"volume=0.78,afade=in:st=0:d=0.8,afade=out:st={TOTAL-1.6:.2f}:d=1.6[out]")
-    subprocess.run(["ffmpeg","-v","error","-y"]+ins+["-filter_complex", f,
-        "-map","[out]","-ac","2","-ar",str(SR), f"{OUT}/_bed.wav"], check=True)
+# bed() IS GONE, not disabled. It pulled each plate's location audio and
+# concatenated it under the film. Operator: "completely cut the sound out
+# of the videos because there's a lot of me talking in the background
+# because there wasn't meant to be sound in the videos." A commented-out
+# mixer input is the kind of thing that gets switched back on by accident
+# six versions later, so the function and its filter graph are deleted and
+# the master no longer opens the source clips for audio at all.
 
 
 def _tick(n, f0, f1, amp, sharp):
@@ -110,7 +102,7 @@ def marks():
     appear time. Same two-part sound: a thin rising tick as the reticle
     starts to converge, then a low lock 0.55s later when it closes.
     """
-    from spec_one import FIGURES
+    from spec_one import figures
     n = int(TOTAL*SR)+SR
     a = np.zeros(n, np.float32)
     def put(at, sig):
@@ -118,7 +110,7 @@ def marks():
         if i < n:
             a[i:i+len(sig)] += sig[:max(0, n-i)]
     for b, clip, tin, st, d, note in BEATS:
-        for (_src, _foot, _h, t0, _build, _sd, _m) in FIGURES.get(b, []):
+        for (_src, _foot, _h, t0, _build, _sd, _m, _off) in figures(b):
             put(st+t0-0.55, _tick(int(0.20*SR), 520, 380, 0.055, 17.0))
             put(st+t0,      _tick(int(0.34*SR), 250, 150, 0.20, 8.0))
     a = a[:int(TOTAL*SR)]
@@ -135,23 +127,23 @@ def master(dst):
     subprocess.run(["ffmpeg","-v","error","-y","-f","concat","-safe","0","-i","concat_one.txt",
         "-r",str(FPS),"-fps_mode","cfr","-c:v","libx264","-crf","14",
         "-pix_fmt","yuv420p",f"{OUT}/_picture.mp4"], check=True)
-    # THREE sources now, not two: the location bed, the confirmation ticks,
-    # and the score. The bed is ducked under the score rather than summed
-    # flat -- at equal weight the river's broadband hiss ate the pad and
-    # the result sounded like neither. weights are bed / ticks / score.
-    mix = ("[1:a][2:a][3:a]amix=inputs=3:normalize=0:weights=0.62 1.0 1.0,"
+    # Three sources, none of them the location: confirmation ticks, score,
+    # narration. Weights put the voice on top -- with the river gone there
+    # is nothing to fight, so the score can sit well under it and the film
+    # is quiet where nobody is speaking.
+    mix = ("[1:a][2:a][3:a]amix=inputs=3:normalize=0:weights=0.85 0.70 1.0,"
            "alimiter=limit=0.80:attack=4:release=90:level=disabled")
     p = subprocess.run(["ffmpeg","-hide_banner","-nostats","-i",f"{OUT}/_picture.mp4",
-        "-i",f"{OUT}/_bed.wav","-i",f"{OUT}/_marks.wav",
-        "-i",f"{OUT}/_music.wav","-filter_complex",
+        "-i",f"{OUT}/_marks.wav",
+        "-i",f"{OUT}/_music.wav","-i",f"{OUT}/_vo.wav","-filter_complex",
         mix+",loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json[a]",
         "-map","[a]","-f","null","-"], capture_output=True, text=True)
     m = re.findall(r"\{[^{}]*input_i[^{}]*\}", p.stderr, re.S)
     if not m: sys.exit(p.stderr[-2000:])
     j = json.loads(m[-1]); print("  measured", j["input_i"], j["input_tp"])
     subprocess.run(["ffmpeg","-v","error","-y","-i",f"{OUT}/_picture.mp4",
-        "-i",f"{OUT}/_bed.wav","-i",f"{OUT}/_marks.wav",
-        "-i",f"{OUT}/_music.wav","-filter_complex",
+        "-i",f"{OUT}/_marks.wav",
+        "-i",f"{OUT}/_music.wav","-i",f"{OUT}/_vo.wav","-filter_complex",
         mix+(f",loudnorm=I=-16:TP=-1.5:LRA=11:linear=true:measured_I={j['input_i']}:"
              f"measured_TP={j['input_tp']}:measured_LRA={j['input_lra']}:"
              f"measured_thresh={j['input_thresh']},aresample={SR}[a]"),
@@ -161,7 +153,8 @@ def master(dst):
 
 if __name__ == "__main__":
     end_card([b for b in BEATS if b[1] is None][0][4]); print("  end card")
-    bed(); marks()
+    marks()
     import score_one; score_one.main()
+    import vo_one; vo_one.main()
     print("  sound")
     master("../out/ORI_What_This_Place_Was_master.mp4"); print("  mastered")

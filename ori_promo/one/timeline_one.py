@@ -36,8 +36,12 @@ def main():
     L.append("")
     L.append("This file is GENERATED from the spec the renderer reads.")
     L.append("")
-    L.append(f"Establishing montage: {', '.join(sorted(UI_OFF))} — no device UI")
-    L.append("")
+    # Only when there IS one. v8 has no montage, and this printed
+    # "Establishing montage:  — no device UI" -- an empty list stated as a
+    # fact about the film.
+    if UI_OFF:
+        L.append(f"Establishing montage: {', '.join(sorted(UI_OFF))} — no device UI")
+        L.append("")
     L.append("SHOT LIST — film time, source, and the footage-gate reading at")
     L.append("the EXACT duration cut. A flagged plate is not cut, full stop.")
     L.append("")
@@ -85,9 +89,21 @@ def main():
     # had been that way since the file was written. A generated handoff
     # document that has never been generated is not a document.
     _starts = {b: st for b, clip, tin, st, d, note in BEATS}
-    for b, (direction, a0, a1) in ICE.items():
-        L.append(f"  the ice grade ramps {direction.upper()} over {b} at "
-                 f"{_starts[b]+a0:.1f}–{_starts[b]+a1:.1f}s film time")
+    for b, (i0, i1, o0, o1) in ICE.items():
+        # An in-envelope that has already finished before the beat starts
+        # is the spec's way of saying "this beat opens fully iced" -- it is
+        # NOT a ramp, and printing it as one put the ramp a second before
+        # the beat it belongs to.
+        if i1 <= 0:
+            L.append(f"  {b} opens ALREADY at full ice — the era did not "
+                     f"re-arrive between two shots of it")
+        else:
+            L.append(f"  the ice grade ramps IN over {b} at "
+                     f"{_starts[b]+i0:.1f}–{_starts[b]+i1:.1f}s film time")
+        if o0 is not None:
+            L.append(f"  and thaws back OUT at "
+                     f"{_starts[b]+o0:.1f}–{_starts[b]+o1:.1f}s, so the cut off "
+                     f"this beat lands between two present-day frames")
     L.append("")
     L.append("STANDING DISCLOSURE")
     L.append(f"    {disclosure()}")

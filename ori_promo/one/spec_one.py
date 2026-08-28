@@ -1,201 +1,113 @@
-# ORI — "WHAT THIS PLACE WAS". v4.
+# ORI — "WHAT THIS PLACE WAS". v8.
 #
-# OPERATOR, 2026-08-27, on v3: "the video was closer but not any where near
-# personal grade cut some b roll in there I have plenty of it".
+# OPERATOR on v7:
+#   "those first settlers, like, the... their sizing is terrible. Their
+#    anchoring is terrible. The falls when it hits the ice age looks like
+#    complete shit. ... the other two AI pictures I don't think were
+#    anchored or put in that horribly ... add a little narration and
+#    completely cut the sound out of the videos because there's a lot of
+#    me talking in the background ... it's still not quite giving me the
+#    feeling I wanted to."
 #
-# WHAT V3 WAS. Forty-four seconds -- then thirty-eight -- of ONE plate.
-# IMG_6804 from 6.0s to 41.0s, uncut, with eras swapping on it. Every era
-# landed on the same rock in the same framing from the same standing
-# position, so the film had exactly one idea about where it was and never
-# showed the viewer the place it kept naming. Worse: in five versions this
-# film has NEVER SHOWN THE FALLS. The waterfall the park is named after,
-# the reason anyone would point a pair of glasses at that rock, was not in
-# a single frame.
+# THE SETTLERS BEAT IS GONE. Not moved, not resized -- cut. r78, r80, r82
+# and now the operator have all named that asset as the weakest thing on
+# screen; it is the only element every reviewer independently failed. Its
+# figures wear floor-length dresses, so there are no feet to land on the
+# ground, and its own internal proportions are wrong (the two children are
+# nearly the mother's height). No placement fixes either. I cannot
+# regenerate it -- the image endpoint now serves one model and ignores the
+# one that made these assets (see ai/eras.py) -- so the honest move is to
+# stop showing it. It returns when there is an asset that earns its place.
 #
-# WHAT V4 DOES. Twenty-six of the thirty-four raw clips had never been
-# used. Four of them now open the film as a montage -- the falls, water on
-# rock, the park wide with the mill ruin, and the walk in -- so by the time
-# the device comes up the viewer knows the location, and the hero plate is
-# an ARRIVAL instead of a cold start. A fifth cutaway (rock texture) hides
-# the SETTLERS -> ICE era change, which is the one swap that has to travel
-# furthest.
+# THE FALLS ICE BEAT IS GONE TOO, and for a reason worth writing down: the
+# frozen-falls still looked spectacular to ME in a single test frame, and
+# it fails in motion for two things a still does not show. Its plate holds
+# TWO sharp present-day people in bright modern clothes filling the right
+# third -- on the hero plate the wearer is one out-of-focus head, which
+# reads as intentional, but two of them read as a mistake. And moving
+# water cannot be frozen by killing its local contrast: it reads as
+# over-exposed water, not ice. The ice now runs on plates that are mostly
+# rock: the wide valley, which has no one near camera at all, and the
+# hero shelf, which is the version nobody objected to.
 #
-# THE CUT IS GATED, NOT GUESSED. Every in-point and duration below was run
-# through shotqc first and the whole table came back 0 flagged. The falls
-# plate is the reason durations are short: IMG_6682 fails DRIFT at 2.5s
-# (18.8-34.4%) and PASSES at 1.6s (11.0%). The gate does not veto the shot,
-# it sets how long the shot may be held -- which is also why the montage
-# reads fast rather than lingering.
+# WHAT CARRIES OVER FROM v7, because it worked: five slow beats, every cut
+# a half-second dissolve. Measured on the v7 master, the worst single-frame
+# change fell from 82.3% of the picture to 19.0%.
 #
-# THE DEVICE UI IS OFF UNDER THE MONTAGE. The viewfinder frame comes up on
-# "open", with the first label. Running the corner cues over documentary
-# B-roll would claim the phone footage was a device view; it isn't, and the
-# film is stronger if the glasses switch on in front of you.
+# SOUND: the location audio is GONE, all of it, on the operator's
+# instruction -- he is audible talking behind several plates and the
+# footage was never shot for sound. Score, confirmation ticks and
+# narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 38.9
+TOTAL = 33.5
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
- # --- the place, before any product claim is made ---
- ("bA",   "6682", 24.0,  0.0, 1.6, "THE FALLS. never once been in this film"),
- ("bB",   "6681",  8.0,  1.6, 1.2, "water on rock, tight"),
- ("bC",   "6699", 12.0,  2.8, 2.0, "the park wide, with the mill ruin"),
- # 6808@24 WAS HERE and it was a mowed lawn with a distant treeline and
- # two specks of people -- municipal, empty, and it stalled the montage
- # dead in the beat before the device comes up. I picked it off gate
- # numbers without looking at it, which is how a shot with nothing wrong
- # and nothing in it gets into a cut. 6806@48 is the wearer standing at the
- # falls from behind, same brown shirt as the hero plate: it introduces the
- # person before we take his point of view, and it rhymes with the plate
- # the rest of the film lives on.
- ("bD",   "6806", 48.0,  4.8, 1.8, "the wearer at the falls, from behind"),
- # --- the device comes up. hero plate, one continuous take from here ---
- ("open", "6804",  6.0,  6.6, 2.6, "the view. the system names the rock it is looking at"),
- ("e1",   "6804", 10.0,  9.2, 6.0, "BEFORE THE MILL: a Dakota family, the one full AR reveal"),
- ("e2",   "6804", 18.0, 15.2, 6.0, "THE SETTLERS: the era swaps on the cut, no reveal"),
- ("bE",   "6686", 16.0, 21.2, 1.2, "rock texture — the cutaway the ice change hides behind"),
- ("e3",   "6804", 26.0, 22.4, 6.0, "THE LAST ICE: the same view frozen, and a mammoth"),
- ("e4",   "6804", 34.0, 28.4, 7.0, "RETURN, then the three eras ONE AT A TIME, then empty rock"),
- ("end",   None,   0.0, 35.4, 3.5, "held from e4's last frame — which is PRESENT DAY"),
+ ("open", "6806",  6.0,  0.0, 5.0, "the falls as they are. the system comes up"),
+ ("dak",  "6804", 10.0,  5.0, 7.0, "BEFORE THE MILL — a Dakota family on the quartzite"),
+ ("ice",  "6791", 14.0, 12.0, 6.5, "THE LAST ICE — the whole valley frozen, nobody in it"),
+ ("mam",  "6804", 26.0, 18.5, 6.5, "the same shelf under the ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 25.0, 5.0, "the thaw, and the closing line"),
+ ("end",   None,   0.0, 30.0, 3.5, "held from now's last frame — which is PRESENT DAY"),
 ]
 
-# Beats that get NO viewfinder frame: the establishing montage. bE keeps it
-# because it is a cutaway inside the demo, not before it.
-UI_OFF = {"bA", "bB", "bC", "bD"}
+# Beats with a present-day person close enough to hold OUT of the ice
+# grade. The wide valley has nobody near camera, and on that plate the
+# depth threshold grabs 22% of the frame -- the foreground rock -- and
+# would have left a raw summer-coloured slab across the bottom of an ice
+# age. A mask built for one plate is not a mask for every plate.
+WEARER_BEATS = {"mam", "now"}
 
-# beat: (title, subtitle, appear_t) — plain documentary title, bottom left,
-# no leader line and no reticle. This is not the system recognising
-# anything, so it must not be dressed as an AR label.
-# It sits on bC, not on the opening frame: bA is 1.6s (the gate's ceiling
-# for that plate) and a two-line title that appears and is cut away inside
-# 1.35s is a flash, not a title. bC is the wide with the mill ruin -- the
-# establishing frame -- and gives it 1.85s.
+# v6 ran the opening montage without the viewfinder because it was
+# documentary B-roll claiming nothing. v7 has no montage: every beat is
+# the device looking at something, so the UI belongs on all of them.
+UI_OFF = set()
+
+# beat: (title, subtitle, appear_t[, scale]) — the film's own voice, drawn
+# bottom-left with a scrim, no reticle and no leader line.
 TITLES = {
- "bC": ("FALLS PARK", "SIOUX FALLS, SOUTH DAKOTA", 0.15),
- # 1.3x, and it is the only title that gets a size. This is the film's
- # closing line landing on empty rock with about 1.3 seconds to read it,
- # where "FALLS PARK" opens over a wide with nothing competing.
- "e4": ("ONE PLACE", "EVERY TIME", 5.1, 1.3),
+ "open": ("FALLS PARK", "SIOUX FALLS, SOUTH DAKOTA", 0.6),
+ "now":  ("ONE PLACE", "EVERY TIME", 2.2, 1.3),
 }
 
-# THE FRONTAL POSING IS A KNOWN, UNFIXED TELL — and the fix was TRIED and
-# REJECTED, which is worth more to the next session than a TODO.
-#
-# r78, on both family groups: "nearly frontal catalogue-like posing",
-# "doll-like facial style and symmetrical front-facing pose", "reads like
-# generated costume art rather than a reconstruction occupying the shelf".
-# That is accurate. Six people in two lines, all facing the lens.
-#
-# Two generation passes tried to replace them with three-quarter-behind
-# groups doing something (_gen_v4figs.py, _gen_v4figs2.py):
-#   pass 1  came back as five full landscape PAINTINGS -- mountains, pine
-#           forest, a lake -- and the Dakota group in PINK BATHROBES. Cause
-#           was in the prompt: given both a scene and "isolated on a plain
-#           white background", this model builds the scene. Fixed by
-#           deleting every environment word.
-#   pass 2  came back correctly isolated on white (see ../_dak5.png) and is
-#           still WORSE than what it would replace: three same-height adults
-#           in identical plain beige robes, standing in a rigid line, backs
-#           to camera. The crouching child and the pointing child were both
-#           dropped. dak_s17 at least has real mixed ages, distinct
-#           silhouettes and fringed hide garments -- and it is the frame the
-#           operator picked out of the whole film.
-#
-# So the set below is UNCHANGED for the humans. Shipping a worse asset to
-# satisfy a correct critique is not an improvement. Fixing this properly
-# needs a generator that will hold a multi-figure pose brief, or hand-picked
-# reference art, not another seed sweep of the same model.
-# beat: (image, foot_xy, height_px, appear_t, build_seconds, subj_depth, match)
-# Every height stays in the 300-390px band. The operator kept the beat that
-# placed figures at 385 and rejected those at 450 and 520; same generator,
-# same prompts, same compositor, size the only variable.
+# beat: (image, foot_xy, height_px, appear_t, build, subj_depth, match[, out_t])
+# Heights stay in the 300-390 band on the two figure plates. The mammoth
+# is smaller because it stands on the FAR ledge across the water, and at
+# that distance an animal reads by silhouette.
 FIGURES = {
- # the one full reveal, and it is given room: 1.4s build
- "e1": [("ai/era/dak_s17.jpg",  (1150, 745), 385, 0.7, 1.4, 0.30, 0.55)],
- # from here the era is simply present at the cut -- 0.15s in, 0.45s build
- # match 0.30, not 0.55. light_match pulls the cutout's per-channel mean
- # toward the plate patch it lands in, and this group's patch is sunlit
- # quartzite -- about as bright as this footage gets. At 0.55 the black
- # hats went grey, the mother's dark skirt went to haze and the whole group
- # read as a ghost rather than a reconstruction (r78: "bright,
- # low-contrast edges ... make them look cut out"). Measured on a still at
- # 0.55 / 0.30 / 0.15: 0.30 keeps the garment tones and still sits in the
- # plate's colour. The Dakota group stays at 0.55 -- it is earth-toned and
- # has nothing to wash out.
- "e2": [("ai/era/fam3_s3.jpg",  (1180, 700), 360, 0.15, 0.45, 0.30, 0.30)],
- # mam_s17 -> mam41f. TWO reasons, both visible at delivery size on a grey
- # card (../_mam_ab.png). s17 mattes with a translucent grey ghost around
- # the entire body -- the original background surviving inside the alpha,
- # which is r78's "pale rim ... reads composited". And its frontal-ish
- # three-quarter view with the ears spread reads ELEPHANT: no shoulder
- # hump, no domed skull. s41 mattes clean and has the mammoth silhouette
- # (high hump, sloping back, heavy shag). It is MIRRORED (mam41f.jpg)
- # because s41 faces frame right, i.e. away from the wearer, and an animal
- # walking out of frame away from the person looking at it is the wrong
- # picture.
- "e3": [("ai/era/mam41f.jpg",    (1330, 690), 320, 0.30, 0.60, 0.30, 0.45)],
- # THE CLOSER, REBUILT. It used to stand all three eras on the ledge at
- # once -- my idea, and r80 killed it correctly: "resembles an asset
- # browser, theme-park menu, or cast lineup. It breaks the illusion that
- # the product is revealing time." It also put every asset mismatch on
- # screen simultaneously, which is the worst possible frame to end on.
- # Now the three eras arrive and leave ONE AT A TIME, each in the exact
- # position the viewer already saw it in, each held under a second. That
- # is time being scrubbed rather than a cast being assembled. Then they
- # are all gone and the film ends on the empty present-day rock, which is
- # the honest last image: the place, as it is, now.
- # The 8th element is when the figure LEAVES (None = stays to the end).
- "e4": [("ai/era/dak_s17.jpg",  (1150, 745), 385, 1.8, 0.30, 0.30, 0.55, 2.6),
-        ("ai/era/fam3_s3.jpg",  (1180, 700), 360, 2.9, 0.30, 0.30, 0.30, 3.7),
-        ("ai/era/mam41f.jpg",   (1330, 690), 320, 4.0, 0.30, 0.30, 0.45, 4.8)],
+ "dak": [("ai/era/dak_s17.jpg", (1150, 745), 385, 1.2, 1.4, 0.30, 0.55)],
+ "mam": [("ai/era/mam41f.jpg",  (1330, 690), 320, 2.2, 1.0, 0.30, 0.45)],
 }
 
-# beat: (anchor_xy, title, subtitle, appear_t, offset_xy)
-# The leader anchors at each group's LEFT EDGE. Anchored centre it dropped
-# straight down through the middle figure's face.
 LABELS = {
- "open": ((1240, 800), "SIOUX QUARTZITE", "SURFACE",        1.4, (-40, -300)),
- "e1":   ((1032, 752), "BEFORE THE MILL", "VISUALISATION",  2.0, (-40, -410)),
- "e2":   ((1072, 707), "THE SETTLERS",    "VISUALISATION",  1.0, (-40, -390)),
- "e3":   ((1222, 700), "THE LAST ICE",    "VISUALISATION",  1.4, (-40, -380)),
- # e4 HAS NO AR LABEL ANY MORE. "ONE PLACE / EVERY TIME" is the film
- # talking, not the system recognising something, and with the eras gone
- # by 4.8s an AR leader line would be pointing at bare rock. It moves to
- # TITLES, in the same documentary voice as the location title.
+ "dak": ((1032, 752), "BEFORE THE MILL", "VISUALISATION", 2.9, (-40, -410)),
+ "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
 }
 
-# The ice ramps IN over e3 and back OUT over e4, so the return to now is an
-# event you watch rather than something that happened on a cut.
-# beat -> (direction, ramp_start, ramp_end) in seconds into that beat
+# beat -> (in_start, in_end, out_start, out_end); out may be None.
+# The ice arrives on `ice`, is simply PRESENT on `mam` (it did not thaw
+# between two shots of the same era), and leaves on `now` so the film
+# returns to the present on screen rather than on a cut.
 ICE = {
- "e3": ("in",  0.1, 1.4),
- "e4": ("out", 0.0, 1.6),
+ "ice": (0.3, 2.3, None, None),
+ "mam": (-1.0, 0.0, None, None),
+ "now": (-1.0, 0.0, 0.2, 1.8),
 }
 
-# The score reads its shape from HERE, by role, so renaming or re-ordering
-# beats cannot silently leave the music playing the old edit. v3's score
-# hardcoded "b1".."b4"; under v4's names that would have raised, which is
-# the correct failure -- but only because these are looked up by name.
 SCORE = {
- "start":  "bA",     # montage: near silence, the place only
- "arrive": "open",   # the device comes up
- "lift":   "e1",     # the one full reveal
- "hold":   "e2",
- "cold":   "e3",     # low voices leave
- "warm":   "e4",     # they come back with the colour
+ "start":  "open",
+ "arrive": "dak",
+ "lift":   "dak",
+ "hold":   "dak",
+ "cold":   "ice",
+ "warm":   "now",
 }
-
-
 def figures(beat):
     """FIGURES rows, normalised to 8 fields.
 
     (image, foot_xy, height_px, appear_t, build, subj_depth, match, out_t)
-
     out_t is when the figure leaves; None means it stays to the end of the
-    beat. Written as an OPTIONAL eighth field so every existing 7-field row
-    keeps working untouched -- three separate modules unpack these tuples
-    and widening them all at once is how you get a positional-argument bug
-    that renders fine and means something different.
+    beat. Optional eighth field so every 7-field row keeps working.
     """
     return [f if len(f) == 8 else f + (None,) for f in FIGURES.get(beat, [])]
 
@@ -216,3 +128,5 @@ for _d, _lbl in ((FIGURES, "FIGURES"), (LABELS, "LABELS"), (ICE, "ICE"),
         assert _k in _names, f"{_lbl} references unknown beat {_k!r}"
 for _k in SCORE.values():
     assert _k in _names, f"SCORE references unknown beat {_k!r}"
+for _b, _env in ICE.items():
+    assert len(_env) == 4, f"ICE[{_b!r}] must be (in0, in1, out0, out1)"

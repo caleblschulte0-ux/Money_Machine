@@ -32,8 +32,8 @@ import shotqc
 import shotnorm
 from ai import place as PL
 import depthtools as DT
-from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, figures,
-                      W, H, FPS, TOTAL)
+from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
+                      figures, W, H, FPS, TOTAL)
 
 RAW = "../raw"
 OUT = "out1"
@@ -330,7 +330,10 @@ def frame_cue(d, t, dur):
         d.rectangle([x0, y0, x1, y1], fill=INK + (c,))
 
 
-def compose(beat, dur, frames):
+DISSOLVE = 0.5          # seconds of cross-dissolve into each beat
+
+
+def compose(beat, dur, frames, prev_last=None):
     gray = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
     figs = figures(beat)
     lab = LABELS.get(beat)
@@ -368,17 +371,33 @@ def compose(beat, dur, frames):
         base = f.astype(np.float32)
 
         if icespec:
-            direction, a0, a1 = icespec
-            r = AR.ease(min(1.0, max(0.0, (t - a0) / (a1 - a0))))
-            k_ice = r if direction == "in" else (1.0 - r)
+            # FULL ENVELOPE, not a direction. v6's ICE was (direction, a0,
+            # a1) -- a beat could ramp in or out but not both, so an ice
+            # beat necessarily ENDED frozen and the cut off it swapped a
+            # white valley for a sunlit one in a single frame. Measured on
+            # v6, boundary frames like that changed 80% of the picture at
+            # once and are what the operator felt as strobing. The
+            # envelope lets the thaw happen on screen, inside the beat.
+            i0, i1, o0, o1 = icespec
+            k_ice = AR.ease(min(1.0, max(0.0, (t - i0) / max(1e-6, i1 - i0))))
+            if o0 is not None:
+                k_ice *= 1.0 - AR.ease(min(1.0, max(0.0, (t - o0) / max(1e-6, o1 - o0))))
             if k_ice > 0.002:
                 dpi = ice_dep[i]
                 gi = gray[i].astype(np.float32) / 255.0
+                # NO WEARER, NO WEARER MASK. The mask is a depth threshold
+                # and it always returns SOMETHING -- on the wide valley
+                # plate, which has nobody within thirty metres, it claims
+                # 22% of the frame (the foreground rock) and would hold a
+                # raw summer-coloured slab out of an ice age. Whether a
+                # plate contains a near person is a fact about the plate,
+                # so the spec states it.
+                has_wearer = beat in WEARER_BEATS
                 base = ice_grade(base.astype(np.uint8), k_ice, depth=dpi,
-                                 near=wearer_mask(dpi, gi))
+                                 near=wearer_mask(dpi, gi) if has_wearer else None)
                 base = snowfall(base, t, k_ice,
-                                near=wearer_mask(dpi, gi, lo=0.25, hi=0.40,
-                                                 grow=6))
+                                near=(wearer_mask(dpi, gi, lo=0.25, hi=0.40,
+                                                  grow=6) if has_wearer else None))
 
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
@@ -472,6 +491,24 @@ def compose(beat, dur, frames):
             if i == len(frames) - 1:
                 assert rel == 0.0 and np.array_equal(out.astype(np.uint8), f), (
                     f"{beat}: final frame still carries overlay (rel={rel:.4f})")
+
+        # CROSS-DISSOLVE INTO THIS BEAT. Operator on v6: "It's not the
+        # flashing. It's the fast cuts." Cutting less often was half the
+        # fix; the other half is that the remaining cuts should not be
+        # hard. Measured on v6, a beat boundary changed 71-82% of the
+        # picture in a single frame -- spread over 15 frames that is a
+        # transition instead of a jolt.
+        # It dissolves from the previous beat's LAST COMPOSED FRAME held
+        # still, not from live footage. On these plates that is very
+        # nearly the same picture: every plate in the cut drifts 0.0-0.6%
+        # over its whole duration, so half a second of it is motionless to
+        # the eye. Holding one frame keeps every beat's own length, and
+        # therefore every label, tick and score boundary, exactly where
+        # the spec says it is -- an overlap would have silently shifted
+        # the entire timeline under them.
+        if prev_last is not None and i < int(DISSOLVE * FPS):
+            a = AR.ease((i + 1) / (DISSOLVE * FPS))
+            out = out * a + prev_last.astype(np.float32) * (1.0 - a)
         yield out.astype(np.uint8)
 
 
@@ -481,10 +518,13 @@ def encode(gen, dst, crf=13):
          "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-an", "-c:v", "libx264",
          "-preset", "slow", "-crf", str(crf), "-pix_fmt", "yuv420p", dst],
         stdin=subprocess.PIPE)
+    last = None
     for fr in gen:
         enc.stdin.write(fr.tobytes())
+        last = fr
     enc.stdin.close()
     enc.wait()
+    return last
 
 
 def main(only=None):
@@ -536,12 +576,17 @@ def main(only=None):
     print(f"  normalization measured across {len(rows)} plates "
           f"(black {tgt['black']:.4f} white {tgt['white']:.4f})", flush=True)
 
+    # Carried between beats so each one can dissolve out of the last frame
+    # of the one before it. Rendering a subset (`render_one.py ice`) leaves
+    # it None for the first beat rendered, which is correct: that beat has
+    # no predecessor in THIS run to dissolve from.
+    prev_last = None
     for (b, c, tin, dur), p in zip(rows, params):
         if only and b not in only:
             continue
         fr = [(np.clip(shotnorm.apply(f.astype(np.float32) / 255.0, p), 0, 1) * 255
                ).astype(np.uint8) for f in frames_of(c, tin, dur)]
-        encode(compose(b, dur, fr), f"{OUT}/{b}_t.mp4")
+        prev_last = encode(compose(b, dur, fr, prev_last), f"{OUT}/{b}_t.mp4")
         del fr
         print(f"  {b} composed", flush=True)
 
