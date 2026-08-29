@@ -312,7 +312,13 @@ export function bronx(text: string, opts: VoiceOptions = {}): string {
   // The closer adds a full stop to a line that had none, so the punctuation
   // cannot be part of what we hash.
   const bodySeed = hash(body.replace(/[.!?\u2026\s]+$/, ''));
-  const garnish = bodySeed % 6;
+  /**
+   * %8, up from %6, after the operator called the tics out by name: two lines
+   * in a row ending "I'm just sayin'." reads as a glitch, not a character. At
+   * %6 a quarter of all lines carried a garnish; at %8 it is one in eight
+   * opening and one in eight closing — rare enough to land when it happens.
+   */
+  const garnish = bodySeed % 8;
 
   // His thoughts are written lowercase on purpose (they are not spoken, they
   // are overheard). A capitalised "Ay." bolted to the front breaks that.

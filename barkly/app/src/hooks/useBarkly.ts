@@ -208,6 +208,8 @@ export interface BarklyController {
   /** All of these route through the one speaking lifecycle; they no-op while busy. */
   /** Optional item id means use a purchased pantry treat instead of the bowl. */
   feed(itemId?: string): Promise<void>;
+  /** What is in the bowl on stage, while a meal is happening. */
+  serving: string | null;
   play(): Promise<PlayRoutine>;
   sleepToggle(): Promise<void>;
   pet(): void;
@@ -373,6 +375,22 @@ export function useBarkly(): BarklyController {
   const setVoiceShape = useCallback((next: Partial<VoiceShape>) => {
     setVoiceShapeState((prev) => ({ ...prev, ...next }));
   }, []);
+
+  /**
+   * Which food is in the bowl on stage right now. The bowl draws the food you
+   * actually chose (see StageProps.FoodBowl); without this it drew the same
+   * kibble for a steak as for dinner, which is the kind of detail a child
+   * notices FIRST.
+   */
+  const [serving, setServing] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (serving && snapshot.state !== 'eating' && snapshot.state !== 'speaking') {
+      // A beat after the meal, so the crumbs get seen before the bowl goes.
+      const t = setTimeout(() => setServing(null), 1200);
+      return () => clearTimeout(t);
+    }
+  }, [serving, snapshot.state]);
 
   const [devMode, setDevModeState] = useState(process.env.EXPO_PUBLIC_BARKLY_DEV === '1');
   const devRef = useRef(devMode);
@@ -1319,6 +1337,7 @@ export function useBarkly(): BarklyController {
 
   const feed = useCallback(async (itemId?: string) => {
     if (!claimTurn()) return;
+    setServing(itemId ?? 'dinner');
     const full = snapshotRef.current.stats.hunger < 12;
 
     if (itemId) {
@@ -1580,6 +1599,7 @@ export function useBarkly(): BarklyController {
     cancelTalk,
     submitText,
     feed,
+    serving,
     play,
     sleepToggle,
     pet: () => dispatch({ type: 'PET' }),

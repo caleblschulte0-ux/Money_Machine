@@ -104,7 +104,6 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
             ))
           )}
 
-          <Text style={styles.footer}>Special food is a possession you actually use. Barkly will remember the good stuff.</Text>
         </Pressable>
       </Pressable>
     </Modal>
@@ -149,5 +148,4 @@ const styles = StyleSheet.create({
     backgroundColor: color.ink,
   },
   emptyCtaText: { color: color.paper, fontSize: 13, fontWeight: '800' },
-  footer: { marginTop: 15, fontSize: 12, lineHeight: 17, textAlign: 'center', color: color.inkSoft },
 });

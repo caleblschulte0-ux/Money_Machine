@@ -673,6 +673,7 @@ export default function BarklyRoom() {
    */
   const look = useAttention({
     wants,
+    eating: snapshot.state === 'eating',
     npcSpeaking: npcBubble ? npcBubble.id : null,
     speaking: snapshot.state === 'speaking',
     asleep,
@@ -1089,7 +1090,7 @@ export default function BarklyRoom() {
           )}
           {/* A bought toy is IN THE ROOM, not a line on a receipt. It sits
               off to the side when idle and vanishes while it is in play. */}
-          {snapshot.state === 'eating' && <FoodBowl />}
+          {barkly.serving !== null && <FoodBowl key={barkly.serving} food={barkly.serving} />}
           {/* Same rule: no ball unless a ball is what he is playing with. */}
           {snapshot.state === 'playing' && !fetching && routine === 'ball' && <Ball />}
           <HeartBurst burst={heartBurst} />

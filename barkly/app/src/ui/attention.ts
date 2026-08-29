@@ -59,6 +59,8 @@ export function lookFor(a: Attending): Look {
 export interface AttentionInput {
   /** Which of his things he would like, if any. */
   wants: 'feed' | 'play' | 'sleep' | null;
+  /** A meal is on stage. His eyes belong in the bowl, not on you. */
+  eating?: boolean;
   /** Someone said something and he should be looking at them. */
   npcSpeaking: NpcId | null;
   /** He is mid-sentence. Talking to you means looking at you. */
@@ -76,6 +78,8 @@ export interface AttentionInput {
  */
 export function attentionFor(i: AttentionInput): Attending {
   if (i.asleep) return { at: 'bed' };
+  // Above even being spoken to: a dog with food does not do eye contact.
+  if (i.eating) return { at: 'bowl' };
   if (i.npcSpeaking) return { at: 'npc', id: i.npcSpeaking };
   if (i.speaking) return { at: 'you' };
   if (i.wants === 'feed') return { at: 'bowl' };
