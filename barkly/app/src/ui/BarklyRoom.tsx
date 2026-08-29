@@ -72,6 +72,7 @@ import {
   spriteScale as scaleForScreen,
 } from './layout';
 import { NPCS, NpcId } from '../world/npcs';
+import { bondFor } from '../barkly/character';
 
 const Renderer = process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyView : BarklyPhotoView;
 
@@ -94,10 +95,21 @@ const NPC_ART: Record<NpcId, ReturnType<typeof require>> = {
  * second cue, so it scales with the sprite — moving the horizon must not
  * leave a dog hovering.
  */
+/**
+ * Where each dog stands, and how big.
+ *
+ * The sizes were 82-88 against Barkly's ~244 and everyone read them as
+ * stickers pinned to the screen edges. Bigger alone would have broken the
+ * perspective — a distant dog cannot grow — so they moved NEARER as they
+ * grew: larger AND lower on screen together, which is what walking a few
+ * steps toward the camera actually looks like. They now overlap Barkly's
+ * silhouette slightly at the edges, which is depth, not a collision: they
+ * draw behind him.
+ */
 const NPC_SPOTS: Partial<Record<NpcId, { left?: number; right?: number; bottom: number; size: number }>> = {
-  biscuit: { left: 4, bottom: 136, size: 82 },
-  duke: { right: 0, bottom: 152, size: 88 },
-  pepper: { right: 6, bottom: 140, size: 84 },
+  biscuit: { left: -6, bottom: 116, size: 112 },
+  duke: { right: -10, bottom: 128, size: 120 },
+  pepper: { right: -4, bottom: 120, size: 114 },
 };
 
 const STATE_LABEL: Partial<Record<BarklyState, string>> = {
@@ -259,14 +271,22 @@ function NpcDog({
   onPress,
   location,
   scale,
+  talking,
+  bond,
 }: {
   id: NpcId;
   onPress: () => void;
   location: LocationId;
   /** Same scale Barkly gets, so the three of them stay in proportion. */
   scale: number;
+  /** This dog currently has the floor — their bubble is up. */
+  talking: boolean;
+  /** The live relationship, so the HISTORY is visible in how they stand. */
+  bond?: { kind: 'friend' | 'rival'; encounters: number };
 }) {
   const spot = NPC_SPOTS[id]!;
+  const fromLeft = spot.left !== undefined;
+
   const breathe = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -278,6 +298,57 @@ function NpcDog({
     loop.start();
     return () => loop.stop();
   }, [breathe]);
+
+  /**
+   * The RELATIONSHIP, standing there. The Pack Book says Biscuit is his best
+   * friend and Duke is his nemesis, and until now both stood in exactly the
+   * same polite spot — the history was documentation, not behaviour. Now a
+   * friend drifts toward him as the bond deepens (capped well short of his
+   * face), and a rival leans IN with a squarer stance the worse it gets.
+   * Loading Biscuit Best Friend and Duke Nemesis should look different from
+   * across the room, before anyone taps anything.
+   */
+  const closeness = Math.min((bond?.encounters ?? 0) / 30, 1);
+  const towardCentre = fromLeft ? 1 : -1;
+  const standIn = bond?.kind === 'friend' ? 26 * closeness : 10 * closeness;
+  const squareUp = bond?.kind === 'rival' ? 4 * closeness : 0;
+
+  /**
+   * Taking the floor is a STEP FORWARD, not a bubble appearing over a distant
+   * sticker. When their line is up they come toward the conversation — in and
+   * slightly down (nearer the camera) and a touch larger — and step back when
+   * it ends. Barkly's attention system already turns him to face them, so the
+   * two of them now visibly square up for the exchange.
+   */
+  const floor = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(floor, { toValue: talking ? 1 : 0, tension: 40, friction: 11, useNativeDriver: true }).start();
+  }, [talking, floor]);
+
+  // A dog that never shifts its weight is a lawn ornament. Occasionally, on
+  // its own clock (deliberately unsynchronised with the other dogs), a small
+  // settle: a dip and a lean, then back.
+  const fidget = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (!alive) return;
+        Animated.sequence([
+          Animated.timing(fidget, { toValue: 1, duration: 240, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(fidget, { toValue: 0, duration: 460, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        ]).start();
+        schedule();
+      }, 5200 + Math.random() * 6800);
+    };
+    schedule();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [fidget]);
+
   const breathScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
   return (
     /*
@@ -290,7 +361,20 @@ function NpcDog({
      * The name is out of the flow now, hanging below the line, so the anchor
      * means what its name says.
      */
-    <View style={[styles.npc, { left: spot.left, right: spot.right, bottom: spot.bottom * scale }]}>
+    <Animated.View
+      style={[
+        styles.npc,
+        { left: spot.left, right: spot.right, bottom: spot.bottom * scale },
+        {
+          transform: [
+            { translateX: (standIn + squareUp) * towardCentre * scale },
+            { translateX: floor.interpolate({ inputRange: [0, 1], outputRange: [0, 30 * towardCentre * scale] }) },
+            { translateY: floor.interpolate({ inputRange: [0, 1], outputRange: [0, 14 * scale] }) },
+            { scale: floor.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
+          ],
+        },
+      ]}
+    >
       <GroundShadow location={location} width={spot.size * 0.92 * scale} style={{ bottom: 0 }} />
       <Pressable
         onPress={onPress}
@@ -299,13 +383,21 @@ function NpcDog({
         accessibilityLabel={`Talk to ${NPCS[id].name}`}
         accessibilityHint={NPCS[id].relationship === 'rival' ? 'Barkly has opinions about this one.' : 'One of the good ones.'}
       >
-        <Animated.View style={{ transform: [{ scale: breathScale }] }}>
+        <Animated.View
+          style={{
+            transform: [
+              { scale: breathScale },
+              { translateY: fidget.interpolate({ inputRange: [0, 1], outputRange: [0, 2.5] }) },
+              { rotate: fidget.interpolate({ inputRange: [0, 1], outputRange: ['0deg', fromLeft ? '-1.6deg' : '1.6deg'] }) },
+            ],
+          }}
+        >
           <Image source={NPC_ART[id]} style={{ width: spot.size * scale, height: spot.size * 1.25 * scale }} resizeMode="contain" />
         </Animated.View>
       </Pressable>
       {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
       <Text style={[styles.npcName, { bottom: -19 * scale }]}>{NPCS[id].name.toUpperCase()}</Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -910,7 +1002,15 @@ export default function BarklyRoom() {
           {!asleep && <GroundShadow location={location} width={196 * spriteScale} style={{ bottom: 20 }} />}
           {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
           {npcsHere.map((id) => (
-            <NpcDog key={id} id={id} location={location} scale={spriteScale} onPress={() => barkly.npcTalk(id)} />
+            <NpcDog
+              key={id}
+              id={id}
+              location={location}
+              scale={spriteScale}
+              talking={npcBubble?.id === id}
+              bond={bondFor(barkly.character, NPCS[id].name)}
+              onPress={() => barkly.npcTalk(id)}
+            />
           ))}
           <Animated.View
             style={{

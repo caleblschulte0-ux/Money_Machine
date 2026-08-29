@@ -205,7 +205,14 @@ function save(now: number, p: {
 }): Save {
   return {
     [SNAPSHOT_KEY]: JSON.stringify(p.snapshot ?? snapshot(now)),
-    [LOCATION_KEY]: JSON.stringify(p.location ?? 'home'),
+    /**
+     * BARE, like onboarding. The app writes `gate.write(LOCATION_KEY, loc)` —
+     * no JSON — and hydration checks `savedLoc in LOCATIONS`, so the quoted
+     * form '"park"' fails the membership test and every preset silently opened
+     * at home. Duke Nemesis is staged at the park; a nemesis you have to walk
+     * to is a nemesis the tester never meets.
+     */
+    [LOCATION_KEY]: p.location ?? 'home',
     [CHARACTER_KEY]: JSON.stringify(p.character ?? freshCharacter()),
     /**
      * A BARE STRING, which is what the app writes and reads here. Every preset

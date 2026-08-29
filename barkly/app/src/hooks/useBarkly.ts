@@ -177,6 +177,13 @@ export interface BarklyController {
 
   /** The legible answer to "what kind of Barkly did I create?" */
   relationship: RelationshipProfile;
+  /**
+   * The live character record, read-only. The screen needs it so the HISTORY
+   * can be visible in how the world stands — a best-friend Biscuit posted at
+   * the same polite distance as a stranger was the Pack Book describing a
+   * relationship the room refused to show.
+   */
+  character: CharacterState;
   /** Three personalized things Barkly wants to do this session/day. */
   adventure: AdventureState | null;
 
@@ -1489,6 +1496,7 @@ export function useBarkly(): BarklyController {
   return {
     snapshot,
     actions,
+    character,
     lastExchange,
     partialTranscript,
     error,

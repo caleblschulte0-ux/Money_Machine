@@ -16,7 +16,8 @@
  */
 
 import { PRESETS, presetById } from '../src/dev/presets';
-import { ALL_SAVE_KEYS, DEVICE_KEYS, MEMORY_KEY, ONBOARDING_DONE, ONBOARDING_KEY, STASH_KEY, MUTE_KEY } from '../src/storage/keys';
+import { ALL_SAVE_KEYS, DEVICE_KEYS, LOCATION_KEY, MEMORY_KEY, ONBOARDING_DONE, ONBOARDING_KEY, STASH_KEY, MUTE_KEY } from '../src/storage/keys';
+import { LOCATIONS } from '../src/world/locations';
 import { activeSlot, hasBackup, loadPreset, readSave, restoreBackup, writeSave } from '../src/dev/saveSlots';
 import { KeyValueStore, DEFAULT_PROFILE } from '../src/storage/types';
 import { BarklyMemory } from '../src/barkly/memory';
@@ -95,6 +96,13 @@ describe('every preset is a real, complete save', () => {
         // to catch.
         if (key === ONBOARDING_KEY) {
           expect(raw).toBe(ONBOARDING_DONE);
+          continue;
+        }
+        // Location is the OTHER bare string: hydration checks `raw in
+        // LOCATIONS`, so the quoted form fails membership and every preset
+        // silently opened at home. Assert the bare form is a real place.
+        if (key === LOCATION_KEY) {
+          expect(Object.keys(LOCATIONS)).toContain(raw);
           continue;
         }
         expect(() => JSON.parse(raw)).not.toThrow();
