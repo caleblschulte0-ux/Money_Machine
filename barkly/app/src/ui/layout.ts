@@ -34,15 +34,31 @@
  */
 
 /**
- * The inset above the status row — notch, status bar, breathing room.
+ * The FLOOR of the inset above the status row, not the inset itself.
  *
- * It lives here rather than as a `paddingTop` literal in the screen because
- * the notice layer is positioned ABSOLUTELY, and absolute `top` in React
- * Native measures from the border box, ignoring that padding. When the two
- * numbers lived apart, the notice was placed 54px too high and printed
- * straight through the places row at every screen size.
+ * It was the inset itself — a flat 54, which is a guess at one particular
+ * notch. The screen now asks the device (useSafeAreaInsets) and takes
+ * whichever is larger: on the web the hardware reports zero and this floor
+ * keeps the breathing room; on a Dynamic Island phone the hardware reports
+ * ~59 and wins. Nothing is built to a specific device either way.
+ *
+ * Still here rather than a `paddingTop` literal because the notice layer is
+ * positioned ABSOLUTELY, and absolute `top` measures from the border box,
+ * ignoring padding — when the two numbers lived apart the notice printed
+ * through the places row.
  */
 export const CONTENT_TOP = 54;
+
+/** Same idea, bottom edge: the home-indicator floor under the controls. */
+export const CONTENT_BOTTOM = 26;
+
+/** The live inset, floored. The single place the two numbers meet. */
+export function contentTop(insetTop: number): number {
+  return Math.max(CONTENT_TOP, insetTop + 12);
+}
+export function contentBottom(insetBottom: number): number {
+  return Math.max(CONTENT_BOTTOM, insetBottom + 10);
+}
 
 /**
  * The two chrome rows, sized so every control in them is a 44px TAP TARGET.
@@ -65,7 +81,10 @@ export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 12;
  * ONE notice at a time, floating over the empty upper sky. Fixed height so
  * the stage below never reflows when a reward appears.
  */
-export const NOTICE_TOP = CONTENT_TOP + CHROME_BOTTOM + 10;
+/** Derived from the LIVE top inset now — see noticeTop(). */
+export function noticeTop(top: number): number {
+  return top + CHROME_BOTTOM + 10;
+}
 /**
  * A slim strip, not a card.
  *
@@ -130,9 +149,22 @@ export const NOTICE_BAND = 10 + NOTICE_MAX_HEIGHT;
  * because on a short screen something has to give and it is better that he is
  * small than that a notice lands on his face.
  */
-export function spriteScale(screenHeight: number): number {
+/** His drawn body is ~244 wide at scale 1 (the 300 box has air either side). */
+const SPRITE_BODY_WIDTH = 244;
+
+export function spriteScale(screenHeight: number, screenWidth = 390): number {
   const room = stageHeight(screenHeight) - SPRITE_FOOT - NOTICE_BAND - 8;
-  return Math.max(0.72, Math.min(1.3, room / SPRITE_HEIGHT));
+  /**
+   * BOTH axes, because height does not imply width. The cap was height-only,
+   * and on a 430x932 phone the height said 1.3 while the width had only grown
+   * 10% — so the dog swallowed ~74% of the screen, the other dogs vanished
+   * behind him, and the biggest phone got the most cramped composition. He
+   * holds a constant fraction of the WIDTH (about two-thirds, which is what
+   * the 390 layout always was), and the height decides how much of that the
+   * stage can afford.
+   */
+  const byWidth = (screenWidth * 0.67) / SPRITE_BODY_WIDTH;
+  return Math.max(0.72, Math.min(1.3, room / SPRITE_HEIGHT, byWidth));
 }
 
 /**

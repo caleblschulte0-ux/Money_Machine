@@ -62,8 +62,9 @@ import {
   STATUS_HEIGHT,
   NOTICE_MAX_HEIGHT,
   NOTICE_PRIORITY,
-  CONTENT_TOP,
-  NOTICE_TOP,
+  contentBottom,
+  contentTop,
+  noticeTop,
   NoticeKind,
   SPEECH_MAX_LINES,
   SPRITE_FOOT,
@@ -73,6 +74,7 @@ import {
 } from './layout';
 import { NPCS, NpcId } from '../world/npcs';
 import { bondFor } from '../barkly/character';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Renderer = process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyView : BarklyPhotoView;
 
@@ -505,12 +507,21 @@ export default function BarklyRoom() {
   const asleep = snapshot.state === 'sleepy';
   const { height: screenH, width: screenW } = useWindowDimensions();
   /**
+   * The real hardware insets, floored by the layout constants. On the web
+   * these report zero and the floors carry it; on a notched phone the
+   * hardware wins. Everything below that used to build on the CONTENT_TOP
+   * constant builds on this instead, so nothing assumes a particular device.
+   */
+  const insets = useSafeAreaInsets();
+  const topPad = contentTop(insets.top);
+  const bottomPad = contentBottom(insets.bottom);
+  /**
    * How big he is drawn. The stage is a fixed band between the chrome and the
    * dialogue panel, and he has to live inside it — cropping his paws to make
    * room for a text panel is the kind of thing that makes an app feel like a
    * web page. Capped at 1 so a tall phone gives him air, not a poster.
    */
-  const spriteScale = scaleForScreen(screenH);
+  const spriteScale = scaleForScreen(screenH, screenW);
   /** How tall the world is: everything above the dialogue panel. */
   const sceneBand = screenH - DIALOGUE_HEIGHT - CONTROLS_HEIGHT + 8;
   /**
@@ -518,7 +529,7 @@ export default function BarklyRoom() {
    * Interior scenes are built around this line rather than around percentages
    * of a rectangle — see Scenes.HomeScene.
    */
-  const groundY = CONTENT_TOP + CHROME_BOTTOM + stageHeight(screenH) - SPRITE_FOOT;
+  const groundY = topPad + CHROME_BOTTOM + stageHeight(screenH) - SPRITE_FOOT;
   const stateLabel = STATE_LABEL[snapshot.state];
 
   /**
@@ -795,7 +806,7 @@ export default function BarklyRoom() {
       <Animated.View
         style={[styles.sceneLayer, { opacity: sceneFade }]}
       >
-        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={CONTENT_TOP + CHROME_BOTTOM} />}
+        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + CHROME_BOTTOM} />}
         {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
         {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
         {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
@@ -888,7 +899,7 @@ export default function BarklyRoom() {
           below it can be positioned against a constant. See ui/layout.ts.
         */}
         {notice && (
-          <View style={styles.noticeLayer} pointerEvents="box-none">
+          <View style={[styles.noticeLayer, { top: noticeTop(topPad) }]} pointerEvents="box-none">
             {notice === 'error' && (
               <View style={styles.errorNotice} pointerEvents="none" accessibilityLiveRegion="polite">
                 <Text style={styles.errorText} numberOfLines={3}>
@@ -1287,7 +1298,7 @@ const styles = StyleSheet.create({
     // on, so the ground dissolves rather than stopping.
     height: DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 56,
   },
-  content: { flex: 1, paddingTop: CONTENT_TOP, paddingBottom: 26, paddingHorizontal: 22 },
+  content: { flex: 1, paddingHorizontal: 22 },
 
   /* -------- chrome: one status row, one places row -------- */
   header: {
@@ -1361,8 +1372,8 @@ const styles = StyleSheet.create({
     left: 22,
     right: 22,
     // A strip of its own between the chrome and his speech. Fixed height, so
-    // the speech band below can be positioned against a constant.
-    top: NOTICE_TOP,
+    // the speech band below can be positioned against a constant. `top` is
+    // set inline from the live inset.
     height: NOTICE_MAX_HEIGHT,
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -1392,7 +1403,14 @@ const styles = StyleSheet.create({
   degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
 
   tabs: { flex: 1, flexDirection: 'row', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 2, ...elevation.card },
-  tab: { flex: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  /**
+   * Grow from CONTENT width, not equal shares. `flex: 1` split the row into
+   * four identical slots, so "home" banked spare width while "beach" (the
+   * longest label, plus its padlock) truncated to "be…" on a 360-wide phone.
+   * An auto basis gives each tab what its word needs first and shares the
+   * remainder, which is the fluid version of the same row.
+   */
+  tab: { flexGrow: 1, flexShrink: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   tabActive: { backgroundColor: color.ink },
   tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 },
   tabTextActive: { color: color.paper },

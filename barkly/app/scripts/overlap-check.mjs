@@ -59,7 +59,14 @@ if (!existsSync(html)) {
   console.error(`no such file: ${html}\nBuild it first: node scripts/build-artifact.mjs`);
   process.exit(2);
 }
-const sizes = arg('--sizes', '360x780,390x844,430x932')
+/**
+ * The spread, not a device list. 360x640 is the short-phone floor still in
+ * circulation, 375x667 is the iPhone SE, 390x844 the mid-range, 412x915 a
+ * wide tall Android, 430x932 the biggest current phone. The point of testing
+ * the ENDS is that anything fluid between them holds everywhere in between;
+ * anything pinned to one device breaks at one of the ends and gets caught.
+ */
+const sizes = arg('--sizes', '360x640,375x667,390x844,412x915,430x932')
   .split(',')
   .map((s) => {
     const [w, h] = s.split('x').map(Number);
