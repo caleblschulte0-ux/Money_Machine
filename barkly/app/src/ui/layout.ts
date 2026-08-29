@@ -102,6 +102,15 @@ export const NOTICE_MAX_HEIGHT = 46;
  */
 export const DIALOGUE_HEIGHT = 100;
 
+/**
+ * Air above AND below the card. The bottom third read as clogged because the
+ * card's top edge touched his paws and the bowl, and its bottom edge nearly
+ * touched the input pill — three dense things stacked flush. The gap is in
+ * the LAYOUT MATH, not just a margin, so the stage genuinely gives the space
+ * up instead of the card overlapping into it.
+ */
+export const DIALOGUE_GAP = 14;
+
 /** Text field + the three action buttons + the padding under them. */
 export const CONTROLS_HEIGHT = 122;
 
@@ -114,7 +123,7 @@ export const SPEECH_MAX_LINES = 3;
  * dog, not a bigger gap.
  */
 export function stageHeight(screenHeight: number): number {
-  return Math.max(220, screenHeight - CHROME_BOTTOM - DIALOGUE_HEIGHT - CONTROLS_HEIGHT - 24);
+  return Math.max(220, screenHeight - CHROME_BOTTOM - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT - 24);
 }
 
 /**

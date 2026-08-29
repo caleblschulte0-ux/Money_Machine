@@ -24,7 +24,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { color, elevation, radius, space, type } from './theme';
-import { DIALOGUE_HEIGHT, SPEECH_MAX_LINES } from './layout';
+import { DIALOGUE_GAP, DIALOGUE_HEIGHT, SPEECH_MAX_LINES } from './layout';
 
 export type Speaker = { name: string; kind: 'barkly' | 'npc' } | null;
 
@@ -70,6 +70,14 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
          never intersects the stage — the "speech never covers a face" rule. */
       testID="dialogue-panel"
     >
+      {/*
+        The TAIL is what makes this a speech bubble instead of an HTML card:
+        a card with words in it belongs to the page, a bubble with a tail
+        belongs to HIM. A rotated square poking out of the top edge, placed
+        under the dog, only while someone is actually speaking — a thought or
+        the resting hint gets no tail, because nobody is saying those aloud.
+      */}
+      {shown && speaker ? <View style={styles.tail} pointerEvents="none" /> : null}
       {shown ? (
         <Animated.View style={{ opacity: enter, transform: [{ translateY }] }}>
           {youSaid ? (
@@ -112,12 +120,25 @@ const styles = StyleSheet.create({
   },
   panel: {
     height: DIALOGUE_HEIGHT,
+    // The air either side of the card — see layout.DIALOGUE_GAP. In the
+    // math up there too, so the stage really cedes this space.
+    marginVertical: DIALOGUE_GAP,
     justifyContent: 'center',
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
     borderRadius: radius.lg,
     backgroundColor: color.card,
     ...elevation.card,
+  },
+  tail: {
+    position: 'absolute',
+    top: -7,
+    left: '46%',
+    width: 18,
+    height: 18,
+    borderRadius: radius.xs / 2,
+    backgroundColor: color.card,
+    transform: [{ rotate: '45deg' }],
   },
   who: {
     ...type.micro,

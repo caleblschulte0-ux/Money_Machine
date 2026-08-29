@@ -57,6 +57,7 @@ import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import {
   CHROME_BOTTOM,
   CONTROLS_HEIGHT,
+  DIALOGUE_GAP,
   DIALOGUE_HEIGHT,
   PLACES_HEIGHT,
   STATUS_HEIGHT,
@@ -523,7 +524,7 @@ export default function BarklyRoom() {
    */
   const spriteScale = scaleForScreen(screenH, screenW);
   /** How tall the world is: everything above the dialogue panel. */
-  const sceneBand = screenH - DIALOGUE_HEIGHT - CONTROLS_HEIGHT + 8;
+  const sceneBand = screenH - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT + 8;
   /**
    * Where his feet meet the ground, measured from the top of the scene layer.
    * Interior scenes are built around this line rather than around percentages
@@ -1158,6 +1159,7 @@ export default function BarklyRoom() {
                 accessibilityLabel={listening ? 'Listening. Release to send.' : 'Hold to talk to Barkly'}
                 accessibilityState={{ disabled: locked, busy: listening }}
               >
+                <View style={styles.gloss} pointerEvents="none" />
                 <View style={[styles.micDot, listening && styles.micDotLive]} />
                 <Text style={styles.talkText}>{listening ? 'listening — release to send' : 'hold to talk'}</Text>
               </Pressable>
@@ -1202,6 +1204,7 @@ export default function BarklyRoom() {
                 accessibilityLabel="Talk to Barkly"
                 accessibilityState={{ disabled: locked || !typed.trim() }}
               >
+                {!(locked || !typed.trim()) && <View style={styles.gloss} pointerEvents="none" />}
                 <Text style={[styles.sendText, (locked || !typed.trim()) && styles.sendTextIdle]}>talk</Text>
               </Pressable>
             </View>
@@ -1411,9 +1414,9 @@ const styles = StyleSheet.create({
    * remainder, which is the fluid version of the same row.
    */
   tab: { flexGrow: 1, flexShrink: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  tabActive: { backgroundColor: color.ink },
+  tabActive: { backgroundColor: color.pop },
   tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 },
-  tabTextActive: { color: color.paper },
+  tabTextActive: { color: color.ink },
 
   /**
    * Anchored just over his head, inside the stage. `top: 0` plus flex-end
@@ -1465,11 +1468,17 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
 
   controls: { gap: 9 },
-  talk: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.ink, borderRadius: 999, paddingVertical: 18, ...elevation.card },
-  talkActive: { backgroundColor: color.brand },
+  /**
+   * The primary actions are CANDY now — see color.pop in the theme. Ink pills
+   * were legible and read as a settings screen; a child's eye goes to the
+   * bright glossy thing, and the bright glossy thing should be the button
+   * that talks to the dog. `overflow: hidden` is for the shine bar.
+   */
+  talk: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 18, overflow: 'hidden', ...elevation.card },
+  talkActive: { backgroundColor: color.popDeep },
   micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT },
   micDotLive: { backgroundColor: color.dangerWell },
-  talkText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
+  talkText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
 
   typeRow: { flexDirection: 'row', gap: 10 },
   /** Swap between talking and typing. Same height as what it sits beside. */
@@ -1483,8 +1492,8 @@ const styles = StyleSheet.create({
     ...elevation.low,
   },
   input: { flex: 1, minHeight: TAP_MIN, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13, fontSize: 15, color: color.ink, ...elevation.low },
-  send: { minHeight: TAP_MIN, backgroundColor: color.ink, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', ...elevation.card },
-  sendText: { color: color.paper, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
+  send: { minHeight: TAP_MIN, backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', overflow: 'hidden', ...elevation.card },
+  sendText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
   /**
    * "Nothing typed yet" is a RESTING state, not a broken one. Fading the dark
    * fill to 45% produced a muddy grey slab sitting where the app's primary
@@ -1493,6 +1502,20 @@ const styles = StyleSheet.create({
    */
   sendIdle: { backgroundColor: color.fill, ...elevation.flat },
   sendTextIdle: { color: color.inkSoft },
+  /**
+   * The candy shine: a soft white bar across the top of a pill. It is what
+   * separates "colored rectangle" from "glossy button" — the single cheapest
+   * unit of the toy-store look.
+   */
+  gloss: {
+    position: 'absolute',
+    top: 4,
+    left: 14,
+    right: 14,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
 
   pressed: { transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.45 },

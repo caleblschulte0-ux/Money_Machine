@@ -84,6 +84,18 @@ export const color = {
 
   /** His red. Errors borrow it so the app only has one alarming colour. */
   brand: '#B3402E',
+  /**
+   * The CANDY pair — the loud, glossy face of the controls.
+   *
+   * The chrome was ink pills on cream: legible, tasteful, and reading as a
+   * settings screen in an app for children. The operator's direction,
+   * verbatim gist: kids love loud, glossy, colorful. These are the two stops
+   * of that dial — `pop` carries ink text at 5.2:1 (the contrast suite holds
+   * it), `popDeep` is its pressed/shaded edge. Used for the primary actions
+   * only; a screen where everything shouts says nothing.
+   */
+  pop: '#FF8A3C',
+  popDeep: '#E06A1F',
   danger: '#8E2F20',
   dangerWell: '#FBE3DE',
   dangerLine: '#D08A7F',

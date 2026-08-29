@@ -24,10 +24,16 @@ export function skyBand(hour: number): SkyBand {
   return 'evening';
 }
 
+/**
+ * Punchier than they were, on purpose. The old day sky was a grey-blue wash
+ * ('#C4E0E8') and the grass a khaki green — technically outdoors, emotionally
+ * a tax form. Kids' worlds are LOUD: the sky is blue like a crayon means it,
+ * and everything else got a step up the same ladder. Night stays deep.
+ */
 const SKY: Record<SkyBand, [string, string]> = {
-  morning: ['#F6E3C5', '#EAF0DC'],
-  day: ['#C4E0E8', '#EAF3E0'],
-  evening: ['#EFC9A0', '#E5D3BC'],
+  morning: ['#FFD9A6', '#EAF0D2'],
+  day: ['#7EC8F0', '#DFF4E2'],
+  evening: ['#FFB27A', '#EFD3B4'],
   night: ['#3B3A5C', '#6B6488'],
 };
 
@@ -130,18 +136,35 @@ export function HomeScene({
         </Svg>
       </View>
 
-      {/* A sofa against the back wall, cropped by the left edge — the room
-          reads as continuing past the frame, and as somebody's. */}
-      <View style={{ position: 'absolute', left: -34, top: floorTop - 72 }}>
-        <Svg width={200} height={124} viewBox="0 0 200 124">
-          <Ellipse cx={96} cy={116} rx={96} ry={8} fill="#2B2117" opacity={0.16} />
-          <Rect x={0} y={0} width={186} height={72} rx={16} fill={dim('#A96C51', '#66463D')} />
-          <Rect x={8} y={52} width={86} height={36} rx={10} fill={dim('#C08663', '#7A5548')} />
-          <Rect x={98} y={52} width={82} height={36} rx={10} fill={dim('#C08663', '#7A5548')} />
-          <Rect x={152} y={12} width={44} height={98} rx={15} fill={dim('#9C6248', '#5C4038')} />
-          <Rect x={16} y={20} width={42} height={38} rx={9} fill={dim('#E9C46A', '#A98A4E')} transform="rotate(-8 37 39)" />
-          <Rect x={12} y={102} width={10} height={14} rx={3} fill={dim('#6E4A34', '#3A2C22')} />
-          <Rect x={132} y={104} width={10} height={12} rx={3} fill={dim('#6E4A34', '#3A2C22')} />
+      {/*
+        A sofa that is actually a sofa. The first one was a back-rect cropped
+        by the frame with no left arm, cushions floating loose of it, and a
+        pillow rotated half off-screen — on screen it read as broken shapes,
+        which is exactly what it was. This one is a complete object: arms,
+        plump cushions with piping, feet, a pillow that sits IN the corner,
+        and a shadow that welds it to the floor.
+      */}
+      <View style={{ position: 'absolute', left: 6, top: floorTop - 78 }}>
+        <Svg width={196} height={130} viewBox="0 0 196 130">
+          <Ellipse cx={98} cy={122} rx={92} ry={7} fill="#2B2117" opacity={0.16} />
+          {/* back, one rounded slab */}
+          <Rect x={14} y={4} width={168} height={64} rx={18} fill={dim('#B36A4A', '#66463D')} />
+          <Rect x={14} y={4} width={168} height={26} rx={13} fill={dim('#C1795A', '#6E4C42')} />
+          {/* arms, overlapping the back's ends */}
+          <Rect x={0} y={30} width={38} height={72} rx={16} fill={dim('#A96C51', '#5C4038')} />
+          <Rect x={158} y={30} width={38} height={72} rx={16} fill={dim('#A96C51', '#5C4038')} />
+          <Rect x={0} y={30} width={38} height={18} rx={9} fill={dim('#C1795A', '#6E4C42')} />
+          <Rect x={158} y={30} width={38} height={18} rx={9} fill={dim('#C1795A', '#6E4C42')} />
+          {/* seat cushions, plump, with piping */}
+          <Rect x={34} y={62} width={64} height={40} rx={13} fill={dim('#CE8A66', '#7A5548')} />
+          <Rect x={100} y={62} width={62} height={40} rx={13} fill={dim('#CE8A66', '#7A5548')} />
+          <Path d="M38 70 h56 M104 70 h54" stroke={dim('#B36A4A', '#66463D')} strokeWidth={2.5} strokeLinecap="round" opacity={0.7} />
+          {/* a pillow leaning into the corner */}
+          <Rect x={26} y={26} width={40} height={40} rx={11} fill={dim('#E9C46A', '#A98A4E')} transform="rotate(-10 46 46)" />
+          <Rect x={32} y={34} width={26} height={24} rx={8} fill={dim('#F2D488', '#B99A5E')} transform="rotate(-10 46 46)" />
+          {/* feet */}
+          <Rect x={14} y={102} width={11} height={16} rx={4} fill={dim('#6E4A34', '#3A2C22')} />
+          <Rect x={170} y={102} width={11} height={16} rx={4} fill={dim('#6E4A34', '#3A2C22')} />
         </Svg>
       </View>
 
@@ -184,9 +207,6 @@ export function HomeScene({
       <View style={[styles.frame, { top: wallArt + 8 }]}>
         <Image source={FACE} style={styles.framePhoto} resizeMode="contain" />
       </View>
-      {/* The soft shadow-rug he stands on, centred on his feet. */}
-      <View style={[styles.homeRug, { top: groundY - 30 }]} />
-
       {/* Bought furniture is IN THE ROOM. */}
       {has('home_bed') && !asleep && <RoomBed upgraded top={groundY - 44} />}
 
@@ -387,8 +407,8 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         {/* THE GROUND, as a plane. */}
         <GroundPlane
           top={horizon}
-          far={night ? '#5C7047' : '#B7CE8E'}
-          near={night ? '#415533' : '#7E9E56'}
+          far={night ? '#5C7047' : '#AEDD84'}
+          near={night ? '#415533' : '#63B23E'}
         >
           <Svg width="100%" height="100%" viewBox="0 0 420 340" preserveAspectRatio="none">
             {/* A path running away from the camera. Converging edges are the
@@ -449,7 +469,7 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Svg width="100%" height="100%" viewBox="0 0 420 72" preserveAspectRatio="none">
           <Path
             d="M0 72 L0 40 q22 -20 44 -4 q20 -22 44 -2 q26 -24 52 -2 q24 -20 48 -4 q26 -22 52 0 q24 -18 46 -2 q24 -20 48 -4 q22 -16 44 -2 L420 72 Z"
-            fill={night ? '#2C3A22' : '#4E6733'}
+            fill={night ? '#2C3A22' : '#3E7D26'}
             opacity={0.9}
           />
         </Svg>
@@ -522,6 +542,7 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
             <Path d="M0 110 H420" stroke={dim('#B29874', '#453B2E')} strokeWidth={2} opacity={0.3} />
             <Path d="M0 190 H420" stroke={dim('#B29874', '#453B2E')} strokeWidth={2.6} opacity={0.35} />
           </Svg>
+
         </GroundPlane>
 
         {/*
@@ -652,6 +673,20 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
           </Sway>
         </View>
 
+        {/* Bunting, strung between the shops. Nothing says "somewhere fun is
+            happening" cheaper than triangles on a string. */}
+        <View style={{ position: 'absolute', left: 0, right: 0, top: h - 214 }}>
+          <Svg width="100%" height={46} viewBox="0 0 420 46" preserveAspectRatio="none">
+            <Path d="M0 6 Q210 34 420 6" stroke={dim('#8A6844', '#5E5140')} strokeWidth={2} fill="none" />
+            {Array.from({ length: 10 }, (_, i) => i).map((i) => {
+              const x = 20 + i * 42;
+              const sag = 6 + Math.sin((i + 0.5) / 9.5 * Math.PI) * 13;
+              const c = ['#FF5A4E', '#FFC93C', '#3DBBE8', '#7ACB5A'][i % 4];
+              return <Path key={i} d={`M${x} ${sag} L${x + 18} ${sag} L${x + 9} ${sag + 17} Z`} fill={c} opacity={night ? 0.55 : 0.95} />;
+            })}
+          </Svg>
+        </View>
+
         {/*
           NEAR: a lamppost cropped by the right edge — big, dark, and lit at
           night, when it takes over from the sun as what picks him out.
@@ -730,7 +765,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
             a ruled line. */}
         <View style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: tide - horizon + 26 }}>
           <LinearGradient
-            colors={[farC('#6FA3B8', '#2A4258'), dim('#7FB4C4', '#2E4C63'), dim('#9CC8D2', '#3A5B72')]}
+            colors={[farC('#3D9FC4', '#2A4258'), dim('#4FB9D6', '#2E4C63'), dim('#7FD4E4', '#3A5B72')]}
             style={StyleSheet.absoluteFill}
           />
           {/* a headland, far off, half dissolved in haze */}
@@ -754,7 +789,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
 
         {/* THE SAND, as a plane: wet and dark at the tide line, dry and warm
             near the camera. The wet band is what says the sea comes up here. */}
-        <GroundPlane top={tide} far={dim('#B99E72', '#4E4433')} near={dim('#E2C795', '#5E5240')}>
+        <GroundPlane top={tide} far={dim('#C9A96E', '#4E4433')} near={dim('#F2D89C', '#5E5240')}>
           <LinearGradient
             colors={[dim('#8E7A56', '#3A3226'), `${dim('#8E7A56', '#3A3226')}00`]}
             style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 34 }}
@@ -919,10 +954,6 @@ const styles = StyleSheet.create({
   windowBig: { width: 172, height: 150, borderWidth: 9 },
   // Under his feet. At 8% the input bar covered the front half of it.
   rugWrap: { position: 'absolute', alignSelf: 'center', width: 286, height: 68 },
-  homeRug: {
-    position: 'absolute', alignSelf: 'center', width: 300, height: 64,
-    borderRadius: 150, backgroundColor: '#C77C52', opacity: 0.3,
-  },
   nearTree: { position: 'absolute', left: -58 },
   ground: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   apron: { flex: 1, marginTop: -2 },
