@@ -50,7 +50,16 @@ BEATS = [
  # None of these beats carry generated imagery. They are the operator's
  # own footage, unmodified, and they exist to make the demo legible.
  ("sign", "6796", 29.0,  0.0, 6.5, "how the story is told today: a man reading a plaque"),
- ("past", "6808",  3.5,  6.5, 4.0, "and the park going by around it, nobody stopping"),
+ # in-point 22.0, not 3.5. r101: "a large cropped person/body entering at
+ # the far right/top edge... looks accidental". It did -- a headless torso
+ # walking out of frame. 22.0 is the same locked-off plate (0.0% drift)
+ # with the walkers small and whole in the middle distance, which is what
+ # the line over it is actually about.
+ # 28.8 looked better still -- two people walking right through the
+ # foreground, literally the narration -- and the gate refused it at 75.8%
+ # drift with a JOLT. The camera moves there. Recorded so nobody re-picks
+ # it off a thumbnail.
+ ("past", "6808", 22.0,  6.5, 4.0, "and the park going by around it, nobody stopping"),
  ("rail", "6790", 24.0, 10.5, 4.0, "the interpretive panel on the railing, the view right behind it"),
  # ---- ACT 2: THE PRODUCT. What it is, on a face, and the act of using it.
  # in-point 7.0, not 9.0. IMG_6799 is only 12.4s long and 9.0+5.0 runs
@@ -107,7 +116,13 @@ BEATS = [
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
- ("off",  "6798",  4.0, 58.5, 4.5, "glasses off the story, the real place, nothing drawn on it"),
+ # NOT IMG_6798. r101: "the foreground railing and large no-climbing sign
+ # dominate the frame, while the wearer's pointing gesture reads more like
+ # a tourist snapshot than the quiet product payoff." All three are true
+ # of that plate. 6803 is the overlook: him at the rail, the whole park
+ # and the falls in front of him, no signage, no gesture -- a man simply
+ # looking at a place, which is the entire closing claim.
+ ("off",  "6803",  2.5, 58.5, 4.5, "glasses off the story, the real place, nothing drawn on it"),
  ("walk", "6807", 12.0, 63.0, 4.5, "the closing line over the park as it actually is"),
  ("end",   None,   0.0, 67.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
@@ -272,7 +287,13 @@ LABELS = {
  # time, or the era rail arrives as a magic trick.
  # No date, no history, no claim — a place name and a river name, both
  # plain geography, both visible in the frame.
- "lock": ((880, 560), "THE FALLS", "BIG SIOUX RIVER", 0.9, (330, -210)),
+ # r101: "oversized and crowded against the wearer's head and upper-right
+ # frame". Correct on both counts. The 6th field is a label SCALE and this
+ # is the only label that uses it: 0.80, and the card lifts and moves left
+ # so there is clear sky between it and his head. The era labels keep
+ # their full weight -- announcing an era has earned it, naming the
+ # waterfall you are already looking at has not.
+ "lock": ((880, 560), "THE FALLS", "BIG SIOUX RIVER", 0.9, (250, -330), 0.80),
 }
 
 # beat -> (in_start, in_end, out_start, out_end); out may be None.
@@ -334,7 +355,22 @@ SCRUB_KEYS = [
 # v16: appears at 24.2, inside `lock`, so the rail arrives WITH the
 # recognition pin rather than materialising at the first era beat. Fades
 # out at 55.1, the same beat of the thaw as before the shift.
-SCRUB_FADE = (24.2, 1.0, 55.1, 0.9)
+# APPEARS AT 20.6, WHICH IS THE GESTURE, NOT THE NEXT BEAT.
+# r101: at 21.0 "the wearer has both hands on his head... can read as
+# fixing hair rather than deliberately operating a temple control." True,
+# and I checked the whole take frame by frame at 0.2s: there is no
+# single-hand moment anywhere in it, and none in 6790, 6793, 6794 or 6807
+# either. The footage does not contain a cleaner gesture, so pretending
+# otherwise by hunting harder was not an option.
+# r101's own fallback is the fix: "add only a restrained activation
+# response after contact; do not introduce device UI before the gesture."
+# His hands reach the temples at 19.7-20.1 film time and the rail now
+# begins at 20.6 -- half a second after contact, nothing before it. A
+# two-handed settle followed immediately by the device waking reads as
+# operating it; the same gesture followed four seconds later by an
+# unrelated beat reads as fixing your hair. The ambiguity was in the
+# CAUSALITY, not in the arm.
+SCRUB_FADE = (20.6, 1.0, 55.1, 0.9)
 SCRUB_SETTLE = 0.15                # marker pulses this long on arrival
 
 SCORE = {

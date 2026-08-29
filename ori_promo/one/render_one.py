@@ -281,8 +281,8 @@ def snowfall(frame, t, k, near=None):
     return np.clip(frame + lay[..., None] * (58.0 * k), 0, 255)
 
 
-def draw_label(d, anchor, box, title, sub, k, col=CYAN):
-    LK.block(d, anchor, box, title, sub, k, col, W, H)
+def draw_label(d, anchor, box, title, sub, k, col=CYAN, scale=1.0):
+    LK.block(d, anchor, box, title, sub, k, col, W, H, scale=scale)
 
 
 def draw_title(d, t, dur, title, sub, t0, scale=1.0):
@@ -547,13 +547,17 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                             shadow_strength=shw, contact=ct)
 
         if lab and lpath:
-            (_, title, sub, t0, off) = lab
+            # 6th field is an optional label SCALE; absent means 1.0, so
+            # the three era labels are untouched.
+            (_, title, sub, t0, off) = lab[:5]
+            lscale = lab[5] if len(lab) > 5 else 1.0
             cx, cy = lpath[min(i, len(lpath) - 1)]
             if t >= t0:
                 k = AR.ease(min(1.0, (t - t0) / 0.5))
                 k *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
                 if k > 0:
-                    draw_label(d, (cx, cy), (cx + off[0], cy + off[1]), title, sub, k)
+                    draw_label(d, (cx, cy), (cx + off[0], cy + off[1]), title, sub, k,
+                               scale=lscale)
 
         # THE HONESTY TAG FOLLOWS THE FIGURES, NOT THE BEAT.
         # It used to be drawn whenever the BEAT contained figures, which on

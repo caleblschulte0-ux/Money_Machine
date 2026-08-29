@@ -55,7 +55,7 @@ def mono(sz):
 
 
 def block(d, anchor, box_xy, title, sub, k, col, W, H,
-          tag=None, dim=1.0, sub_col=None):
+          tag=None, dim=1.0, sub_col=None, scale=1.0):
     """Draw one tracked label.
 
     anchor : the point on the object, already tracked
@@ -69,7 +69,17 @@ def block(d, anchor, box_xy, title, sub, k, col, W, H,
     a = k * dim
     al = int(250 * a)
     sh = int(165 * a)
-    f1, f2, f3 = inter(TITLE_PX), mono(SUB_PX), mono(TAG_PX)
+    # SCALE, default 1.0 so every existing caller is untouched. It exists
+    # because v16 introduced a RECOGNITION label -- the device naming a
+    # real waterfall -- alongside the era labels, and at the shared size
+    # it crowded the wearer's head (r101). The era labels announce a whole
+    # era and have earned their weight; a label that just names what you
+    # are already looking at has not, and should sit quieter. Every
+    # dimension below is derived from these three, so scaling here scales
+    # the scrim, the tick, the leader gap and the sub-line spacing too.
+    tpx, spx, gpx = (max(8, int(round(v * scale)))
+                     for v in (TITLE_PX, SUB_PX, TAG_PX))
+    f1, f2, f3 = inter(tpx), mono(spx), mono(gpx)
     tw = d.textlength(title, font=f1)
     sw = sum(d.textlength(c, font=f2) for c in sub) + 4.0 * max(0, len(sub) - 1)
     x0 = bx if bx >= ax else bx - tw
@@ -83,7 +93,8 @@ def block(d, anchor, box_xy, title, sub, k, col, W, H,
     # Q3, only louder. Rounded and see-through, the plate still shows under it
     # and it reads as a panel in front of the world rather than a title card.
     wid = max(tw, sw)
-    box = [x0 - 26, by - TITLE_PX - 12, x0 + wid + 26, by + SUB_PX + 24]
+    pad = max(10, int(round(26 * scale)))
+    box = [x0 - pad, by - tpx - 12 * scale, x0 + wid + pad, by + spx + 24 * scale]
     d.rounded_rectangle(box, radius=14, fill=SCRIM + (int(150 * a),))
     d.rounded_rectangle(box, radius=14, outline=col + (int(72 * a),), width=2)
 
@@ -95,20 +106,20 @@ def block(d, anchor, box_xy, title, sub, k, col, W, H,
 
     if tag:
         cw = d.textlength(tag, font=f3) + 28
-        ty = by - TITLE_PX - 56
+        ty = by - tpx - 56 * scale
         d.rectangle([x0 - 4, ty, x0 + cw, ty + 38], fill=col + (int(232 * a),))
         d.text((x0 + 14, ty + 19), tag, font=f3, fill=(8, 11, 14, al), anchor="lm")
 
-    d.rectangle([x0 - 24, by - TITLE_PX + 4, x0 - 18, by + 30], fill=SHADOW + (sh,))
-    d.rectangle([x0 - 26, by - TITLE_PX + 2, x0 - 20, by + 28], fill=col + (al,))
+    d.rectangle([x0 - 24 * scale, by - tpx + 4, x0 - 18 * scale, by + 30 * scale], fill=SHADOW + (sh,))
+    d.rectangle([x0 - 26 * scale, by - tpx + 2, x0 - 20 * scale, by + 28 * scale], fill=col + (al,))
     d.text((x0 + 3, by + 3), title, font=f1, fill=SHADOW + (sh,), anchor="ls")
     d.text((x0, by), title, font=f1, fill=INK + (al,), anchor="ls")
 
     sc = sub_col or col
     x = x0
     for ch in sub:
-        d.text((x + 2, by + SUB_PX + 12), ch, font=f2, fill=SHADOW + (int(200 * a),), anchor="ls")
-        d.text((x, by + SUB_PX + 10), ch, font=f2, fill=sc + (int(250 * a),), anchor="ls")
+        d.text((x + 2, by + spx + 12 * scale), ch, font=f2, fill=SHADOW + (int(200 * a),), anchor="ls")
+        d.text((x, by + spx + 10 * scale), ch, font=f2, fill=sc + (int(250 * a),), anchor="ls")
         x += d.textlength(ch, font=f2) + 4.0
     return x0, wid
 

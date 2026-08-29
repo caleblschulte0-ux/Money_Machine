@@ -51,8 +51,14 @@ LINES = [
     # --- ACT 1: the problem. Establish the place in the first sentence;
     # a viewer told where they are 28 seconds in has spent 28 seconds lost.
     ("sign", 0.8, "This is Falls Park, in Sioux Falls."),
-    ("sign", 3.4, "Everything that happened here is on a sign like this one."),
-    ("past", 0.6, "And most people walk right past it."),
+    # r101 was right that the first version of this line -- "Everything
+    # that happened here is on a sign like this one" -- was too absolute
+    # to be true of any interpretive sign, and that it undercut a film
+    # otherwise careful about claims. This is the operator's own phrasing
+    # from the cut he approved, and it is accurate: the signs carry some
+    # of it, not all of it.
+    ("sign", 3.4, "But today, the story lives on plaques and little signs."),
+    ("past", 0.6, "And most people walk right past."),
     ("rail", 0.3, "The story is right there. You just can't see it."),
     # --- ACT 2: what it is, and the act of using it.
     ("prod", 0.4, "Open Range Interactive is building AR glasses made for travel."),
