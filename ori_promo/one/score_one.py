@@ -8,8 +8,8 @@ leaving, and a pad that ignores them tells the viewer nothing is happening.
 This follows the cut, and every boundary is read out of spec_one so the
 score cannot drift from the edit:
 
-  montage     almost nothing. the location audio carries the place
-  arrive      the system comes up
+  open        almost nothing. the falls carry it
+  arrive      the first era arrives (v7: same beat as the lift)
   first era   the lift. this is the one full AR reveal and it earns it
   second era  held, warm, no new event -- the era swapped on the cut
   ice         the pad thins to its top two voices and the sub drops out.
@@ -89,8 +89,14 @@ def main():
     # footage of a real park and the location audio (falls, wind, footsteps)
     # carries it; a score that comes in over the waterfall at full weight
     # is the score telling you what to feel before anything has happened.
+    # FLOOR RAISED 0.07 -> 0.12 for v16. The note above says the montage
+    # leans on location audio to carry it -- and location audio has been
+    # gone from this master since v8, on the operator's instruction. A
+    # floor set for a mix that still had a waterfall in it leaves the new
+    # first act as narration over near-silence for six seconds at a time.
+    # Still the quietest thing in the film, still well under the reveal.
     gain = np.full(n, 0.22, np.float32)
-    gain = np.where(t < arr, ramp(t, m_st, arr, 0.07, 0.26), gain)
+    gain = np.where(t < arr, ramp(t, m_st, arr, 0.12, 0.26), gain)
     gain = np.where((t >= arr) & (t < e1), ramp(t, arr, e1, 0.26, 0.34), gain)
     gain = np.where((t >= e1) & (t < e2), ramp(t, e1, e1 + 2.0, 0.34, 0.80), gain)
     gain = np.where((t >= e2) & (t < ice_st), 0.80, gain)

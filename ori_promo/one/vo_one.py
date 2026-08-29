@@ -35,10 +35,33 @@ SR = 48000
 VOICE = "../vo/voices/en_US-ryan-high.onnx"
 
 # (beat, seconds into that beat, line)
+# THE WORDING IS THE OPERATOR'S, NOT MINE. v16 has to explain the product
+# to someone who has never heard of it, and the claim lines below are
+# lifted from the cut he approved and documented in ori_promo/README.md --
+# "AR glasses made for travel", "the place starts talking", "No tour
+# group. No phone in your face. You just look.", "See the story where you
+# stand." Writing fresh marketing copy here would have meant inventing
+# positioning for a company on its behalf, which is the one thing this
+# project has said all along that neither agent may do. Reusing his own
+# approved sentences is not laziness; it is the only source of claim
+# language on this project that has actually been signed off.
+# Still no date, no measurement, no attribution, no traction, no raise,
+# no partnership, no deployment claim and no call to action.
 LINES = [
-    # Rewritten for the era rail. The old lines described what the viewer
-    # was seeing; these follow the ACTION, because the picture now has one.
-    ("open", 1.2, "This is Falls Park, in Sioux Falls. Now run it backwards."),
+    # --- ACT 1: the problem. Establish the place in the first sentence;
+    # a viewer told where they are 28 seconds in has spent 28 seconds lost.
+    ("sign", 0.8, "This is Falls Park, in Sioux Falls."),
+    ("sign", 3.4, "Everything that happened here is on a sign like this one."),
+    ("past", 0.6, "And most people walk right past it."),
+    ("rail", 0.3, "The story is right there. You just can't see it."),
+    # --- ACT 2: what it is, and the act of using it.
+    ("prod", 0.4, "Open Range Interactive is building AR glasses made for travel."),
+    ("on",   0.6, "You put them on, and the place starts talking."),
+    ("lock", 0.4, "They know where you're standing, and what you're looking at."),
+    # --- ACT 3: the demo. The era lines are unchanged from v15 except the
+    # first, which no longer has to introduce the location -- act one did
+    # that -- so it can just be the instruction that starts the scrub.
+    ("open", 1.4, "So take the falls, and run them backwards."),
     ("dak",  1.9, "Before the mill, people lived along this water."),
     # the rail does not move for this one -- he turned his head, he did
     # not change the year, and the line has to say so or the beat reads as
@@ -47,6 +70,9 @@ LINES = [
     ("ice",  0.9, "Further back."),
     ("mam",  1.6, "The whole valley under ice, and the animals that crossed it."),
     ("now",  2.1, "Then back. One place. Every time."),
+    # --- ACT 4: the close.
+    ("off",  0.6, "No tour group. No phone in your face. You just look."),
+    ("walk", 0.7, "Open Range Interactive. See the story where you stand."),
 ]
 
 
@@ -73,9 +99,13 @@ def main():
     n = int(TOTAL * SR)
     bus = np.zeros(n, np.float32)
     placed = []
-    for beat, offset, text in LINES:
+    for idx, (beat, offset, text) in enumerate(LINES):
         st, dur = _beat_start(beat)
-        a, sr = synth(text, f"out1/_vo_{beat}.wav")
+        # INDEXED, because a beat may now carry more than one line and the
+        # old name collided: both `sign` lines wrote out1/_vo_sign.wav.
+        # It happened to work only because each file is read back before
+        # the next is written, which is not a property to rely on.
+        a, sr = synth(text, f"out1/_vo_{idx:02d}_{beat}.wav")
         if sr != SR:                       # piper is 22.05k; resample to the master rate
             m = int(round(len(a) * SR / sr))
             a = np.interp(np.linspace(0, len(a) - 1, m), np.arange(len(a)), a).astype(np.float32)

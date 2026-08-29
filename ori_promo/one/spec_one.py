@@ -39,12 +39,47 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 34.5
+TOTAL = 71.5
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
- ("open", "6806",  6.0,  0.0, 5.0, "the falls as they are. the system comes up, the era rail appears"),
- ("dak",  "6804", 10.0,  5.0, 6.5, "the scrub reaches BEFORE THE MILL and the family answers"),
+ # ---- ACT 1: THE PROBLEM. Added v16 on the operator's ruling that the
+ # film "has a third of what I needed" and must play to someone with no
+ # idea what this is. The era demo was the whole picture; it answered
+ # WHAT IT DOES and never WHAT IT IS, WHO WEARS IT, or WHY.
+ # None of these beats carry generated imagery. They are the operator's
+ # own footage, unmodified, and they exist to make the demo legible.
+ ("sign", "6796", 29.0,  0.0, 6.5, "how the story is told today: a man reading a plaque"),
+ ("past", "6808",  3.5,  6.5, 4.0, "and the park going by around it, nobody stopping"),
+ ("rail", "6790", 24.0, 10.5, 4.0, "the interpretive panel on the railing, the view right behind it"),
+ # ---- ACT 2: THE PRODUCT. What it is, on a face, and the act of using it.
+ # in-point 7.0, not 9.0. IMG_6799 is only 12.4s long and 9.0+5.0 runs
+ # off the end of it; ffmpeg would have handed back a short beat and the
+ # renderer pads, so this would have shipped as a freeze nobody flagged.
+ ("prod", "6799",  7.0, 14.5, 5.0, "the wearer, the glasses on him, the whole park in front"),
+ # ---- ONE CONTINUOUS SHOT, CUT INTO THREE BEATS. `on`, `lock` and `open`
+ # are consecutive windows of IMG_6806 with no gap: 8.4-12.4, 12.4-16.4,
+ # 16.4-21.4, all under 0.6% drift. So the whole causal chain -- he
+ # reaches up to the temple, the glasses name what he is looking at, the
+ # era rail arrives -- plays without a single cut, on one man in one
+ # place.
+ # The first attempt put the activation on IMG_6794@26.5 and it was
+ # simply the wrong take: he turns and gestures at the camera with both
+ # arms, which reads as "hey, look at this", not as operating a device.
+ # 6806@8.8-10.0 is an unambiguous reach to the side of the head. Buying
+ # that gesture is what moved `open` off its old 6.0 in-point -- same
+ # clip, same locked-off framing, 10 seconds later in the take, so the
+ # shot the operator approved is the shot that still plays.
+ ("on",   "6806",  8.4, 19.5, 4.0, "he raises a hand to the temple — he is switching it on"),
+ ("lock", "6806", 12.4, 23.5, 4.0, "the glasses recognise the falls and name them"),
+ # ---- ACT 3: THE DEMO. LOCKED. Operator, on v15: "all the AI parts look
+ # good enough to pass. Now don't mess with those anymore... don't lose
+ # the AI scenes that you did AI overlays on because those are all... I
+ # like those." These six beats are unchanged from v15 except that their
+ # START TIMES shift by +27.5 to sit behind the new first act. Every
+ # in-point, duration, figure, scale, grade and label is identical.
+ ("open", "6806", 16.4, 27.5, 5.0, "the falls as they are. the system comes up, the era rail appears"),
+ ("dak",  "6804", 10.0, 32.5, 6.5, "the scrub reaches BEFORE THE MILL and the family answers"),
  # SAME ERA, DIFFERENT PLACE. The operator asked for "one more that has
  # Indians and shit", and the useful way to add it is not a second
  # unrelated tableau -- it is to LOOK AROUND inside the era already
@@ -65,11 +100,16 @@ BEATS = [
  # the falls, the shelf, the valley -- were all shot as PANS. The only
  # static plates with ground at figure scale are the hero shelf (6804)
  # and this lawn below the mill ruin (6805, 0.2% drift).
- ("more", "6805", 70.3, 11.5, 4.5, "same era, a second group up by the mill ruin"),
- ("ice",  "6791", 14.0, 16.0, 4.0, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 20.0, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 26.0, 5.0, "the scrub returns to NOW, the thaw, the closing line"),
- ("end",   None,   0.0, 31.0, 3.5, "held from now's last frame — which is PRESENT DAY"),
+ ("more", "6805", 70.3, 39.0, 4.5, "same era, a second group up by the mill ruin"),
+ ("ice",  "6791", 14.0, 43.5, 4.0, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 47.5, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 53.5, 5.0, "the scrub returns to NOW, the thaw, the closing line"),
+ # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
+ # again, which is the only honest way to end a film about a device that
+ # is not on your face right now.
+ ("off",  "6798",  4.0, 58.5, 4.5, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 63.0, 4.5, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 67.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -80,14 +120,25 @@ BEATS = [
 WEARER_BEATS = {"mam", "now"}
 
 # v6 ran the opening montage without the viewfinder because it was
-# documentary B-roll claiming nothing. v7 has no montage: every beat is
-# the device looking at something, so the UI belongs on all of them.
-UI_OFF = set()
+# documentary B-roll claiming nothing. v7 had no montage: every beat was
+# the device looking at something, so the UI belonged on all of them.
+# v16 HAS A MONTAGE AGAIN, and the rule is back with it — sharper.
+# The first act is the world BEFORE the product: a man reading a plaque,
+# a park going by, a sign on a railing. Drawing the device's HUD over
+# those frames would say the glasses are already on and quietly destroy
+# the only thing act one is for, which is showing what it is like without
+# them. The last act is the same in reverse: he has looked, the film is
+# over, and a HUD on the closing frames would claim the device is still
+# running when the point is that you just look.
+UI_OFF = {"sign", "past", "rail", "prod", "off", "walk"}
 
 # beat: (title, subtitle, appear_t[, scale]) — the film's own voice, drawn
 # bottom-left with a scrim, no reticle and no leader line.
 TITLES = {
- "open": ("FALLS PARK", "SIOUX FALLS, SOUTH DAKOTA", 0.6),
+ # The location card moves to the FIRST frame of the film, not to `open`.
+ # With an act in front of it, a viewer who is told where they are only
+ # 25 seconds in has spent 25 seconds not knowing.
+ "sign": ("FALLS PARK", "SIOUX FALLS, SOUTH DAKOTA", 0.6),
  "now":  ("ONE PLACE", "EVERY TIME", 2.2, 1.3),
 }
 
@@ -211,6 +262,17 @@ LABELS = {
  # now empty ground below a figure that starts at 830.
  "more": ((1430, 846), "SAME DAY",        "VISUALISATION", 2.4, (-70, -300)),
  "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
+ # RECOGNITION, and it is a different KIND of label from the three above.
+ # Those name a generated era and are subtitled VISUALISATION because
+ # something drawn is on screen. This one names a real waterfall in an
+ # unmodified frame: it is the device identifying what the wearer is
+ # actually looking at, which is the step the film was missing. A viewer
+ # who has never seen this product needs to be shown that the glasses
+ # know WHERE HE IS before being shown that they can move him through
+ # time, or the era rail arrives as a magic trick.
+ # No date, no history, no claim — a place name and a river name, both
+ # plain geography, both visible in the frame.
+ "lock": ((880, 560), "THE FALLS", "BIG SIOUX RIVER", 0.9, (330, -210)),
 }
 
 # beat -> (in_start, in_end, out_start, out_end); out may be None.
@@ -256,21 +318,32 @@ SCRUB_STOPS = [("NOW", 0.0), ("BEFORE THE MILL", 0.5), ("THE LAST ICE", 1.0)]
 #     arrives 12.0 settles 12.15 valley freezes 12.5   (0.50s lead)
 #     arrives 22.3 settles 22.45 thaw begins 22.8      (0.50s lead)
 # The time comes out of the holds, not out of the running time.
+# v16: every key shifted +27.5 so the identical scrub sits behind the new
+# first act. The LEADS ARE UNCHANGED — 0.50s at all three arrivals — which
+# is the whole reason to shift rather than re-time.
 SCRUB_KEYS = [
- (0.0, 0.0), (5.4, 0.0),
- (5.9, 0.5),                       # family resolves 6.4  (0.50s lead)
- (15.5, 0.5),                      # ...and does NOT move across `more`
- (16.0, 1.0),                      # valley freezes 16.5  (0.50s lead)
- (25.6, 1.0),
- (26.3, 0.0),                      # thaw begins 26.8     (0.50s lead)
+ (27.5, 0.0), (32.9, 0.0),
+ (33.4, 0.5),                      # family resolves 33.9 (0.50s lead)
+ (43.0, 0.5),                      # ...and does NOT move across `more`
+ (43.5, 1.0),                      # valley freezes 44.0  (0.50s lead)
+ (53.1, 1.0),
+ (53.8, 0.0),                      # thaw begins 54.3     (0.50s lead)
 ]
 # (appear, fade-in, start of fade-out, fade-out length). r90: "keep the
 # rail through the NOW settle and the first beat of thaw, then fade it."
-SCRUB_FADE = (2.0, 1.0, 27.6, 0.9)
+# v16: appears at 24.2, inside `lock`, so the rail arrives WITH the
+# recognition pin rather than materialising at the first era beat. Fades
+# out at 55.1, the same beat of the thaw as before the shift.
+SCRUB_FADE = (24.2, 1.0, 55.1, 0.9)
 SCRUB_SETTLE = 0.15                # marker pulses this long on arrival
 
 SCORE = {
- "start":  "open",
+ # v16: "start" is the FIRST FRAME OF THE FILM, not the first frame of the
+ # demo. It pointed at `open`, which is now 28 seconds in, so the whole
+ # first act sat below the montage floor while the score waited for a beat
+ # that had three other acts in front of it. The roles are looked up, so
+ # this one edit re-times the entire arc.
+ "start":  "sign",
  "arrive": "dak",
  "lift":   "dak",
  "hold":   "more",
