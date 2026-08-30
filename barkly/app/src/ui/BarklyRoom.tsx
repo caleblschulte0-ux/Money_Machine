@@ -6,7 +6,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { color, elevation, radius, space, type } from './theme';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BALL, BRASS, DIRT, GROUND, LEAF, SAND } from './scenes/artPalette';
+import { BALL, BRASS, DIORAMA, GROUND, LEAF } from './scenes/artPalette';
 import {
   Animated,
   Easing,
@@ -35,7 +35,7 @@ import { AREA_UNLOCKS, levelProgress } from '../game/progression';
 import BarklyView from './BarklyView';
 import DialoguePanel from './DialoguePanel';
 import SettingsSheet from './SettingsSheet';
-import { Ball, FoodBowl } from './StageProps';
+import { Ball, DigMound, FoodBowl, WetSandMound } from './StageProps';
 import BarklyKit, { KitAction } from './BarklyKit';
 import PlaytestSheet from './PlaytestSheet';
 import { playtestAllowed } from '../dev/playtest';
@@ -966,19 +966,9 @@ export default function BarklyRoom() {
               accessibilityRole="button"
               accessibilityLabel={location === 'beach' ? 'Search the wet sand' : 'Dig here'}
             >
-              {location === 'beach' ? (
-                <Svg width={86} height={44} viewBox="0 0 86 44">
-                  <Path d="M4 38 Q43 12 82 38 Z" fill={SAND.mound} />
-                  <Path d="M18 38 Q43 22 68 38 Z" fill={SAND.shade} />
-                  <Path d="M34 33 q5 -6 10 0 q5 -6 10 0" stroke={SAND.ripple} strokeWidth={2} fill="none" />
-                </Svg>
-              ) : (
-                <Svg width={86} height={44} viewBox="0 0 86 44">
-                  <Path d="M6 38 Q43 2 80 38 Z" fill={DIRT.mound} />
-                  <Path d="M18 38 Q43 14 68 38 Z" fill={DIRT.shade} />
-                  <Circle cx={43} cy={34} r={7} fill={DIRT.hole} />
-                </Svg>
-              )}
+              {location === 'beach'
+                ? <WetSandMound active={digging} />
+                : <DigMound active={digging} />}
               <Text style={styles.digHint}>
                 {digging ? '…' : location === 'beach' ? 'SIFT' : 'DIG'}
               </Text>
@@ -1264,9 +1254,9 @@ const styles = StyleSheet.create({
   heart: { position: 'absolute', fontSize: 24, color: color.danger },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
-  digSpot: { position: 'absolute', left: 6, bottom: 72, alignItems: 'center', zIndex: 2 },
-  digHint: { marginTop: 2, ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
-  npcName: { position: 'absolute', ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
+  digSpot: { position: 'absolute', left: -25, bottom: 67, alignItems: 'center', zIndex: 2 },
+  digHint: { marginTop: -11, ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodSoft, paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
+  npcName: { position: 'absolute', ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodWarm, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   chip: { position: 'absolute', bottom: 72, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
