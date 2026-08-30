@@ -6,7 +6,7 @@
  * staying short enough that Barkly still owns the screen above it.
  */
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { color, elevation, radius, space, type } from './theme';
 import { DIALOGUE_GAP, DIALOGUE_HEIGHT, SPEECH_MAX_LINES } from './layout';
@@ -43,10 +43,10 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
   const translateY = enter.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
   const npc = speaker?.kind === 'npc';
   const thinking = Boolean(thought && !line);
-  const shellTop = npc ? '#B89AF8' : thinking ? '#BDEEFF' : '#FFE66A';
-  const shellBottom = npc ? '#9473DF' : thinking ? '#73D4F4' : '#FFC93D';
+  const shellTop = npc ? color.violet : thinking ? color.fill : color.lemon;
+  const shellBottom = npc ? color.violetDeep : thinking ? color.pop : color.lemonDeep;
   const edge = npc ? color.violetDeep : thinking ? color.popDeep : color.lemonDeep;
-  const badge = npc ? '#5F438F' : thinking ? '#236B86' : '#433628';
+  const badge = npc ? color.violetDeep : thinking ? color.popDeep : color.ink;
 
   return (
     <View style={[styles.panel, !shown && styles.panelResting]} accessibilityLiveRegion="polite" testID="dialogue-panel">
@@ -71,9 +71,9 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
                   <Text style={styles.who}>{speaker.name.toUpperCase()}</Text>
                 </View>
               ) : (
-                <View style={[styles.badge, { backgroundColor: '#236B86' }]}><Text style={styles.who}>BARKLY BRAIN</Text></View>
+                <View style={[styles.badge, { backgroundColor: color.popDeep }]}><Text style={styles.who}>BARKLY BRAIN</Text></View>
               )}
-              <View style={[styles.statusPip, { backgroundColor: npc ? '#FFF2AE' : thinking ? '#FFFFFF' : '#FF775C' }]} />
+              <View style={[styles.statusPip, { backgroundColor: npc ? color.goldSoft : thinking ? color.card : color.coral }]} />
             </View>
             <Text style={[styles.line, !line && styles.thought]} numberOfLines={SPEECH_MAX_LINES}>{shown}</Text>
           </Animated.View>
@@ -113,31 +113,30 @@ const styles = StyleSheet.create({
   shell: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: radius.xl, borderWidth: 2.5, borderColor: color.inkMid },
   innerPlate: {
     position: 'absolute', left: 8, right: 8, top: 8, bottom: 8,
-    borderRadius: radius.lg, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.58)',
-    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderRadius: radius.lg, borderWidth: 1.5, borderColor: color.gloss, backgroundColor: color.glossSoft,
   },
-  gloss: { position: 'absolute', left: 20, right: 20, top: 7, height: 9, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.42)' },
-  bolt: { position: 'absolute', left: 9, bottom: 9, width: 9, height: 9, borderRadius: radius.pill, backgroundColor: '#8F7249', borderWidth: 1, borderColor: '#60492E' },
+  gloss: { position: 'absolute', left: 20, right: 20, top: 7, height: 9, borderRadius: radius.pill, backgroundColor: color.gloss },
+  bolt: { position: 'absolute', left: 9, bottom: 9, width: 9, height: 9, borderRadius: radius.pill, backgroundColor: color.goldInk, borderWidth: 1, borderColor: color.inkMid },
   boltRight: { left: undefined, right: 9 },
-  boltShine: { position: 'absolute', left: 2, top: 1.5, width: 3, height: 2, borderRadius: 2, backgroundColor: '#FFF0B2', opacity: 0.75 },
+  boltShine: { position: 'absolute', left: 2, top: 1.5, width: 3, height: 2, borderRadius: radius.xs, backgroundColor: color.goldSoft, opacity: 0.75 },
   tail: {
     position: 'absolute', top: -8, left: '48%', width: 18, height: 18,
-    borderRadius: 5, borderLeftWidth: 2.5, borderTopWidth: 2.5,
+    borderRadius: radius.xs, borderLeftWidth: 2.5, borderTopWidth: 2.5,
     transform: [{ rotate: '45deg' }],
   },
   copy: { paddingHorizontal: space.xs },
   copyTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.xs },
-  badge: { alignSelf: 'flex-start', paddingHorizontal: space.md, paddingVertical: 5, borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
-  who: { ...type.micro, color: '#FFF8E9', letterSpacing: 1.5 },
-  youBadge: { maxWidth: '86%', backgroundColor: 'rgba(255,255,255,0.72)', borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 5 },
+  badge: { alignSelf: 'flex-start', paddingHorizontal: space.md, paddingVertical: 5, borderRadius: radius.pill, borderWidth: 1, borderColor: color.glossSoft },
+  who: { ...type.micro, color: color.inkOn, letterSpacing: 1.5 },
+  youBadge: { maxWidth: '86%', backgroundColor: color.gloss, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 5 },
   youSaid: { ...type.caption, color: color.inkMid, fontWeight: '800' },
   statusPip: { width: 8, height: 8, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.inkMid },
-  line: { ...type.speech, color: '#372E24', fontWeight: '800', letterSpacing: -0.1 },
-  thought: { fontStyle: 'italic', fontWeight: '600', color: '#3F5360' },
+  line: { ...type.speech, color: color.ink, fontWeight: '800', letterSpacing: -0.1 },
+  thought: { fontStyle: 'italic', fontWeight: '600', color: color.inkMid },
   restingWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md, opacity: 0.72 },
   restingPaw: { width: 24, height: 21, position: 'relative' },
-  pawPad: { position: 'absolute', left: 6, bottom: 0, width: 13, height: 11, borderRadius: 7, backgroundColor: color.popDeep, transform: [{ rotate: '-5deg' }] },
-  toe: { position: 'absolute', width: 6, height: 7, borderRadius: 4, backgroundColor: color.pop },
+  pawPad: { position: 'absolute', left: 6, bottom: 0, width: 13, height: 11, borderRadius: radius.xs, backgroundColor: color.popDeep, transform: [{ rotate: '-5deg' }] },
+  toe: { position: 'absolute', width: 6, height: 7, borderRadius: radius.xs, backgroundColor: color.pop },
   toe1: { left: 1, top: 4 },
   toe2: { left: 9, top: 0 },
   toe3: { right: 1, top: 4 },
