@@ -74,7 +74,6 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
                 key={choice.id}
                 style={({ pressed }) => [
                   styles.choice,
-                  index === 0 && styles.choicePrimary,
                   pressed && styles.choicePressed,
                   busy && styles.disabled,
                 ]}
@@ -83,7 +82,7 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
                 accessibilityRole="button"
                 accessibilityLabel={`${choice.label}. ${choice.hint}`}
               >
-                <View style={[styles.choiceNumber, index === 0 && styles.choiceNumberPrimary]}>
+                <View style={styles.choiceNumber}>
                   <Text style={styles.choiceNumberText}>{index + 1}</Text>
                 </View>
                 <View style={styles.choiceCopy}>
@@ -145,10 +144,8 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
     ...elevation.low,
   },
-  choicePrimary: { borderColor: color.popDeep, backgroundColor: color.goldWell },
-  choicePressed: { transform: [{ scale: 0.985 }] },
+  choicePressed: { transform: [{ scale: 0.985 }], backgroundColor: color.well },
   choiceNumber: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center' },
-  choiceNumberPrimary: { backgroundColor: color.popDeep },
   choiceNumberText: { ...type.caption, color: color.inkOn, fontWeight: '900' },
   choiceCopy: { flex: 1, marginLeft: space.md },
   choiceLabel: { ...type.strong, color: color.ink },
