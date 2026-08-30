@@ -27,6 +27,11 @@ replace_once(
     "  mode: LayoutMode = 'narrowPortrait',\n): number {\n  const landscape = isLandscapeMode(mode);\n  const room = stageHeight(screenHeight, mode) - SPRITE_FOOT - (landscape ? 20 : NOTICE_BAND + 4);\n",
     "  mode: LayoutMode = 'narrowPortrait',\n  dialogueExpanded = true,\n): number {\n  const landscape = isLandscapeMode(mode);\n  const room = stageHeight(screenHeight, mode, dialogueExpanded) - SPRITE_FOOT - (landscape ? 20 : NOTICE_BAND + 4);\n",
 )
+replace_once(
+    layout,
+    "  const cap = mode === 'tabletLandscape' ? 1.25 : mode === 'widePortrait' ? 1.34 : mode === 'phoneLandscape' ? 1.05 : 1.42;\n",
+    "  const cap = mode === 'narrowPortrait' && screenHeight < 680\n    ? 0.75\n    : mode === 'tabletLandscape'\n      ? 1.25\n      : mode === 'widePortrait'\n        ? 1.34\n        : mode === 'phoneLandscape'\n          ? 1.05\n          : 1.42;\n",
+)
 
 room = ROOT / "src/ui/BarklyRoom.tsx"
 replace_once(
