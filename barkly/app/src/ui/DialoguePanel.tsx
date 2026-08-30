@@ -31,13 +31,14 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
     enter.setValue(0);
     Animated.timing(enter, {
       toValue: 1,
-      duration: 170,
+      duration: 190,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
   }, [shown, enter]);
 
-  const translateY = enter.interpolate({ inputRange: [0, 1], outputRange: [6, 0] });
+  const translateY = enter.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
+  const scale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
   const npc = speaker?.kind === 'npc';
   const thinking = Boolean(thought && !line);
 
@@ -46,25 +47,35 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
   const speakerInk = npc ? color.violetDeep : thinking ? color.popDeep : color.ink;
 
   return (
-    <View style={[styles.panel, !shown && styles.panelResting]} accessibilityLiveRegion="polite" testID="dialogue-panel">
+    <View
+      style={[styles.panel, !shown && styles.panelResting]}
+      accessibilityLiveRegion="polite"
+      accessibilityLabel={shown ? `${speaker?.name ?? 'Barkly thought'}: ${shown}` : undefined}
+      testID="dialogue-panel"
+    >
       {shown ? (
         <>
           <View style={[styles.edge, { backgroundColor: edge }]} pointerEvents="none" />
           <View style={[styles.shell, { backgroundColor: shell, borderColor: color.inkMid }]} pointerEvents="none" />
+          <View style={styles.innerRim} pointerEvents="none" />
           <View style={styles.highlight} pointerEvents="none" />
+          <View style={styles.glint} pointerEvents="none" />
+          <View style={styles.bottomSheen} pointerEvents="none" />
           {speaker ? <View style={[styles.tail, { backgroundColor: shell, borderColor: color.inkMid }]} pointerEvents="none" /> : null}
 
-          <Animated.View style={[styles.copy, { opacity: enter, transform: [{ translateY }] }]}>
+          <Animated.View style={[styles.copy, { opacity: enter, transform: [{ translateY }, { scale }] }]}>
             {youSaid ? (
               <View style={styles.youBadge}>
                 <Text style={styles.youSaid} numberOfLines={1}>YOU · “{youSaid}”</Text>
               </View>
             ) : speaker ? (
               <View style={[styles.badge, { borderColor: speakerInk }]}>
+                <View style={[styles.speakerDot, { backgroundColor: speakerInk }]} />
                 <Text style={[styles.who, { color: speakerInk }]}>{speaker.name.toUpperCase()}</Text>
               </View>
             ) : (
               <View style={[styles.badge, { borderColor: color.popDeep }]}>
+                <View style={[styles.speakerDot, { backgroundColor: color.popDeep }]} />
                 <Text style={[styles.who, { color: color.popDeep }]}>BARKLY BRAIN</Text>
               </View>
             )}
@@ -116,7 +127,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 2,
   },
-  /** A single controlled specular edge; no translucent plate-on-plate stack. */
+  /** Thin inset rim makes the panel read as a molded game surface, not a flat card. */
+  innerRim: {
+    position: 'absolute',
+    left: 5,
+    right: 5,
+    top: 5,
+    bottom: 5,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: color.glossSoft,
+  },
+  /** One controlled specular edge: enough gloss to feel premium without frosting the whole card. */
   highlight: {
     position: 'absolute',
     left: space.lg,
@@ -125,6 +147,26 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: radius.pill,
     backgroundColor: color.gloss,
+  },
+  glint: {
+    position: 'absolute',
+    left: space.xl,
+    top: 12,
+    width: 34,
+    height: 5,
+    borderRadius: radius.pill,
+    backgroundColor: color.glossSoft,
+    transform: [{ rotate: '-5deg' }],
+  },
+  bottomSheen: {
+    position: 'absolute',
+    left: space.xl,
+    right: space.xl,
+    bottom: 7,
+    height: 2,
+    borderRadius: radius.pill,
+    backgroundColor: color.glossSoft,
+    opacity: 0.6,
   },
   tail: {
     position: 'absolute',
@@ -140,13 +182,18 @@ const styles = StyleSheet.create({
   copy: { paddingHorizontal: space.xs },
   badge: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: space.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: radius.sm,
     borderWidth: 1.5,
     marginBottom: space.xs,
     backgroundColor: color.card,
+    ...elevation.low,
   },
+  speakerDot: { width: 6, height: 6, borderRadius: radius.pill },
   who: { ...type.micro },
   youBadge: {
     alignSelf: 'flex-start',
@@ -154,8 +201,9 @@ const styles = StyleSheet.create({
     backgroundColor: color.card,
     borderRadius: radius.sm,
     paddingHorizontal: space.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
     marginBottom: space.xs,
+    ...elevation.low,
   },
   youSaid: { ...type.caption, color: color.inkMid },
   line: { ...type.speech, color: color.ink },
