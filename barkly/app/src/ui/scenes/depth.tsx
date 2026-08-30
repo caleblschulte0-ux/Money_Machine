@@ -1,31 +1,10 @@
 /**
  * The parts that make a flat drawing read as a PLACE.
  *
- * Every location was three or four bands of flat colour with a hard line where
- * they met, a couple of lollipop trees, and a big empty middle. Barkly is a
- * rendered object with real light on him; standing him on that read exactly
- * like what it was — a good model pasted onto a placeholder.
- *
- * None of what is missing is detail. Adding more trees to a flat green band
- * gives you a flat green band with more trees. What is missing is DEPTH, and
- * depth is four specific things, which is what this file is:
- *
- *   THE GROUND IS A PLANE, NOT A BAND. A floor going away from you gets
- *   lighter, hazier and less saturated toward the horizon. One gradient does
- *   more for the illusion than any amount of scenery.
- *
- *   THE HORIZON IS A DISSOLVE, NOT A CUT. Air between you and the far distance
- *   washes it toward the sky colour. A hard line between two greens is the
- *   single loudest "this is a placeholder" signal in the whole scene.
- *
- *   THINGS OVERLAP AT DIFFERENT SIZES. Three layers — far, middle, and
- *   something big and dark at the very bottom of the frame — tell the eye how
- *   far away everything is, before it has looked at any of it.
- *
- *   THE LIGHT PICKS SOMEBODY. A warm pool under the character and a darkening
- *   at the corners says where to look, and turns "empty" into "out of focus".
- *
- * All of it is vector and cheap, because it runs behind a dog on a phone.
+ * CRISP PASS:
+ * Depth is still essential, but atmosphere cannot become a soft filter over
+ * the whole game. The goal is clean planes + clear contact + restrained air,
+ * not haze/vignette/motes doing the art direction for us.
  */
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,14 +12,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Svg, { Defs, Ellipse, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
-/**
- * A ground plane seen in perspective.
- *
- * `far` is the colour where it meets the horizon and `near` where it reaches
- * the bottom of the screen. They are the same surface: the difference between
- * them IS the depth, and the bigger that difference the further away the
- * horizon feels.
- */
+/** A ground plane seen in perspective. */
 export function GroundPlane({
   top,
   far,
@@ -61,34 +33,26 @@ export function GroundPlane({
 }
 
 /**
- * Air. A soft band of sky colour sitting ON the horizon, fading out downward.
- *
- * This is the one that does the most and shows the least. Without it the
- * distance ends in a ruled line; with it the far scenery walks into the sky.
+ * Air at the horizon. Shorter and quieter than the first version: enough to
+ * remove a hard cut, not enough to wash the scene into a web-gradient haze.
  */
-export function Haze({ top, color, height = 78 }: { top: number; color: string; height?: number }) {
+export function Haze({ top, color, height = 54 }: { top: number; color: string; height?: number }) {
   return (
     <LinearGradient
       colors={[color, `${color}00`]}
-      style={[styles.haze, { top: top - height * 0.55, height }]}
+      style={[styles.haze, { top: top - height * 0.5, height }]}
       pointerEvents="none"
     />
   );
 }
 
-/**
- * Corner darkening, very slightly.
- *
- * Portrait phones are tall, and a tall frame has a lot of screen a long way
- * from the subject. A vignette turns that from "nothing was drawn here" into
- * "this is the edge of the shot".
- */
-export function Vignette({ strength = 0.16 }: { strength?: number }) {
+/** Restrained edge framing. The subject should win through composition first. */
+export function Vignette({ strength = 0.1 }: { strength?: number }) {
   return (
     <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
       <Defs>
-        <RadialGradient id="vig" cx="50%" cy="52%" r="76%">
-          <Stop offset="55%" stopColor="#000000" stopOpacity={0} />
+        <RadialGradient id="vig" cx="50%" cy="52%" r="78%">
+          <Stop offset="62%" stopColor="#000000" stopOpacity={0} />
           <Stop offset="100%" stopColor="#20180E" stopOpacity={strength} />
         </RadialGradient>
       </Defs>
@@ -98,7 +62,7 @@ export function Vignette({ strength = 0.16 }: { strength?: number }) {
 }
 
 /** The warm patch of floor the character is standing in. */
-export function LightPool({ y, width = 300, height = 120, color = '#FFF3D2', opacity = 0.5 }: {
+export function LightPool({ y, width = 300, height = 112, color = '#FFF3D2', opacity = 0.34 }: {
   y: number;
   width?: number;
   height?: number;
@@ -111,6 +75,7 @@ export function LightPool({ y, width = 300, height = 120, color = '#FFF3D2', opa
         <Defs>
           <RadialGradient id="pool" cx="50%" cy="50%" r="50%">
             <Stop offset="0%" stopColor={color} stopOpacity={opacity} />
+            <Stop offset="74%" stopColor={color} stopOpacity={opacity * 0.22} />
             <Stop offset="100%" stopColor={color} stopOpacity={0} />
           </RadialGradient>
         </Defs>
@@ -120,14 +85,7 @@ export function LightPool({ y, width = 300, height = 120, color = '#FFF3D2', opa
   );
 }
 
-/**
- * Something big, dark and close, along the bottom edge of the frame.
- *
- * A foreground element is the cheapest depth cue there is: the eye reads
- * "there is stuff between me and him, so he is over THERE". It is deliberately
- * darker and less detailed than everything else — near things in shadow, out of
- * the light the subject is standing in.
- */
+/** Something close along the bottom edge of the frame. */
 export function Foreground({ children, height = 96 }: { children: React.ReactNode; height?: number }) {
   return (
     <View style={[styles.foreground, { height }]} pointerEvents="none">
@@ -138,14 +96,6 @@ export function Foreground({ children, height = 96 }: { children: React.ReactNod
 
 /* ------------------------------------------------------------------ motion */
 
-/**
- * A very slow horizontal drift, for clouds and anything else that should move
- * without ever being caught moving.
- *
- * Deliberately long: at anything under about twenty seconds it stops being
- * weather and starts being an animation, and the eye goes to it instead of to
- * the dog.
- */
 export function Drift({
   children,
   distance = 26,
@@ -179,15 +129,6 @@ export function Drift({
   );
 }
 
-/**
- * The advance and retreat of an edge — written for the shoreline.
- *
- * Drift is horizontal because clouds are; water comes AT the camera, so the
- * foam edge needs the same slow sine on the other axis. It is a separate
- * component rather than a `direction` prop on Drift because the two read at
- * different speeds: weather is only weather past ~20s, but a wave that slow
- * reads as a tide going out — the sea breathes in seconds.
- */
 export function Surge({
   children,
   distance = 12,
@@ -221,7 +162,6 @@ export function Surge({
   );
 }
 
-/** A gentle rocking, for foliage and anything hanging. */
 export function Sway({
   children,
   degrees = 1.4,
@@ -260,16 +200,14 @@ export function Sway({
 }
 
 /**
- * Dust in the light, or pollen, or sea spray.
- *
- * Three of them, not thirty. The point is that the air is not a vacuum, and
- * three is enough to say that; more turns into snow.
+ * Three restrained particles, not a visual filter. The world can breathe
+ * without putting translucent noise between the kid and the dog.
  */
-export function Motes({ top, height = 240, tint = '#FFFFFF' }: { top: number; height?: number; tint?: string }) {
+export function Motes({ top, height = 220, tint = '#FFFFFF' }: { top: number; height?: number; tint?: string }) {
   const specks = [
-    { x: '22%', r: 2.2, secs: 17, rise: 46, delay: 0 },
-    { x: '58%', r: 1.6, secs: 23, rise: 62, delay: 3200 },
-    { x: '81%', r: 2.6, secs: 20, rise: 38, delay: 6400 },
+    { x: '22%', r: 1.8, secs: 19, rise: 42, delay: 0 },
+    { x: '58%', r: 1.4, secs: 25, rise: 54, delay: 3200 },
+    { x: '81%', r: 2.0, secs: 22, rise: 34, delay: 6400 },
   ];
   return (
     <View style={[styles.motes, { top, height }]} pointerEvents="none">
@@ -300,10 +238,10 @@ function Mote({ x, r, secs, rise, delay, tint }: {
         position: 'absolute',
         left: x as unknown as number,
         top: '70%',
-        opacity: v.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.5, 0.4, 0] }),
+        opacity: v.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.32, 0.24, 0] }),
         transform: [
           { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -rise] }) },
-          { translateX: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 9, -5] }) },
+          { translateX: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 7, -4] }) },
         ],
       }}
     >
@@ -312,25 +250,19 @@ function Mote({ x, r, secs, rise, delay, tint }: {
   );
 }
 
-/**
- * The dark soft ellipse that welds a character to the floor.
- *
- * Exported so BOTH Barkly and the other dogs use the same one — they used to
- * differ, and an NPC with a weaker shadow floats next to a dog who does not,
- * which is most of why they read as stickers laid on the picture.
- */
-export function ContactShadow({ width, opacity = 0.24, style }: {
+/** A tight shadow that visually welds a character to the floor. */
+export function ContactShadow({ width, opacity = 0.26, style }: {
   width: number;
   opacity?: number;
   style?: object;
 }) {
   return (
-    <View style={[styles.contact, { width, height: width * 0.3, marginLeft: -width / 2 }, style]} pointerEvents="none">
+    <View style={[styles.contact, { width, height: width * 0.25, marginLeft: -width / 2 }, style]} pointerEvents="none">
       <Svg width="100%" height="100%">
         <Defs>
           <RadialGradient id="cs" cx="50%" cy="50%" r="50%">
             <Stop offset="0%" stopColor="#2B2117" stopOpacity={opacity} />
-            <Stop offset="62%" stopColor="#2B2117" stopOpacity={opacity * 0.5} />
+            <Stop offset="58%" stopColor="#2B2117" stopOpacity={opacity * 0.56} />
             <Stop offset="100%" stopColor="#2B2117" stopOpacity={0} />
           </RadialGradient>
         </Defs>
