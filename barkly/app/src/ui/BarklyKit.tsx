@@ -1,9 +1,11 @@
 /**
  * Barkly's three physical play objects.
  *
- * These are not toolbar buttons. They live in his world and need to feel like
- * objects a kid can reach for: solid materials, clean contact shadows, simple
- * highlights and enough scale to read before any text does.
+ * These are not toolbar buttons. The previous pass got the interaction right
+ * but still put the objects on a white UI card. This version treats the whole
+ * thing as a LOW TOY DOCK sitting in the room: moulded base, recessed wells,
+ * lower edge, contact shadows and larger object art. The Store's finish is the
+ * benchmark; the dog is still the hero.
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -40,73 +42,77 @@ function useNudge(active: boolean) {
     loop.start();
     return () => loop.stop();
   }, [active, v]);
-  return v.interpolate({ inputRange: [0, 1], outputRange: [0, -7] });
+  return v.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
 }
 
 function Bowl() {
   return (
-    <Svg width={70} height={50} viewBox="0 0 64 46">
-      <Ellipse cx={32} cy={38} rx={24} ry={4.5} fill={DIORAMA.shadow} opacity={0.22} />
-      <Circle cx={23} cy={14} r={5.2} fill={ITEM.biscuitEdge} />
-      <Circle cx={37} cy={12} r={4.4} fill={ITEM.biscuit} />
-      <Circle cx={31} cy={17} r={4.7} fill={ITEM.biscuitEdge} />
-      <Ellipse cx={32} cy={21} rx={24} ry={7} fill={BRASS.dark} />
-      <Ellipse cx={32} cy={20} rx={20} ry={5.2} fill={BRASS.mid} />
-      <Path d="M8 21 a24 7 0 0 0 48 0 l-5 14 a19 5 0 0 1-38 0Z" fill={BRASS.polished} />
-      <Path d="M14 25 Q32 32 50 25" stroke={BRASS.light} strokeWidth={4} fill="none" strokeLinecap="round" opacity={0.8} />
-      <Path d="M17 24 Q27 27 37 24" stroke={DIORAMA.white} strokeWidth={3} fill="none" strokeLinecap="round" opacity={0.45} />
+    <Svg width={78} height={56} viewBox="0 0 70 50">
+      <Ellipse cx={35} cy={44} rx={27} ry={5} fill={DIORAMA.shadow} opacity={0.24} />
+      <Circle cx={24} cy={14} r={5.6} fill={ITEM.biscuitEdge} />
+      <Circle cx={41} cy={12} r={4.8} fill={ITEM.biscuit} />
+      <Circle cx={33} cy={18} r={5.2} fill={ITEM.biscuitEdge} />
+      <Ellipse cx={35} cy={23} rx={27} ry={8} fill={BRASS.edge} />
+      <Ellipse cx={35} cy={20} rx={24} ry={7} fill={BRASS.mid} />
+      <Path d="M8 22 a27 8 0 0 0 54 0 l-6 16 a21 6 0 0 1-42 0Z" fill={BRASS.polished} />
+      <Path d="M13 28 Q35 38 57 28" stroke={BRASS.dark} strokeWidth={3} fill="none" opacity={0.46} />
+      <Path d="M15 25 Q35 32 55 25" stroke={BRASS.light} strokeWidth={5} fill="none" strokeLinecap="round" opacity={0.82} />
+      <Path d="M18 23 Q29 27 40 23" stroke={DIORAMA.white} strokeWidth={3.5} fill="none" strokeLinecap="round" opacity={0.52} />
     </Svg>
   );
 }
 
 function KitBall() {
   return (
-    <Svg width={58} height={58} viewBox="0 0 50 50">
-      <Ellipse cx={25} cy={44} rx={17} ry={3.5} fill={DIORAMA.shadow} opacity={0.2} />
-      <Circle cx={25} cy={25} r={20} fill={BALL.body} />
-      <Path d="M5 22 C15 13 35 13 45 22" stroke={BALL.seam} strokeWidth={3.5} fill="none" />
-      <Circle cx={17} cy={16} r={5.5} fill={BALL.gloss} opacity={0.42} />
-      <Circle cx={15.5} cy={14.5} r={2.2} fill={BALL.gloss} opacity={0.72} />
+    <Svg width={64} height={64} viewBox="0 0 54 54">
+      <Ellipse cx={27} cy={49} rx={19} ry={4} fill={DIORAMA.shadow} opacity={0.22} />
+      <Circle cx={27} cy={27} r={22} fill={BALL.edge} />
+      <Circle cx={27} cy={24} r={21} fill={BALL.body} />
+      <Path d="M6 21 C17 13 37 13 48 21" stroke={BALL.seam} strokeWidth={3.8} fill="none" />
+      <Circle cx={18} cy={15} r={6.2} fill={BALL.gloss} opacity={0.48} />
+      <Circle cx={16.2} cy={13.2} r={2.4} fill={BALL.gloss} opacity={0.8} />
     </Svg>
   );
 }
 
 function KitRope() {
   return (
-    <Svg width={72} height={42} viewBox="0 0 62 36">
-      <Ellipse cx={31} cy={31} rx={25} ry={3.4} fill={DIORAMA.shadow} opacity={0.18} />
-      <Path d="M10 18 q10-10 21 0 q10 10 21 0" stroke={ITEM.ropeShade} strokeWidth={14} strokeLinecap="round" fill="none" />
-      <Path d="M10 16 q10-9 21 0 q10 9 21 0" stroke={ITEM.rope} strokeWidth={9} strokeLinecap="round" fill="none" />
-      <Path d="M11 13 q9-6 18 0" stroke={DIORAMA.white} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.3} />
-      <Path d="M7 18 l-4-7 M7 18 l-4 7 M55 18 l4-7 M55 18 l4 7" stroke={ITEM.ropeShade} strokeWidth={3.5} strokeLinecap="round" />
+    <Svg width={80} height={48} viewBox="0 0 68 40">
+      <Ellipse cx={34} cy={35} rx={27} ry={4} fill={DIORAMA.shadow} opacity={0.2} />
+      <Path d="M10 21 q11-12 24 0 q11 11 24 0" stroke={ITEM.ropeShade} strokeWidth={16} strokeLinecap="round" fill="none" />
+      <Path d="M10 18 q11-10 24 0 q11 10 24 0" stroke={ITEM.rope} strokeWidth={10} strokeLinecap="round" fill="none" />
+      <Path d="M11 15 q10-7 20 0" stroke={DIORAMA.white} strokeWidth={2.8} strokeLinecap="round" fill="none" opacity={0.38} />
+      <Path d="M7 20 l-4-8 M7 20 l-4 8 M61 20 l4-8 M61 20 l4 8" stroke={ITEM.ropeShade} strokeWidth={4} strokeLinecap="round" />
     </Svg>
   );
 }
 
 function KitStick() {
   return (
-    <Svg width={74} height={42} viewBox="0 0 64 36">
-      <Ellipse cx={32} cy={31} rx={25} ry={3.4} fill={DIORAMA.shadow} opacity={0.18} />
-      <Path d="M7 23 q16-10 30-5 q12 4 20-4" stroke={ITEM.stick} strokeWidth={11} strokeLinecap="round" fill="none" />
-      <Path d="M8 20 q16-7 29-3" stroke={ITEM.stickLight} strokeWidth={3} strokeLinecap="round" fill="none" opacity={0.7} />
-      <Path d="M23 17 l-7-8 M43 18 l7-9" stroke={ITEM.stick} strokeWidth={6} strokeLinecap="round" />
+    <Svg width={82} height={48} viewBox="0 0 70 40">
+      <Ellipse cx={35} cy={35} rx={27} ry={4} fill={DIORAMA.shadow} opacity={0.2} />
+      <Path d="M8 26 q17-11 33-6 q13 4 21-5" stroke={DIORAMA.woodDeep} strokeWidth={13} strokeLinecap="round" fill="none" />
+      <Path d="M8 22 q17-9 33-5 q13 4 21-5" stroke={ITEM.stick} strokeWidth={11} strokeLinecap="round" fill="none" />
+      <Path d="M10 18 q16-6 30-2" stroke={ITEM.stickLight} strokeWidth={3.4} strokeLinecap="round" fill="none" opacity={0.8} />
+      <Path d="M25 18 l-8-9 M47 19 l8-10" stroke={ITEM.stick} strokeWidth={6.5} strokeLinecap="round" />
     </Svg>
   );
 }
 
 function KitBed({ asleep }: { asleep: boolean }) {
   return (
-    <Svg width={76} height={52} viewBox="0 0 68 46">
-      <Ellipse cx={34} cy={40} rx={28} ry={4} fill={DIORAMA.shadow} opacity={0.2} />
-      <Ellipse cx={34} cy={25} rx={29} ry={14} fill={ITEM.bedRim} />
-      <Ellipse cx={34} cy={22} rx={25} ry={11} fill={ITEM.bed} />
-      <Ellipse cx={34} cy={27} rx={20} ry={8} fill={ITEM.bedCushion} />
-      <Path d="M5 25 a29 14 0 0 0 58 0 a29 17 0 0 1-58 0Z" fill={ITEM.bedRim} />
-      <Path d="M15 18 Q34 10 53 18" stroke={DIORAMA.white} strokeWidth={3} fill="none" opacity={0.3} strokeLinecap="round" />
+    <Svg width={84} height={58} viewBox="0 0 74 50">
+      <Ellipse cx={37} cy={45} rx={31} ry={4.5} fill={DIORAMA.shadow} opacity={0.22} />
+      <Ellipse cx={37} cy={29} rx={32} ry={15} fill={DIORAMA.bedEdge} />
+      <Ellipse cx={37} cy={25} rx={31} ry={15} fill={ITEM.bedRim} />
+      <Ellipse cx={37} cy={22} rx={27} ry={12} fill={ITEM.bed} />
+      <Ellipse cx={37} cy={28} rx={21} ry={8} fill={ITEM.bedCushion} />
+      <Path d="M6 25 a31 15 0 0 0 62 0 a31 18 0 0 1-62 0Z" fill={ITEM.bedRim} />
+      <Path d="M17 17 Q37 9 57 17" stroke={DIORAMA.white} strokeWidth={3.5} fill="none" opacity={0.38} strokeLinecap="round" />
       {asleep && (
         <>
-          <Path d="M47 11 h7 l-7 7 h7" stroke={DIORAMA.paleCream} strokeWidth={2.2} fill="none" strokeLinecap="round" />
-          <Path d="M56 4 h4 l-4 4 h4" stroke={DIORAMA.paleCream} strokeWidth={1.6} fill="none" strokeLinecap="round" />
+          <Path d="M50 10 h7 l-7 7 h7" stroke={DIORAMA.paleCream} strokeWidth={2.2} fill="none" strokeLinecap="round" />
+          <Path d="M60 3 h4 l-4 4 h4" stroke={DIORAMA.paleCream} strokeWidth={1.6} fill="none" strokeLinecap="round" />
         </>
       )}
     </Svg>
@@ -126,7 +132,7 @@ function KitObject({ action, label, hint, wanted, disabled, onPress, children }:
   const press = useRef(new Animated.Value(1)).current;
   return (
     <Pressable
-      onPressIn={() => Animated.spring(press, { toValue: 0.9, friction: 5, tension: 340, useNativeDriver: true }).start()}
+      onPressIn={() => Animated.spring(press, { toValue: 0.91, friction: 5, tension: 340, useNativeDriver: true }).start()}
       onPressOut={() => Animated.spring(press, { toValue: 1, friction: 5, tension: 320, useNativeDriver: true }).start()}
       onPress={() => onPress(action)}
       disabled={disabled}
@@ -137,8 +143,9 @@ function KitObject({ action, label, hint, wanted, disabled, onPress, children }:
       testID={`kit-${action}`}
       style={[styles.slot, disabled && styles.slotOff]}
     >
-      <View style={[styles.pad, wanted && !disabled && styles.padWanted]} pointerEvents="none">
-        <View style={styles.padHighlight} />
+      <View style={[styles.wellShadow, wanted && !disabled && styles.wellShadowWanted]} pointerEvents="none" />
+      <View style={[styles.well, wanted && !disabled && styles.wellWanted]} pointerEvents="none">
+        <View style={styles.wellGloss} />
       </View>
       <Animated.View style={[styles.art, { transform: [{ translateY: lift }, { scale: press }] }]}>{children}</Animated.View>
       {wanted && !disabled && <Text style={styles.label} numberOfLines={1}>{label}</Text>}
@@ -149,9 +156,10 @@ function KitObject({ action, label, hint, wanted, disabled, onPress, children }:
 export default function BarklyKit({ toyId, playLabel, asleep, wants, disabled, onPress }: Props) {
   return (
     <View style={styles.kit}>
+      <View style={styles.dockShadow} pointerEvents="none" />
       <View style={styles.dock} pointerEvents="none">
-        <View style={styles.dockEdge} />
         <View style={styles.dockGloss} />
+        <View style={styles.dockFront} />
       </View>
 
       <KitObject action="feed" label="food" hint="His bowl. Tap it to choose what he eats." wanted={wants === 'feed'} disabled={disabled} onPress={onPress}>
@@ -179,77 +187,99 @@ export default function BarklyKit({ toyId, playLabel, asleep, wants, disabled, o
 const styles = StyleSheet.create({
   kit: {
     position: 'absolute',
-    left: 8,
-    right: 8,
-    bottom: 0,
-    height: 72,
+    left: 7,
+    right: 7,
+    bottom: -1,
+    height: 76,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'flex-end',
     paddingHorizontal: space.xs,
     zIndex: 8,
   },
+  dockShadow: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: -2,
+    height: 24,
+    borderRadius: radius.xl,
+    backgroundColor: color.ink,
+    opacity: 0.12,
+  },
   dock: {
     position: 'absolute',
     left: 5,
     right: 5,
-    bottom: 1,
-    height: 43,
+    bottom: 2,
+    height: 46,
     borderRadius: radius.xl,
-    backgroundColor: color.card,
+    backgroundColor: color.paper,
     borderWidth: 2,
     borderColor: color.line,
+    overflow: 'hidden',
     ...elevation.low,
-  },
-  dockEdge: {
-    position: 'absolute',
-    left: 9,
-    right: 9,
-    bottom: -4,
-    height: 8,
-    borderBottomLeftRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
-    backgroundColor: color.line,
   },
   dockGloss: {
     position: 'absolute',
-    left: 18,
-    right: 18,
+    left: 17,
+    right: 17,
     top: 5,
-    height: 5,
+    height: 6,
     borderRadius: radius.pill,
     backgroundColor: color.glossSoft,
   },
+  dockFront: {
+    position: 'absolute',
+    left: 7,
+    right: 7,
+    bottom: 0,
+    height: 8,
+    borderTopLeftRadius: radius.md,
+    borderTopRightRadius: radius.md,
+    backgroundColor: color.line,
+  },
   slot: {
-    minWidth: TAP_MIN + 24,
-    minHeight: TAP_MIN + 18,
+    minWidth: TAP_MIN + 26,
+    minHeight: TAP_MIN + 20,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: 3,
+    paddingBottom: 2,
   },
-  slotOff: { opacity: 0.38 },
-  pad: {
+  slotOff: { opacity: 0.4 },
+  wellShadow: {
     position: 'absolute',
-    bottom: 7,
-    width: 74,
+    bottom: 5,
+    width: 80,
     height: 30,
+    borderRadius: radius.lg,
+    backgroundColor: color.ink,
+    opacity: 0.12,
+  },
+  wellShadowWanted: { opacity: 0.18 },
+  well: {
+    position: 'absolute',
+    bottom: 9,
+    width: 80,
+    height: 31,
     borderRadius: radius.lg,
     backgroundColor: color.fill,
     borderWidth: 1.5,
     borderColor: color.line,
+    overflow: 'hidden',
   },
-  padWanted: { backgroundColor: color.goldWell, borderColor: color.gold },
-  padHighlight: {
+  wellWanted: { backgroundColor: color.goldWell, borderColor: color.gold },
+  wellGloss: {
     position: 'absolute',
     left: 9,
     right: 9,
     top: 4,
-    height: 4,
+    height: 5,
     borderRadius: radius.pill,
     backgroundColor: color.gloss,
-    opacity: 0.65,
+    opacity: 0.72,
   },
-  art: { alignItems: 'center', justifyContent: 'flex-end', height: 62, zIndex: 2 },
+  art: { alignItems: 'center', justifyContent: 'flex-end', height: 68, zIndex: 2 },
   label: {
     position: 'absolute',
     bottom: -3,
