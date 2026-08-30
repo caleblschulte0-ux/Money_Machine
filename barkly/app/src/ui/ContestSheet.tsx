@@ -1,17 +1,17 @@
 /**
  * The duel, on screen.
  *
- * A marker sweeps the track, a zone is the target, you tap. Three rounds,
- * faster and tighter each time. No instructions screen — the shape of it is
- * the instruction.
+ * The tested timing mechanic stays exactly where it belongs: game/contest.ts.
+ * This pass changes only presentation. A contest used to replace Barkly and his
+ * opponent with a centered white timing card, so the most game-like moment in
+ * the app looked the least like the game. The world now remains visible and
+ * the timing input sits low like a contest HUD.
  *
- * The rules live in game/contest.ts; this file only animates them and reads
- * the marker's position at the instant of the tap. That split is why the
- * fairness is testable without rendering anything.
+ * A future BarklyRoom pass should animate the dogs and ball from each result;
+ * this component is deliberately the bridge, not the final cinematic system.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { color } from './theme';
 import { Animated, DimensionValue, Easing, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   ContestRules,
@@ -22,7 +22,7 @@ import {
   RoundSpec,
   verdictLine,
 } from '../game/contest';
-
+import { color, elevation, radius, space, type } from './theme';
 
 interface Props {
   visible: boolean;
@@ -37,8 +37,8 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
   const [flash, setFlash] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const sweep = useRef(new Animated.Value(0)).current;
-  // The marker's live position. Animated.Value cannot be read synchronously
-  // in a tap handler, so the listener keeps a plain number in step with it.
+  // Animated.Value cannot be read synchronously in a tap handler, so the
+  // listener keeps a plain number in step with it.
   const position = useRef(0);
 
   useEffect(() => {
@@ -48,7 +48,6 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
     return () => sweep.removeListener(id);
   }, [sweep]);
 
-  // Fresh contest whenever one opens.
   useEffect(() => {
     if (!visible || !rules) return;
     const fresh = freshContest(rules);
@@ -57,7 +56,6 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
     setFlash(null);
   }, [visible, rules]);
 
-  // Sweep back and forth for the current round.
   useEffect(() => {
     if (!visible || !spec || !state || state.done) {
       sweep.stopAnimation();
@@ -96,31 +94,31 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
   };
 
   const pct = (n: number) => `${Math.round(n * 100)}%` as DimensionValue;
+  const kind = rules.kind === 'race' ? 'RACE' : rules.kind === 'dig' ? 'DIG-OFF' : 'FETCH DUEL';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
-          <Text style={styles.eyebrow}>
-            {rules.kind === 'race' ? 'RACE' : rules.kind === 'dig' ? 'DIG-OFF' : 'FETCH DUEL'} · VS{' '}
-            {rules.opponent.toUpperCase()}
-          </Text>
+      <View style={styles.root}>
+        <View style={styles.worldScrim} pointerEvents="none" />
+
+        <View style={styles.scoreFloat} pointerEvents="none">
+          <Text style={styles.eyebrow}>{kind} · VS {rules.opponent.toUpperCase()}</Text>
+          <View style={styles.score}>
+            <Text style={styles.scoreSide}>Barkly {state?.you ?? 0}</Text>
+            <Text style={styles.scoreDash}>—</Text>
+            <Text style={styles.scoreSide}>{state?.them ?? 0} {rules.opponent}</Text>
+          </View>
+        </View>
+
+        <View style={styles.tray}>
+          <View style={styles.handle} />
           <Text style={styles.title}>
             {state?.done
               ? verdictLine(state)
               : `Round ${Math.min((state?.round ?? 0) + 1, rules.rounds)} of ${rules.rounds}`}
           </Text>
+          <Text style={styles.instruction}>{flash ?? (running ? 'Hit it when the marker crosses the gold.' : ' ')}</Text>
 
-          {/* score — never colour alone, the numbers say it */}
-          <View style={styles.score}>
-            <Text style={styles.scoreSide}>Barkly {state?.you ?? 0}</Text>
-            <Text style={styles.scoreDash}>—</Text>
-            <Text style={styles.scoreSide}>
-              {state?.them ?? 0} {rules.opponent}
-            </Text>
-          </View>
-
-          {/* the track */}
           <Pressable
             style={styles.track}
             onPress={tap}
@@ -139,9 +137,7 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
                 ]}
               />
             )}
-            {spec && (
-              <View style={[styles.zoneCore, { left: pct(spec.target - 0.006), width: '1.2%' as DimensionValue }]} />
-            )}
+            {spec && <View style={[styles.zoneCore, { left: pct(spec.target - 0.006), width: '1.2%' as DimensionValue }]} />}
             <Animated.View
               style={[
                 styles.marker,
@@ -150,13 +146,10 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
             />
           </Pressable>
 
-          <Text style={styles.flash} accessibilityLiveRegion="polite">
-            {flash ?? (running ? 'Tap when the marker is in the gold.' : ' ')}
-          </Text>
-
           {state?.done ? (
             <Pressable style={styles.primary} onPress={() => onDone(state)} accessibilityRole="button">
-              <Text style={styles.primaryText}>done</Text>
+              <View style={styles.gloss} pointerEvents="none" />
+              <Text style={styles.primaryText}>back to Barkly</Text>
             </Pressable>
           ) : (
             <Pressable style={styles.cancel} onPress={onClose} accessibilityRole="button">
@@ -170,33 +163,25 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(40,32,22,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  card: { backgroundColor: color.card, borderRadius: 28, padding: 22, width: '100%', maxWidth: 360 },
-  eyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: color.inkSoft },
-  title: { fontSize: 20, fontWeight: '800', color: color.ink, marginTop: 6, lineHeight: 26 },
-  score: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 14 },
-  scoreSide: { fontSize: 15, fontWeight: '800', color: color.ink },
-  scoreDash: { fontSize: 15, color: color.inkSoft },
-  track: {
-    height: 54,
-    borderRadius: 12,
-    backgroundColor: color.fill,
-    marginTop: 16,
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
+  root: { flex: 1, justifyContent: 'flex-end' },
+  worldScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: color.scrim, opacity: 0.34 },
+  scoreFloat: { position: 'absolute', left: space.xl, right: space.xl, top: '13%', alignItems: 'center' },
+  eyebrow: { ...type.micro, color: color.inkOn, backgroundColor: color.ink, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: space.xs, overflow: 'hidden' },
+  score: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md, marginTop: space.sm, backgroundColor: color.card, borderRadius: radius.pill, paddingHorizontal: space.lg, paddingVertical: space.sm, ...elevation.card },
+  scoreSide: { ...type.strong, color: color.ink },
+  scoreDash: { ...type.strong, color: color.inkSoft },
+
+  tray: { backgroundColor: color.paper, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.xl, ...elevation.sheet },
+  handle: { alignSelf: 'center', width: 50, height: 5, borderRadius: radius.pill, backgroundColor: color.line, marginBottom: space.md },
+  title: { ...type.title, color: color.ink, textAlign: 'center' },
+  instruction: { ...type.small, minHeight: 40, color: color.inkSoft, textAlign: 'center', marginTop: space.sm },
+  track: { height: 58, borderRadius: radius.sm, backgroundColor: color.fill, marginTop: space.sm, overflow: 'hidden', justifyContent: 'center', borderWidth: 1, borderColor: color.line },
   zone: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.goldWell },
-  zoneCore: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.gold, opacity: 0.55 },
-  marker: { position: 'absolute', top: 4, bottom: 4, width: 8, borderRadius: 8, backgroundColor: color.ink },
-  flash: { marginTop: 12, minHeight: 38, fontSize: 13, lineHeight: 19, color: color.inkSoft },
-  primary: { backgroundColor: color.ink, borderRadius: 999, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
-  primaryText: { color: color.card, fontSize: 15, fontWeight: '800' },
-  cancel: { alignItems: 'center', paddingVertical: 10 },
-  cancelText: { color: color.inkSoft, fontSize: 13 },
+  zoneCore: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.gold, opacity: 0.7 },
+  marker: { position: 'absolute', top: space.xs, bottom: space.xs, width: 8, borderRadius: radius.pill, backgroundColor: color.ink },
+  primary: { backgroundColor: color.pop, borderRadius: radius.pill, paddingVertical: space.lg, alignItems: 'center', marginTop: space.lg, overflow: 'hidden', ...elevation.card },
+  gloss: { position: 'absolute', top: space.xs, left: space.lg, right: space.lg, height: 12, borderRadius: radius.pill, backgroundColor: color.inkOn, opacity: 0.4 },
+  primaryText: { ...type.strong, color: color.ink },
+  cancel: { alignItems: 'center', paddingVertical: space.md, marginTop: space.sm },
+  cancelText: { ...type.small, color: color.inkSoft },
 });
