@@ -5,6 +5,7 @@ import {
   friendshipStage,
   INITIATIVE_COOLDOWN_MS,
   noteInitiative,
+  noteTreasureAffinity,
   pickInitiative,
   rivalryStage,
   adjustSocialBond,
@@ -92,12 +93,29 @@ describe('Barkly starts conversations himself', () => {
 });
 
 describe('character continuity', () => {
-  it('a new treasure becomes his favorite, obsession and collection history', () => {
+  it('a new treasure becomes an obsession without automatically erasing the old favorite', () => {
     let c = withTreasure(freshCharacter(), 'a rock that looks like a duck', NOW);
     c = withTreasure(c, 'the good stick', NOW + 1);
-    expect(c.favoriteTreasure).toBe('the good stick');
+    expect(c.favoriteTreasure).toBe('a rock that looks like a duck');
     expect(c.obsession?.topic).toBe('the good stick');
     expect(c.treasuresFound).toBe(2);
+  });
+
+  it('lets repeated history, not recency, change Barkly\'s favorite treasure', () => {
+    let c = withTreasure(freshCharacter(), 'a rock that looks like a duck', NOW);
+    c = withTreasure(c, 'the good stick', NOW + 1);
+    c = noteTreasureAffinity(c, 'the good stick', NOW + 2, 2);
+    expect(c.favoriteTreasure).toBe('the good stick');
+    expect(c.treasureAffinities?.['the good stick'].score).toBeGreaterThan(
+      c.treasureAffinities?.['a rock that looks like a duck'].score ?? 0,
+    );
+  });
+
+  it('backfills a legacy favorite without rerolling the dog', () => {
+    const legacy = { ...freshCharacter(), treasureAffinities: undefined, favoriteTreasure: 'the good stick' };
+    const migrated = expireCharacter(legacy, NOW);
+    expect(migrated.favoriteTreasure).toBe('the good stick');
+    expect(migrated.treasureAffinities?.['the good stick'].score).toBe(3);
   });
 
   it('obsessions and grievances expire but durable social history does not', () => {
