@@ -72,6 +72,9 @@ const TARGETS = [
 
 const NEVER_OVER_THE_DOG = ['dialogue', 'notice'];
 const BELOW_HIS_MIDLINE = ['kit-feed', 'kit-play', 'kit-sleep'];
+const KIT_NAMES = ['kit-feed', 'kit-play', 'kit-sleep'];
+const MIN_STAGE_GAP = 8;
+const MIN_EDGE_GUTTER = 10;
 
 const overlap = (a, b) => {
   const x = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
@@ -150,6 +153,37 @@ for (const size of sizes) {
         failures++;
         console.log(`  COLLIDES: ${boxes[i].name} × ${boxes[j].name} (${hit.x}px × ${hit.y}px)`);
       }
+    }
+  }
+
+  const kitBoxes = boxes.filter((b) => KIT_NAMES.includes(b.name));
+  const kitTop = kitBoxes.length ? Math.min(...kitBoxes.map((b) => b.y)) : null;
+  const stateChip = boxes.find((b) => b.name === 'state-chip');
+
+  if (dog && kitTop !== null && size.height >= size.width) {
+    const dogBottom = dog.y + dog.height;
+    const gap = kitTop - dogBottom;
+    if (gap < MIN_STAGE_GAP) {
+      failures++;
+      console.log(`  DOG/DOCK CROWDING: only ${Math.round(gap)}px between Barkly and care dock; need ${MIN_STAGE_GAP}px`);
+    }
+  }
+
+  if (stateChip && kitTop !== null && size.height >= size.width) {
+    const chipBottom = stateChip.y + stateChip.height;
+    const gap = kitTop - chipBottom;
+    if (gap < MIN_STAGE_GAP) {
+      failures++;
+      console.log(`  CHIP/DOCK CROWDING: only ${Math.round(gap)}px between state chip and care dock; need ${MIN_STAGE_GAP}px`);
+    }
+  }
+
+  if (kitBoxes.length && size.height >= size.width) {
+    const left = Math.min(...kitBoxes.map((b) => b.x));
+    const right = Math.max(...kitBoxes.map((b) => b.x + b.width));
+    if (left < MIN_EDGE_GUTTER || size.width - right < MIN_EDGE_GUTTER) {
+      failures++;
+      console.log(`  DOCK EDGE CROWDING: care controls must keep ${MIN_EDGE_GUTTER}px side gutters`);
     }
   }
 
