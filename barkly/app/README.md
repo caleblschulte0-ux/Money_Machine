@@ -112,3 +112,5 @@ NPC labels, notices, and the adaptive conversation dock are measured by the
 layout check across short phones, modern portrait phones, landscape phones,
 and tablet viewports before a spacing change is released. The checker also
 enforces visual breathing room, not only literal box overlap.
+
+Released to the playable branch after the responsive spacing CI gate passed.
