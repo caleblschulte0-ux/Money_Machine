@@ -1,0 +1,134 @@
+name: Barkly layout fix once
+
+on:
+  push:
+    branches: [chatgpt/barkly-layout-space-fix-20260830]
+    paths:
+      - '.github/workflows/barkly-layout-fix-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/barkly-layout-space-fix-20260830
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: barkly/app/package-lock.json
+
+      - name: Reflow the phone layout
+        shell: python
+        run: |
+          from pathlib import Path
+
+          room_path = Path('barkly/app/src/ui/BarklyRoom.tsx')
+          room = room_path.read_text()
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f'missing expected BarklyRoom fragment: {label}')
+              return text.replace(old, new, 1)
+
+          room = replace_once(
+              room,
+              '            <Pressable style={styles.gear} hitSlop={10} onPress={() => openOnly(setSettingsOpen)} accessibilityRole="button" accessibilityLabel="Settings">',
+              '''            <Pressable
+              style={styles.gear}
+              hitSlop={10}
+              onPress={() => openOnly(setSettingsOpen)}
+              onLongPress={() => { if (playtest) setPlaytestOpen(true); }}
+              delayLongPress={450}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              accessibilityHint={playtest ? 'Long press to open playtest saves.' : undefined}
+            >''',
+              'settings control',
+          )
+
+          places = room.index('        <View style={styles.places}>')
+          start = room.index('          {playtest && (\n', places)
+          marker = '          )}\n          <View style={styles.tabs}>'
+          end = room.index(marker, start)
+          room = room[:start] + '          <View style={styles.tabs}>' + room[end + len(marker):]
+
+          replacements = [
+              ('  content: { flex: 1, paddingHorizontal: 22 },', '  content: { flex: 1, paddingHorizontal: 16 },', 'content gutters'),
+              ('    gap: space.sm,\n    marginTop: space.sm,', '    gap: 6,\n    marginTop: 4,', 'navigation spacing'),
+              ('  headerButtons: { flexDirection: \'row\', gap: 7 },', '  headerButtons: { flexDirection: \'row\', gap: 6 },', 'header gap'),
+              ('  walletTap: { flex: 1, marginHorizontal: 8 },', '  walletTap: { flex: 1 },', 'wallet margins'),
+              ("  tabs: { flex: 1, flexDirection: 'row', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 2, ...elevation.card },", "  tabs: { flex: 1, height: TAP_MIN, flexDirection: 'row', backgroundColor: 'rgba(255,253,247,0.90)', borderRadius: 999, padding: 3, gap: 2, ...elevation.card },", 'tab rail'),
+              ("  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 },", "  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 12 },", 'stage bottom'),
+              ('  controls: { gap: 9 },', '  controls: { gap: 6 },', 'control gap'),
+              ("  talk: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 18, overflow: 'hidden', ...elevation.card },", "  talk: { flex: 1, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 12, overflow: 'hidden', ...elevation.card },", 'talk row'),
+          ]
+          for old, new, label in replacements:
+              room = replace_once(room, old, new, label)
+
+          room_path.write_text(room)
+
+          layout_path = Path('barkly/app/src/ui/layout.ts')
+          layout = layout_path.read_text()
+          layout = layout.replace('export const PLACES_HEIGHT = TAP_MIN + 6;', 'export const PLACES_HEIGHT = TAP_MIN + 4;')
+          layout = layout.replace('export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 8;', 'export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 6;')
+          layout = layout.replace('export const DIALOGUE_HEIGHT = 100;', 'export const DIALOGUE_HEIGHT = 94;')
+          layout = layout.replace('export const DIALOGUE_GAP = 8;', 'export const DIALOGUE_GAP = 6;')
+          layout = layout.replace('export const CONTROLS_HEIGHT = TAP_MIN + 20;', 'export const CONTROLS_HEIGHT = TAP_MIN + 14;')
+          layout_path.write_text(layout)
+
+          dialogue_path = Path('barkly/app/src/ui/DialoguePanel.tsx')
+          dialogue = dialogue_path.read_text()
+          if '    paddingVertical: space.md,' not in dialogue:
+              raise SystemExit('missing DialoguePanel padding')
+          dialogue = dialogue.replace('    paddingVertical: space.md,', '    paddingVertical: space.sm,', 1)
+          dialogue_path.write_text(dialogue)
+
+          kit_path = Path('barkly/app/src/ui/BarklyKit.tsx')
+          kit = kit_path.read_text()
+          kit_changes = [
+              ("  kit: { position: 'absolute', left: 7, right: 7, bottom: -1, height: 78,", "  kit: { position: 'absolute', left: 7, right: 7, bottom: -1, height: 72,"),
+              ("bottom: -3, height: 25,", "bottom: -3, height: 22,"),
+              ("bottom: 2, height: 48,", "bottom: 2, height: 44,"),
+              ("minHeight: TAP_MIN + 20,", "minHeight: TAP_MIN + 16,"),
+              ("height: 68, zIndex: 2", "height: 62, zIndex: 2"),
+          ]
+          for old, new in kit_changes:
+              if old not in kit:
+                  raise SystemExit(f'missing BarklyKit fragment: {old}')
+              kit = kit.replace(old, new, 1)
+          kit_path.write_text(kit)
+
+      - name: Install locked dependencies
+        working-directory: barkly/app
+        run: npm ci
+
+      - name: Install Chromium
+        working-directory: barkly/app
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck
+        working-directory: barkly/app
+        run: npm run typecheck
+
+      - name: App tests
+        working-directory: barkly/app
+        run: npm test -- --runInBand
+
+      - name: Layout and accessibility
+        working-directory: barkly/app
+        run: npm run check:ui
+
+      - name: Commit the verified reflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add barkly/app/src/ui/BarklyRoom.tsx barkly/app/src/ui/layout.ts barkly/app/src/ui/DialoguePanel.tsx barkly/app/src/ui/BarklyKit.tsx
+          git rm .github/workflows/barkly-layout-fix-once.yml
+          git commit -m "Barkly: reclaim screen space and separate HUD zones"
+          git push origin HEAD:chatgpt/barkly-layout-space-fix-20260830
