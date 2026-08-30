@@ -412,7 +412,7 @@ function NpcDog({
       {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
       <Text
         testID={`npc-name-${id}`}
-        style={[styles.npcName, { bottom: compactLabel ? spot.size * 1.25 * scale + 4 : -19 * scale }]}
+        style={[styles.npcName, { bottom: compactLabel ? spot.size * 1.25 * scale + 4 : -4 * scale }]}
       >
         {NPCS[id].name.toUpperCase()}
       </Text>
@@ -985,7 +985,7 @@ export default function BarklyRoom() {
               scale={spriteScale}
               talking={npcBubble?.id === id}
               bond={bondFor(barkly.character, NPCS[id].name)}
-              compactLabel={!landscape && screenH < 650}
+              compactLabel={landscape || screenH < 650}
               onPress={() => barkly.npcTalk(id)}
             />
           ))}
