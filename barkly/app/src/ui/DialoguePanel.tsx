@@ -23,6 +23,8 @@ interface Props {
   thought?: string | null;
   hint: string;
   asleep?: boolean;
+  /** Compact Talk/Type controls live inside the response surface. */
+  actions?: React.ReactNode;
 }
 
 interface QueuedNpc {
@@ -30,7 +32,7 @@ interface QueuedNpc {
   line: string;
 }
 
-export default function DialoguePanel({ speaker, line, youSaid, thought, hint, asleep }: Props) {
+export default function DialoguePanel({ speaker, line, youSaid, thought, hint, asleep, actions }: Props) {
   const [voice, setVoice] = useState(getVoiceActivity);
   const [queuedNpc, setQueuedNpc] = useState<QueuedNpc | null>(null);
   const [npcReady, setNpcReady] = useState(false);
@@ -161,7 +163,7 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
           <View style={styles.bottomSheen} pointerEvents="none" />
           {visibleSpeaker ? <View style={[styles.tail, { backgroundColor: shell, borderColor: color.inkMid }]} pointerEvents="none" /> : null}
 
-          <Animated.View style={[styles.copy, { opacity: enter, transform: [{ translateY }, { scale }] }]}>
+          <Animated.View style={[styles.copy, actions ? styles.copyWithActions : null, { opacity: enter, transform: [{ translateY }, { scale }] }]}>
             {visibleYouSaid ? (
               <View style={styles.youBadge}>
                 <Text style={styles.youSaid} numberOfLines={1}>YOU · “{visibleYouSaid}”</Text>
@@ -179,6 +181,7 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
             )}
             <Text style={[styles.line, !visibleLine && styles.thought]} numberOfLines={SPEECH_MAX_LINES}>{shown}</Text>
           </Animated.View>
+          {actions ? <View style={styles.actions}>{actions}</View> : null}
         </>
       ) : (
         <View style={styles.restingWrap}>
@@ -281,6 +284,15 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
   },
   copy: { paddingHorizontal: space.xs },
+  copyWithActions: { paddingRight: 96 },
+  actions: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    flexDirection: 'row',
+    gap: 4,
+    zIndex: 4,
+  },
   badge: {
     alignSelf: 'flex-start',
     flexDirection: 'row',

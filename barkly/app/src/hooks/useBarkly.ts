@@ -114,6 +114,7 @@ import { HydrationGate } from '../storage/hydration';
 import { VoiceShape } from '../providers/tts/expoSpeechTts';
 import { pickThought } from '../world/thoughts';
 import { bronx } from '../barkly/dialect';
+import { autonomousSpeechAllowed, nextPlayerFloorUntil } from '../barkly/conversationTurn';
 
 // Every persisted key lives in storage/keys.ts — the playtester writes the
 // same list, and a second copy here is how those two silently drift apart.
@@ -200,7 +201,9 @@ export interface BarklyController {
   onboarding: OnboardingState | undefined;
   advanceOnboarding(result: ReturnType<typeof advanceOnboarding>): void;
 
-  startTalk(): Promise<void>;
+  /** Explicit player intent wins over Barkly's interruptible speech. */
+  claimConversationTurn(): boolean;
+  startTalk(): Promise<boolean>;
   stopTalk(): Promise<void>;
   cancelTalk(): Promise<void>;
   submitText(text: string): Promise<void>;
@@ -324,6 +327,8 @@ export function useBarkly(): BarklyController {
     isBusy(snapshot.state);
   const conversationHeldRef = useRef(conversationHeld);
   conversationHeldRef.current = conversationHeld;
+  const [playerFloorUntil, setPlayerFloorUntil] = useState(0);
+  const playerFloorUntilRef = useRef(0);
 
   const [muted, setMutedState] = useState(false);
   const [onboarding, setOnboarding] = useState<OnboardingState | undefined>(undefined);
@@ -770,12 +775,16 @@ export function useBarkly(): BarklyController {
       setLastExchange({ userText: opts.userText ?? '', barklyText: line });
       setReplyActions(opts.actions ?? []);
       dispatch({ type: 'SPEAK_START' });
+      let interrupted = false;
       try {
-        await voiceEngine.speak(line);
+        const result = await voiceEngine.speak(line);
+        interrupted = result.interrupted;
       } catch {}
       dispatch({ type: 'SPEAK_END' });
       setReplyActions([]);
-      if (opts.after) dispatch(opts.after);
+      // If the player cut him off, do not fire a post-line reaction as though
+      // the interrupted line completed. The player owns the turn now.
+      if (opts.after && !interrupted) dispatch(opts.after);
     },
     [dispatch, voiceEngine],
   );
@@ -791,9 +800,25 @@ export function useBarkly(): BarklyController {
    * nothing about why is the single most common way this app felt broken.
    */
   const claimTurn = useCallback((): boolean => {
-    if (busy || activeEncounter) return false;
+    if (busy || activeEncounter || pendingContest) return false;
     const state = snapshotRef.current.state;
     if (isLocked(state)) return false;
+
+    // A deliberate player action owns the conversational floor. This is not a
+    // mute: Barkly can answer the player normally, but queued greetings,
+    // thoughts and initiative cannot immediately start another unprompted beat.
+    const until = nextPlayerFloorUntil(Date.now());
+    playerFloorUntilRef.current = until;
+    setPlayerFloorUntil(until);
+
+    // Whatever autonomous/previous line was occupying the shared surface gets
+    // out of the way immediately. A tap on Type should reveal an input, not an
+    // old sentence that keeps fighting for the same pixels.
+    setThought(null);
+    setLastExchange(null);
+    setNpcBubble(null);
+    if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+
     if (isInterruptible(state)) {
       try {
         voiceEngine.stop();
@@ -802,7 +827,7 @@ export function useBarkly(): BarklyController {
       setReplyActions([]);
     }
     return true;
-  }, [activeEncounter, busy, dispatch, voiceEngine]);
+  }, [activeEncounter, busy, dispatch, pendingContest, voiceEngine]);
 
   /**
    * Say a line in the current shape so a choice can be HEARD before it is
@@ -849,6 +874,18 @@ export function useBarkly(): BarklyController {
     // conversation with an announcement. A conversation includes the other
     // dog's half and any open scene, so the queue waits for all of it.
     if (conversationHeld) return;
+    // Explicit player intent gets a quiet window. If a queued line exists,
+    // keep it queued and wake this effect after the window instead of dropping
+    // it or letting it steal the input surface back.
+    const now = Date.now();
+    if (!autonomousSpeechAllowed(now, playerFloorUntil, false)) {
+      const remaining = Math.max(25, playerFloorUntil - now + 25);
+      const wake = setTimeout(() => {
+        if (playerFloorUntilRef.current === playerFloorUntil) playerFloorUntilRef.current = 0;
+        setPlayerFloorUntil((current) => (current === playerFloorUntil ? 0 : current));
+      }, remaining);
+      return () => clearTimeout(wake);
+    }
     // ...and then it waits a beat longer.
     //
     // Waiting for "not busy" alone still cost you the answer: he replied, the
@@ -861,7 +898,7 @@ export function useBarkly(): BarklyController {
       speak(pendingGreeting, { actions: ['TAIL_WAG'] }).catch(() => {});
     }, 1900);
     return () => clearTimeout(t);
-  }, [pendingGreeting, conversationHeld, speak]);
+  }, [pendingGreeting, conversationHeld, playerFloorUntil, speak]);
 
   // --------------------------------------------------------------- world
   const locationRef = useRef(location);
@@ -893,7 +930,10 @@ export function useBarkly(): BarklyController {
         // ambient thoughts popped over story scenes mid-beat. The shared
         // conversation lock (via ref — this timer outlives renders) is the
         // whole answer; no second condition grows here.
-        if (IDLE_STATES.includes(snapshotRef.current.state) && !conversationHeldRef.current) {
+        if (
+          IDLE_STATES.includes(snapshotRef.current.state) &&
+          autonomousSpeechAllowed(Date.now(), playerFloorUntilRef.current, conversationHeldRef.current)
+        ) {
           thoughtSeed.current += 1;
           // His inner voice has the same accent as his outer one.
           setThought(bronx(pickThought(locationRef.current, new Date().getHours(), thoughtSeed.current)));
@@ -922,7 +962,10 @@ export function useBarkly(): BarklyController {
         // Same shared lock as thoughts and queued lines: an initiative is an
         // unprompted line, and unprompted lines wait for open scenes (duels,
         // NPC bubbles) — not just for `activeEncounter`.
-        if (quiet && !conversationHeldRef.current) {
+        if (
+          quiet &&
+          autonomousSpeechAllowed(Date.now(), playerFloorUntilRef.current, conversationHeldRef.current)
+        ) {
           const mem = memory.snapshot();
           const relevant = memory.relevant();
           const loc = LOCATIONS[locationRef.current];
@@ -999,8 +1042,11 @@ export function useBarkly(): BarklyController {
     [credit, dispatch, engine, memory, performRoutine, progressPlan, speak, worldContext],
   );
 
-  const startTalk = useCallback(async () => {
-    if (busy || activeEncounter) return;
+  const startTalk = useCallback(async (): Promise<boolean> => {
+    // This used to skip claimTurn(), so microphone capture could begin while
+    // Barkly's TTS kept talking. Talk now uses the same floor arbitration as
+    // every other player action: his interruptible line stops first.
+    if (!claimTurn()) return false;
     setError(null);
     if (!permissionGranted.current) {
       try {
@@ -1010,18 +1056,20 @@ export function useBarkly(): BarklyController {
       }
       if (!permissionGranted.current) {
         sayMishap('mic_denied');
-        return;
+        return false;
       }
     }
     dispatch({ type: 'TALK_START' });
     setPartialTranscript('');
     try {
       await providers.stt.start({ onPartial: setPartialTranscript });
+      return true;
     } catch {
       dispatch({ type: 'TALK_FAILED' });
       sayMishap('mic_broken');
+      return false;
     }
-  }, [activeEncounter, busy, dispatch, providers, sayMishap]);
+  }, [claimTurn, dispatch, providers, sayMishap]);
 
   const stopTalk = useCallback(async () => {
     if (snapshotRef.current.state !== 'listening') return;
@@ -1053,10 +1101,10 @@ export function useBarkly(): BarklyController {
 
   const submitText = useCallback(
     async (text: string) => {
-      if (busy || activeEncounter || !text.trim()) return;
+      if (!text.trim() || !claimTurn()) return;
       await runExchange(text.trim());
     },
-    [activeEncounter, busy, runExchange],
+    [claimTurn, runExchange],
   );
 
   const goTo = useCallback((loc: LocationId) => {
@@ -1594,6 +1642,7 @@ export function useBarkly(): BarklyController {
       walletRef.current = next;
       setReward({ coins: 0, xp: 0, note: 'dev · everything' });
     },
+    claimConversationTurn: claimTurn,
     startTalk,
     stopTalk,
     cancelTalk,

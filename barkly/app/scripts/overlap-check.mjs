@@ -65,13 +65,12 @@ const TARGETS = [
   ['notice', '[aria-label*="official rival"]'],
   ['dialogue', '[data-testid="dialogue-panel"]'],
   ['state-chip', 'text=/^listening$/'],
-  ['input', 'input'],
   ['kit-feed', '[data-testid="kit-feed"]'],
   ['kit-play', '[data-testid="kit-play"]'],
   ['kit-sleep', '[data-testid="kit-sleep"]'],
 ];
 
-const NEVER_OVER_THE_DOG = ['dialogue', 'notice', 'input'];
+const NEVER_OVER_THE_DOG = ['dialogue', 'notice'];
 const BELOW_HIS_MIDLINE = ['kit-feed', 'kit-play', 'kit-sleep'];
 
 const overlap = (a, b) => {

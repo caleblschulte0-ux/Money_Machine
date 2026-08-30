@@ -155,7 +155,7 @@ await page.waitForTimeout(1200);
  * and reports either a clean run on the wrong screen or a pile of failures
  * that name controls the reader cannot place. Both are worse than stopping.
  */
-if (!(await page.locator('[data-testid="dialogue-panel"]').first().count())) {
+if (!(await page.locator('[data-testid="conversation-dock"]').first().count())) {
   console.error(
     'never reached the room — onboarding did not complete.\n' +
       'This check measures the app, not the welcome flow, so it is stopping rather\n' +

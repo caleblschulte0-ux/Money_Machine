@@ -46,9 +46,16 @@ export const DIALOGUE_HEIGHT = 96;
 export const RESTING_DIALOGUE_HEIGHT = 34;
 export const DIALOGUE_GAP = 3;
 export const CONTROLS_HEIGHT = TAP_MIN + 6;
+export const IDLE_CONVERSATION_HEIGHT = TAP_MIN;
 
 export function dialogueHeight(expanded: boolean): number {
   return expanded ? DIALOGUE_HEIGHT : RESTING_DIALOGUE_HEIGHT;
+}
+
+export function conversationHeight(dialogueExpanded: boolean, composerExpanded = false): number {
+  if (dialogueExpanded) return DIALOGUE_HEIGHT;
+  if (composerExpanded) return CONTROLS_HEIGHT;
+  return IDLE_CONVERSATION_HEIGHT;
 }
 export const SPEECH_MAX_LINES = 3;
 
@@ -80,11 +87,12 @@ export function stageHeight(
   screenHeight: number,
   mode: LayoutMode = 'narrowPortrait',
   dialogueExpanded = true,
+  composerExpanded = false,
 ): number {
   if (isLandscapeMode(mode)) return Math.max(230, screenHeight - STATUS_HEIGHT - 18);
   return Math.max(
     212,
-    screenHeight - CHROME_BOTTOM - dialogueHeight(dialogueExpanded) - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT - 10,
+    screenHeight - CHROME_BOTTOM - conversationHeight(dialogueExpanded, composerExpanded) - DIALOGUE_GAP * 2 - 10,
   );
 }
 
@@ -98,9 +106,10 @@ export function spriteScale(
   stageWidthPx = 390,
   mode: LayoutMode = 'narrowPortrait',
   dialogueExpanded = true,
+  composerExpanded = false,
 ): number {
   const landscape = isLandscapeMode(mode);
-  const room = stageHeight(screenHeight, mode, dialogueExpanded) - SPRITE_FOOT - (landscape ? 20 : NOTICE_BAND + 4);
+  const room = stageHeight(screenHeight, mode, dialogueExpanded, composerExpanded) - SPRITE_FOOT - (landscape ? 20 : NOTICE_BAND + 4);
   const byWidth = (stageWidthPx * 0.82) / SPRITE_BODY_WIDTH;
   const minScale = landscape
     ? screenHeight < 430 ? 0.62 : 0.72

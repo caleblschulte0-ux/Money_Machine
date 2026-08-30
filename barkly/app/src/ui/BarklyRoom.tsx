@@ -58,7 +58,7 @@ import {
   CONTROLS_HEIGHT,
   DIALOGUE_GAP,
   DIALOGUE_HEIGHT,
-  RESTING_DIALOGUE_HEIGHT,
+  IDLE_CONVERSATION_HEIGHT,
   PLACES_HEIGHT,
   STATUS_HEIGHT,
   NOTICE_MAX_HEIGHT,
@@ -502,8 +502,8 @@ export default function BarklyRoom() {
   const [heartBurst, setHeartBurst] = useState(0);
   const [fetching, setFetching] = useState(false);
   const [tugging, setTugging] = useState(false);
-  /** The keyboard is a choice, not a fallback — see the input block below. */
-  const [typing, setTyping] = useState(false);
+  /** One surface, three player modes. Idle is only two compact buttons. */
+  const [conversationMode, setConversationMode] = useState<'idle' | 'voice' | 'type'>('idle');
   const tugX = useRef(new Animated.Value(0)).current;
   const [digging, setDigging] = useState(false);
   const [variant, setVariant] = useState<'runRight' | 'carryLeft' | null>(null);
@@ -529,27 +529,32 @@ export default function BarklyRoom() {
   const insets = useSafeAreaInsets();
   const topPad = contentTop(insets.top);
   const bottomPad = contentBottom(insets.bottom);
-  // The idle prompt should not permanently consume a full speech-card slot.
-  // Reclaim that room for the world until Barkly/NPC dialogue actually exists.
-  const dialogueExpanded = Boolean(
-    partialTranscript || lastExchange?.barklyText || barkly.thought || barkly.npcBubble || barkly.showcase
-  );
-  const dialogueHeightPx = dialogueExpanded ? DIALOGUE_HEIGHT : RESTING_DIALOGUE_HEIGHT;
+  // One adaptive conversation surface. With nobody talking and no composer
+  // open, only the two 44px Talk/Type buttons reserve space. A response or an
+  // explicitly opened composer expands into that same slot.
+  const responseVisible = Boolean(lastExchange?.barklyText || barkly.thought || barkly.npcBubble || barkly.showcase);
+  const composerExpanded = conversationMode !== 'idle' || listening || snapshot.state === 'thinking';
+  const dialogueExpanded = responseVisible && !composerExpanded;
+  const conversationHeightPx = dialogueExpanded
+    ? DIALOGUE_HEIGHT
+    : composerExpanded
+      ? CONTROLS_HEIGHT
+      : IDLE_CONVERSATION_HEIGHT;
   /**
    * How big he is drawn. The stage is a fixed band between the chrome and the
    * dialogue panel, and he has to live inside it — cropping his paws to make
    * room for a text panel is the kind of thing that makes an app feel like a
    * web page. Capped at 1 so a tall phone gives him air, not a poster.
    */
-  const spriteScale = scaleForScreen(screenH, stageW, layout, dialogueExpanded);
-  /** How tall the world is: everything above the dialogue panel. */
-  const sceneBand = landscape ? screenH : screenH - dialogueHeightPx - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT + 8;
+  const spriteScale = scaleForScreen(screenH, stageW, layout, dialogueExpanded, composerExpanded);
+  /** How tall the world is: everything above the one adaptive conversation slot. */
+  const sceneBand = landscape ? screenH : screenH - conversationHeightPx - DIALOGUE_GAP * 2 + 8;
   /**
    * Where his feet meet the ground, measured from the top of the scene layer.
    * Interior scenes are built around this line rather than around percentages
    * of a rectangle — see Scenes.HomeScene.
    */
-  const groundY = topPad + chromeBottomPx + stageHeight(screenH, layout, dialogueExpanded) - SPRITE_FOOT;
+  const groundY = topPad + chromeBottomPx + stageHeight(screenH, layout, dialogueExpanded, composerExpanded) - SPRITE_FOOT;
   const stateLabel = STATE_LABEL[snapshot.state];
 
   /**
@@ -740,9 +745,31 @@ export default function BarklyRoom() {
   const ballX = ballFlight.interpolate({ inputRange: [0, 1], outputRange: [0, 118] });
   const ballY = ballFlight.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -120, -8] });
 
+  const openTyping = () => {
+    if (!barkly.claimConversationTurn()) return;
+    setConversationMode('type');
+  };
+
+  const startVoice = async () => {
+    const started = await barkly.startTalk();
+    setConversationMode(started ? 'voice' : 'idle');
+  };
+
+  const finishVoice = async () => {
+    setConversationMode('idle');
+    await barkly.stopTalk();
+  };
+
+  const switchVoiceToType = async () => {
+    await barkly.cancelTalk();
+    if (barkly.claimConversationTurn()) setConversationMode('type');
+  };
+
   const sendTyped = async () => {
-    const text = typed;
+    const text = typed.trim();
+    if (!text) return;
     setTyped('');
+    setConversationMode('idle');
     await barkly.submitText(text);
   };
 
@@ -773,9 +800,7 @@ export default function BarklyRoom() {
 
   const bubbleText = showcase
     ? 'The longest thing he can say, at three full lines, so the tallest bubble this app can produce is the one being measured right here.'
-    : listening && partialTranscript
-      ? `“${partialTranscript}”`
-      : lastExchange?.barklyText;
+    : lastExchange?.barklyText;
 
   const routine = playRoutineFor(barkly.toy?.id, location);
   const playLabel = playLabelFor(routine, location, fetching || tugging);
@@ -805,7 +830,7 @@ export default function BarklyRoom() {
       <LinearGradient
         colors={['rgba(255,249,236,0)', 'rgba(255,249,236,0.72)', 'rgba(255,249,236,1)']}
         locations={[0, 0.55, 1]}
-        style={[styles.horizon, { height: landscape ? 76 : dialogueHeightPx + CONTROLS_HEIGHT + 24 }]}
+        style={[styles.horizon, { height: landscape ? 76 : conversationHeightPx + 24 }]}
         pointerEvents="none"
       />
 
@@ -933,7 +958,7 @@ export default function BarklyRoom() {
         <View
           style={[
             styles.stageArea,
-            { height: stageHeight(screenH, layout, dialogueExpanded) },
+            { height: stageHeight(screenH, layout, dialogueExpanded, composerExpanded) },
             landscape
               ? { marginLeft: navW + 8, marginRight: interactionW + 8 }
               : { width: '100%', maxWidth: stageW, alignSelf: 'center' },
@@ -1021,85 +1046,139 @@ export default function BarklyRoom() {
             landscape && styles.interactionStackLandscape,
             landscape ? { width: interactionW } : { maxWidth: stageW },
           ]}
+          testID="conversation-dock"
         >
-        <DialoguePanel
-          speaker={
-            npcBubble
-              ? { name: NPCS[npcBubble.id].name, kind: 'npc' }
-              : bubbleText
-                ? { name: 'Barkly', kind: 'barkly' }
-                : null
-          }
-          line={npcBubble ? npcBubble.line : bubbleText ?? null}
-          youSaid={!npcBubble && lastExchange && !listening && lastExchange.userText !== '' ? lastExchange.userText : null}
-          thought={barkly.thought}
-          hint={sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
-          asleep={asleep}
-        />
-
-        <View style={styles.controls}>
-          {sttAvailable && !typing ? (
-            <View style={styles.typeRow}>
-              <Pressable
-                style={({ pressed }) => [styles.talk, listening && styles.talkActive, (locked || pressed) && styles.pressed, locked && styles.disabled]}
-                disabled={locked}
-                onPressIn={barkly.startTalk}
-                onPressOut={barkly.stopTalk}
-                accessibilityRole="button"
-                accessibilityLabel={listening ? 'Listening. Release to send.' : 'Hold to talk to Barkly'}
-                accessibilityState={{ disabled: locked, busy: listening }}
-              >
-                <View style={styles.gloss} pointerEvents="none" />
-                <View style={[styles.micDot, listening && styles.micDotLive]} />
-                <Text style={styles.talkText}>{listening ? 'listening — release to send' : 'hold to talk'}</Text>
-              </Pressable>
-              <Pressable
-                style={styles.swap}
-                onPress={() => setTyping(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Type to Barkly instead"
-              >
-                <KeyboardGlyph />
-              </Pressable>
+          {dialogueExpanded ? (
+            <DialoguePanel
+              speaker={
+                npcBubble
+                  ? { name: NPCS[npcBubble.id].name, kind: 'npc' }
+                  : bubbleText
+                    ? { name: 'Barkly', kind: 'barkly' }
+                    : null
+              }
+              line={npcBubble ? npcBubble.line : bubbleText ?? null}
+              youSaid={!npcBubble && lastExchange && lastExchange.userText !== '' ? lastExchange.userText : null}
+              thought={barkly.thought}
+              hint=""
+              asleep={asleep}
+              actions={
+                <>
+                  {sttAvailable && (
+                    <Pressable
+                      style={({ pressed }) => [styles.responseAction, pressed && styles.pressed, locked && styles.disabled]}
+                      disabled={locked}
+                      onPress={() => void startVoice()}
+                      accessibilityRole="button"
+                      accessibilityLabel="Talk to Barkly"
+                    >
+                      <View style={styles.micDot} />
+                    </Pressable>
+                  )}
+                  <Pressable
+                    style={({ pressed }) => [styles.responseAction, pressed && styles.pressed, locked && styles.disabled]}
+                    disabled={locked}
+                    onPress={openTyping}
+                    accessibilityRole="button"
+                    accessibilityLabel="Type to Barkly"
+                  >
+                    <KeyboardGlyph />
+                  </Pressable>
+                </>
+              }
+            />
+          ) : snapshot.state === 'thinking' ? (
+            <View style={styles.waitingDock}>
+              <View style={styles.chipDot} />
+              <Text style={styles.waitingText}>Barkly's thinking…</Text>
             </View>
-          ) : (
-            <View style={styles.typeRow}>
-              <TextInput
-                style={styles.input}
-                value={typed}
-                onChangeText={setTyped}
-                placeholder="say something to Barkly…"
-                placeholderTextColor={color.inkSoft}
-                editable={!locked}
-                onSubmitEditing={sendTyped}
-                returnKeyType="send"
-                accessibilityLabel="Say something to Barkly"
-                accessibilityHint="Type a message, then press talk."
-              />
-              {sttAvailable && (
+          ) : conversationMode === 'type' ? (
+            <View style={styles.controls}>
+              <View style={styles.typeRow}>
+                <TextInput
+                  style={styles.input}
+                  value={typed}
+                  onChangeText={setTyped}
+                  placeholder="say something to Barkly…"
+                  placeholderTextColor={color.inkSoft}
+                  editable={!locked}
+                  autoFocus
+                  onSubmitEditing={sendTyped}
+                  returnKeyType="send"
+                  accessibilityLabel="Say something to Barkly"
+                  accessibilityHint="Type a message, then press send."
+                />
                 <Pressable
                   style={styles.swap}
-                  onPress={() => setTyping(false)}
+                  onPress={() => { setTyped(''); setConversationMode('idle'); }}
                   accessibilityRole="button"
-                  accessibilityLabel="Talk to Barkly out loud instead"
+                  accessibilityLabel="Close typing"
+                >
+                  <Text style={styles.closeComposer}>×</Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.send, pressed && styles.pressed, (locked || !typed.trim()) && styles.sendIdle]}
+                  disabled={locked || !typed.trim()}
+                  onPress={() => void sendTyped()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send to Barkly"
+                  accessibilityState={{ disabled: locked || !typed.trim() }}
+                >
+                  {!(locked || !typed.trim()) && <View style={styles.gloss} pointerEvents="none" />}
+                  <Text style={[styles.sendText, (locked || !typed.trim()) && styles.sendTextIdle]}>send</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : conversationMode === 'voice' || listening ? (
+            <View style={styles.controls}>
+              <View style={styles.typeRow}>
+                <Pressable
+                  style={({ pressed }) => [styles.talk, styles.talkActive, pressed && styles.pressed]}
+                  onPress={() => void finishVoice()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Listening. Tap to send."
+                  accessibilityState={{ busy: true }}
+                >
+                  <View style={styles.gloss} pointerEvents="none" />
+                  <View style={[styles.micDot, styles.micDotLive]} />
+                  <Text style={styles.talkText}>{partialTranscript || 'listening — tap to send'}</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.swap}
+                  onPress={() => void switchVoiceToType()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel voice and type instead"
+                >
+                  <KeyboardGlyph />
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.compactControls}>
+              {sttAvailable && (
+                <Pressable
+                  style={({ pressed }) => [styles.compactAction, pressed && styles.pressed, locked && styles.disabled]}
+                  disabled={locked}
+                  onPress={() => void startVoice()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Talk to Barkly"
                 >
                   <View style={styles.micDot} />
+                  <Text style={styles.compactActionText}>talk</Text>
                 </Pressable>
               )}
               <Pressable
-                style={({ pressed }) => [styles.send, pressed && styles.pressed, (locked || !typed.trim()) && styles.sendIdle]}
-                disabled={locked || !typed.trim()}
-                onPress={sendTyped}
+                style={({ pressed }) => [styles.compactAction, pressed && styles.pressed, locked && styles.disabled]}
+                disabled={locked}
+                onPress={openTyping}
                 accessibilityRole="button"
-                accessibilityLabel="Talk to Barkly"
-                accessibilityState={{ disabled: locked || !typed.trim() }}
+                accessibilityLabel="Type to Barkly"
               >
-                {!(locked || !typed.trim()) && <View style={styles.gloss} pointerEvents="none" />}
-                <Text style={[styles.sendText, (locked || !typed.trim()) && styles.sendTextIdle]}>talk</Text>
+                <KeyboardGlyph />
+                <Text style={styles.compactActionText}>type</Text>
               </Pressable>
             </View>
           )}
-        </View>
         </View>
       </KeyboardAvoidingView>
 
@@ -1292,9 +1371,52 @@ const styles = StyleSheet.create({
   chip: { position: 'absolute', bottom: 72, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
-  interactionStack: { width: '100%', alignSelf: 'center' },
+  interactionStack: { width: '100%', alignSelf: 'center', minHeight: TAP_MIN },
   interactionStackLandscape: { position: 'absolute', right: 0, top: STATUS_HEIGHT + 8, bottom: 0, justifyContent: 'flex-end', paddingBottom: 2 },
-  controls: { gap: 3 },
+  controls: { gap: 3, minHeight: TAP_MIN, justifyContent: 'center' },
+  compactControls: {
+    minHeight: TAP_MIN,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  compactAction: {
+    height: TAP_MIN,
+    minWidth: 86,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    ...elevation.low,
+  },
+  compactActionText: { ...type.caption, fontWeight: '900', color: color.ink },
+  responseAction: {
+    width: TAP_MIN,
+    height: TAP_MIN,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.low,
+  },
+  waitingDock: {
+    height: TAP_MIN,
+    alignSelf: 'center',
+    minWidth: 180,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    ...elevation.low,
+  },
+  waitingText: { ...type.caption, fontWeight: '800', color: color.inkSoft },
+  closeComposer: { fontSize: 24, lineHeight: 26, fontWeight: '700', color: color.inkSoft },
   talk: { flex: 1, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 12, overflow: 'hidden', ...elevation.card },
   talkActive: { backgroundColor: color.popDeep },
   micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT },

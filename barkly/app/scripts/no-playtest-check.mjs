@@ -61,7 +61,7 @@ async function playtestEntryVisible(file, query = '') {
     } else break;
   }
   await page.waitForTimeout(1200);
-  const reached = await page.locator('[data-testid="dialogue-panel"]').first().count();
+  const reached = await page.locator('[data-testid="conversation-dock"]').first().count();
 
   let entry = false;
   const settings = page.getByRole('button', { name: 'Settings' }).first();

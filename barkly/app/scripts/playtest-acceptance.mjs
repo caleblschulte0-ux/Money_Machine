@@ -181,7 +181,7 @@ async function loadPreset(id) {
    * room to come back instead.
    */
   try {
-    await page.waitForSelector('[data-testid="dialogue-panel"]', { timeout: 25_000 });
+    await page.waitForSelector('[data-testid="conversation-dock"]', { timeout: 25_000 });
   } catch {
     await page.screenshot({ path: `/tmp/acceptance-stuck-${id}.png` });
     return false;
@@ -205,11 +205,19 @@ async function savedState() {
 await page.goto(url);
 await settle(2600);
 await onboard();
-check('1-2. opens and gets through onboarding', (await byId('dialogue-panel').count()) > 0);
+check('1-2. opens and gets through onboarding', (await byId('conversation-dock').count()) > 0);
 check('24. playtest saves reachable from Settings', await playtestEntryReachable());
 
-// 3. talk to him
+// 3. The player must be able to take the floor even if Barkly started talking
+// on his own. Type is deterministic in headless Chromium, unlike microphone STT.
+const takeFloor = page.getByRole('button', { name: 'Type to Barkly' }).first();
+const canTakeFloor = (await takeFloor.count()) > 0 && (await takeFloor.isEnabled());
+if (canTakeFloor) {
+  await takeFloor.click();
+  await settle(350);
+}
 const input = page.locator('input:visible').first();
+check('3a. player can take the floor', canTakeFloor && (await input.count()) > 0);
 if (await input.count()) {
   await input.fill('hello barkly');
   await input.press('Enter');
@@ -256,7 +264,7 @@ if ((await wake.count()) && (await wake.isEnabled())) {
   await wake.click();
   await settle(2000);
 }
-check('6b. woke him back up', (await byId('dialogue-panel').count()) > 0);
+check('6b. woke him back up', (await byId('conversation-dock').count()) > 0);
 
 // 7. every unlocked location
 let visited = 0;
@@ -347,7 +355,12 @@ const trickMem = await savedState();
 const mem = JSON.parse(trickMem[Object.keys(trickMem).find((k) => k.includes('memory-v2'))] ?? '{}');
 const showtime = (mem.trainingRules ?? []).find((r) => r.normalizedCue === 'showtime');
 check('19a. …and the showtime routine is stored', Boolean(showtime) && showtime.routine?.length === 3);
-// 19b. fire it
+// 19b. fire it through the same explicit Type action a player uses.
+const trickType = page.getByRole('button', { name: 'Type to Barkly' }).first();
+if (await trickType.count()) {
+  await trickType.click();
+  await settle(350);
+}
 const typeBox = page.locator('input:visible').first();
 if (await typeBox.count()) {
   await typeBox.fill('showtime');
@@ -375,7 +388,7 @@ await settle(3200);
 const after = await savedState();
 const stashKey = Object.keys(after).find((k) => k.includes('stash-v1'));
 check('23. the loaded state survives a refresh', JSON.parse(after[stashKey] ?? '[]').length >= 10);
-check('23b. the room came back after the refresh', (await byId('dialogue-panel').count()) > 0);
+check('23b. the room came back after the refresh', (await byId('conversation-dock').count()) > 0);
 
 await browser.close();
 console.log(results.join('\n'));
