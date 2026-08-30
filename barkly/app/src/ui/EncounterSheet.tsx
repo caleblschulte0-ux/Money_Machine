@@ -1,9 +1,9 @@
 import React from 'react';
-import { color, elevation } from './theme';
-import { TAP_MIN } from './layout';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SocialEncounter } from '../barkly/encounters';
 import { NPCS } from '../world/npcs';
+import { color, elevation, glyph, radius, space, type } from './theme';
+import { TAP_MIN } from './layout';
 
 interface Props {
   encounter: SocialEncounter | null;
@@ -12,18 +12,42 @@ interface Props {
   onClose: () => void;
 }
 
-
+/**
+ * Encounter v2 presentation.
+ *
+ * The old version replaced the dogs with a centered white form: title, meter,
+ * three rows. The mechanics were good and the fiction disappeared exactly when
+ * it mattered most.
+ *
+ * A full in-world cinematic belongs in BarklyRoom later. This intermediate
+ * surface already fixes the biggest presentation mistake without touching the
+ * encounter engine: the actual scene stays visible above, the relationship
+ * meter is gone, and the choices arrive as a low dialogue tray over the world.
+ */
 export default function EncounterSheet({ encounter, busy, onChoose, onClose }: Props) {
   if (!encounter) return null;
   const npc = NPCS[encounter.npcId];
 
   return (
     <Modal visible animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+      <View style={styles.root}>
+        <Pressable
+          style={styles.worldScrim}
+          onPress={busy ? undefined : onClose}
+          accessible={false}
+        />
+
+        <View style={styles.scenePrompt} pointerEvents="none">
+          <Text style={styles.npc}>{npc.name.toUpperCase()}</Text>
+          <Text style={styles.prompt}>{encounter.prompt}</Text>
+        </View>
+
+        <View style={styles.tray}>
+          <View style={styles.trayHandle} />
           <View style={styles.topline}>
-            <View style={styles.eyebrowPill}>
+            <View style={styles.headingCopy}>
               <Text style={styles.eyebrow}>{encounter.eyebrow}</Text>
+              <Text style={styles.title}>{encounter.title}</Text>
             </View>
             <Pressable
               onPress={onClose}
@@ -36,48 +60,30 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
             </Pressable>
           </View>
 
-          <Text style={styles.npcName}>{npc.name}</Text>
-          <Text style={styles.title}>{encounter.title}</Text>
-          <Text style={styles.prompt}>{encounter.prompt}</Text>
-
-          {/* Where this stands and what is next. Escalation you can see
-              coming reads as a story; escalation you discover afterwards
-              reads as a counter. */}
           {encounter.ladder && (
-            <View style={styles.ladder} accessibilityLabel={`${npc.name}: ${encounter.ladder.stage.label}. ${encounter.ladder.hint}`}>
-              <View style={styles.ladderRow}>
-                <Text style={styles.ladderNow}>{encounter.ladder.stage.label}</Text>
-                {encounter.ladder.nextLabel ? (
-                  <Text style={styles.ladderNext}>next: {encounter.ladder.nextLabel}</Text>
-                ) : null}
-              </View>
-              <View style={styles.meter}>
-                <View
-                  style={[
-                    styles.meterFill,
-                    encounter.ladder.kind === 'rival' ? styles.meterRival : styles.meterFriend,
-                    { width: `${Math.round(encounter.ladder.fraction * 100)}%` },
-                  ]}
-                />
-              </View>
-              <Text style={styles.ladderHint}>{encounter.ladder.hint}</Text>
-            </View>
+            <Text style={styles.relationshipLine} accessibilityLabel={`${npc.name}: ${encounter.ladder.stage.label}. ${encounter.ladder.hint}`}>
+              {encounter.ladder.stage.label} · {encounter.ladder.hint}
+            </Text>
           )}
 
-          <View style={styles.divider} />
           <Text style={styles.question}>What do you tell Barkly?</Text>
 
           <View style={styles.choices}>
             {encounter.choices.map((choice, index) => (
               <Pressable
                 key={choice.id}
-                style={({ pressed }) => [styles.choice, pressed && styles.choicePressed, busy && styles.disabled]}
+                style={({ pressed }) => [
+                  styles.choice,
+                  index === 0 && styles.choicePrimary,
+                  pressed && styles.choicePressed,
+                  busy && styles.disabled,
+                ]}
                 disabled={busy}
                 onPress={() => onChoose(choice.id)}
                 accessibilityRole="button"
                 accessibilityLabel={`${choice.label}. ${choice.hint}`}
               >
-                <View style={styles.choiceNumber}>
+                <View style={[styles.choiceNumber, index === 0 && styles.choiceNumberPrimary]}>
                   <Text style={styles.choiceNumberText}>{index + 1}</Text>
                 </View>
                 <View style={styles.choiceCopy}>
@@ -89,9 +95,7 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
             ))}
           </View>
 
-          <Text style={styles.footer}>
-            This choice becomes part of Barkly's history. It can change friendships, rivalries and future stories.
-          </Text>
+          <Text style={styles.footer}>Whatever you pick becomes part of their history.</Text>
         </View>
       </View>
     </Modal>
@@ -99,66 +103,57 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
 }
 
 const styles = StyleSheet.create({
-  ladder: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: color.fill },
-  ladderRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 },
-  ladderNow: { fontSize: 13, fontWeight: '900', color: color.ink },
-  ladderNext: { fontSize: 12, color: color.inkSoft },
-  meter: { height: 6, borderRadius: 999, backgroundColor: color.fill, marginTop: 7, overflow: 'hidden' },
-  meterFill: { height: 6, borderRadius: 999 },
-  meterRival: { backgroundColor: color.warm },
-  meterFriend: { backgroundColor: color.goodLine },
-  ladderHint: { marginTop: 6, fontSize: 12, color: color.inkSoft },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(29,24,18,0.58)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+  root: { flex: 1, justifyContent: 'flex-end' },
+  worldScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: color.scrim, opacity: 0.42 },
+  scenePrompt: {
+    position: 'absolute',
+    left: space.xl,
+    right: space.xl,
+    top: '17%',
+    alignItems: 'center',
   },
-  sheet: {
+  npc: { ...type.micro, color: color.inkOn, backgroundColor: color.ink, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: space.xs, overflow: 'hidden' },
+  prompt: { ...type.speech, color: color.inkOn, fontWeight: '800', textAlign: 'center', marginTop: space.sm, textShadowColor: color.ink, textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } },
+
+  tray: {
     backgroundColor: color.paper,
-    borderRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 20,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: space.xl,
+    paddingTop: space.md,
+    paddingBottom: space.xl,
     ...elevation.sheet,
   },
-  topline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  eyebrowPill: { backgroundColor: color.goldWell, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },
-  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.2, color: color.goldInk },
-  /**
-   * The way out of a sheet, at a real tap size.
-   *
-   * Seven sheets each declared this separately and every one of them measured
-   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
-   * carried a comment saying the X was "the labelled way out", which was true
-   * and beside the point: it was the smallest target in the app, on the
-   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
-   */
-  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
-  npcName: { marginTop: 18, fontSize: 12, fontWeight: '900', color: color.goldInk, letterSpacing: 1.4, textTransform: 'uppercase' },
-  title: { marginTop: 4, fontSize: 24, lineHeight: 31, fontWeight: '900', color: color.ink, letterSpacing: -0.7 },
-  prompt: { marginTop: 10, fontSize: 15, lineHeight: 22, color: color.inkMid },
-  divider: { height: 1, backgroundColor: color.line, marginTop: 18, marginBottom: 15 },
-  question: { fontSize: 12, fontWeight: '900', letterSpacing: 1.1, color: color.inkSoft, textTransform: 'uppercase' },
-  choices: { marginTop: 9, gap: 9 },
+  trayHandle: { alignSelf: 'center', width: 50, height: 5, borderRadius: radius.pill, backgroundColor: color.line, marginBottom: space.md },
+  topline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: space.md },
+  headingCopy: { flex: 1 },
+  eyebrow: { ...type.micro, color: color.goldInk },
+  title: { ...type.title, color: color.ink, marginTop: space.xs },
+  close: { fontSize: glyph.close, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
+  relationshipLine: { ...type.caption, color: color.inkSoft, marginTop: space.sm, fontStyle: 'italic' },
+  question: { ...type.micro, color: color.inkSoft, textTransform: 'uppercase', marginTop: space.lg },
+  choices: { marginTop: space.sm, gap: space.sm },
   choice: {
-    minHeight: 70,
-    borderRadius: 18,
-    borderWidth: 1.3,
+    minHeight: 68,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
     borderColor: color.line,
     backgroundColor: color.card,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    ...elevation.low,
   },
-  choicePressed: { transform: [{ scale: 0.985 }], backgroundColor: color.well },
-  choiceNumber: { width: 32, height: 32, borderRadius: 18, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center' },
-  choiceNumberText: { color: color.inkOn, fontSize: 13, fontWeight: '900' },
-  choiceCopy: { flex: 1, marginLeft: 11 },
-  choiceLabel: { fontSize: 15, fontWeight: '800', color: color.ink },
-  choiceHint: { marginTop: 3, fontSize: 12, color: color.inkSoft },
-  arrow: { fontSize: 26, lineHeight: 30, color: color.warmLine, marginLeft: 8 },
-  footer: { marginTop: 14, fontSize: 12, lineHeight: 17, color: color.inkSoft, textAlign: 'center' },
+  choicePrimary: { borderColor: color.popDeep, backgroundColor: color.goldWell },
+  choicePressed: { transform: [{ scale: 0.985 }] },
+  choiceNumber: { width: 32, height: 32, borderRadius: radius.pill, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center' },
+  choiceNumberPrimary: { backgroundColor: color.popDeep },
+  choiceNumberText: { ...type.caption, color: color.inkOn, fontWeight: '900' },
+  choiceCopy: { flex: 1, marginLeft: space.md },
+  choiceLabel: { ...type.strong, color: color.ink },
+  choiceHint: { ...type.caption, color: color.inkSoft, marginTop: space.xs },
+  arrow: { fontSize: glyph.arrow, lineHeight: 30, color: color.warmLine, marginLeft: space.sm },
+  footer: { ...type.caption, color: color.inkSoft, textAlign: 'center', marginTop: space.md },
   disabled: { opacity: 0.48 },
 });
