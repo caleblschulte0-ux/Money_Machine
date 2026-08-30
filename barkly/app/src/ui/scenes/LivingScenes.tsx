@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import {
   BeachScene as BaseBeachScene,
@@ -17,10 +16,13 @@ import {
 export { DogBedBack, DogBedFront, NightOverlay, RoomBed, skyBand };
 
 /**
- * The scene art is intentionally crisp and composed; this layer adds LIFE,
- * not clutter. Motion stays behind Barkly and away from tap targets, uses only
- * transforms/opacity so it is cheap on phones, and is subtle enough that the
- * dog remains the hero instead of the background becoming a screensaver.
+ * LIFE, not blur.
+ *
+ * The first ambient pass put a translucent "premium glass" wash over the
+ * entire world. It did technically add sheen, but it also softened every edge
+ * we had just spent time making crisp. This layer now moves LOCAL things only:
+ * light from a window, leaves, a butterfly, shop reflections, waves and gulls.
+ * Barkly and the authored scenery stay sharp.
  */
 function useReduceMotion() {
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -43,7 +45,7 @@ function useAmbientLoop(duration: number, delay = 0, reduceMotion = false) {
   useEffect(() => {
     if (reduceMotion) {
       value.stopAnimation();
-      value.setValue(0.35);
+      value.setValue(0.38);
       return;
     }
     const loop = Animated.loop(
@@ -69,79 +71,47 @@ function useAmbientLoop(duration: number, delay = 0, reduceMotion = false) {
   return value;
 }
 
-/**
- * Store-level finish without turning the world into chrome. The edge shade and
- * soft center light make every location read like the same toy-diorama product
- * while keeping the highest contrast in the middle where Barkly stands.
- */
-function PremiumGlass() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <LinearGradient
-        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.04)', 'rgba(255,255,255,0)']}
-        locations={[0, 0.32, 0.72]}
-        style={styles.topSheen}
-      />
-      <LinearGradient
-        colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.06)', 'rgba(33,25,18,0.045)']}
-        locations={[0, 0.62, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      <LinearGradient
-        colors={['rgba(30,23,18,0.055)', 'rgba(30,23,18,0)', 'rgba(30,23,18,0.055)']}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.heroHalo} />
-    </View>
-  );
-}
-
 function HomeLife() {
   const reduceMotion = useReduceMotion();
-  const glow = useAmbientLoop(2800, 0, reduceMotion);
-  const drift = useAmbientLoop(4600, 700, reduceMotion);
-  const curtain = useAmbientLoop(3900, 350, reduceMotion);
+  const glow = useAmbientLoop(2600, 0, reduceMotion);
+  const mote = useAmbientLoop(4800, 500, reduceMotion);
+  const mote2 = useAmbientLoop(5700, 1200, reduceMotion);
+  const lamp = useAmbientLoop(3300, 300, reduceMotion);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View
         style={[
           styles.windowGlow,
-          { opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.22] }) },
+          { opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.2] }) },
         ]}
       />
       <Animated.View
         style={[
-          styles.homeLightRibbon,
+          styles.lampPulse,
+          { opacity: lamp.interpolate({ inputRange: [0, 1], outputRange: [0.03, 0.12] }), transform: [{ scale: lamp.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.05] }) }] },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.homeMote,
           {
-            opacity: curtain.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.14] }),
+            opacity: mote.interpolate({ inputRange: [0, 0.2, 0.85, 1], outputRange: [0, 0.5, 0.28, 0] }),
             transform: [
-              { translateX: curtain.interpolate({ inputRange: [0, 1], outputRange: [-5, 7] }) },
-              { rotate: '-13deg' },
+              { translateX: mote.interpolate({ inputRange: [0, 1], outputRange: [-8, 30] }) },
+              { translateY: mote.interpolate({ inputRange: [0, 1], outputRange: [12, -27] }) },
             ],
           },
         ]}
       />
       <Animated.View
         style={[
-          styles.homeDust,
+          styles.homeMoteSmall,
           {
-            opacity: drift.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.25] }),
+            opacity: mote2.interpolate({ inputRange: [0, 0.2, 0.8, 1], outputRange: [0, 0.42, 0.2, 0] }),
             transform: [
-              { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-8, 18] }) },
-              { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [7, -13] }) },
+              { translateX: mote2.interpolate({ inputRange: [0, 1], outputRange: [8, -22] }) },
+              { translateY: mote2.interpolate({ inputRange: [0, 1], outputRange: [3, -31] }) },
             ],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.homeDustSmall,
-          {
-            opacity: drift.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.04] }),
-            transform: [{ translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [0, -18] }) }],
           },
         ]}
       />
@@ -151,29 +121,27 @@ function HomeLife() {
 
 function ParkLife() {
   const reduceMotion = useReduceMotion();
-  const breeze = useAmbientLoop(3400, 0, reduceMotion);
-  const wander = useAmbientLoop(6200, 900, reduceMotion);
-  const canopy = useAmbientLoop(4100, 250, reduceMotion);
+  const breeze = useAmbientLoop(3000, 0, reduceMotion);
+  const wander = useAmbientLoop(6100, 650, reduceMotion);
+  const butterfly = useAmbientLoop(5200, 1250, reduceMotion);
+  const cloud = useAmbientLoop(7400, 300, reduceMotion);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View
         style={[
-          styles.parkCanopyLight,
-          {
-            opacity: canopy.interpolate({ inputRange: [0, 1], outputRange: [0.035, 0.1] }),
-            transform: [{ translateX: canopy.interpolate({ inputRange: [0, 1], outputRange: [-9, 9] }) }],
-          },
+          styles.cloudWisp,
+          { opacity: cloud.interpolate({ inputRange: [0, 1], outputRange: [0.24, 0.42] }), transform: [{ translateX: cloud.interpolate({ inputRange: [0, 1], outputRange: [-22, 34] }) }] },
         ]}
       />
       <Animated.View
         style={[
           styles.parkLeafOne,
           {
-            opacity: breeze.interpolate({ inputRange: [0, 1], outputRange: [0.24, 0.72] }),
+            opacity: breeze.interpolate({ inputRange: [0, 0.12, 0.85, 1], outputRange: [0, 0.75, 0.62, 0] }),
             transform: [
-              { translateX: breeze.interpolate({ inputRange: [0, 1], outputRange: [-10, 36] }) },
-              { translateY: breeze.interpolate({ inputRange: [0, 1], outputRange: [0, 12] }) },
-              { rotate: breeze.interpolate({ inputRange: [0, 1], outputRange: ['-18deg', '48deg'] }) },
+              { translateX: breeze.interpolate({ inputRange: [0, 1], outputRange: [-16, 58] }) },
+              { translateY: breeze.interpolate({ inputRange: [0, 1], outputRange: [-4, 18] }) },
+              { rotate: breeze.interpolate({ inputRange: [0, 1], outputRange: ['-18deg', '95deg'] }) },
             ],
           },
         ]}
@@ -182,45 +150,56 @@ function ParkLife() {
         style={[
           styles.parkLeafTwo,
           {
-            opacity: wander.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.5] }),
+            opacity: wander.interpolate({ inputRange: [0, 0.12, 0.86, 1], outputRange: [0, 0.52, 0.38, 0] }),
             transform: [
-              { translateX: wander.interpolate({ inputRange: [0, 1], outputRange: [18, -42] }) },
-              { translateY: wander.interpolate({ inputRange: [0, 1], outputRange: [-3, 18] }) },
-              { rotate: wander.interpolate({ inputRange: [0, 1], outputRange: ['22deg', '-55deg'] }) },
+              { translateX: wander.interpolate({ inputRange: [0, 1], outputRange: [25, -72] }) },
+              { translateY: wander.interpolate({ inputRange: [0, 1], outputRange: [-2, 24] }) },
+              { rotate: wander.interpolate({ inputRange: [0, 1], outputRange: ['22deg', '-120deg'] }) },
             ],
           },
         ]}
       />
       <Animated.View
         style={[
-          styles.cloudWisp,
-          { transform: [{ translateX: wander.interpolate({ inputRange: [0, 1], outputRange: [-24, 30] }) }] },
+          styles.butterfly,
+          {
+            opacity: butterfly.interpolate({ inputRange: [0, 0.12, 0.84, 1], outputRange: [0, 0.9, 0.78, 0] }),
+            transform: [
+              { translateX: butterfly.interpolate({ inputRange: [0, 1], outputRange: [-45, 250] }) },
+              { translateY: butterfly.interpolate({ inputRange: [0, 0.45, 1], outputRange: [20, -18, 8] }) },
+              { rotate: butterfly.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['-8deg', '9deg', '-6deg'] }) },
+            ],
+          },
         ]}
-      />
+      >
+        <View style={styles.butterflyLeft} />
+        <View style={styles.butterflyRight} />
+      </Animated.View>
     </View>
   );
 }
 
 function TownLife() {
   const reduceMotion = useReduceMotion();
-  const gleam = useAmbientLoop(2600, 0, reduceMotion);
-  const passerby = useAmbientLoop(5400, 600, reduceMotion);
-  const windowPulse = useAmbientLoop(3300, 400, reduceMotion);
+  const gleam = useAmbientLoop(2500, 0, reduceMotion);
+  const passerby = useAmbientLoop(5600, 700, reduceMotion);
+  const sign = useAmbientLoop(2300, 250, reduceMotion);
+  const windowPulse = useAmbientLoop(3500, 400, reduceMotion);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View
         style={[
           styles.townWindowWarmth,
-          { opacity: windowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.04, 0.12] }) },
+          { opacity: windowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.035, 0.12] }) },
         ]}
       />
       <Animated.View
         style={[
           styles.shopGlint,
           {
-            opacity: gleam.interpolate({ inputRange: [0, 0.42, 1], outputRange: [0, 0.34, 0] }),
+            opacity: gleam.interpolate({ inputRange: [0, 0.42, 1], outputRange: [0, 0.54, 0] }),
             transform: [
-              { translateX: gleam.interpolate({ inputRange: [0, 1], outputRange: [-35, 105] }) },
+              { translateX: gleam.interpolate({ inputRange: [0, 1], outputRange: [-48, 122] }) },
               { rotate: '17deg' },
             ],
           },
@@ -230,19 +209,28 @@ function TownLife() {
         style={[
           styles.townShadow,
           {
-            opacity: passerby.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 0.15, 0] }),
-            transform: [{ translateX: passerby.interpolate({ inputRange: [0, 1], outputRange: [-70, 430] }) }],
+            opacity: passerby.interpolate({ inputRange: [0, 0.22, 0.76, 1], outputRange: [0, 0.14, 0.14, 0] }),
+            transform: [{ translateX: passerby.interpolate({ inputRange: [0, 1], outputRange: [-80, 460] }) }],
           },
         ]}
       />
+      <Animated.View
+        style={[
+          styles.openSign,
+          { transform: [{ rotate: sign.interpolate({ inputRange: [0, 1], outputRange: ['-2.5deg', '2.5deg'] }) }] },
+        ]}
+      >
+        <View style={styles.openSignGloss} />
+      </Animated.View>
     </View>
   );
 }
 
 function BeachLife() {
   const reduceMotion = useReduceMotion();
-  const tide = useAmbientLoop(2500, 0, reduceMotion);
-  const gull = useAmbientLoop(6400, 1100, reduceMotion);
+  const tide = useAmbientLoop(2350, 0, reduceMotion);
+  const tide2 = useAmbientLoop(3200, 500, reduceMotion);
+  const gull = useAmbientLoop(6500, 1050, reduceMotion);
   const water = useAmbientLoop(3700, 300, reduceMotion);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -250,8 +238,8 @@ function BeachLife() {
         style={[
           styles.oceanSparkle,
           {
-            opacity: water.interpolate({ inputRange: [0, 1], outputRange: [0.03, 0.13] }),
-            transform: [{ translateX: water.interpolate({ inputRange: [0, 1], outputRange: [-10, 18] }) }],
+            opacity: water.interpolate({ inputRange: [0, 1], outputRange: [0.04, 0.22] }),
+            transform: [{ translateX: water.interpolate({ inputRange: [0, 1], outputRange: [-16, 28] }) }],
           },
         ]}
       />
@@ -259,8 +247,21 @@ function BeachLife() {
         style={[
           styles.foamGleam,
           {
-            opacity: tide.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.28] }),
-            transform: [{ translateY: tide.interpolate({ inputRange: [0, 1], outputRange: [-4, 6] }) }],
+            opacity: tide.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.48] }),
+            transform: [
+              { translateX: tide.interpolate({ inputRange: [0, 1], outputRange: [-10, 12] }) },
+              { translateY: tide.interpolate({ inputRange: [0, 1], outputRange: [-5, 6] }) },
+              { scaleX: tide.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.04] }) },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.foamGleamSecond,
+          {
+            opacity: tide2.interpolate({ inputRange: [0, 1], outputRange: [0.1, 0.31] }),
+            transform: [{ translateY: tide2.interpolate({ inputRange: [0, 1], outputRange: [4, -4] }) }],
           },
         ]}
       />
@@ -268,10 +269,10 @@ function BeachLife() {
         style={[
           styles.gull,
           {
-            opacity: gull.interpolate({ inputRange: [0, 0.15, 0.82, 1], outputRange: [0, 0.45, 0.45, 0] }),
+            opacity: gull.interpolate({ inputRange: [0, 0.12, 0.84, 1], outputRange: [0, 0.62, 0.62, 0] }),
             transform: [
-              { translateX: gull.interpolate({ inputRange: [0, 1], outputRange: [-50, 430] }) },
-              { translateY: gull.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -18, 4] }) },
+              { translateX: gull.interpolate({ inputRange: [0, 1], outputRange: [-55, 445] }) },
+              { translateY: gull.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -23, 5] }) },
             ],
           },
         ]}
@@ -288,7 +289,6 @@ export function HomeScene(props: React.ComponentProps<typeof BaseHomeScene>) {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <BaseHomeScene {...props} />
       <HomeLife />
-      <PremiumGlass />
     </View>
   );
 }
@@ -298,7 +298,6 @@ export function ParkScene(props: React.ComponentProps<typeof BaseParkScene>) {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <BaseParkScene {...props} />
       <ParkLife />
-      <PremiumGlass />
     </View>
   );
 }
@@ -308,7 +307,6 @@ export function TownScene(props: React.ComponentProps<typeof BaseTownScene>) {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <BaseTownScene {...props} />
       <TownLife />
-      <PremiumGlass />
     </View>
   );
 }
@@ -318,164 +316,167 @@ export function BeachScene(props: React.ComponentProps<typeof BaseBeachScene>) {
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <BaseBeachScene {...props} />
       <BeachLife />
-      <PremiumGlass />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  topSheen: { position: 'absolute', left: 0, right: 0, top: 0, height: '38%' },
-  heroHalo: {
-    position: 'absolute',
-    alignSelf: 'center',
-    top: '29%',
-    width: 250,
-    height: 300,
-    borderRadius: 160,
-    backgroundColor: 'rgba(255,255,255,0.025)',
-  },
-
   windowGlow: {
     position: 'absolute',
-    left: 24,
-    top: 172,
-    width: 118,
-    height: 78,
+    left: 22,
+    top: 174,
+    width: 128,
+    height: 82,
     borderRadius: 26,
-    backgroundColor: 'rgba(255,244,187,0.34)',
+    backgroundColor: 'rgba(255,232,126,0.44)',
   },
-  homeLightRibbon: {
+  lampPulse: {
     position: 'absolute',
-    left: 36,
-    top: 232,
-    width: 118,
-    height: 190,
-    borderRadius: 80,
-    backgroundColor: 'rgba(255,248,215,0.22)',
+    right: 4,
+    top: 200,
+    width: 78,
+    height: 78,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,222,109,0.52)',
   },
-  homeDust: {
+  homeMote: {
     position: 'absolute',
-    left: 92,
-    top: 212,
+    left: 91,
+    top: 246,
     width: 7,
     height: 7,
     borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.96)',
   },
-  homeDustSmall: {
+  homeMoteSmall: {
     position: 'absolute',
-    left: 127,
-    top: 236,
+    left: 132,
+    top: 267,
     width: 4,
     height: 4,
     borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.94)',
   },
 
-  parkCanopyLight: {
+  cloudWisp: {
     position: 'absolute',
-    left: -15,
-    right: -15,
-    top: '29%',
-    height: 120,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255,248,206,0.5)',
+    left: 116,
+    top: 117,
+    width: 92,
+    height: 14,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.58)',
   },
   parkLeafOne: {
     position: 'absolute',
-    left: 126,
+    left: 109,
     top: '34%',
-    width: 10,
-    height: 6,
-    borderTopLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    backgroundColor: 'rgba(91,128,61,0.9)',
+    width: 13,
+    height: 8,
+    borderTopLeftRadius: 13,
+    borderBottomRightRadius: 13,
+    backgroundColor: 'rgba(69,145,55,0.96)',
   },
   parkLeafTwo: {
     position: 'absolute',
-    right: 92,
-    top: '28%',
-    width: 8,
-    height: 5,
-    borderTopRightRadius: 9,
-    borderBottomLeftRadius: 9,
-    backgroundColor: 'rgba(120,151,73,0.9)',
+    right: 83,
+    top: '27%',
+    width: 11,
+    height: 7,
+    borderTopRightRadius: 11,
+    borderBottomLeftRadius: 11,
+    backgroundColor: 'rgba(123,202,78,0.95)',
   },
-  cloudWisp: {
+  butterfly: {
     position: 'absolute',
-    left: 128,
-    top: 118,
-    width: 84,
-    height: 13,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    left: 32,
+    top: '39%',
+    width: 18,
+    height: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  butterflyLeft: { width: 8, height: 10, borderTopLeftRadius: 8, borderBottomRightRadius: 8, backgroundColor: 'rgba(255,126,170,0.96)', transform: [{ rotate: '-20deg' }] },
+  butterflyRight: { width: 8, height: 10, borderTopRightRadius: 8, borderBottomLeftRadius: 8, backgroundColor: 'rgba(255,213,70,0.96)', transform: [{ rotate: '20deg' }] },
 
   townWindowWarmth: {
     position: 'absolute',
-    left: 144,
-    right: 140,
-    top: '30%',
-    height: 96,
+    left: 145,
+    right: 141,
+    top: '31%',
+    height: 91,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,237,185,0.3)',
+    backgroundColor: 'rgba(255,226,130,0.62)',
   },
   shopGlint: {
     position: 'absolute',
-    left: 160,
-    top: '28%',
-    width: 16,
+    left: 144,
+    top: '32%',
+    width: 18,
     height: 92,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.38)',
+    backgroundColor: 'rgba(255,255,255,0.78)',
   },
   townShadow: {
     position: 'absolute',
     left: 0,
-    bottom: '27%',
-    width: 44,
-    height: 9,
+    top: '63%',
+    width: 38,
+    height: 13,
     borderRadius: 999,
-    backgroundColor: 'rgba(37,31,28,0.44)',
+    backgroundColor: 'rgba(45,35,28,0.64)',
   },
+  openSign: {
+    position: 'absolute',
+    right: 73,
+    top: '35%',
+    width: 42,
+    height: 22,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,216,77,0.94)',
+    borderWidth: 3,
+    borderColor: 'rgba(114,76,31,0.75)',
+  },
+  openSignGloss: { position: 'absolute', left: 5, right: 5, top: 3, height: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.55)' },
 
   oceanSparkle: {
     position: 'absolute',
-    left: 54,
-    right: 54,
-    top: '48%',
-    height: 22,
+    left: 70,
+    right: 55,
+    top: '42%',
+    height: 5,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.34)',
+    backgroundColor: 'rgba(255,255,255,0.85)',
   },
   foamGleam: {
     position: 'absolute',
-    left: 24,
-    right: 24,
-    top: '55%',
-    height: 8,
+    left: -18,
+    right: -18,
+    top: '56%',
+    height: 7,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.30)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
   },
-  gull: { position: 'absolute', left: 0, top: '18%', width: 30, height: 14 },
-  gullWingLeft: {
+  foamGleamSecond: {
     position: 'absolute',
-    left: 2,
-    top: 5,
-    width: 14,
-    height: 3,
+    left: 38,
+    right: 72,
+    top: '52%',
+    height: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.74)',
-    transform: [{ rotate: '-18deg' }],
+    backgroundColor: 'rgba(255,255,255,0.8)',
   },
-  gullWingRight: {
+  gull: {
     position: 'absolute',
-    left: 14,
-    top: 5,
-    width: 14,
-    height: 3,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.74)',
-    transform: [{ rotate: '18deg' }],
+    left: 0,
+    top: '22%',
+    width: 28,
+    height: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  gullWingLeft: { width: 13, height: 4, borderTopLeftRadius: 10, borderTopRightRadius: 10, backgroundColor: 'rgba(255,255,255,0.94)', transform: [{ rotate: '14deg' }] },
+  gullWingRight: { width: 13, height: 4, borderTopLeftRadius: 10, borderTopRightRadius: 10, backgroundColor: 'rgba(255,255,255,0.94)', transform: [{ rotate: '-14deg' }] },
 });
