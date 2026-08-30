@@ -1,9 +1,9 @@
 /**
- * NPC exchanges. Three bugs lived in one index expression; these are the three
- * assertions that stop them coming back.
+ * NPC exchanges. These assertions protect per-dog variety, relationship-stage
+ * dialogue, and the reading-time contract consumed by the conversation UI.
  */
 
-import { freshExchangeMemory, pickExchange, pickFresh, poolFor } from '../src/world/npcExchange';
+import { freshExchangeMemory, npcReadMs, pickExchange, pickFresh, poolFor } from '../src/world/npcExchange';
 import { NPCS } from '../src/world/npcs';
 
 const rng = (values: number[]) => {
@@ -38,30 +38,39 @@ describe('picking a fresh index', () => {
 });
 
 describe('the exchange itself', () => {
-  it('each dog remembers its OWN last line — no shared counter', () => {
-    // The original bug: one counter for all three dogs, so greeting Duke
-    // twice moved Biscuit's line along too.
+  it('each dog remembers its OWN lines — no shared counter', () => {
     let mem = freshExchangeMemory();
     mem = pickExchange(NPCS.duke, mem, 0, () => 0).memory;
     mem = pickExchange(NPCS.duke, mem, 0, () => 0).memory;
     expect(mem.line.biscuit).toBeUndefined();
     expect(mem.line.duke).toBeDefined();
+    expect(mem.recentLine?.biscuit).toBeUndefined();
+    expect(mem.recentLine?.duke).toHaveLength(2);
   });
 
-  it('never repeats the same greeting twice running', () => {
+  it('never repeats either of the previous two greetings when the pool allows it', () => {
     let mem = freshExchangeMemory();
-    let last = '';
-    for (let i = 0; i < 30; i++) {
+    const recent: string[] = [];
+    for (let i = 0; i < 40; i++) {
       const ex = pickExchange(NPCS.biscuit, mem, 0, rng([0.1, 0.9, 0.4, 0.7]));
-      expect(ex.npcLine).not.toBe(last);
-      last = ex.npcLine;
+      expect(recent.slice(-2)).not.toContain(ex.npcLine);
+      recent.push(ex.npcLine);
+      mem = ex.memory;
+    }
+  });
+
+  it('never repeats either of the previous two Barkly replies when the pool allows it', () => {
+    let mem = freshExchangeMemory();
+    const recent: string[] = [];
+    for (let i = 0; i < 40; i++) {
+      const ex = pickExchange(NPCS.pepper, mem, 0, rng([0.2, 0.8, 0.35, 0.65]));
+      expect(recent.slice(-2)).not.toContain(ex.barklyLine);
+      recent.push(ex.barklyLine);
       mem = ex.memory;
     }
   });
 
   it('the reply is drawn independently, so a greeting is not one fixed script', () => {
-    // Same greeting index, different reply — impossible under the old
-    // `barklyLines[i]` pairing.
     const a = pickExchange(NPCS.duke, freshExchangeMemory(), 0, rng([0, 0.9]));
     const b = pickExchange(NPCS.duke, freshExchangeMemory(), 0, rng([0, 0.1]));
     expect(a.npcLine).toBe(b.npcLine);
@@ -78,14 +87,30 @@ describe('the exchange itself', () => {
   });
 });
 
-describe('the relationship stage selects the pool', () => {
-  // The operator's report, verbatim symptoms: "Biscuit Best Friend uses the
-  // same introductory dialogue as early Biscuit" and "Duke Nemesis does not
-  // immediately behave differently from ordinary Duke". Both were true
-  // because pickExchange drew from ONE flat pool per dog regardless of the
-  // bond. These tests drive the same encounter counts the presets carry
-  // (biscuit: 34, duke: 18) and fail against any flat-pool regression.
+describe('NPC reading time', () => {
+  it('gives short quips at least 4.2 seconds', () => {
+    expect(npcReadMs('Yep.')).toBe(4200);
+    expect(npcReadMs('')).toBe(4200);
+  });
 
+  it('gives meaningfully longer lines more time', () => {
+    const medium = 'I found a stick and hid it right behind the bench.';
+    const long = 'I found a stick and then I hid it behind the bench because Duke was looking at me and acting extremely suspicious.';
+    expect(npcReadMs(medium)).toBeGreaterThan(npcReadMs('Yep.'));
+    expect(npcReadMs(long)).toBeGreaterThan(npcReadMs(medium));
+  });
+
+  it('caps stale bubbles at nine seconds', () => {
+    expect(npcReadMs(Array.from({ length: 100 }, () => 'word').join(' '))).toBe(9000);
+  });
+
+  it('stores the exact dwell for the picked NPC line', () => {
+    const ex = pickExchange(NPCS.biscuit, freshExchangeMemory(), 0, () => 0);
+    expect(ex.npcReadMs).toBe(npcReadMs(ex.npcLine));
+  });
+});
+
+describe('the relationship stage selects the pool', () => {
   const allLines = (npcId: 'biscuit' | 'duke' | 'pepper', encounters: number) => {
     const seen = new Set<string>();
     let mem = freshExchangeMemory();
@@ -111,7 +136,6 @@ describe('the relationship stage selects the pool', () => {
   });
 
   it('the pool climbs the ladder at the escalation thresholds', () => {
-    // Below the first rung: base pool. At each rung: that rung's pool.
     expect(poolFor(NPCS.duke, 2).lines).toBe(NPCS.duke.lines);
     expect(poolFor(NPCS.duke, 3)).toBe(NPCS.duke.stages![0]);
     expect(poolFor(NPCS.duke, 6)).toBe(NPCS.duke.stages![1]);
@@ -137,7 +161,6 @@ describe('the relationship stage selects the pool', () => {
         expect(new Set(stage.lines).size).toBe(stage.lines.length);
         expect(new Set(stage.barklyLines).size).toBe(stage.barklyLines.length);
       }
-      // A dog without stages would silently regress to flat pools forever.
       expect((npc.stages ?? []).length).toBeGreaterThanOrEqual(2);
     }
   });
