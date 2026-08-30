@@ -10,7 +10,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
-import { BALL, BRASS, DIORAMA, ITEM } from './scenes/artPalette';
+import { BALL, BRASS, DIORAMA, DIRT, ITEM, SAND } from './scenes/artPalette';
 
 function useSpringIn(): Animated.Value {
   const v = useRef(new Animated.Value(0)).current;
@@ -134,6 +134,41 @@ export function Ball() {
         <Circle cx={14.5} cy={12.5} r={2.3} fill={BALL.gloss} opacity={0.82} />
       </Svg>
     </Animated.View>
+  );
+}
+
+/**
+ * Premium interaction mound for the park. This intentionally does not render
+ * text or UI chrome: it is a physical piece of the world that the interaction
+ * control can sit on top of later.
+ */
+export function DigMound({ active = false }: { active?: boolean }) {
+  return (
+    <Svg width={112} height={68} viewBox="0 0 112 68">
+      <Ellipse cx={56} cy={60} rx={49} ry={7} fill={DIORAMA.shadow} opacity={0.18} />
+      <Path d="M8 56Q21 25 49 20Q79 15 104 55Q82 66 56 65Q29 66 8 56Z" fill={DIRT.edge} />
+      <Path d="M10 50Q24 19 50 15Q79 10 102 50Q79 60 56 59Q31 60 10 50Z" fill={DIRT.mound} />
+      <Path d="M19 44Q34 23 51 22Q72 18 91 43" stroke={DIRT.light} strokeWidth={7} fill="none" strokeLinecap="round" opacity={0.72} />
+      <Ellipse cx={57} cy={47} rx={17} ry={9} fill={DIRT.hole} />
+      <Ellipse cx={57} cy={43} rx={13} ry={5} fill={DIORAMA.shadow} opacity={0.28} />
+      <Path d="M24 51Q31 47 38 51M78 49Q85 44 91 49" stroke={DIRT.shade} strokeWidth={4} fill="none" strokeLinecap="round" />
+      {active && <Path d="M23 19l-4-8M58 10V2M91 20l6-7" stroke={DIORAMA.goldLight} strokeWidth={3.2} strokeLinecap="round" />}
+    </Svg>
+  );
+}
+
+/** Same material treatment for the beach's wet-sand search spot. */
+export function WetSandMound({ active = false }: { active?: boolean }) {
+  return (
+    <Svg width={112} height={66} viewBox="0 0 112 66">
+      <Ellipse cx={56} cy={59} rx={50} ry={7} fill={DIORAMA.shadow} opacity={0.15} />
+      <Path d="M7 54Q26 26 55 20Q85 18 105 54Q82 65 56 64Q29 65 7 54Z" fill={SAND.edge} />
+      <Path d="M9 48Q28 20 56 15Q84 14 103 48Q80 59 56 58Q31 59 9 48Z" fill={SAND.mound} />
+      <Path d="M20 40Q39 23 63 22Q80 21 93 38" stroke={SAND.light} strokeWidth={7} fill="none" strokeLinecap="round" opacity={0.78} />
+      <Path d="M28 50Q38 42 47 49Q57 41 67 49Q78 42 87 49" stroke={SAND.ripple} strokeWidth={3.5} fill="none" strokeLinecap="round" />
+      <Circle cx={44} cy={33} r={3} fill={DIORAMA.white} opacity={0.36} />
+      {active && <Path d="M25 16l-4-8M58 9V1M88 17l6-7" stroke={DIORAMA.goldLight} strokeWidth={3.2} strokeLinecap="round" />}
+    </Svg>
   );
 }
 
