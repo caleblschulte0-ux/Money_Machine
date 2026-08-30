@@ -110,4 +110,5 @@ Interactive chrome uses shared gutters and protected stage clearances rather
 than component-specific magic numbers. Barkly, his state chip, the care dock,
 NPC labels, notices, and the adaptive conversation dock are measured by the
 layout check across short phones, modern portrait phones, landscape phones,
-and tablet viewports before a spacing change is released.
+and tablet viewports before a spacing change is released. The checker also
+enforces visual breathing room, not only literal box overlap.
