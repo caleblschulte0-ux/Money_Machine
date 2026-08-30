@@ -1,7 +1,7 @@
 import { freshCharacter, withFriend, withGrievance } from '../src/barkly/character';
 import { emptyMemory } from '../src/barkly/memory';
 import { mergeTrainingRules } from '../src/barkly/training';
-import { createAdventure, progressAdventure } from '../src/game/adventure';
+import { adventureDay, createAdventure, progressAdventure } from '../src/game/adventure';
 
 const NOW = Date.UTC(2026, 7, 27, 12);
 
@@ -21,6 +21,12 @@ describe("Barkly's Plan", () => {
     expect(plan.rewarded).toBe(false);
     expect(plan.completedAt).toBeUndefined();
     expect(plan.day).toBe('2026-08-27');
+  });
+
+  it('defines today from the device calendar instead of UTC serialization', () => {
+    const local = new Date(2026, 7, 27, 23, 55, 0);
+    const expected = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`;
+    expect(adventureDay(local.getTime())).toBe(expected);
   });
 
   it('uses this Barkly history as goal material', () => {
