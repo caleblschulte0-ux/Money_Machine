@@ -1,0 +1,43 @@
+name: Barkly spacing final visual once
+
+on:
+  push:
+    branches: [chatgpt/barkly-spacing-system-pass-20260830]
+    paths:
+      - '.github/workflows/barkly-spacing-final-visual-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: barkly/app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/barkly-spacing-system-pass-20260830
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: barkly/app/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check:layout
+      - uses: actions/upload-artifact@v4
+        with:
+          name: barkly-spacing-final-review
+          path: barkly/app/overlap-*.png
+          if-no-files-found: error
+      - name: Remove one-shot workflow
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/barkly-spacing-final-visual-once.yml
+          git commit -m "Remove final Barkly spacing visual workflow"
+          git push origin HEAD:chatgpt/barkly-spacing-system-pass-20260830
