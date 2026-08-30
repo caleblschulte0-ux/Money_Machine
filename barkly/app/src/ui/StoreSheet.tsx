@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   note: { marginTop: space.lg, ...type.caption, color: color.inkSoft },
 
   pill: { flex: 1, minWidth: 124, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, borderRadius: radius.pill, overflow: 'visible', ...elevation.toy },
-  pillFill: { ...StyleSheet.absoluteFillObject, borderRadius: radius.pill },
+  pillFill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: radius.pill },
   pillGloss: { position: 'absolute', left: space.sm, right: space.sm, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
   pillEdge: { position: 'absolute', left: space.sm, right: space.sm, bottom: -4, height: space.sm, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg, backgroundColor: color.lemonDeep },
   coin: { width: 26, height: 26, borderRadius: radius.pill, backgroundColor: color.gold, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: color.goldInk },
