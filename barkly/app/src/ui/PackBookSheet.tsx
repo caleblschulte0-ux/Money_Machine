@@ -1,8 +1,8 @@
 import React from 'react';
-import { color } from './theme';
-import { TAP_MIN } from './layout';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { RelationshipProfile } from '../barkly/relationship';
+import { RelationshipProfile, RelationshipLore } from '../barkly/relationship';
+import { color, elevation, glyph, radius, space, type } from './theme';
+import { TAP_MIN } from './layout';
 
 interface Props {
   visible: boolean;
@@ -10,145 +10,168 @@ interface Props {
   profile: RelationshipProfile;
 }
 
+/**
+ * Pack Book v2: relationship evidence, not analytics.
+ *
+ * The first version exposed the machinery — 73/100 trait scores, progress bars,
+ * intensity dots, numbered memory rows, and a footer that literally explained
+ * the product thesis. Accurate, but it made the most personal screen in Barkly
+ * look like a dashboard.
+ *
+ * This pass keeps the SAME underlying state and throws away the spreadsheet
+ * presentation. Traits are stamps. Memories are taped cards. Lore is a pile of
+ * receipts. The current saga is "current drama." The player should be able to
+ * glance at this and see a weird friendship, not reverse-engineer our scoring.
+ */
 
-function TraitCard({ label, score, detail }: { label: string; score: number; detail: string }) {
+function Tape({ side = 'left' }: { side?: 'left' | 'right' }) {
+  return <View style={[styles.tape, side === 'right' && styles.tapeRight]} pointerEvents="none" />;
+}
+
+function TraitStamp({ label, detail, index }: { label: string; detail: string; index: number }) {
   return (
-    <View style={styles.traitCard}>
-      <View style={styles.traitHead}>
-        <Text style={styles.traitLabel}>{label}</Text>
-        <Text style={styles.traitScore}>{score}</Text>
-      </View>
-      <View style={styles.traitTrack}>
-        <View style={[styles.traitFill, { width: `${Math.max(5, score)}%` }]} />
-      </View>
-      <Text style={styles.traitDetail}>{detail}</Text>
+    <View style={[styles.stamp, index % 2 === 0 ? styles.stampLeft : styles.stampRight]}>
+      <Text style={styles.stampKicker}>BARKLY IS</Text>
+      <Text style={styles.stampLabel}>{label.toUpperCase()}</Text>
+      <Text style={styles.stampDetail}>{detail}</Text>
     </View>
   );
 }
 
+function loreLabel(item: RelationshipLore): string {
+  switch (item.kind) {
+    case 'friendship': return 'FRIEND FILE';
+    case 'rivalry': return 'BEEF FILE';
+    case 'treasure': return 'SACRED JUNK';
+    case 'obsession': return 'CURRENT FIXATION';
+  }
+}
+
 export default function PackBookSheet({ visible, onClose, profile }: Props) {
+  const stageDots = Array.from({ length: 5 }, (_, i) => i < profile.stage.level);
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-            {/*
-        Tapping the dimmed area closes the sheet.
-
-        Five bottom sheets shipped without it. The backdrop looks tappable,
-        every other app on the phone behaves that way, and the only way out was
-        a 15px ✕ in the corner — which is also the smallest tap target in the
-        app. `accessible={false}` keeps it out of the screen-reader order; the
-        ✕ is the labelled way out.
-      */}
       <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
         <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
           <View style={styles.header}>
             <View>
               <Text style={styles.eyebrow}>THE PACK BOOK</Text>
-              <Text style={styles.title}>Your Barkly</Text>
+              <Text style={styles.title}>Us, apparently.</Text>
             </View>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close Pack Book">
+            <Pressable
+              onPress={onClose}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Close Pack Book"
+            >
               <Text style={styles.close}>✕</Text>
             </Pressable>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-            <View style={styles.hero}>
-              <Text style={styles.stage}>PACK {profile.stage.level} · {profile.stage.label.toUpperCase()}</Text>
+            <View style={styles.cover}>
+              <Tape />
+              <Text style={styles.coverKicker}>THIS PARTICULAR BARKLY</Text>
               <Text style={styles.archetype}>{profile.archetype}</Text>
               <Text style={styles.tagline}>{profile.tagline}</Text>
-              <View style={styles.bondTrack}>
-                <View style={[styles.bondFill, { width: `${profile.stage.progress * 100}%` }]} />
+
+              <View style={styles.stageRow} accessibilityLabel={`Pack stage ${profile.stage.label}`}>
+                <Text style={styles.stageLabel}>{profile.stage.label}</Text>
+                <View style={styles.stageDots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  {stageDots.map((on, i) => <View key={i} style={[styles.stageDot, on && styles.stageDotOn]} />)}
+                </View>
               </View>
               <Text style={styles.stageBlurb}>{profile.stage.blurb}</Text>
+              <Text style={styles.marginNote}>Nobody picked this at signup. You caused it.</Text>
             </View>
-
-            <Text style={styles.explainer}>
-              Barkly does not pick a personality at signup. This is what he has become from the way you actually talk,
-              train, explore and cause problems together.
-            </Text>
 
             {profile.story && (
               <>
-                <Text style={styles.section}>Current saga</Text>
-                <View style={styles.storyCard}>
-                  <View style={styles.storyTop}>
-                    <Text style={styles.storyKicker}>ONGOING</Text>
-                    <Text style={styles.storyIntensity}>{'●'.repeat(profile.story.intensity)}</Text>
+                <Text style={styles.section}>Current drama</Text>
+                <View style={styles.dramaCard}>
+                  <Tape side="right" />
+                  <View style={styles.dramaTop}>
+                    <Text style={styles.dramaKicker}>ONGOING SITUATION</Text>
+                    <Text style={styles.dramaScribble}>do not make this worse</Text>
                   </View>
-                  <Text style={styles.storyTitle}>{profile.story.title}</Text>
-                  <Text style={styles.storyChapter}>{profile.story.chapter}</Text>
-                  <Text style={styles.storyPremise}>{profile.story.premise}</Text>
-                  <View style={styles.nextBeat}>
-                    <Text style={styles.nextLabel}>NEXT BEAT</Text>
+                  <Text style={styles.dramaTitle}>{profile.story.title}</Text>
+                  <Text style={styles.dramaChapter}>{profile.story.chapter}</Text>
+                  <Text style={styles.dramaPremise}>{profile.story.premise}</Text>
+                  <View style={styles.nextCard}>
+                    <Text style={styles.nextLabel}>WHAT'S HANGING OVER US</Text>
                     <Text style={styles.nextText}>{profile.story.nextHook}</Text>
                   </View>
                 </View>
               </>
             )}
 
-            <Text style={styles.section}>What you turned him into</Text>
+            <Text style={styles.section}>What you've turned him into</Text>
             {profile.traits.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>Still forming.</Text>
-                <Text style={styles.emptyText}>No label yet. Keep doing things together and the Pack Book will call out the traits that actually become true.</Text>
+                <Text style={styles.emptyTitle}>Still becoming a problem.</Text>
+                <Text style={styles.emptyText}>Keep talking, training, wandering around and making choices. The labels show up after they become true.</Text>
               </View>
             ) : (
-              profile.traits.map((trait) => (
-                <TraitCard key={trait.id} label={trait.label} score={trait.score} detail={trait.detail} />
-              ))
+              <View style={styles.stampPile}>
+                {profile.traits.map((trait, index) => (
+                  <TraitStamp key={trait.id} label={trait.label} detail={trait.detail} index={index} />
+                ))}
+              </View>
             )}
 
-            <Text style={styles.section}>Private rituals</Text>
+            <Text style={styles.section}>Our bits</Text>
             {profile.rituals.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No ritual yet.</Text>
-                <Text style={styles.emptyText}>
-                  Teach Barkly a cue and use it a few times. Repeated tricks stop being “commands” and become part of your shared lore.
-                </Text>
+                <Text style={styles.emptyTitle}>No running bit yet.</Text>
+                <Text style={styles.emptyText}>Teach Barkly something dumb and keep doing it. Repetition is how a command turns into lore.</Text>
               </View>
             ) : (
-              profile.rituals.map((ritual) => (
-                <View key={ritual.id} style={[styles.loreCard, ritual.signature && styles.signatureCard]}>
-                  <View style={styles.loreHead}>
-                    <Text style={styles.loreTitle}>{ritual.title}</Text>
-                    {ritual.signature && <Text style={styles.signature}>SIGNATURE</Text>}
+              profile.rituals.map((ritual, index) => (
+                <View key={ritual.id} style={[styles.ritualCard, index % 2 === 0 ? styles.tiltLeft : styles.tiltRight]}>
+                  <View style={styles.ritualHead}>
+                    <Text style={styles.ritualCue}>“{ritual.cue}”</Text>
+                    {ritual.signature && <Text style={styles.signature}>SIGNATURE BIT</Text>}
                   </View>
-                  <Text style={styles.loreDetail}>{ritual.detail}</Text>
+                  <Text style={styles.ritualTitle}>{ritual.title}</Text>
+                  <Text style={styles.ritualDetail}>{ritual.detail}</Text>
                 </View>
               ))
             )}
 
-            <Text style={styles.section}>Our lore</Text>
+            <Text style={styles.section}>Receipts</Text>
             {profile.lore.length === 0 ? (
-              <Text style={styles.emptyLine}>Recurring friends, enemies and sacred dirt objects will end up here.</Text>
+              <Text style={styles.emptyLine}>Friends, enemies, sacred junk and ridiculous fixations will leave receipts here.</Text>
             ) : (
-              profile.lore.map((item) => (
-                <View key={item.id} style={styles.loreCard}>
-                  <Text style={styles.loreTitle}>{item.title}</Text>
-                  <Text style={styles.loreDetail}>{item.detail}</Text>
-                </View>
-              ))
+              <View style={styles.receipts}>
+                {profile.lore.map((item, index) => (
+                  <View key={item.id} style={[styles.receipt, index % 2 === 0 ? styles.receiptA : styles.receiptB]}>
+                    <Text style={styles.receiptKicker}>{loreLabel(item)}</Text>
+                    <Text style={styles.receiptTitle}>{item.title}</Text>
+                    <Text style={styles.receiptDetail}>{item.detail}</Text>
+                  </View>
+                ))}
+              </View>
             )}
 
-            <Text style={styles.section}>Core memories</Text>
+            <Text style={styles.section}>Stuff we actually remember</Text>
             {profile.coreMemories.length === 0 ? (
-              <Text style={styles.emptyLine}>Nothing has made the highlight reel yet.</Text>
+              <Text style={styles.emptyLine}>Nothing has made the wall yet.</Text>
             ) : (
-              profile.coreMemories.map((memory, index) => (
-                <View key={memory.id} style={styles.memoryRow}>
-                  <Text style={styles.memoryNumber}>{String(index + 1).padStart(2, '0')}</Text>
-                  <View style={styles.memoryCopy}>
+              <View style={styles.memoryWall}>
+                {profile.coreMemories.map((memory, index) => (
+                  <View key={memory.id} style={[styles.memoryCard, index % 2 === 0 ? styles.memoryLeft : styles.memoryRight]}>
+                    <Tape side={index % 2 === 0 ? 'left' : 'right'} />
+                    <Text style={styles.memoryKicker}>KEEP THIS ONE</Text>
                     <Text style={styles.memoryText}>{memory.what}</Text>
                     {memory.where && <Text style={styles.memoryWhere}>{memory.where}</Text>}
                   </View>
-                </View>
-              ))
+                ))}
+              </View>
             )}
 
-            <View style={styles.footerCard}>
-              <Text style={styles.footerTitle}>The point</Text>
-              <Text style={styles.footerText}>
-                Someone else can download Barkly. They cannot download this Barkly. The history, routines, grudges, friendships and weird little traditions only exist because you made them happen.
-              </Text>
+            <View style={styles.lastNote}>
+              <Text style={styles.lastNoteText}>Someone else can download Barkly. They still won't have this mess.</Text>
             </View>
           </ScrollView>
         </Pressable>
@@ -158,76 +181,106 @@ export default function PackBookSheet({ visible, onClose, profile }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(28,24,19,0.48)', justifyContent: 'flex-end' },
-  sheet: { maxHeight: '91%', backgroundColor: color.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 },
-  eyebrow: { fontSize: 12, fontWeight: '900', letterSpacing: 2.1, color: color.goldInk },
-  title: { marginTop: 2, fontSize: 24, fontWeight: '900', color: color.ink, letterSpacing: -0.4 },
-  /**
-   * The way out of a sheet, at a real tap size.
-   *
-   * Seven sheets each declared this separately and every one of them measured
-   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
-   * carried a comment saying the X was "the labelled way out", which was true
-   * and beside the point: it was the smallest target in the app, on the
-   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
-   */
-  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.ink },
-  scrollContent: { paddingBottom: 34 },
+  backdrop: { flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' },
+  sheet: {
+    maxHeight: '93%',
+    backgroundColor: color.paper,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: space.xl,
+    paddingTop: space.lg,
+    ...elevation.sheet,
+  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: space.md },
+  eyebrow: { ...type.micro, color: color.goldInk },
+  title: { ...type.display, color: color.ink, marginTop: space.xxs },
+  close: { fontSize: glyph.close, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.ink },
+  scrollContent: { paddingBottom: space.xxl },
 
-  hero: { backgroundColor: color.ink, borderRadius: 22, paddingHorizontal: 20, paddingVertical: 20, marginTop: 4 },
-  stage: { fontSize: 12, fontWeight: '900', letterSpacing: 1.5, color: color.goldSoft },
-  archetype: { marginTop: 7, fontSize: 24, lineHeight: 32, fontWeight: '900', color: color.paper, letterSpacing: -0.7 },
-  tagline: { marginTop: 7, fontSize: 15, lineHeight: 21, color: color.fill },
-  bondTrack: { height: 7, borderRadius: 999, backgroundColor: color.inkMid, overflow: 'hidden', marginTop: 17 },
-  bondFill: { height: 7, borderRadius: 999, backgroundColor: color.goldSoft },
-  // `goldSoft`, because the hero card behind it is `color.ink`. It was
-  // `inkSoft` — a DARK token on a DARK surface, 2.07:1 — which the contrast
-  // test did not catch because that test only checked the light surfaces.
-  // It checks both directions now.
-  stageBlurb: { marginTop: 9, fontSize: 12, lineHeight: 18, color: color.goldSoft },
+  cover: {
+    marginTop: space.xs,
+    backgroundColor: color.ink,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.xl,
+    paddingTop: space.xxl,
+    paddingBottom: space.xl,
+    transform: [{ rotate: '-0.35deg' }],
+    ...elevation.card,
+  },
+  tape: {
+    position: 'absolute',
+    width: 76,
+    height: 18,
+    top: -8,
+    left: 26,
+    borderRadius: radius.xs,
+    backgroundColor: color.goldSoft,
+    opacity: 0.75,
+    transform: [{ rotate: '-5deg' }],
+  },
+  tapeRight: { left: undefined, right: 24, transform: [{ rotate: '6deg' }] },
+  coverKicker: { ...type.micro, color: color.goldSoft },
+  archetype: { ...type.display, color: color.paper, marginTop: space.sm },
+  tagline: { ...type.body, color: color.inkOn, marginTop: space.sm },
+  stageRow: { marginTop: space.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
+  stageLabel: { ...type.strong, color: color.goldSoft, textTransform: 'uppercase' },
+  stageDots: { flexDirection: 'row', gap: space.xs },
+  stageDot: { width: 10, height: 10, borderRadius: radius.pill, borderWidth: 1.5, borderColor: color.inkMid },
+  stageDotOn: { backgroundColor: color.goldSoft, borderColor: color.goldSoft },
+  stageBlurb: { ...type.small, color: color.inkOn, marginTop: space.sm },
+  marginNote: { ...type.caption, color: color.goldSoft, marginTop: space.lg, fontStyle: 'italic', textAlign: 'right' },
 
-  explainer: { marginTop: 15, fontSize: 13, lineHeight: 20, color: color.inkSoft },
-  section: { marginTop: 23, marginBottom: 9, fontSize: 12, fontWeight: '900', letterSpacing: 1.3, color: color.inkSoft, textTransform: 'uppercase' },
+  section: { ...type.micro, color: color.inkSoft, textTransform: 'uppercase', marginTop: space.xxl, marginBottom: space.md },
 
-  storyCard: { borderRadius: 22, padding: 17, backgroundColor: color.line, borderWidth: 1.5, borderColor: color.warmLine },
-  storyTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  storyKicker: { fontSize: 10, fontWeight: '900', letterSpacing: 1.7, color: color.goldInk },
-  storyIntensity: { fontSize: 10, letterSpacing: 2, color: color.goldInk },
-  storyTitle: { marginTop: 6, fontSize: 24, fontWeight: '900', color: color.ink, letterSpacing: -0.3 },
-  storyChapter: { marginTop: 3, fontSize: 12, fontWeight: '900', letterSpacing: 0.8, color: color.goldInk, textTransform: 'uppercase' },
-  storyPremise: { marginTop: 10, fontSize: 13, lineHeight: 20, color: color.inkMid },
-  nextBeat: { marginTop: 13, borderTopWidth: 1, borderTopColor: color.goldSoft, paddingTop: 10 },
-  nextLabel: { fontSize: 10, fontWeight: '900', letterSpacing: 1.3, color: color.goldInk },
-  nextText: { marginTop: 3, fontSize: 12, lineHeight: 18, fontWeight: '600', color: color.ink },
+  dramaCard: { backgroundColor: color.warmWell, borderRadius: radius.lg, padding: space.lg, borderWidth: 1.5, borderColor: color.warmLine, ...elevation.low },
+  dramaTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
+  dramaKicker: { ...type.micro, color: color.danger },
+  dramaScribble: { ...type.caption, color: color.inkSoft, fontStyle: 'italic', transform: [{ rotate: '-2deg' }] },
+  dramaTitle: { ...type.display, color: color.ink, marginTop: space.sm },
+  dramaChapter: { ...type.caption, color: color.goldInk, textTransform: 'uppercase', marginTop: space.xs },
+  dramaPremise: { ...type.small, color: color.inkMid, marginTop: space.md },
+  nextCard: { marginTop: space.lg, paddingTop: space.md, borderTopWidth: 1.5, borderTopColor: color.warmLine },
+  nextLabel: { ...type.micro, color: color.danger },
+  nextText: { ...type.small, color: color.ink, fontWeight: '600', marginTop: space.xs },
 
-  traitCard: { backgroundColor: color.card, borderRadius: 18, padding: 14, marginBottom: 9 },
-  traitHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  traitLabel: { fontSize: 15, fontWeight: '800', color: color.ink },
-  traitScore: { fontSize: 13, fontWeight: '900', color: color.goldInk },
-  traitTrack: { height: 6, borderRadius: 999, backgroundColor: color.fill, overflow: 'hidden', marginTop: 9 },
-  traitFill: { height: 6, borderRadius: 999, backgroundColor: color.gold },
-  traitDetail: { marginTop: 8, fontSize: 12, lineHeight: 18, color: color.inkSoft },
+  stampPile: { gap: space.md },
+  stamp: { borderRadius: radius.sm, padding: space.lg, borderWidth: 2, borderStyle: 'dashed', backgroundColor: color.card, ...elevation.low },
+  stampLeft: { borderColor: color.gold, transform: [{ rotate: '-0.7deg' }] },
+  stampRight: { borderColor: color.goodLine, transform: [{ rotate: '0.7deg' }] },
+  stampKicker: { ...type.micro, color: color.inkSoft },
+  stampLabel: { ...type.title, color: color.ink, marginTop: space.xs },
+  stampDetail: { ...type.small, color: color.inkSoft, marginTop: space.sm },
 
-  emptyCard: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.line, padding: 16 },
-  emptyTitle: { fontSize: 15, fontWeight: '800', color: color.ink },
-  emptyText: { marginTop: 5, fontSize: 13, lineHeight: 19, color: color.inkSoft },
-  emptyLine: { fontSize: 13, lineHeight: 20, color: color.inkSoft, fontStyle: 'italic' },
+  emptyCard: { borderRadius: radius.md, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.line, padding: space.lg },
+  emptyTitle: { ...type.strong, color: color.ink },
+  emptyText: { ...type.small, color: color.inkSoft, marginTop: space.xs },
+  emptyLine: { ...type.small, color: color.inkSoft, fontStyle: 'italic' },
 
-  loreCard: { backgroundColor: color.card, borderRadius: 18, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: color.fill },
-  signatureCard: { borderColor: color.warmLine, borderWidth: 1.5 },
-  loreHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  loreTitle: { flex: 1, fontSize: 15, fontWeight: '800', color: color.ink },
-  loreDetail: { marginTop: 4, fontSize: 13, lineHeight: 19, color: color.inkSoft },
-  signature: { fontSize: 10, fontWeight: '900', letterSpacing: 1.1, color: color.goldInk },
+  ritualCard: { backgroundColor: color.card, borderRadius: radius.md, padding: space.lg, marginBottom: space.sm, borderWidth: 1, borderColor: color.line, ...elevation.low },
+  tiltLeft: { transform: [{ rotate: '-0.45deg' }] },
+  tiltRight: { transform: [{ rotate: '0.45deg' }] },
+  ritualHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  ritualCue: { ...type.strong, color: color.ink, flex: 1 },
+  signature: { ...type.micro, color: color.goldInk, backgroundColor: color.goldWell, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: space.xs },
+  ritualTitle: { ...type.small, color: color.inkMid, fontWeight: '700', marginTop: space.sm },
+  ritualDetail: { ...type.caption, color: color.inkSoft, marginTop: space.xs },
 
-  memoryRow: { flexDirection: 'row', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: color.fill },
-  memoryNumber: { width: 24, fontSize: 12, fontWeight: '900', letterSpacing: 1.1, color: color.inkSoft, paddingTop: 2 },
-  memoryCopy: { flex: 1 },
-  memoryText: { fontSize: 13, lineHeight: 20, fontWeight: '600', color: color.ink },
-  memoryWhere: { marginTop: 3, fontSize: 12, color: color.inkSoft, textTransform: 'uppercase', letterSpacing: 0.7 },
+  receipts: { gap: space.sm },
+  receipt: { borderRadius: radius.sm, padding: space.lg, borderWidth: 1, ...elevation.low },
+  receiptA: { backgroundColor: color.well, borderColor: color.line, transform: [{ rotate: '-0.25deg' }] },
+  receiptB: { backgroundColor: color.goldWell, borderColor: color.goldSoft, transform: [{ rotate: '0.25deg' }] },
+  receiptKicker: { ...type.micro, color: color.inkSoft },
+  receiptTitle: { ...type.strong, color: color.ink, marginTop: space.xs },
+  receiptDetail: { ...type.small, color: color.inkSoft, marginTop: space.xs },
 
-  footerCard: { marginTop: 24, borderRadius: 18, padding: 17, backgroundColor: color.fill },
-  footerTitle: { fontSize: 13, fontWeight: '900', color: color.ink },
-  footerText: { marginTop: 6, fontSize: 13, lineHeight: 20, color: color.inkMid },
+  memoryWall: { gap: space.md },
+  memoryCard: { backgroundColor: color.card, borderRadius: radius.xs, paddingHorizontal: space.lg, paddingTop: space.xl, paddingBottom: space.lg, borderWidth: 1, borderColor: color.line, ...elevation.card },
+  memoryLeft: { marginRight: space.md, transform: [{ rotate: '-0.6deg' }] },
+  memoryRight: { marginLeft: space.md, transform: [{ rotate: '0.6deg' }] },
+  memoryKicker: { ...type.micro, color: color.goldInk },
+  memoryText: { ...type.body, color: color.ink, fontWeight: '600', marginTop: space.sm },
+  memoryWhere: { ...type.caption, color: color.inkSoft, textTransform: 'uppercase', marginTop: space.sm },
+
+  lastNote: { marginTop: space.xxl, marginHorizontal: space.lg, borderTopWidth: 1.5, borderBottomWidth: 1.5, borderColor: color.line, paddingVertical: space.lg, transform: [{ rotate: '-0.5deg' }] },
+  lastNoteText: { ...type.small, color: color.inkMid, fontStyle: 'italic', textAlign: 'center' },
 });
