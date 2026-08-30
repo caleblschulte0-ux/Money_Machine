@@ -1,0 +1,125 @@
+name: Barkly world-unification surgical patch
+
+on:
+  push:
+    branches:
+      - chatgpt/barkly-world-unification-20260830
+    paths:
+      - .github/workflows/barkly-world-unification-surgical.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/barkly-world-unification-20260830
+          fetch-depth: 0
+
+      - name: Apply staging and conversation fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          room = Path('barkly/app/src/ui/BarklyRoom.tsx')
+          s = room.read_text()
+          old = "  biscuit: { left: -6, bottom: 116, size: 112 },"
+          new = "  biscuit: { left: 76, bottom: 132, size: 106 },"
+          if old not in s:
+              raise SystemExit('Biscuit staging anchor changed; refusing blind patch')
+          s = s.replace(old, new, 1)
+          room.write_text(s)
+
+          hook = Path('barkly/app/src/hooks/useBarkly.ts')
+          s = hook.read_text()
+
+          old_import = "import { freshExchangeMemory, pickExchange } from '../world/npcExchange';"
+          new_import = "import { freshExchangeMemory, npcReadMs, pickExchange } from '../world/npcExchange';"
+          if old_import not in s:
+              raise SystemExit('npcExchange import changed; refusing blind patch')
+          s = s.replace(old_import, new_import, 1)
+
+          old_simple = """      setNpcBubble({ id, line: exchange.npcLine });
+      if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+      npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 4500);
+
+      speak(exchange.barklyLine, {
+        actions: ['MOUTH_MOVE', 'EAR_PERK'],
+        after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
+      }).catch(() => {});
+"""
+          new_simple = """      // Barkly owns the first beat. The other dog only gets the floor AFTER
+      // his voiced line finishes, so two characters never visually talk at once.
+      // Unvoiced NPC copy then stays up long enough for a child to read it.
+      speak(exchange.barklyLine, {
+        actions: ['MOUTH_MOVE', 'EAR_PERK'],
+        after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
+      })
+        .then(() => {
+          setNpcBubble({ id, line: exchange.npcLine });
+          if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+          npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), exchange.npcReadMs);
+        })
+        .catch(() => {});
+"""
+          if old_simple not in s:
+              raise SystemExit('simple NPC exchange block changed; refusing blind patch')
+          s = s.replace(old_simple, new_simple, 1)
+
+          old_choice_head = """      setActiveEncounter(null);
+      setBusy(true);
+      setNpcBubble({ id: encounter.npcId, line: choice.npcReply });
+      if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+      npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), 5200);
+"""
+          new_choice_head = """      setActiveEncounter(null);
+      setBusy(true);
+      // Do not put the NPC's answer on screen yet. Barkly gets the first beat;
+      // the NPC bubble is staged after his line below.
+      setNpcBubble(null);
+      if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+"""
+          if old_choice_head not in s:
+              raise SystemExit('encounter NPC pre-roll changed; refusing blind patch')
+          s = s.replace(old_choice_head, new_choice_head, 1)
+
+          old_after_speak = """        await speak(replyLine, {
+          actions: choice.actions,
+          after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
+        });
+
+        // The relationship moved a rung. Say so, show so, and write it down —
+"""
+          new_after_speak = """        await speak(replyLine, {
+          actions: choice.actions,
+          after: { type: 'SOCIAL', friendly: npc.relationship === 'friend' },
+        });
+
+        // Now the other dog gets the floor. They do not have to be voiced to
+        // feel conversational: the bubble lands after Barkly, and its dwell
+        // scales with the amount of text instead of vanishing on a fixed timer.
+        const npcDwell = npcReadMs(choice.npcReply);
+        setNpcBubble({ id: encounter.npcId, line: choice.npcReply });
+        if (npcBubbleTimer.current) clearTimeout(npcBubbleTimer.current);
+        npcBubbleTimer.current = setTimeout(() => setNpcBubble(null), npcDwell);
+        await pause(npcDwell);
+        setNpcBubble(null);
+
+        // The relationship moved a rung. Say so, show so, and write it down —
+"""
+          if old_after_speak not in s:
+              raise SystemExit('encounter Barkly reply block changed; refusing blind patch')
+          s = s.replace(old_after_speak, new_after_speak, 1)
+
+          hook.write_text(s)
+
+      - name: Commit surgical fixes
+        run: |
+          git config user.name "ChatGPT Barkly Builder"
+          git config user.email "actions@users.noreply.github.com"
+          git add barkly/app/src/ui/BarklyRoom.tsx barkly/app/src/hooks/useBarkly.ts
+          git commit -m "World polish: fix NPC staging and Barkly-first dialogue"
+          git push origin HEAD:chatgpt/barkly-world-unification-20260830
