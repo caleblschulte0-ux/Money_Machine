@@ -45,16 +45,19 @@ function useWebPolish() {
         padding-right: 0 !important;
       }
 
+      /* RN Web may render Text as a div or span depending on nesting/version. */
+      [data-testid="playtest-badge"] div,
       [data-testid="playtest-badge"] span {
         font-size: 0 !important;
         letter-spacing: 0 !important;
       }
 
-      [data-testid="playtest-badge"] span::after {
+      [data-testid="playtest-badge"]::after {
         content: "TEST";
         font-size: 10px;
         font-weight: 900;
         letter-spacing: 0.7px;
+        color: #FFF9EE;
       }
     `;
     document.head.appendChild(style);
