@@ -48,6 +48,7 @@ const ART = new Set([
   'Scenes.tsx',
   'PolishedScenes.tsx',
   'LivingScenes.tsx',
+  'CandyScenes.tsx',
   'depth.tsx',
 ]);
 
@@ -78,20 +79,10 @@ describe('one palette', () => {
     const short = file.slice(file.indexOf('src/'));
 
     it(`${short}: declares no palette of its own`, () => {
-      // This is the exact shape the drift took: `const INK = '#3E332A';`
       const own = code(file).match(/const\s+(INK|INK_SOFT|SOFT|CARD|PAPER|GOLD|LINE|WELL|BG)\s*=/g);
       expect(own ?? []).toEqual([]);
     });
 
-    /**
-     * ...and no ALIAS of a token either: `const COIN = color.gold;`
-     *
-     * That one line put the shop's prices at 2.38:1 and kept them there
-     * through a colour sweep and a contrast test, because both of them scan
-     * for `color: color.gold` and this reads `color: COIN`. An alias buys
-     * nothing — the token already has a name — and it costs the whole
-     * enforcement layer its grip.
-     */
     it(`${short}: does not rename a token`, () => {
       const alias = code(file).match(/const\s+[A-Z_]{2,}\s*=\s*color\.\w+;/g);
       expect(alias ?? []).toEqual([]);
@@ -134,8 +125,6 @@ describe('one elevation ramp', () => {
   for (const file of chrome) {
     const short = file.slice(file.indexOf('src/'));
     it(`${short}: no hand-rolled shadows`, () => {
-      // Every shadow comes from theme.elevation, which is the only place that
-      // knows React Native Web ignores the native shadow props.
       expect(code(file)).not.toMatch(/shadowColor|shadowOffset|boxShadow/);
     });
   }
