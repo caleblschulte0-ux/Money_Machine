@@ -354,6 +354,16 @@ function NpcDog({
 
   const breathScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
   return (
+    /*
+     * The container's bottom edge IS the ground line under this dog.
+     *
+     * It used to also contain the name, as the last child in a column — so the
+     * container bottom was the bottom of the NAME CHIP, roughly twenty pixels
+     * below his paws, and the shadow (positioned against that bottom) drew
+     * itself under the label instead of under the dog. He stood on nothing.
+     * The name is out of the flow now, hanging below the line, so the anchor
+     * means what its name says.
+     */
     <Animated.View
       style={[
         styles.npc,
@@ -388,11 +398,30 @@ function NpcDog({
           <Image source={NPC_ART[id]} style={{ width: spot.size * scale, height: spot.size * 1.25 * scale }} resizeMode="contain" />
         </Animated.View>
       </Pressable>
+      {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
       <Text style={[styles.npcName, { bottom: -19 * scale }]}>{NPCS[id].name.toUpperCase()}</Text>
     </Animated.View>
   );
 }
 
+/**
+ * His ball, in one place.
+ *
+ * It was written out twice — once for the ball in flight during fetch, once
+ * for the toy sitting in the room — and a palette pass turned BOTH copies into
+ * the literal strings `fill="color.brand"`, which SVG cannot parse, so the
+ * ball rendered as a black disc. Two copies is how one edit misses one of
+ * them; now there is one copy, and its colours are art, not tokens.
+ */
+/**
+ * The padlock on a place he cannot go yet.
+ *
+ * It was the 🔒 EMOJI, added in the same pass that took emoji out of the shop
+ * for rendering in the operating system's art style rather than the app's.
+ * Six pixels of drawn shackle is not a hard thing to do and it stops one glyph
+ * on the screen being someone else's drawing.
+ */
+/** The "type instead" affordance. Drawn, like everything else in here. */
 function KeyboardGlyph() {
   return (
     <Svg width={22} height={16} viewBox="0 0 22 16">
@@ -446,6 +475,14 @@ export default function BarklyRoom() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [storeOpen, setStoreOpen] = useState(false);
   const [foodOpen, setFoodOpen] = useState(false);
+
+  /**
+   * Open one sheet, closing the rest.
+   *
+   * Nothing stopped two from being up at once — the shop over the settings
+   * sheet, an encounter behind the food picker — and the one underneath still
+   * caught taps through the backdrop. One at a time, always.
+   */
   const openOnly = (open: (v: boolean) => void) => {
     setStoreOpen(false);
     setSettingsOpen(false);
@@ -460,6 +497,7 @@ export default function BarklyRoom() {
   const [heartBurst, setHeartBurst] = useState(0);
   const [fetching, setFetching] = useState(false);
   const [tugging, setTugging] = useState(false);
+  /** The keyboard is a choice, not a fallback — see the input block below. */
   const [typing, setTyping] = useState(false);
   const tugX = useRef(new Animated.Value(0)).current;
   const [digging, setDigging] = useState(false);
@@ -469,17 +507,51 @@ export default function BarklyRoom() {
   const listening = snapshot.state === 'listening';
   const asleep = snapshot.state === 'sleepy';
   const { height: screenH, width: screenW } = useWindowDimensions();
+  /**
+   * The real hardware insets, floored by the layout constants. On the web
+   * these report zero and the floors carry it; on a notched phone the
+   * hardware wins. Everything below that used to build on the CONTENT_TOP
+   * constant builds on this instead, so nothing assumes a particular device.
+   */
   const insets = useSafeAreaInsets();
   const topPad = contentTop(insets.top);
   const bottomPad = contentBottom(insets.bottom);
+  /**
+   * How big he is drawn. The stage is a fixed band between the chrome and the
+   * dialogue panel, and he has to live inside it — cropping his paws to make
+   * room for a text panel is the kind of thing that makes an app feel like a
+   * web page. Capped at 1 so a tall phone gives him air, not a poster.
+   */
   const spriteScale = scaleForScreen(screenH, screenW);
+  /** How tall the world is: everything above the dialogue panel. */
   const sceneBand = screenH - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT + 8;
+  /**
+   * Where his feet meet the ground, measured from the top of the scene layer.
+   * Interior scenes are built around this line rather than around percentages
+   * of a rectangle — see Scenes.HomeScene.
+   */
   const groundY = topPad + CHROME_BOTTOM + stageHeight(screenH) - SPRITE_FOOT;
   const stateLabel = STATE_LABEL[snapshot.state];
+
+  /**
+   * Stress mode: every overlay on screen at once.
+   *
+   * This is the brief made runnable — "pretend that everything that could ever
+   * pop up on the screen popped up at once". Turned on from Settings (dev
+   * tools), it forces a notice, a speech bubble, a thought, an NPC bubble, the
+   * state chip and an error to render together so the spacing can be checked
+   * against something real instead of imagined. scripts/overlap-check.mjs
+   * measures the boxes in a browser and fails on any collision.
+   */
   const showcase = barkly.showcase;
 
+  // Muting the dog mutes his BODY too: a toy you have silenced should not
+  // still buzz in your pocket. See ui/feel.
   useEffect(() => setFeelMuted(barkly.muted), [barkly.muted]);
+
   const shownPromo = barkly.promotion ?? SHOWCASE_PROMOTION;
+
+  // Exactly one notice, highest priority first.
   const notice: NoticeKind | null = showcase
     ? 'promotion'
     : (NOTICE_PRIORITY.find((kind) =>
@@ -493,9 +565,10 @@ export default function BarklyRoom() {
       ) ?? null);
   const hour = new Date().getHours();
   const npcsHere = LOCATIONS[location].npcIds;
-  const npcBubble = showcase && npcsHere.length > 0
-    ? { id: npcsHere[0], line: 'Barkly!! I found a stick. It might be THE stick.' }
-    : barkly.npcBubble;
+  const npcBubble =
+    showcase && npcsHere.length > 0
+      ? { id: npcsHere[0], line: 'Barkly!! I found a stick. It might be THE stick.' }
+      : barkly.npcBubble;
   const planDone = barkly.adventure?.goals.filter((goal) => goal.done).length ?? 0;
   const planTotal = barkly.adventure?.goals.length ?? 0;
   const planComplete = Boolean(barkly.adventure?.completedAt);
@@ -514,15 +587,20 @@ export default function BarklyRoom() {
     Animated.parallel([
       Animated.timing(sceneFade, { toValue: 1, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(walkX, { toValue: 0, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.sequence(Array.from({ length: 4 }, () => Animated.sequence([
-        Animated.timing(hopY, { toValue: -12, duration: 88, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.timing(hopY, { toValue: 0, duration: 88, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-      ]))),
+      Animated.sequence(
+        Array.from({ length: 4 }, () =>
+          Animated.sequence([
+            Animated.timing(hopY, { toValue: -12, duration: 88, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+            Animated.timing(hopY, { toValue: 0, duration: 88, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          ]),
+        ),
+      ),
     ]).start();
   }, [location, sceneFade, walkX, hopY]);
 
   const chaseX = useRef(new Animated.Value(0)).current;
   const ballFlight = useRef(new Animated.Value(0)).current;
+  /** Throw, chase, grab, carry back. Used by fetch AND by ball play. */
   const runChase = (onDone: () => void) => {
     setFetching(true);
     ballFlight.setValue(0);
@@ -543,21 +621,64 @@ export default function BarklyRoom() {
     });
   };
 
+  /**
+   * The play button. It used to speak one line wherever you stood, which felt
+   * like a button that did nothing. Now it runs the routine for the toy he is
+   * actually holding: a ball gets thrown and chased, a rope gets a tug, and
+   * with nothing he improvises. Fetch at the park is the same chase.
+   */
   const runTug = () => {
     setTugging(true);
-    Animated.sequence([
-      ...Array.from({ length: 5 }, (_, i) => Animated.timing(tugX, {
-        toValue: i % 2 === 0 ? -14 : 12,
-        duration: 150,
-        easing: Easing.inOut(Easing.quad),
-        useNativeDriver: true,
-      })),
-      Animated.spring(tugX, { toValue: 0, friction: 5, useNativeDriver: true }),
+      Animated.sequence([
+        ...Array.from({ length: 5 }, (_, i) =>
+          Animated.timing(tugX, {
+            toValue: i % 2 === 0 ? -14 : 12,
+            duration: 150,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ),
+        Animated.spring(tugX, { toValue: 0, friction: 5, useNativeDriver: true }),
     ]).start(() => setTugging(false));
   };
 
-  const wants: KitAction | null = asleep ? null : snapshot.stats.hunger > 68 ? 'feed' : snapshot.stats.energy < 22 ? 'sleep' : snapshot.stats.mood < 42 ? 'play' : null;
-  const look = useAttention({ wants, eating: snapshot.state === 'eating', npcSpeaking: npcBubble ? npcBubble.id : null, speaking: snapshot.state === 'speaking', asleep });
+  /**
+   * One entry point for the play button, so the animation and the line can
+   * never disagree about what he is doing. The animation is chosen from the
+   * SAME `routine` the label was rendered from.
+   */
+  /**
+   * What he would like, if anything. Drives the small lift on the matching
+   * object — the one thing the button row did better than a bare world, which
+   * is telling a child where to tap next.
+   */
+  const wants: KitAction | null =
+    asleep
+      ? null
+      : snapshot.stats.hunger > 68
+        ? 'feed'
+        : snapshot.stats.energy < 22
+          ? 'sleep'
+          : snapshot.stats.mood < 42
+            ? 'play'
+            : null;
+
+  /**
+   * WHERE HE IS LOOKING — and the reason there is no "hungry" badge.
+   */
+  const look = useAttention({
+    wants,
+    eating: snapshot.state === 'eating',
+    npcSpeaking: npcBubble ? npcBubble.id : null,
+    speaking: snapshot.state === 'speaking',
+    asleep,
+  });
+
+  /**
+   * PLAYTEST. The badge IS the button — a dev build needs to say so, and a
+   * tester needs a way in, and those are the same one-line pill rather than a
+   * banner plus a hidden gesture.
+   */
   const playtest = playtestAllowed();
   const [playtestOpen, setPlaytestOpen] = useState(false);
   const [slotName, setSlotName] = useState<string | null>(null);
@@ -570,108 +691,396 @@ export default function BarklyRoom() {
   const react = (kind: 'pet' | 'refuse' | 'arrive' | 'delight') => setBeat({ kind, at: Date.now() });
 
   const onKit = (action: KitAction) => {
-    if (action === 'feed') { feel('touch'); openOnly(setFoodOpen); return; }
-    if (action === 'sleep') { feel(asleep ? 'touch' : 'act'); void barkly.sleepToggle(); return; }
+    if (action === 'feed') {
+      feel('touch');
+      openOnly(setFoodOpen);
+      return;
+    }
+    if (action === 'sleep') {
+      feel(asleep ? 'touch' : 'act');
+      void barkly.sleepToggle();
+      return;
+    }
     runPlay();
   };
 
   const runPlay = () => {
-    if (fetching || tugging || locked || digging) { react('refuse'); return; }
-    if (routine === 'waves') { runChase(() => void barkly.chaseWaves()); return; }
-    if (routine === 'tug') { feel('act'); runTug(); void barkly.play(); return; }
+    if (fetching || tugging || locked || digging) {
+      react('refuse');
+      return;
+    }
+    if (routine === 'waves') {
+      runChase(() => void barkly.chaseWaves());
+      return;
+    }
+    if (routine === 'tug') {
+      feel('act');
+      runTug();
+      void barkly.play();
+      return;
+    }
     feel('act');
     runChase(() => void barkly.play());
   };
 
   const ballX = ballFlight.interpolate({ inputRange: [0, 1], outputRange: [0, 118] });
   const ballY = ballFlight.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -120, -8] });
-  const sendTyped = async () => { const text = typed; setTyped(''); await barkly.submitText(text); };
+
+  const sendTyped = async () => {
+    const text = typed;
+    setTyped('');
+    await barkly.submitText(text);
+  };
+
   const digRotate = useRef(new Animated.Value(0)).current;
   const runDig = () => {
     if (digging || fetching || locked) return;
-    feel('act'); setDigging(true);
-    Animated.loop(Animated.sequence([
-      Animated.timing(digRotate, { toValue: 1, duration: 90, useNativeDriver: true }),
-      Animated.timing(digRotate, { toValue: -1, duration: 90, useNativeDriver: true }),
-    ]), { iterations: 8 }).start(async () => {
-      digRotate.setValue(0); await barkly.dig(); setDigging(false);
+    feel('act');
+    setDigging(true);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(digRotate, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(digRotate, { toValue: -1, duration: 90, useNativeDriver: true }),
+      ]),
+      { iterations: 8 },
+    ).start(async () => {
+      digRotate.setValue(0);
+      await barkly.dig();
+      setDigging(false);
     });
   };
-  const pet = () => { feel('touch'); react('pet'); barkly.pet(); if (snapshot.state !== 'sleepy') setHeartBurst((b) => b + 1); };
+
+  const pet = () => {
+    feel('touch');
+    react('pet');
+    barkly.pet();
+    if (snapshot.state !== 'sleepy') setHeartBurst((b) => b + 1);
+  };
+
   const bubbleText = showcase
     ? 'The longest thing he can say, at three full lines, so the tallest bubble this app can produce is the one being measured right here.'
-    : listening && partialTranscript ? `“${partialTranscript}”` : lastExchange?.barklyText;
+    : listening && partialTranscript
+      ? `“${partialTranscript}”`
+      : lastExchange?.barklyText;
+
   const routine = playRoutineFor(barkly.toy?.id, location);
   const playLabel = playLabelFor(routine, location, fetching || tugging);
 
   if (barkly.onboarding === undefined) return <View style={styles.room} />;
-  if (barkly.onboarding.step !== 'done') return <Onboarding state={barkly.onboarding} micAvailable={sttAvailable} onAdvance={barkly.advanceOnboarding} Renderer={Renderer} />;
+  if (barkly.onboarding.step !== 'done') {
+    return <Onboarding state={barkly.onboarding} micAvailable={sttAvailable} onAdvance={barkly.advanceOnboarding} Renderer={Renderer} />;
+  }
 
   return (
     <View style={styles.room}>
-      <Animated.View style={[styles.sceneLayer, { opacity: sceneFade }]}>
+      <Animated.View
+        style={[styles.sceneLayer, { opacity: sceneFade }]}
+      >
         {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + CHROME_BOTTOM} />}
         {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
         {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
         {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
       </Animated.View>
       {asleep && <NightOverlay />}
-      <LinearGradient colors={['rgba(255,249,236,0.55)', 'rgba(255,249,236,0.22)', 'rgba(255,249,236,0)']} style={styles.chromeScrim} pointerEvents="none" />
-      <LinearGradient colors={['rgba(255,249,236,0)', 'rgba(255,249,236,0.72)', 'rgba(255,249,236,1)']} locations={[0, 0.55, 1]} style={styles.horizon} pointerEvents="none" />
+
+      <LinearGradient
+        colors={['rgba(255,249,236,0.55)', 'rgba(255,249,236,0.22)', 'rgba(255,249,236,0)']}
+        style={styles.chromeScrim}
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={['rgba(255,249,236,0)', 'rgba(255,249,236,0.72)', 'rgba(255,249,236,1)']}
+        locations={[0, 0.55, 1]}
+        style={styles.horizon}
+        pointerEvents="none"
+      />
 
       <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
-          <Pressable style={styles.walletTap} onPress={() => openOnly(setStoreOpen)} accessibilityRole="button" accessibilityLabel={`Shop. ${barkly.wallet.coins} coins, level ${barkly.level}.`}>
+          <Pressable
+            style={styles.walletTap}
+            onPress={() => openOnly(setStoreOpen)}
+            accessibilityRole="button"
+            accessibilityLabel={`Shop. ${barkly.wallet.coins} coins, level ${barkly.level}.`}
+          >
             <CoinPill coins={barkly.wallet.coins} level={barkly.level} frac={levelProgress(barkly.wallet.xp).frac} />
           </Pressable>
           <View style={styles.headerButtons}>
-            <Pressable style={styles.packButton} hitSlop={8} onPress={() => openOnly(setPackOpen)} accessibilityRole="button" accessibilityLabel={`Pack Book. ${barkly.relationship.archetype}. ${barkly.relationship.stage.label}.`}>
-              <Text style={styles.packLabel}>PACK</Text><Text style={styles.packLevel}>{barkly.relationship.stage.level}</Text>
+            <Pressable
+              style={styles.packButton}
+              hitSlop={8}
+              onPress={() => openOnly(setPackOpen)}
+              accessibilityRole="button"
+              accessibilityLabel={`Pack Book. ${barkly.relationship.archetype}. ${barkly.relationship.stage.label}.`}
+            >
+              <Text style={styles.packLabel}>PACK</Text>
+              <Text style={styles.packLevel}>{barkly.relationship.stage.level}</Text>
             </Pressable>
-            <Pressable style={styles.gear} hitSlop={10} onPress={() => openOnly(setSettingsOpen)} accessibilityRole="button" accessibilityLabel="Settings"><View style={styles.gearDot} /><View style={styles.gearDot} /><View style={styles.gearDot} /></Pressable>
+            <Pressable style={styles.gear} hitSlop={10} onPress={() => openOnly(setSettingsOpen)} accessibilityRole="button" accessibilityLabel="Settings">
+              <View style={styles.gearDot} />
+              <View style={styles.gearDot} />
+              <View style={styles.gearDot} />
+            </Pressable>
           </View>
         </View>
 
-        {notice && <View style={[styles.noticeLayer, { top: noticeTop(topPad) }]} pointerEvents="box-none">
-          {notice === 'error' && <View style={styles.errorNotice} pointerEvents="none" accessibilityLiveRegion="polite"><Text style={styles.errorText} numberOfLines={3}>{error ?? 'Something went wrong and this is what it says.'}</Text></View>}
-          {notice === 'degraded' && barkly.degraded && <Pressable style={styles.degraded} onPress={barkly.dismissDegraded} accessibilityRole="button" accessibilityLabel={`${barkly.degraded}. Tap to dismiss.`}><View style={styles.degradedDot} /><Text style={styles.degradedText} numberOfLines={2}>{barkly.degraded}</Text></Pressable>}
-          {notice === 'promotion' && (barkly.promotion ?? SHOWCASE_PROMOTION) && <View style={[styles.promo, shownPromo.kind === 'rival' ? styles.promoRival : styles.promoFriend]} pointerEvents="none" accessibilityLiveRegion="polite" accessibilityLabel={`${shownPromo.headline}. From ${shownPromo.fromLabel} to ${shownPromo.toLabel}.`}><Text style={styles.promoEyebrow}>{shownPromo.kind === 'rival' ? 'RIVALRY' : 'FRIENDSHIP'}</Text><Text style={styles.promoHeadline} numberOfLines={1}>{shownPromo.headline}</Text></View>}
-          {notice === 'reward' && barkly.reward && <View style={styles.reward} pointerEvents="none" accessibilityLiveRegion="polite"><Text style={styles.rewardText} numberOfLines={1}>+{barkly.reward.coins}c  +{barkly.reward.xp} xp{barkly.reward.note ? `  ·  ${barkly.reward.note}` : ''}</Text></View>}
-        </View>}
+        {notice && (
+          <View style={[styles.noticeLayer, { top: noticeTop(topPad) }]} pointerEvents="box-none">
+            {notice === 'error' && (
+              <View style={styles.errorNotice} pointerEvents="none" accessibilityLiveRegion="polite">
+                <Text style={styles.errorText} numberOfLines={3}>
+                  {error ?? 'Something went wrong and this is what it says.'}
+                </Text>
+              </View>
+            )}
+            {notice === 'degraded' && barkly.degraded && (
+              <Pressable
+                style={styles.degraded}
+                onPress={barkly.dismissDegraded}
+                accessibilityRole="button"
+                accessibilityLabel={`${barkly.degraded}. Tap to dismiss.`}
+              >
+                <View style={styles.degradedDot} />
+                <Text style={styles.degradedText} numberOfLines={2}>{barkly.degraded}</Text>
+              </Pressable>
+            )}
+            {notice === 'promotion' && (barkly.promotion ?? SHOWCASE_PROMOTION) && (
+              <View
+                style={[styles.promo, shownPromo.kind === 'rival' ? styles.promoRival : styles.promoFriend]}
+                pointerEvents="none"
+                accessibilityLiveRegion="polite"
+                accessibilityLabel={`${shownPromo.headline}. From ${shownPromo.fromLabel} to ${shownPromo.toLabel}.`}
+              >
+                <Text style={styles.promoEyebrow}>
+                  {shownPromo.kind === 'rival' ? 'RIVALRY' : 'FRIENDSHIP'}
+                </Text>
+                <Text style={styles.promoHeadline} numberOfLines={1}>{shownPromo.headline}</Text>
+              </View>
+            )}
+            {notice === 'reward' && barkly.reward && (
+              <View style={styles.reward} pointerEvents="none" accessibilityLiveRegion="polite">
+                <Text style={styles.rewardText} numberOfLines={1}>
+                  +{barkly.reward.coins}c  +{barkly.reward.xp} xp
+                  {barkly.reward.note ? `  ·  ${barkly.reward.note}` : ''}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.places}>
-          {playtest && <Pressable onPress={() => setPlaytestOpen(true)} style={styles.playtest} accessibilityRole="button" accessibilityLabel={slotName ? `Playtest build. Now playing ${slotName}. Open save slots.` : 'Playtest build. Open save slots.'} testID="playtest-badge"><Text style={styles.playtestText} numberOfLines={1}>PLAYTEST</Text></Pressable>}
-          <View style={styles.tabs}>{LOCATION_ORDER.map((loc: LocationId) => {
+          {playtest && (
+            <Pressable
+              onPress={() => setPlaytestOpen(true)}
+              style={styles.playtest}
+              accessibilityRole="button"
+              accessibilityLabel={slotName ? `Playtest build. Now playing ${slotName}. Open save slots.` : 'Playtest build. Open save slots.'}
+              testID="playtest-badge"
+            >
+              <Text style={styles.playtestText} numberOfLines={1}>PLAYTEST</Text>
+            </Pressable>
+          )}
+          <View style={styles.tabs}>
+          {LOCATION_ORDER.map((loc: LocationId) => {
             const areaLocked = !barkly.isUnlocked(loc);
-            return <Pressable key={loc} style={[styles.tab, location === loc && styles.tabActive, areaLocked && styles.tabLocked]} disabled={locked || fetching} onPress={() => { react('arrive'); barkly.goTo(loc); }} accessibilityRole="tab" accessibilityState={{ selected: location === loc }} accessibilityLabel={areaLocked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}. Tap and he will say so.` : LOCATIONS[loc].name}>{areaLocked && <LockGlyph />}<Text style={[styles.tabText, location === loc && styles.tabTextActive]} numberOfLines={1}>{LOCATIONS[loc].name.toLowerCase()}</Text></Pressable>;
-          })}</View>
-          {barkly.adventure && <Pressable style={[styles.planChip, planComplete && styles.planChipDone]} onPress={() => openOnly(setPlanOpen)} accessibilityRole="button" accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete. ${planComplete ? 'All done.' : barkly.adventure.goals.find((g) => !g.done)?.label ?? ''}`}><Text style={[styles.planChipText, planComplete && styles.planChipTextDone]}>{planDone}/{planTotal}</Text></Pressable>}
+            return (
+              <Pressable
+                key={loc}
+                style={[styles.tab, location === loc && styles.tabActive, areaLocked && styles.tabLocked]}
+                disabled={locked || fetching}
+                onPress={() => { react('arrive'); barkly.goTo(loc); }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: location === loc }}
+                accessibilityLabel={areaLocked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}. Tap and he will say so.` : LOCATIONS[loc].name}
+              >
+                {areaLocked && <LockGlyph />}
+                <Text style={[styles.tabText, location === loc && styles.tabTextActive]} numberOfLines={1}>
+                  {LOCATIONS[loc].name.toLowerCase()}
+                </Text>
+              </Pressable>
+            );
+          })}
+          </View>
+          {barkly.adventure && (
+            <Pressable
+              style={[styles.planChip, planComplete && styles.planChipDone]}
+              onPress={() => openOnly(setPlanOpen)}
+              accessibilityRole="button"
+              accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete. ${
+                planComplete ? 'All done.' : barkly.adventure.goals.find((g) => !g.done)?.label ?? ''
+              }`}
+            >
+              <Text style={[styles.planChipText, planComplete && styles.planChipTextDone]}>
+                {planDone}/{planTotal}
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={[styles.stageArea, { height: stageHeight(screenH) }]}>
           {!asleep && <GroundShadow location={location} width={196 * spriteScale} style={{ bottom: 20 }} />}
           {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
-          {npcsHere.map((id) => <NpcDog key={id} id={id} location={location} scale={spriteScale} talking={npcBubble?.id === id} bond={bondFor(barkly.character, NPCS[id].name)} onPress={() => barkly.npcTalk(id)} />)}
-          <Animated.View style={{ transform: [{ translateX: Animated.add(Animated.add(chaseX, walkX), tugX) }, { translateY: hopY }, { rotate: digRotate.interpolate({ inputRange: [-1, 1], outputRange: ['-7deg', '7deg'] }) }] }}>
-            <Pressable onPress={pet} disabled={locked} accessibilityRole="button" accessibilityLabel={`Barkly. ${stateLabel || snapshot.state}.`} testID="barkly-sprite" accessibilityHint="Tap to pet him."><Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} /></Pressable>
+          {npcsHere.map((id) => (
+            <NpcDog
+              key={id}
+              id={id}
+              location={location}
+              scale={spriteScale}
+              talking={npcBubble?.id === id}
+              bond={bondFor(barkly.character, NPCS[id].name)}
+              onPress={() => barkly.npcTalk(id)}
+            />
+          ))}
+          <Animated.View
+            style={{
+              transform: [
+                { translateX: Animated.add(Animated.add(chaseX, walkX), tugX) },
+                { translateY: hopY },
+                { rotate: digRotate.interpolate({ inputRange: [-1, 1], outputRange: ['-7deg', '7deg'] }) },
+              ],
+            }}
+          >
+            <Pressable
+              onPress={pet}
+              disabled={locked}
+              accessibilityRole="button"
+              accessibilityLabel={`Barkly. ${stateLabel || snapshot.state}.`}
+              testID="barkly-sprite"
+              accessibilityHint="Tap to pet him."
+            >
+              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} />
+            </Pressable>
           </Animated.View>
           {asleep && location === 'home' && <DogBedFront upgraded={barkly.hasHome('home_bed')} />}
-          {fetching && routine === 'ball' && variant !== 'carryLeft' && <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none"><RubberBall size={30} /></Animated.View>}
-          {(location === 'park' || location === 'beach') && !asleep && <Pressable style={styles.digSpot} onPress={runDig} disabled={digging || fetching || locked} hitSlop={8} accessibilityRole="button" accessibilityLabel={location === 'beach' ? 'Search the wet sand' : 'Dig here'}>
-            {location === 'beach' ? <Svg width={86} height={44} viewBox="0 0 86 44"><Path d="M4 38 Q43 12 82 38 Z" fill={SAND.mound} /><Path d="M18 38 Q43 22 68 38 Z" fill={SAND.shade} /><Path d="M34 33 q5 -6 10 0 q5 -6 10 0" stroke={SAND.ripple} strokeWidth={2} fill="none" /></Svg> : <Svg width={86} height={44} viewBox="0 0 86 44"><Path d="M6 38 Q43 2 80 38 Z" fill={DIRT.mound} /><Path d="M18 38 Q43 14 68 38 Z" fill={DIRT.shade} /><Circle cx={43} cy={34} r={7} fill={DIRT.hole} /></Svg>}
-            <Text style={styles.digHint}>{digging ? '…' : location === 'beach' ? 'SIFT' : 'DIG'}</Text>
-          </Pressable>}
+          {fetching && routine === 'ball' && variant !== 'carryLeft' && (
+            <Animated.View style={[styles.fetchBall, { transform: [{ translateX: ballX }, { translateY: ballY }] }]} pointerEvents="none">
+              <RubberBall size={30} />
+            </Animated.View>
+          )}
+          {(location === 'park' || location === 'beach') && !asleep && (
+            <Pressable
+              style={styles.digSpot}
+              onPress={runDig}
+              disabled={digging || fetching || locked}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={location === 'beach' ? 'Search the wet sand' : 'Dig here'}
+            >
+              {location === 'beach' ? (
+                <Svg width={86} height={44} viewBox="0 0 86 44">
+                  <Path d="M4 38 Q43 12 82 38 Z" fill={SAND.mound} />
+                  <Path d="M18 38 Q43 22 68 38 Z" fill={SAND.shade} />
+                  <Path d="M34 33 q5 -6 10 0 q5 -6 10 0" stroke={SAND.ripple} strokeWidth={2} fill="none" />
+                </Svg>
+              ) : (
+                <Svg width={86} height={44} viewBox="0 0 86 44">
+                  <Path d="M6 38 Q43 2 80 38 Z" fill={DIRT.mound} />
+                  <Path d="M18 38 Q43 14 68 38 Z" fill={DIRT.shade} />
+                  <Circle cx={43} cy={34} r={7} fill={DIRT.hole} />
+                </Svg>
+              )}
+              <Text style={styles.digHint}>
+                {digging ? '…' : location === 'beach' ? 'SIFT' : 'DIG'}
+              </Text>
+            </Pressable>
+          )}
           {barkly.serving !== null && <FoodBowl key={barkly.serving} food={barkly.serving} />}
           {snapshot.state === 'playing' && !fetching && routine === 'ball' && <Ball />}
           <HeartBurst burst={heartBurst} />
-          <BarklyKit toyId={barkly.toy?.id ?? null} playLabel={playLabel} asleep={asleep} wants={wants} disabled={locked || fetching || tugging || digging} onPress={onKit} />
-          {(stateLabel || showcase) && <View style={styles.chip}>{(listening || snapshot.state === 'thinking') && <View style={styles.chipDot} />}<Text style={styles.chipText}>{stateLabel || 'listening'}</Text></View>}
+          <BarklyKit
+            toyId={barkly.toy?.id ?? null}
+            playLabel={playLabel}
+            asleep={asleep}
+            wants={wants}
+            disabled={locked || fetching || tugging || digging}
+            onPress={onKit}
+          />
+
+          {(stateLabel || showcase) && (
+            <View style={styles.chip}>
+              {(listening || snapshot.state === 'thinking') && <View style={styles.chipDot} />}
+              <Text style={styles.chipText}>{stateLabel || 'listening'}</Text>
+            </View>
+          )}
         </View>
 
-        <DialoguePanel speaker={npcBubble ? { name: NPCS[npcBubble.id].name, kind: 'npc' } : bubbleText ? { name: 'Barkly', kind: 'barkly' } : null} line={npcBubble ? npcBubble.line : bubbleText ?? null} youSaid={!npcBubble && lastExchange && !listening && lastExchange.userText !== '' ? lastExchange.userText : null} thought={barkly.thought} hint={sttAvailable ? 'hold talk and say hi' : 'type something and say hi'} asleep={asleep} />
+        <DialoguePanel
+          speaker={
+            npcBubble
+              ? { name: NPCS[npcBubble.id].name, kind: 'npc' }
+              : bubbleText
+                ? { name: 'Barkly', kind: 'barkly' }
+                : null
+          }
+          line={npcBubble ? npcBubble.line : bubbleText ?? null}
+          youSaid={!npcBubble && lastExchange && !listening && lastExchange.userText !== '' ? lastExchange.userText : null}
+          thought={barkly.thought}
+          hint={sttAvailable ? 'hold talk and say hi' : 'type something and say hi'}
+          asleep={asleep}
+        />
 
         <View style={styles.controls}>
-          {sttAvailable && !typing ? <View style={styles.typeRow}><Pressable style={({ pressed }) => [styles.talk, listening && styles.talkActive, (locked || pressed) && styles.pressed, locked && styles.disabled]} disabled={locked} onPressIn={barkly.startTalk} onPressOut={barkly.stopTalk} accessibilityRole="button" accessibilityLabel={listening ? 'Listening. Release to send.' : 'Hold to talk to Barkly'} accessibilityState={{ disabled: locked, busy: listening }}><View style={styles.gloss} pointerEvents="none" /><View style={[styles.micDot, listening && styles.micDotLive]} /><Text style={styles.talkText}>{listening ? 'listening — release to send' : 'hold to talk'}</Text></Pressable><Pressable style={styles.swap} onPress={() => setTyping(true)} accessibilityRole="button" accessibilityLabel="Type to Barkly instead"><KeyboardGlyph /></Pressable></View> : <View style={styles.typeRow}><TextInput style={styles.input} value={typed} onChangeText={setTyped} placeholder="say something to Barkly…" placeholderTextColor={color.inkSoft} editable={!locked} onSubmitEditing={sendTyped} returnKeyType="send" accessibilityLabel="Say something to Barkly" accessibilityHint="Type a message, then press talk." />{sttAvailable && <Pressable style={styles.swap} onPress={() => setTyping(false)} accessibilityRole="button" accessibilityLabel="Talk to Barkly out loud instead"><View style={styles.micDot} /></Pressable>}<Pressable style={({ pressed }) => [styles.send, pressed && styles.pressed, (locked || !typed.trim()) && styles.sendIdle]} disabled={locked || !typed.trim()} onPress={sendTyped} accessibilityRole="button" accessibilityLabel="Talk to Barkly" accessibilityState={{ disabled: locked || !typed.trim() }}>{!(locked || !typed.trim()) && <View style={styles.gloss} pointerEvents="none" />}<Text style={[styles.sendText, (locked || !typed.trim()) && styles.sendTextIdle]}>talk</Text></Pressable></View>}
+          {sttAvailable && !typing ? (
+            <View style={styles.typeRow}>
+              <Pressable
+                style={({ pressed }) => [styles.talk, listening && styles.talkActive, (locked || pressed) && styles.pressed, locked && styles.disabled]}
+                disabled={locked}
+                onPressIn={barkly.startTalk}
+                onPressOut={barkly.stopTalk}
+                accessibilityRole="button"
+                accessibilityLabel={listening ? 'Listening. Release to send.' : 'Hold to talk to Barkly'}
+                accessibilityState={{ disabled: locked, busy: listening }}
+              >
+                <View style={styles.gloss} pointerEvents="none" />
+                <View style={[styles.micDot, listening && styles.micDotLive]} />
+                <Text style={styles.talkText}>{listening ? 'listening — release to send' : 'hold to talk'}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.swap}
+                onPress={() => setTyping(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Type to Barkly instead"
+              >
+                <KeyboardGlyph />
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.typeRow}>
+              <TextInput
+                style={styles.input}
+                value={typed}
+                onChangeText={setTyped}
+                placeholder="say something to Barkly…"
+                placeholderTextColor={color.inkSoft}
+                editable={!locked}
+                onSubmitEditing={sendTyped}
+                returnKeyType="send"
+                accessibilityLabel="Say something to Barkly"
+                accessibilityHint="Type a message, then press talk."
+              />
+              {sttAvailable && (
+                <Pressable
+                  style={styles.swap}
+                  onPress={() => setTyping(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Talk to Barkly out loud instead"
+                >
+                  <View style={styles.micDot} />
+                </Pressable>
+              )}
+              <Pressable
+                style={({ pressed }) => [styles.send, pressed && styles.pressed, (locked || !typed.trim()) && styles.sendIdle]}
+                disabled={locked || !typed.trim()}
+                onPress={sendTyped}
+                accessibilityRole="button"
+                accessibilityLabel="Talk to Barkly"
+                accessibilityState={{ disabled: locked || !typed.trim() }}
+              >
+                {!(locked || !typed.trim()) && <View style={styles.gloss} pointerEvents="none" />}
+                <Text style={[styles.sendText, (locked || !typed.trim()) && styles.sendTextIdle]}>talk</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -681,64 +1090,216 @@ export default function BarklyRoom() {
       <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={(id) => { const r = barkly.buy(id); if (r?.ok) react('delight'); return r; }} onEquip={barkly.equip} devMode={barkly.devMode} />
       <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} />
       <AdventureSheet visible={planOpen} onClose={() => setPlanOpen(false)} adventure={barkly.adventure} />
-      <EncounterSheet encounter={barkly.activeEncounter} busy={busy} onClose={barkly.dismissEncounter} onChoose={(choiceId) => void barkly.resolveEncounter(choiceId)} />
-      <SettingsSheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} memory={barkly.memorySnapshot()} stats={snapshot.stats} stash={barkly.stashItems} dialogueProviderName={barkly.dialogueProviderName} brain={{ using: barkly.dialogueStatus().using, breakerOpen: barkly.dialogueStatus().breakerOpen, lastFailure: barkly.dialogueStatus().lastFailure?.barklyLine }} modelConfigured={barkly.modelConfigured} voice={{ route: barkly.voiceRoute, muted: barkly.muted }} onToggleMuted={barkly.toggleMuted} sttAvailable={sttAvailable} onForgetFact={barkly.forgetFact} devMode={barkly.devMode} showcase={barkly.showcase} onSetShowcase={barkly.setShowcase} voices={barkly.voices} voiceShape={barkly.voiceShape} onSetVoiceShape={barkly.setVoiceShape} onPreviewVoice={barkly.previewVoice} onSetDevMode={barkly.setDevMode} onGrantCoins={barkly.devGrantCoins} onGrantLevel={barkly.devGrantLevel} onGrantEverything={barkly.devGrantEverything} onForgetEverything={barkly.forgetEverything} />
+      <EncounterSheet
+        encounter={barkly.activeEncounter}
+        busy={busy}
+        onClose={barkly.dismissEncounter}
+        onChoose={(choiceId) => void barkly.resolveEncounter(choiceId)}
+      />
+      <SettingsSheet
+        visible={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        memory={barkly.memorySnapshot()}
+        stats={snapshot.stats}
+        stash={barkly.stashItems}
+        dialogueProviderName={barkly.dialogueProviderName}
+        brain={{
+          using: barkly.dialogueStatus().using,
+          breakerOpen: barkly.dialogueStatus().breakerOpen,
+          lastFailure: barkly.dialogueStatus().lastFailure?.barklyLine,
+        }}
+        modelConfigured={barkly.modelConfigured}
+        voice={{ route: barkly.voiceRoute, muted: barkly.muted }}
+        onToggleMuted={barkly.toggleMuted}
+        sttAvailable={sttAvailable}
+        onForgetFact={barkly.forgetFact}
+        devMode={barkly.devMode}
+        showcase={barkly.showcase}
+        onSetShowcase={barkly.setShowcase}
+        voices={barkly.voices}
+        voiceShape={barkly.voiceShape}
+        onSetVoiceShape={barkly.setVoiceShape}
+        onPreviewVoice={barkly.previewVoice}
+        onSetDevMode={barkly.setDevMode}
+        onGrantCoins={barkly.devGrantCoins}
+        onGrantLevel={barkly.devGrantLevel}
+        onGrantEverything={barkly.devGrantEverything}
+        onForgetEverything={barkly.forgetEverything}
+      />
     </View>
   );
 }
 
 const SHOWCASE_PROMOTION = {
-  who: 'Duke', kind: 'rival' as const, headline: 'Duke is now an official rival', line: '', fromLabel: 'annoying dog', toLabel: 'official rival',
+  who: 'Duke',
+  kind: 'rival' as const,
+  headline: 'Duke is now an official rival',
+  line: '',
+  fromLabel: 'annoying dog',
+  toLabel: 'official rival',
 };
 
 const styles = StyleSheet.create({
   room: { flex: 1, backgroundColor: color.well },
   sceneLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   chromeScrim: { position: 'absolute', left: 0, right: 0, top: 0, height: CHROME_BOTTOM + 92 },
-  horizon: { position: 'absolute', left: 0, right: 0, bottom: 0, height: DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 56 },
+  horizon: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 56,
+  },
   content: { flex: 1, paddingHorizontal: 22 },
-  header: { height: STATUS_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  playtest: { marginTop: 10, minHeight: TAP_MIN, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 999, backgroundColor: color.ink },
+  header: {
+    height: STATUS_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+  },
+  playtest: {
+    marginTop: 10,
+    minHeight: TAP_MIN,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: color.ink,
+  },
   playtestText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, color: color.inkOn },
-  places: { height: PLACES_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.sm },
-  planChip: { minWidth: 46, height: TAP_MIN, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center', ...elevation.low },
+  places: {
+    height: PLACES_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: space.sm,
+  },
+  planChip: {
+    minWidth: 46,
+    height: TAP_MIN,
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.low,
+  },
   planChipDone: { backgroundColor: color.goodWell },
   planChipText: { ...type.caption, fontWeight: '900', color: color.inkSoft },
   planChipTextDone: { color: color.good },
-  gear: { width: TAP_MIN, height: TAP_MIN, borderRadius: radius.pill, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3, ...elevation.card },
+  gear: {
+    width: TAP_MIN,
+    height: TAP_MIN,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 3,
+    ...elevation.card,
+  },
   gearDot: { width: 4, height: 4, borderRadius: 8, backgroundColor: color.inkSoft },
   headerButtons: { flexDirection: 'row', gap: 7 },
   walletTap: { flex: 1, marginHorizontal: 8 },
-  packButton: { minWidth: 46, height: TAP_MIN, borderRadius: 12, paddingHorizontal: 7, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center', ...elevation.card },
+  packButton: {
+    minWidth: 46,
+    height: TAP_MIN,
+    borderRadius: 12,
+    paddingHorizontal: 7,
+    backgroundColor: color.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.card,
+  },
   packLabel: { fontSize: 10, lineHeight: 8, fontWeight: '900', letterSpacing: 1.1, color: color.goldSoft },
   packLevel: { marginTop: 1, fontSize: 15, lineHeight: 16, fontWeight: '900', color: color.paper },
   tabLocked: { opacity: 0.5 },
-  noticeLayer: { position: 'absolute', left: 22, right: 22, height: NOTICE_MAX_HEIGHT, alignItems: 'center', justifyContent: 'flex-start', zIndex: 20 },
+  noticeLayer: {
+    position: 'absolute',
+    left: 22,
+    right: 22,
+    height: NOTICE_MAX_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    zIndex: 20,
+  },
   reward: { alignSelf: 'center', marginTop: 0, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: color.goldWell },
-  promo: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5, maxWidth: '100%' },
-  promoRival: { backgroundColor: color.warmWell, borderColor: color.warmLine }, promoFriend: { backgroundColor: color.goodWell, borderColor: color.goodLine },
-  promoEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.2, color: color.inkSoft }, promoHeadline: { fontSize: 13, fontWeight: '900', color: color.ink, flexShrink: 1 },
+  promo: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    maxWidth: '100%',
+  },
+  promoRival: { backgroundColor: color.warmWell, borderColor: color.warmLine },
+  promoFriend: { backgroundColor: color.goodWell, borderColor: color.goodLine },
+  promoEyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.2, color: color.inkSoft },
+  promoHeadline: { fontSize: 13, fontWeight: '900', color: color.ink, flexShrink: 1 },
   rewardText: { fontSize: 13, fontWeight: '800', color: color.goldInk },
   degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: color.fill },
-  degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished }, degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
+  degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished },
+  degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
   tabs: { flex: 1, flexDirection: 'row', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 2, ...elevation.card },
   tab: { flexGrow: 1, flexShrink: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  tabActive: { backgroundColor: color.pop }, tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 }, tabTextActive: { color: color.ink },
+  tabActive: { backgroundColor: color.pop },
+  tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 },
+  tabTextActive: { color: color.ink },
   bubble: { maxWidth: '92%', backgroundColor: color.card, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...elevation.card },
-  errorNotice: { alignSelf: 'center', maxWidth: '100%', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: color.dangerWell, borderWidth: 1, borderColor: color.dangerLine },
+  errorNotice: {
+    alignSelf: 'center',
+    maxWidth: '100%',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: color.dangerWell,
+    borderWidth: 1,
+    borderColor: color.dangerLine,
+  },
   errorText: { fontSize: 13, lineHeight: 17, color: color.danger, textAlign: 'center' },
-  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 }, heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' }, heart: { position: 'absolute', fontSize: 24, color: color.danger },
-  fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 }, npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
+  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 },
+  heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
+  heart: { position: 'absolute', fontSize: 24, color: color.danger },
+  fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
+  npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
   digSpot: { position: 'absolute', left: 6, bottom: 72, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: 2, ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: color.inkOn, backgroundColor: 'rgba(62,52,40,0.42)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden' },
   chip: { position: 'absolute', bottom: 72, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
-  chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT }, chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
-  controls: { gap: 9 }, talk: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 18, overflow: 'hidden', ...elevation.card },
-  talkActive: { backgroundColor: color.popDeep }, micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT }, micDotLive: { backgroundColor: color.dangerWell }, talkText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
-  typeRow: { flexDirection: 'row', gap: 10 }, swap: { width: TAP_MIN, minHeight: TAP_MIN, borderRadius: radius.pill, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center', ...elevation.low },
+  chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
+  chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
+  controls: { gap: 9 },
+  talk: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 18, overflow: 'hidden', ...elevation.card },
+  talkActive: { backgroundColor: color.popDeep },
+  micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT },
+  micDotLive: { backgroundColor: color.dangerWell },
+  talkText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
+  typeRow: { flexDirection: 'row', gap: 10 },
+  swap: {
+    width: TAP_MIN,
+    minHeight: TAP_MIN,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.low,
+  },
   input: { flex: 1, minHeight: TAP_MIN, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13, fontSize: 15, color: color.ink, ...elevation.low },
-  send: { minHeight: TAP_MIN, backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', overflow: 'hidden', ...elevation.card }, sendText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 }, sendIdle: { backgroundColor: color.fill, ...elevation.flat }, sendTextIdle: { color: color.inkSoft },
-  gloss: { position: 'absolute', top: 4, left: 14, right: 14, height: 12, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.4)' },
-  pressed: { transform: [{ scale: 0.98 }] }, disabled: { opacity: 0.45 },
+  send: { minHeight: TAP_MIN, backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', overflow: 'hidden', ...elevation.card },
+  sendText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
+  sendIdle: { backgroundColor: color.fill, ...elevation.flat },
+  sendTextIdle: { color: color.inkSoft },
+  gloss: {
+    position: 'absolute',
+    top: 4,
+    left: 14,
+    right: 14,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  pressed: { transform: [{ scale: 0.98 }] },
+  disabled: { opacity: 0.45 },
 });
