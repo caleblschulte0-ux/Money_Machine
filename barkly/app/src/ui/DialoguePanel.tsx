@@ -46,11 +46,7 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
   const edge = npc ? color.violetDeep : thinking ? color.popDeep : color.lemonDeep;
 
   return (
-    <View
-      style={[styles.panel, !shown && styles.panelResting]}
-      accessibilityLiveRegion="polite"
-      testID="dialogue-panel"
-    >
+    <View style={[styles.panel, !shown && styles.panelResting]} accessibilityLiveRegion="polite" testID="dialogue-panel">
       {shown ? (
         <>
           <LinearGradient
@@ -67,22 +63,16 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
           <Animated.View style={{ opacity: enter, transform: [{ translateY }] }}>
             {youSaid ? (
               <View style={styles.badgeSoft}>
-                <Text style={styles.youSaid} numberOfLines={1}>
-                  YOU SAID · “{youSaid}”
-                </Text>
+                <Text style={styles.youSaid} numberOfLines={1}>YOU SAID · “{youSaid}”</Text>
               </View>
             ) : speaker ? (
               <View style={[styles.badge, npc && styles.badgeNpc]}>
                 <Text style={[styles.who, npc && styles.whoNpc]}>{speaker.name.toUpperCase()}</Text>
               </View>
             ) : (
-              <View style={styles.badgeSoft}>
-                <Text style={styles.who}>BARKLY BRAIN</Text>
-              </View>
+              <View style={styles.badgeSoft}><Text style={styles.who}>BARKLY BRAIN</Text></View>
             )}
-            <Text style={[styles.line, !line && styles.thought]} numberOfLines={SPEECH_MAX_LINES}>
-              {shown}
-            </Text>
+            <Text style={[styles.line, !line && styles.thought]} numberOfLines={SPEECH_MAX_LINES}>{shown}</Text>
           </Animated.View>
         </>
       ) : (
@@ -109,15 +99,8 @@ const styles = StyleSheet.create({
     backgroundColor: color.card,
     ...elevation.toy,
   },
-  panelResting: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    ...elevation.flat,
-  },
-  shell: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.lg,
-  },
+  panelResting: { backgroundColor: 'transparent', borderColor: 'transparent', ...elevation.flat },
+  shell: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: radius.lg },
   lowerEdge: {
     position: 'absolute',
     left: space.sm,
