@@ -26,6 +26,9 @@ jobs:
           python3 barkly/app/scripts/apply-turn-aware-conversation.py
           python3 - <<'PY'
           from pathlib import Path
+
+          # Animated styles cannot receive the falsey numeric value ReactNode
+          # permits; make the optional response-action padding explicitly null.
           p = Path('barkly/app/src/ui/DialoguePanel.tsx')
           s = p.read_text()
           old = 'styles.copy, actions && styles.copyWithActions,'
@@ -33,6 +36,37 @@ jobs:
           if s.count(old) != 1:
               raise SystemExit(f'expected one animated-style match, got {s.count(old)}')
           p.write_text(s.replace(old, new, 1))
+
+          # The acceptance walk must use the adaptive UI the same way a player
+          # does: the room is the conversation dock, while an input only exists
+          # after Type has been explicitly opened.
+          p = Path('barkly/app/scripts/playtest-acceptance.mjs')
+          s = p.read_text()
+
+          def one(old, new):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'acceptance patch expected one match, got {count}: {old[:100]!r}')
+              s = s.replace(old, new, 1)
+
+          one(
+              "await page.waitForSelector('[data-testid=\"dialogue-panel\"]', { timeout: 25_000 });",
+              "await page.waitForSelector('[data-testid=\"conversation-dock\"]', { timeout: 25_000 });",
+          )
+          one(
+              "check('6b. woke him back up', (await byId('dialogue-panel').count()) > 0);",
+              "check('6b. woke him back up', (await byId('conversation-dock').count()) > 0);",
+          )
+          one(
+              "// 19b. fire it\nconst typeBox = page.locator('input:visible').first();",
+              "// 19b. fire it through the same explicit Type action a player uses.\nconst trickType = page.getByRole('button', { name: 'Type to Barkly' }).first();\nif (await trickType.count()) {\n  await trickType.click();\n  await settle(350);\n}\nconst typeBox = page.locator('input:visible').first();",
+          )
+          one(
+              "check('23b. the room came back after the refresh', (await byId('dialogue-panel').count()) > 0);",
+              "check('23b. the room came back after the refresh', (await byId('conversation-dock').count()) > 0);",
+          )
+          p.write_text(s)
           PY
       - name: Install locked dependencies
         working-directory: barkly/app
