@@ -1,19 +1,14 @@
 /**
  * First launch. Not a tutorial — a meeting.
  *
- * The whole screen is Barkly, at the same size and in the same room he lives
- * in the rest of the time, saying four things. There is no logo screen, no
- * feature carousel and no explanation of how buttons work, because the one
- * thing a stranger needs to believe in the first minute is that this is a
- * specific dog who noticed them.
- *
- * The beats and the rules live in barkly/onboarding.ts; this file is only how
- * they look. Every step can be skipped, and skipping only ever costs him the
- * name.
+ * The important continuity rule is literal now: the first Barkly you meet is
+ * standing in the same Home scene he will still occupy after onboarding. The
+ * old implementation said that in its comment while drawing a generic cream
+ * gradient behind him; that tiny mismatch made onboarding feel like a splash
+ * screen that happened to contain the dog.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { color, elevation } from './theme';
 import {
   Animated,
   KeyboardAvoidingView,
@@ -24,7 +19,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarklyRenderProps } from '../animation/renderer';
 import {
@@ -35,7 +30,8 @@ import {
   OnboardingState,
 } from '../barkly/onboarding';
 import { BodyAction } from '../barkly/types';
-
+import { color, elevation, radius, space, type } from './theme';
+import { HomeScene } from './scenes/Scenes';
 
 interface Props {
   state: OnboardingState;
@@ -64,11 +60,14 @@ function actionsFor(state: OnboardingState): BodyAction[] {
 
 export default function Onboarding({ state, micAvailable, onAdvance, Renderer }: Props) {
   const [typed, setTyped] = useState('');
+  const [stageHeight, setStageHeight] = useState(420);
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(14)).current;
+  const insets = useSafeAreaInsets();
 
-  // Each line arrives rather than appears. The same 260ms as the speech
-  // bubble in the room, so the app already feels consistent.
+  // Each line arrives rather than appears. The same fast, soft motion as the
+  // room's dialogue panel, so onboarding does not establish a second visual
+  // language that disappears five seconds later.
   useEffect(() => {
     fade.setValue(0);
     rise.setValue(14);
@@ -81,6 +80,7 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
   const step = state.step;
   const wantsInput = needsInput(step);
   const canContinue = !wantsInput || typed.trim().length > 0;
+  const groundY = Math.max(250, stageHeight - 18);
 
   const go = (skip = false) => {
     onAdvance(advance(state, { input: typed, skip, micAvailable }));
@@ -88,12 +88,23 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
   };
 
   return (
-    <LinearGradient colors={[color.well, color.fill]} style={styles.fill}>
+    <View style={styles.fill}>
       <KeyboardAvoidingView
         style={styles.fill}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.stage}>
+        <View
+          style={[styles.stage, { paddingTop: Math.max(space.lg, insets.top + space.sm) }]}
+          onLayout={(event) => setStageHeight(event.nativeEvent.layout.height)}
+        >
+          <HomeScene
+            hour={new Date().getHours()}
+            upgrades={[]}
+            asleep={false}
+            groundY={groundY}
+            chromeBottom={0}
+          />
+
           <Animated.View
             style={[styles.bubble, { opacity: fade, transform: [{ translateY: rise }] }]}
             accessibilityLiveRegion="polite"
@@ -107,14 +118,14 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
           </View>
         </View>
 
-        <View style={styles.controls}>
+        <View style={[styles.controls, { paddingBottom: Math.max(space.xl, insets.bottom + space.md) }]}>
           {wantsInput && (
             <TextInput
               style={styles.input}
               value={typed}
               onChangeText={setTyped}
               placeholder="your name"
-              placeholderTextColor={color.inkFaint}
+              placeholderTextColor={color.inkSoft}
               autoCapitalize="words"
               autoCorrect={false}
               maxLength={24}
@@ -125,12 +136,17 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
           )}
 
           <Pressable
-            style={[styles.primary, !canContinue && styles.primaryOff]}
+            style={({ pressed }) => [
+              styles.primary,
+              pressed && canContinue && styles.primaryPressed,
+              !canContinue && styles.primaryOff,
+            ]}
             disabled={!canContinue}
             onPress={() => go()}
             accessibilityRole="button"
             accessibilityLabel={actionFor(step)}
           >
+            {canContinue && <View style={styles.gloss} pointerEvents="none" />}
             <Text style={styles.primaryText}>{actionFor(step)}</Text>
           </Pressable>
 
@@ -144,67 +160,70 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
             </Pressable>
           )}
 
-          <View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no">
+          <View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             {(['greeting', 'name', 'delight', 'listening'] as const).map((s) => (
               <View key={s} style={[styles.dot, s === step && styles.dotOn]} />
             ))}
           </View>
         </View>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
-  // Centred, not bottom-aligned: he should meet you at eye level, not sit in
-  // a pile of empty space at the bottom of a tall phone.
-  stage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 22 },
+  fill: { flex: 1, backgroundColor: color.paper },
+  stage: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', overflow: 'hidden' },
   bubble: {
+    position: 'absolute',
+    top: '9%',
+    zIndex: 4,
     backgroundColor: color.card,
-    borderRadius: 22,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    borderRadius: radius.lg,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.lg,
+    width: '84%',
     maxWidth: 340,
-    marginBottom: 18,
     ...elevation.card,
   },
-  line: { fontSize: 20, lineHeight: 27, fontWeight: '700', color: color.ink },
+  line: { ...type.speech, color: color.ink, fontWeight: '700' },
   tail: {
     position: 'absolute',
-    bottom: -9,
+    bottom: -8,
     left: '50%',
     marginLeft: -9,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 9,
-    borderRightWidth: 9,
-    borderTopWidth: 10,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: color.card,
+    width: 18,
+    height: 18,
+    borderRadius: radius.xs / 2,
+    backgroundColor: color.card,
+    transform: [{ rotate: '45deg' }],
   },
-  dog: { width: 260, height: 300, alignItems: 'center', justifyContent: 'flex-end' },
-  controls: { paddingHorizontal: 26, paddingBottom: 34, gap: 12 },
+  dog: { width: 300, height: 322, alignItems: 'center', justifyContent: 'flex-end', zIndex: 3, marginBottom: space.xs },
+  controls: { backgroundColor: color.paper, paddingHorizontal: space.xl, paddingTop: space.lg, gap: space.md, borderTopWidth: 1, borderTopColor: color.line },
   input: {
     backgroundColor: color.card,
-    borderRadius: 999,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    fontSize: 17,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.xl,
+    paddingVertical: space.md,
+    ...type.speech,
     color: color.ink,
+    ...elevation.low,
   },
   primary: {
-    backgroundColor: color.ink,
-    borderRadius: 999,
-    paddingVertical: 15,
+    backgroundColor: color.pop,
+    borderRadius: radius.pill,
+    paddingVertical: space.lg,
     alignItems: 'center',
+    overflow: 'hidden',
+    ...elevation.card,
   },
-  primaryOff: { backgroundColor: color.inkFaint },
-  primaryText: { color: color.card, fontSize: 17, fontWeight: '800' },
-  skip: { alignItems: 'center', paddingVertical: 6 },
-  skipText: { color: color.inkSoft, fontSize: 13 },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 2 },
-  dot: { width: 6, height: 6, borderRadius: 8, backgroundColor: color.line },
+  primaryPressed: { backgroundColor: color.popDeep, transform: [{ scale: 0.99 }] },
+  primaryOff: { backgroundColor: color.fill, ...elevation.flat },
+  gloss: { position: 'absolute', left: space.lg, right: space.lg, top: space.xs, height: 12, borderRadius: radius.pill, backgroundColor: color.inkOn, opacity: 0.4 },
+  primaryText: { ...type.speech, color: color.ink, fontWeight: '800' },
+  skip: { alignItems: 'center', paddingVertical: space.xs },
+  skipText: { ...type.small, color: color.inkSoft },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: space.sm, marginTop: space.xxs },
+  dot: { width: 6, height: 6, borderRadius: radius.pill, backgroundColor: color.line },
   dotOn: { backgroundColor: color.inkSoft, width: 18 },
 });
