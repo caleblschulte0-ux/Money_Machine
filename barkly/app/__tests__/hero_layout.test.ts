@@ -2,6 +2,7 @@ import {
   CARE_DOCK_CLEARANCE,
   CARE_DOCK_GAP,
   CARE_DOCK_HEIGHT,
+  INTERACTION_GUTTER,
   PLACES_HEIGHT,
   STATUS_HEIGHT,
   interactionRailWidth,
@@ -70,5 +71,10 @@ describe('hero-first phone composition', () => {
     expect(CARE_DOCK_HEIGHT).toBeGreaterThanOrEqual(TAP_MIN + 12);
     expect(CARE_DOCK_GAP).toBeGreaterThanOrEqual(10);
     expect(CARE_DOCK_CLEARANCE).toBe(CARE_DOCK_HEIGHT + CARE_DOCK_GAP);
+  });
+
+  it('uses one meaningful lower-third gutter instead of edge-hugging magic numbers', () => {
+    expect(INTERACTION_GUTTER).toBeGreaterThanOrEqual(12);
+    expect(INTERACTION_GUTTER).toBeLessThanOrEqual(20);
   });
 });
