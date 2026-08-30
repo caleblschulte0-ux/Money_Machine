@@ -53,6 +53,9 @@ import {
 import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import {
+  CARE_DOCK_CLEARANCE,
+  INTERACTION_GUTTER,
+  STATE_CHIP_GAP,
   chromeBottom,
   contentFrameWidth,
   CONTROLS_HEIGHT,
@@ -1360,7 +1363,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 13, lineHeight: 17, color: color.danger, textAlign: 'center' },
   // Keep Barkly's feet out of the foreground care dock without throwing away
   // the reclaimed world space below him.
-  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 48 },
+  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: CARE_DOCK_CLEARANCE },
   heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
   heart: { position: 'absolute', fontSize: 24, color: color.danger },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
@@ -1368,10 +1371,10 @@ const styles = StyleSheet.create({
   digSpot: { position: 'absolute', left: -42, bottom: 67, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: -11, ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodSoft, paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodWarm, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
-  chip: { position: 'absolute', bottom: 72, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
+  chip: { position: 'absolute', bottom: CARE_DOCK_CLEARANCE + STATE_CHIP_GAP, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
-  interactionStack: { width: '100%', alignSelf: 'center', minHeight: TAP_MIN },
+  interactionStack: { width: '100%', alignSelf: 'center', minHeight: TAP_MIN, paddingHorizontal: INTERACTION_GUTTER },
   interactionStackLandscape: { position: 'absolute', right: 0, top: STATUS_HEIGHT + 8, bottom: 0, justifyContent: 'flex-end', paddingBottom: 2 },
   controls: { gap: 3, minHeight: TAP_MIN, justifyContent: 'center' },
   compactControls: {
