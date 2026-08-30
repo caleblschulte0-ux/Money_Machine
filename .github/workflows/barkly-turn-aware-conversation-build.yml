@@ -1,0 +1,72 @@
+name: Barkly turn-aware conversation build
+
+on:
+  push:
+    branches:
+      - chatgpt/barkly-turn-aware-conversation-dock-20260830
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/barkly-turn-aware-conversation-dock-20260830
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: barkly/app/package-lock.json
+      - name: Apply turn-aware conversation redesign
+        run: python3 barkly/app/scripts/apply-turn-aware-conversation.py
+      - name: Install locked dependencies
+        working-directory: barkly/app
+        run: npm ci
+      - name: Typecheck
+        working-directory: barkly/app
+        run: npm run typecheck
+      - name: App and server tests
+        working-directory: barkly/app
+        run: npm run test:all -- --runInBand
+      - name: Install Chromium
+        working-directory: barkly/app
+        run: npx playwright install --with-deps chromium
+      - name: Responsive UI, accessibility and voice gates
+        working-directory: barkly/app
+        run: npm run check:ui
+      - name: Build both Pages variants and prove playtest isolation
+        working-directory: barkly/app
+        run: |
+          npm run build:pages
+          npm run check:gate
+      - name: Full playtest walkthrough
+        working-directory: barkly/app
+        run: |
+          python3 -m http.server 8099 --directory dist >/tmp/barkly-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill $server_pid 2>/dev/null || true' EXIT
+          sleep 1
+          npm run check:playtest
+      - name: Commit verified app changes only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm barkly/app/scripts/apply-turn-aware-conversation.py .github/workflows/barkly-turn-aware-conversation-build.yml
+          git add \
+            barkly/app/src/barkly/conversationTurn.ts \
+            barkly/app/src/hooks/useBarkly.ts \
+            barkly/app/src/ui/layout.ts \
+            barkly/app/src/ui/DialoguePanel.tsx \
+            barkly/app/src/ui/BarklyRoom.tsx \
+            barkly/app/__tests__/conversation_turn.test.ts \
+            barkly/app/__tests__/hero_layout.test.ts \
+            barkly/app/scripts/a11y-check.mjs \
+            barkly/app/scripts/overlap-check.mjs \
+            barkly/app/scripts/no-playtest-check.mjs \
+            barkly/app/scripts/playtest-acceptance.mjs
+          git commit -m "Barkly: unify conversation into a turn-aware dock"
+          git push origin HEAD:chatgpt/barkly-turn-aware-conversation-dock-20260830
