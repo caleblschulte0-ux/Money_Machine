@@ -1,15 +1,18 @@
 /**
  * One dialogue surface for Barkly, NPCs and thoughts.
  *
- * CRISP PASS:
- * This is game dialogue, not a chat card and not a toy covered in decorative
- * chrome. One confident solid surface, one edge, one highlight, strong type.
- * The dog remains the hero above it.
+ * VISUALS ARE FROZEN. This pass changes only turn staging: when an NPC line is
+ * queued at the same moment Barkly starts speaking, Barkly owns the rail first.
+ * The other dog is never voiced. Its bubble appears after Barkly finishes and
+ * remains for a word-count-based reading dwell even if the controller's older
+ * fixed timer has already cleared the source bubble.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { color, elevation, radius, space, type } from './theme';
 import { DIALOGUE_GAP, DIALOGUE_HEIGHT, SPEECH_MAX_LINES } from './layout';
+import { getVoiceActivity, subscribeVoiceActivity } from '../audio/voiceActivity';
+import { npcReadMs } from '../world/npcExchange';
 
 export type Speaker = { name: string; kind: 'barkly' | 'npc' } | null;
 
@@ -22,8 +25,108 @@ interface Props {
   asleep?: boolean;
 }
 
+interface QueuedNpc {
+  name: string;
+  line: string;
+}
+
 export default function DialoguePanel({ speaker, line, youSaid, thought, hint, asleep }: Props) {
-  const shown = line ?? thought ?? null;
+  const [voice, setVoice] = useState(getVoiceActivity);
+  const [queuedNpc, setQueuedNpc] = useState<QueuedNpc | null>(null);
+  const [npcReady, setNpcReady] = useState(false);
+  const npcDwellTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const npcGraceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousSpeaking = useRef(voice.speaking);
+  const suppressedBarklyLine = useRef<string | null>(null);
+
+  useEffect(() => subscribeVoiceActivity(setVoice), []);
+
+  useEffect(() => () => {
+    if (npcDwellTimer.current) clearTimeout(npcDwellTimer.current);
+    if (npcGraceTimer.current) clearTimeout(npcGraceTimer.current);
+  }, []);
+
+  // Capture the NPC response as soon as the controller offers it, but do not
+  // automatically show it. npcTalk currently creates the bubble just before
+  // it calls Barkly's speak(); this grace window lets that voice claim the
+  // first beat without a one-frame flash of the response.
+  useEffect(() => {
+    if (speaker?.kind !== 'npc' || !line) return;
+    setQueuedNpc({ name: speaker.name, line });
+    setNpcReady(false);
+    if (npcDwellTimer.current) clearTimeout(npcDwellTimer.current);
+    if (npcGraceTimer.current) clearTimeout(npcGraceTimer.current);
+    npcGraceTimer.current = setTimeout(() => {
+      if (!getVoiceActivity().speaking) {
+        setNpcReady(true);
+        npcDwellTimer.current = setTimeout(() => {
+          setNpcReady(false);
+          setQueuedNpc(null);
+        }, npcReadMs(line));
+      }
+    }, 180);
+  }, [speaker?.kind, speaker?.name, line]);
+
+  // Barkly entering the voice engine always wins the floor. When that exact
+  // utterance ends, the cached NPC response receives a fresh reading window.
+  useEffect(() => {
+    const wasSpeaking = previousSpeaking.current;
+    previousSpeaking.current = voice.speaking;
+
+    if (voice.speaking && queuedNpc) {
+      if (npcGraceTimer.current) clearTimeout(npcGraceTimer.current);
+      if (npcDwellTimer.current) clearTimeout(npcDwellTimer.current);
+      setNpcReady(false);
+      if (voice.line) suppressedBarklyLine.current = voice.line;
+      return;
+    }
+
+    if (wasSpeaking && !voice.speaking && queuedNpc) {
+      setNpcReady(true);
+      if (npcDwellTimer.current) clearTimeout(npcDwellTimer.current);
+      npcDwellTimer.current = setTimeout(() => {
+        setNpcReady(false);
+        setQueuedNpc(null);
+      }, npcReadMs(queuedNpc.line));
+    }
+  }, [voice.speaking, voice.line, queuedNpc]);
+
+  // Once the controller produces a genuinely new Barkly line, normal dialogue
+  // resumes. This prevents his pre-NPC line from popping back into the panel
+  // after the NPC response disappears.
+  useEffect(() => {
+    if (speaker?.kind !== 'barkly' || !line) return;
+    if (suppressedBarklyLine.current && line !== suppressedBarklyLine.current) {
+      suppressedBarklyLine.current = null;
+    }
+  }, [speaker?.kind, line]);
+
+  const voiceOwnsNpcTurn = Boolean(queuedNpc && voice.speaking && voice.line);
+  const visibleNpc = queuedNpc && npcReady ? queuedNpc : null;
+  const suppressOldBarkly = speaker?.kind === 'barkly' && line && line === suppressedBarklyLine.current && !voice.speaking;
+
+  const visibleSpeaker: Speaker = voiceOwnsNpcTurn
+    ? { name: 'Barkly', kind: 'barkly' }
+    : visibleNpc
+      ? { name: visibleNpc.name, kind: 'npc' }
+      : speaker?.kind === 'npc'
+        ? null
+        : suppressOldBarkly
+          ? null
+          : speaker;
+
+  const visibleLine = voiceOwnsNpcTurn
+    ? voice.line
+    : visibleNpc
+      ? visibleNpc.line
+      : speaker?.kind === 'npc'
+        ? null
+        : suppressOldBarkly
+          ? null
+          : line;
+
+  const visibleYouSaid = visibleSpeaker?.kind === 'barkly' && !voiceOwnsNpcTurn ? youSaid : null;
+  const shown = visibleLine ?? thought ?? null;
   const enter = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -39,8 +142,8 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
 
   const translateY = enter.interpolate({ inputRange: [0, 1], outputRange: [7, 0] });
   const scale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
-  const npc = speaker?.kind === 'npc';
-  const thinking = Boolean(thought && !line);
+  const npc = visibleSpeaker?.kind === 'npc';
+  const thinking = Boolean(thought && !visibleLine);
 
   const shell = npc ? color.violet : thinking ? color.fill : color.lemon;
   const edge = npc ? color.violetDeep : thinking ? color.popDeep : color.lemonDeep;
@@ -50,27 +153,23 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
     <View style={[styles.panel, !shown && styles.panelResting]} accessibilityLiveRegion="polite" testID="dialogue-panel">
       {shown ? (
         <>
-          {/* A tiny dark footprint and a bright top edge make this read like a
-              physical toy panel rather than a flat rectangle floating over the
-              world. The effect is deliberately restrained: one material, not
-              another stack of decorative cards. */}
           <View style={[styles.edge, { backgroundColor: edge }]} pointerEvents="none" />
           <View style={[styles.shell, { backgroundColor: shell, borderColor: color.inkMid }]} pointerEvents="none" />
           <View style={styles.innerRim} pointerEvents="none" />
           <View style={styles.highlight} pointerEvents="none" />
           <View style={styles.glint} pointerEvents="none" />
           <View style={styles.bottomSheen} pointerEvents="none" />
-          {speaker ? <View style={[styles.tail, { backgroundColor: shell, borderColor: color.inkMid }]} pointerEvents="none" /> : null}
+          {visibleSpeaker ? <View style={[styles.tail, { backgroundColor: shell, borderColor: color.inkMid }]} pointerEvents="none" /> : null}
 
           <Animated.View style={[styles.copy, { opacity: enter, transform: [{ translateY }, { scale }] }]}>
-            {youSaid ? (
+            {visibleYouSaid ? (
               <View style={styles.youBadge}>
-                <Text style={styles.youSaid} numberOfLines={1}>YOU · “{youSaid}”</Text>
+                <Text style={styles.youSaid} numberOfLines={1}>YOU · “{visibleYouSaid}”</Text>
               </View>
-            ) : speaker ? (
+            ) : visibleSpeaker ? (
               <View style={[styles.badge, { borderColor: speakerInk }]}>
                 <View style={[styles.speakerPip, { backgroundColor: speakerInk }]} />
-                <Text style={[styles.who, { color: speakerInk }]}>{speaker.name.toUpperCase()}</Text>
+                <Text style={[styles.who, { color: speakerInk }]}>{visibleSpeaker.name.toUpperCase()}</Text>
               </View>
             ) : (
               <View style={[styles.badge, { borderColor: color.popDeep }]}>
@@ -78,7 +177,7 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
                 <Text style={[styles.who, { color: color.popDeep }]}>BARKLY BRAIN</Text>
               </View>
             )}
-            <Text style={[styles.line, !line && styles.thought]} numberOfLines={SPEECH_MAX_LINES}>{shown}</Text>
+            <Text style={[styles.line, !visibleLine && styles.thought]} numberOfLines={SPEECH_MAX_LINES}>{shown}</Text>
           </Animated.View>
         </>
       ) : (
@@ -137,8 +236,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.30)',
   },
-  /** Broad specular edge, then one tight glint. Together they make the shell
-      feel molded without stealing attention from the line itself. */
   highlight: {
     position: 'absolute',
     left: space.lg,
