@@ -103,7 +103,7 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  worldScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: color.scrim, opacity: 0.42 },
+  worldScrim: { ...StyleSheet.absoluteFill, backgroundColor: color.scrim, opacity: 0.42 },
   scenePrompt: {
     position: 'absolute',
     left: space.xl,
