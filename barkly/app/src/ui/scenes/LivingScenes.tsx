@@ -38,9 +38,8 @@ function useReduceMotion() {
   return reduceMotion;
 }
 
-function useAmbientLoop(duration: number, delay = 0) {
+function useAmbientLoop(duration: number, delay = 0, reduceMotion = false) {
   const value = useRef(new Animated.Value(0)).current;
-  const reduceMotion = useReduceMotion();
   useEffect(() => {
     if (reduceMotion) {
       value.stopAnimation();
@@ -101,9 +100,10 @@ function PremiumGlass() {
 }
 
 function HomeLife() {
-  const glow = useAmbientLoop(2800);
-  const drift = useAmbientLoop(4600, 700);
-  const curtain = useAmbientLoop(3900, 350);
+  const reduceMotion = useReduceMotion();
+  const glow = useAmbientLoop(2800, 0, reduceMotion);
+  const drift = useAmbientLoop(4600, 700, reduceMotion);
+  const curtain = useAmbientLoop(3900, 350, reduceMotion);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View
@@ -117,7 +117,10 @@ function HomeLife() {
           styles.homeLightRibbon,
           {
             opacity: curtain.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.14] }),
-            transform: [{ translateX: curtain.interpolate({ inputRange: [0, 1], outputRange: [-5, 7] }) }],
+            transform: [
+              { translateX: curtain.interpolate({ inputRange: [0, 1], outputRange: [-5, 7] }) },
+              { rotate: '-13deg' },
+            ],
           },
         ]}
       />
@@ -147,9 +150,10 @@ function HomeLife() {
 }
 
 function ParkLife() {
-  const breeze = useAmbientLoop(3400);
-  const wander = useAmbientLoop(6200, 900);
-  const canopy = useAmbientLoop(4100, 250);
+  const reduceMotion = useReduceMotion();
+  const breeze = useAmbientLoop(3400, 0, reduceMotion);
+  const wander = useAmbientLoop(6200, 900, reduceMotion);
+  const canopy = useAmbientLoop(4100, 250, reduceMotion);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View
@@ -198,9 +202,10 @@ function ParkLife() {
 }
 
 function TownLife() {
-  const gleam = useAmbientLoop(2600);
-  const passerby = useAmbientLoop(5400, 600);
-  const windowPulse = useAmbientLoop(3300, 400);
+  const reduceMotion = useReduceMotion();
+  const gleam = useAmbientLoop(2600, 0, reduceMotion);
+  const passerby = useAmbientLoop(5400, 600, reduceMotion);
+  const windowPulse = useAmbientLoop(3300, 400, reduceMotion);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View
@@ -214,7 +219,10 @@ function TownLife() {
           styles.shopGlint,
           {
             opacity: gleam.interpolate({ inputRange: [0, 0.42, 1], outputRange: [0, 0.34, 0] }),
-            transform: [{ translateX: gleam.interpolate({ inputRange: [0, 1], outputRange: [-35, 105] }) }],
+            transform: [
+              { translateX: gleam.interpolate({ inputRange: [0, 1], outputRange: [-35, 105] }) },
+              { rotate: '17deg' },
+            ],
           },
         ]}
       />
@@ -232,9 +240,10 @@ function TownLife() {
 }
 
 function BeachLife() {
-  const tide = useAmbientLoop(2500);
-  const gull = useAmbientLoop(6400, 1100);
-  const water = useAmbientLoop(3700, 300);
+  const reduceMotion = useReduceMotion();
+  const tide = useAmbientLoop(2500, 0, reduceMotion);
+  const gull = useAmbientLoop(6400, 1100, reduceMotion);
+  const water = useAmbientLoop(3700, 300, reduceMotion);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View
@@ -343,7 +352,6 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: 80,
     backgroundColor: 'rgba(255,248,215,0.22)',
-    transform: [{ rotate: '-13deg' }],
   },
   homeDust: {
     position: 'absolute',
@@ -420,7 +428,6 @@ const styles = StyleSheet.create({
     height: 92,
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.38)',
-    transform: [{ rotate: '17deg' }],
   },
   townShadow: {
     position: 'absolute',
