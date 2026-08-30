@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import {
@@ -22,9 +22,31 @@ export { DogBedBack, DogBedFront, NightOverlay, RoomBed, skyBand };
  * transforms/opacity so it is cheap on phones, and is subtle enough that the
  * dog remains the hero instead of the background becoming a screensaver.
  */
+function useReduceMotion() {
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => alive && setReduceMotion(enabled))
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  return reduceMotion;
+}
+
 function useAmbientLoop(duration: number, delay = 0) {
   const value = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
   useEffect(() => {
+    if (reduceMotion) {
+      value.stopAnimation();
+      value.setValue(0.35);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(delay),
@@ -44,23 +66,36 @@ function useAmbientLoop(duration: number, delay = 0) {
     );
     loop.start();
     return () => loop.stop();
-  }, [delay, duration, value]);
+  }, [delay, duration, reduceMotion, value]);
   return value;
 }
 
+/**
+ * Store-level finish without turning the world into chrome. The edge shade and
+ * soft center light make every location read like the same toy-diorama product
+ * while keeping the highest contrast in the middle where Barkly stands.
+ */
 function PremiumGlass() {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <LinearGradient
-        colors={['rgba(255,255,255,0.20)', 'rgba(255,255,255,0.035)', 'rgba(255,255,255,0)']}
+        colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.04)', 'rgba(255,255,255,0)']}
         locations={[0, 0.32, 0.72]}
         style={styles.topSheen}
       />
       <LinearGradient
-        colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.055)', 'rgba(33,25,18,0.035)']}
+        colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.06)', 'rgba(33,25,18,0.045)']}
         locations={[0, 0.62, 1]}
         style={StyleSheet.absoluteFill}
       />
+      <LinearGradient
+        colors={['rgba(30,23,18,0.055)', 'rgba(30,23,18,0)', 'rgba(30,23,18,0.055)']}
+        locations={[0, 0.5, 1]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.heroHalo} />
     </View>
   );
 }
@@ -68,12 +103,22 @@ function PremiumGlass() {
 function HomeLife() {
   const glow = useAmbientLoop(2800);
   const drift = useAmbientLoop(4600, 700);
+  const curtain = useAmbientLoop(3900, 350);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Animated.View
         style={[
           styles.windowGlow,
           { opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.22] }) },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.homeLightRibbon,
+          {
+            opacity: curtain.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.14] }),
+            transform: [{ translateX: curtain.interpolate({ inputRange: [0, 1], outputRange: [-5, 7] }) }],
+          },
         ]}
       />
       <Animated.View
@@ -104,8 +149,18 @@ function HomeLife() {
 function ParkLife() {
   const breeze = useAmbientLoop(3400);
   const wander = useAmbientLoop(6200, 900);
+  const canopy = useAmbientLoop(4100, 250);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Animated.View
+        style={[
+          styles.parkCanopyLight,
+          {
+            opacity: canopy.interpolate({ inputRange: [0, 1], outputRange: [0.035, 0.1] }),
+            transform: [{ translateX: canopy.interpolate({ inputRange: [0, 1], outputRange: [-9, 9] }) }],
+          },
+        ]}
+      />
       <Animated.View
         style={[
           styles.parkLeafOne,
@@ -145,8 +200,15 @@ function ParkLife() {
 function TownLife() {
   const gleam = useAmbientLoop(2600);
   const passerby = useAmbientLoop(5400, 600);
+  const windowPulse = useAmbientLoop(3300, 400);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Animated.View
+        style={[
+          styles.townWindowWarmth,
+          { opacity: windowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.04, 0.12] }) },
+        ]}
+      />
       <Animated.View
         style={[
           styles.shopGlint,
@@ -172,8 +234,18 @@ function TownLife() {
 function BeachLife() {
   const tide = useAmbientLoop(2500);
   const gull = useAmbientLoop(6400, 1100);
+  const water = useAmbientLoop(3700, 300);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Animated.View
+        style={[
+          styles.oceanSparkle,
+          {
+            opacity: water.interpolate({ inputRange: [0, 1], outputRange: [0.03, 0.13] }),
+            transform: [{ translateX: water.interpolate({ inputRange: [0, 1], outputRange: [-10, 18] }) }],
+          },
+        ]}
+      />
       <Animated.View
         style={[
           styles.foamGleam,
@@ -244,6 +316,15 @@ export function BeachScene(props: React.ComponentProps<typeof BaseBeachScene>) {
 
 const styles = StyleSheet.create({
   topSheen: { position: 'absolute', left: 0, right: 0, top: 0, height: '38%' },
+  heroHalo: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '29%',
+    width: 250,
+    height: 300,
+    borderRadius: 160,
+    backgroundColor: 'rgba(255,255,255,0.025)',
+  },
 
   windowGlow: {
     position: 'absolute',
@@ -253,6 +334,16 @@ const styles = StyleSheet.create({
     height: 78,
     borderRadius: 26,
     backgroundColor: 'rgba(255,244,187,0.34)',
+  },
+  homeLightRibbon: {
+    position: 'absolute',
+    left: 36,
+    top: 232,
+    width: 118,
+    height: 190,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,248,215,0.22)',
+    transform: [{ rotate: '-13deg' }],
   },
   homeDust: {
     position: 'absolute',
@@ -273,6 +364,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.9)',
   },
 
+  parkCanopyLight: {
+    position: 'absolute',
+    left: -15,
+    right: -15,
+    top: '29%',
+    height: 120,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,248,206,0.5)',
+  },
   parkLeafOne: {
     position: 'absolute',
     left: 126,
@@ -303,6 +403,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
 
+  townWindowWarmth: {
+    position: 'absolute',
+    left: 144,
+    right: 140,
+    top: '30%',
+    height: 96,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,237,185,0.3)',
+  },
   shopGlint: {
     position: 'absolute',
     left: 160,
@@ -323,6 +432,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(37,31,28,0.44)',
   },
 
+  oceanSparkle: {
+    position: 'absolute',
+    left: 54,
+    right: 54,
+    top: '48%',
+    height: 22,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.34)',
+  },
   foamGleam: {
     position: 'absolute',
     left: 24,
