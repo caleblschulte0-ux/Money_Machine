@@ -20,8 +20,8 @@ jobs:
           fetch-depth: 0
 
       - name: Apply staging and conversation fixes
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           room = Path('barkly/app/src/ui/BarklyRoom.tsx')
@@ -115,6 +115,7 @@ jobs:
           s = s.replace(old_after_speak, new_after_speak, 1)
 
           hook.write_text(s)
+          PY
 
       - name: Commit surgical fixes
         run: |
