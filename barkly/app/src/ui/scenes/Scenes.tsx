@@ -1,8 +1,8 @@
 // Canonical scene entrypoint.
 //
-// The HUD/store are intentionally frozen. The world now gets its own renderer
-// that applies the same visual discipline to scenery: crisp silhouette, dark
-// moulded lower edge, controlled highlight, contact shadow and clear depth.
+// The HUD/store are intentionally frozen. The world renderer is isolated here
+// so environment art can be rebuilt and screenshot-reviewed without touching
+// any of the polished chrome above it.
 
 /**
  * Store-to-room contract. Every purchasable home object listed here must stay
@@ -17,7 +17,7 @@ export {
   ParkScene,
   TownScene,
   skyBand,
-} from './CandyScenes';
+} from './CandyScenesV2';
 
 // Sleeping-bed pieces already have the right silhouette/overlap contract and
 // are kept stable while the scenery behind them changes.
