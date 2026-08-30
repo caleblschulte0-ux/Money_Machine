@@ -27,9 +27,26 @@ export interface SocialStage {
   blurb: string;
 }
 
+/**
+ * A treasure can become important instead of merely being recent.
+ *
+ * `score` is intentionally small and relative. Discovery gives one point;
+ * later systems can call noteTreasureAffinity when a treasure is played with,
+ * named, defended in a story, displayed at home, etc. That is how a random
+ * rock eventually becomes *the* rock.
+ */
+export interface TreasureAffinity {
+  score: number;
+  discoveries: number;
+  firstSeenAt: number;
+  lastSeenAt: number;
+}
+
 export interface CharacterState {
-  /** Treasure he is currently proudest of. */
+  /** Treasure he is currently proudest of. Earned from affinity, not recency. */
   favoriteTreasure?: string;
+  /** Durable attachment by treasure name. Older saves may not have it yet. */
+  treasureAffinities?: Record<string, TreasureAffinity>;
   /** Total discoveries: treasure hunting becomes a character trait over time. */
   treasuresFound?: number;
   /** A thing he cannot stop thinking about right now, and when it started. */
@@ -51,6 +68,7 @@ export interface CharacterState {
 export function freshCharacter(): CharacterState {
   return {
     treasuresFound: 0,
+    treasureAffinities: {},
     socialBonds: {},
     socialChoices: {},
     lastInitiativeAt: 0,
@@ -62,10 +80,57 @@ export function freshCharacter(): CharacterState {
 const OBSESSION_TTL_MS = 3 * 86_400_000;
 const GRIEVANCE_TTL_MS = 5 * 86_400_000;
 
+/** Case-insensitive identity helper used for durable names. */
+const sameName = (a: string, b: string): boolean =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
+function affinityKey(c: CharacterState, treasureName: string): string {
+  const affinities = c.treasureAffinities ?? {};
+  return Object.keys(affinities).find((key) => sameName(key, treasureName)) ?? treasureName;
+}
+
+/**
+ * Backfill affinity for an old save without changing the thing Barkly already
+ * considered special. Save migrations should preserve personality, not reroll
+ * it. A legacy favorite starts a little ahead so the next random dig cannot
+ * instantly dethrone months of implied history.
+ */
+function normalizedTreasureAffinities(c: CharacterState, now: number): Record<string, TreasureAffinity> {
+  const affinities = { ...(c.treasureAffinities ?? {}) };
+  if (c.favoriteTreasure && !Object.keys(affinities).some((key) => sameName(key, c.favoriteTreasure!))) {
+    affinities[c.favoriteTreasure] = {
+      score: 3,
+      discoveries: 1,
+      firstSeenAt: now,
+      lastSeenAt: now,
+    };
+  }
+  return affinities;
+}
+
+function favoriteFrom(
+  affinities: Record<string, TreasureAffinity>,
+  current?: string,
+): string | undefined {
+  const rows = Object.entries(affinities);
+  if (rows.length === 0) return current;
+  rows.sort((a, b) => {
+    const score = b[1].score - a[1].score;
+    if (score !== 0) return score;
+    // A tie keeps the existing favorite if possible. Affection should be
+    // sticky; it should take evidence to change Barkly's mind.
+    if (current && sameName(a[0], current)) return -1;
+    if (current && sameName(b[0], current)) return 1;
+    return a[1].firstSeenAt - b[1].firstSeenAt;
+  });
+  return rows[0][0];
+}
+
 export function expireCharacter(c: CharacterState, now: number): CharacterState {
   const out: CharacterState = {
     ...c,
     treasuresFound: c.treasuresFound ?? 0,
+    treasureAffinities: normalizedTreasureAffinities(c, now),
     socialBonds: c.socialBonds ?? {},
     socialChoices: c.socialChoices ?? {},
     recentInitiatives: c.recentInitiatives ?? [],
@@ -101,8 +166,7 @@ export function rivalryStage(encounters: number): SocialStage {
  * driving nothing. Matching by key text instead of key identity means both
  * spellings of the same dog are the same dog.
  */
-const sameDog = (a: string, b: string): boolean =>
-  a.trim().toLowerCase() === b.trim().toLowerCase();
+const sameDog = sameName;
 
 export function bondFor(c: CharacterState, who: string): SocialBond | undefined {
   const bonds = c.socialBonds ?? {};
@@ -276,12 +340,58 @@ export function noteInitiative(
 
 // -------------------------------------------------------- character drift
 
+/**
+ * Discovering something makes it the current obsession, but NOT automatically
+ * the favorite. That old newest-wins rule meant months of supposed attachment
+ * could be erased by the next bottle cap. The first treasure starts as the
+ * favorite; after that Barkly needs repeated evidence to change his mind.
+ */
 export function withTreasure(c: CharacterState, treasureName: string, now: number): CharacterState {
+  const affinities = normalizedTreasureAffinities(c, now);
+  const key = Object.keys(affinities).find((name) => sameName(name, treasureName)) ?? treasureName;
+  const previous = affinities[key];
+  affinities[key] = {
+    score: Math.min(100, (previous?.score ?? 0) + 1),
+    discoveries: (previous?.discoveries ?? 0) + 1,
+    firstSeenAt: previous?.firstSeenAt ?? now,
+    lastSeenAt: now,
+  };
   return {
     ...c,
     treasuresFound: (c.treasuresFound ?? 0) + 1,
-    favoriteTreasure: treasureName,
+    treasureAffinities: affinities,
+    favoriteTreasure: favoriteFrom(affinities, c.favoriteTreasure),
     obsession: { topic: treasureName, since: now },
+  };
+}
+
+/**
+ * Record evidence that Barkly actually cares about one object.
+ *
+ * This is deliberately public even before every call-site exists. Stories,
+ * room interactions, naming, defending an object from Duke, carrying it around
+ * and future toy play can all feed the same durable preference instead of each
+ * inventing their own "favorite" flag.
+ */
+export function noteTreasureAffinity(
+  c: CharacterState,
+  treasureName: string,
+  now: number,
+  weight = 1,
+): CharacterState {
+  const affinities = normalizedTreasureAffinities(c, now);
+  const key = Object.keys(affinities).find((name) => sameName(name, treasureName)) ?? treasureName;
+  const previous = affinities[key];
+  affinities[key] = {
+    score: Math.min(100, Math.max(0, (previous?.score ?? 0) + weight)),
+    discoveries: previous?.discoveries ?? 0,
+    firstSeenAt: previous?.firstSeenAt ?? now,
+    lastSeenAt: now,
+  };
+  return {
+    ...c,
+    treasureAffinities: affinities,
+    favoriteTreasure: favoriteFrom(affinities, c.favoriteTreasure),
   };
 }
 
