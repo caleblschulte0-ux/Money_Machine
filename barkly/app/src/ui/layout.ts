@@ -4,6 +4,14 @@
  * The rule is simple: chrome owns the edges, Barkly owns the middle, and
  * transient UI is never allowed to borrow his face just because a browser
  * viewport happened to have enough room in one screenshot.
+ *
+ * HERO PASS:
+ * The earlier responsive pass solved collisions, but it solved them too
+ * conservatively on normal/tall phones. Barkly ended up looking like a small
+ * object inside a UI composition. A kid should see the DOG first. The maths
+ * below now lets him use substantially more of the available width whenever
+ * the vertical room genuinely exists, while preserving the smaller short-phone
+ * floor that keeps Safari/browser-chrome layouts safe.
  */
 
 /**
@@ -24,8 +32,12 @@ export function contentBottom(insetBottom: number): number {
 /** Real child-sized tap targets on every platform. */
 export const TAP_MIN = 44;
 export const STATUS_HEIGHT = TAP_MIN;
-export const PLACES_HEIGHT = TAP_MIN + 10;
-export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 12;
+/**
+ * Keep navigation comfortable without giving it more vertical authority than
+ * the character. It was 54px; 50px keeps the same 44px tap target plus air.
+ */
+export const PLACES_HEIGHT = TAP_MIN + 6;
+export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 8;
 
 /** One compact transient notice, above the character stage. */
 export function noticeTop(top: number): number {
@@ -35,16 +47,14 @@ export const NOTICE_MAX_HEIGHT = 38;
 
 /** Dialogue has its own band below the world. */
 export const DIALOGUE_HEIGHT = 100;
-export const DIALOGUE_GAP = 10;
+export const DIALOGUE_GAP = 8;
 
 /**
- * IMPORTANT: this used to be 122px because the screen once had a text field
- * PLUS a PLAY / FEED / SLEEP action row. That action row was replaced by the
- * bowl, toy and bed in the world, but the old 122px reservation survived.
- * On a 640px phone it needlessly crushed the entire stage upward by ~54px.
- * There is one 44px talk/type row now, plus breathing room.
+ * There is one 44px talk/type row now. Keep it fully usable, but do not reserve
+ * web-form-sized whitespace around it. This gives the dog room without making
+ * the interaction controls smaller.
  */
-export const CONTROLS_HEIGHT = TAP_MIN + 24;
+export const CONTROLS_HEIGHT = TAP_MIN + 20;
 
 export const SPEECH_MAX_LINES = 3;
 
@@ -55,7 +65,7 @@ export const SPEECH_MAX_LINES = 3;
  */
 export function stageHeight(screenHeight: number): number {
   return Math.max(
-    205,
+    212,
     screenHeight - CHROME_BOTTOM - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT - 18,
   );
 }
@@ -66,16 +76,20 @@ export const NOTICE_BAND = 4 + NOTICE_MAX_HEIGHT;
 const SPRITE_BODY_WIDTH = 244;
 
 /**
- * Short phones get a genuinely smaller composition. The previous hard 0.72
- * floor meant the dog could no longer shrink even when Safari/browser chrome
- * removed another 60–80px of vertical room. A smaller Barkly with clear air
- * around his ears is better than a large Barkly underneath banners and NPCs.
+ * Barkly is the hero, not another widget.
+ *
+ * The previous width cap used only 67% of the phone, which was excellent for
+ * proving nothing collided and bad for a pet game: on a 390px phone it capped
+ * him around 1.07x even when there was hundreds of pixels of empty vertical
+ * stage. We now allow up to 82% of the phone width. Height still wins on short
+ * screens, so a 360x640 browser remains conservative while an 844/932px phone
+ * finally gives the dog the scale the product needs.
  */
 export function spriteScale(screenHeight: number, screenWidth = 390): number {
-  const room = stageHeight(screenHeight) - SPRITE_FOOT - NOTICE_BAND - 8;
-  const byWidth = (screenWidth * 0.67) / SPRITE_BODY_WIDTH;
+  const room = stageHeight(screenHeight) - SPRITE_FOOT - NOTICE_BAND - 4;
+  const byWidth = (screenWidth * 0.82) / SPRITE_BODY_WIDTH;
   const minScale = screenHeight < 590 ? 0.60 : screenHeight < 680 ? 0.66 : 0.72;
-  return Math.max(minScale, Math.min(1.3, room / SPRITE_HEIGHT, byWidth));
+  return Math.max(minScale, Math.min(1.42, room / SPRITE_HEIGHT, byWidth));
 }
 
 export type NoticeKind = 'error' | 'degraded' | 'promotion' | 'reward';
