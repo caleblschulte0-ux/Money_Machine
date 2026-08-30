@@ -1,17 +1,24 @@
 // Canonical scene entrypoint.
 //
-// The old renderer accumulated good individual fixes but still mixed several
-// illustration languages: soft vector haze, one-off furniture, and flat scene
-// bands. The new renderer keeps the same public API while giving every place
-// one crisp toy-diorama material language, then adds a restrained ambient
-// motion layer so the world feels inhabited without stealing focus from Barkly.
+// The HUD/store are intentionally frozen. The world now gets its own renderer
+// that applies the same visual discipline to scenery: crisp silhouette, dark
+// moulded lower edge, controlled highlight, contact shadow and clear depth.
 
 /**
- * Store-to-room contract. Every purchasable home object listed here is drawn
- * by PolishedScenes.HomeScene when present in `upgrades`. Keeping the ids in
- * executable code lets the cheap static release check protect that promise
- * even though the implementation now lives behind this facade.
+ * Store-to-room contract. Every purchasable home object listed here must stay
+ * represented by HomeScene when present in `upgrades`.
  */
 export const HOME_SCENE_PURCHASES = ['home_bed', 'home_rug', 'home_window'] as const;
 
-export * from './LivingScenes';
+export {
+  BeachScene,
+  HomeScene,
+  NightOverlay,
+  ParkScene,
+  TownScene,
+  skyBand,
+} from './CandyScenes';
+
+// Sleeping-bed pieces already have the right silhouette/overlap contract and
+// are kept stable while the scenery behind them changes.
+export { DogBedBack, DogBedFront, RoomBed } from './PolishedScenes';
