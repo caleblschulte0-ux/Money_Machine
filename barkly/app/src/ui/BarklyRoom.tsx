@@ -874,7 +874,7 @@ export default function BarklyRoom() {
             style={[
               styles.noticeLayer,
               { top: noticeTop(topPad, layout) },
-              landscape ? { left: navW + 12, right: interactionW + 12 } : { left: 22, right: 22 },
+              landscape ? { left: screenW - interactionW + INTERACTION_GUTTER, right: INTERACTION_GUTTER } : { left: 22, right: 22 },
             ]}
             pointerEvents="box-none"
           >
