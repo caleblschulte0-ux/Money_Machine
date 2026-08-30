@@ -1,4 +1,7 @@
 import {
+  CARE_DOCK_CLEARANCE,
+  CARE_DOCK_GAP,
+  CARE_DOCK_HEIGHT,
   PLACES_HEIGHT,
   STATUS_HEIGHT,
   interactionRailWidth,
@@ -11,11 +14,12 @@ import {
 } from '../src/ui/layout';
 
 describe('hero-first phone composition', () => {
-  it('lets Barkly dominate a normal modern phone', () => {
+  it('lets Barkly dominate a normal modern phone without swallowing the stage', () => {
     const scale = spriteScale(844, 390);
     const renderedBodyWidth = 244 * scale;
 
     expect(scale).toBeGreaterThanOrEqual(1.25);
+    expect(scale).toBeLessThanOrEqual(1.3);
     expect(renderedBodyWidth / 390).toBeGreaterThanOrEqual(0.78);
   });
 
@@ -62,4 +66,9 @@ describe('hero-first phone composition', () => {
     expect(idle).toBeGreaterThan(650);
   });
 
+  it('reserves a real gap between Barkly and the care dock', () => {
+    expect(CARE_DOCK_HEIGHT).toBeGreaterThanOrEqual(TAP_MIN + 12);
+    expect(CARE_DOCK_GAP).toBeGreaterThanOrEqual(10);
+    expect(CARE_DOCK_CLEARANCE).toBe(CARE_DOCK_HEIGHT + CARE_DOCK_GAP);
+  });
 });
