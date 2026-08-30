@@ -3,18 +3,17 @@
  * Prove the player-facing build cannot reach the playtester — in a browser,
  * because that is the only place the answer is true or false.
  *
- * The first version of this grepped the HTML for the menu's title and failed
- * immediately, correctly: Metro bundles `PlaytestSheet` into BOTH builds. The
- * component's CODE ships either way. What differs is a build-time flag that
- * decides whether anything ever renders it, and no amount of string matching
- * on a minified bundle can tell you which way that went.
+ * Metro bundles `PlaytestSheet` into BOTH builds. The component's CODE ships
+ * either way. What differs is a build-time flag that decides whether the
+ * Settings entry can render, so string matching a minified bundle cannot prove
+ * the production surface is actually reachable.
  *
  *     node scripts/no-playtest-check.mjs <player.html> <playtest.html>
  *
- * So: open each build, get past onboarding, and look for the badge. Then try to
- * talk the player build into showing it with ?playtest=1, which is the exact
- * thing a curious person types. Both directions are checked, because "not
- * found" is also what a broken selector looks like.
+ * Open each build, finish onboarding, open Settings, and look for the
+ * accessible "Playtest saves" entry. Then try to coax the player build into
+ * exposing it with ?playtest=1. Both directions are checked so a broken
+ * selector cannot masquerade as a successful production lockout.
  */
 
 import { existsSync } from 'node:fs';
@@ -43,8 +42,8 @@ function browserOptions() {
 
 const browser = await chromium.launch(browserOptions());
 
-/** Open a build, finish onboarding, and report whether the badge is there. */
-async function badgeVisible(file, query = '') {
+/** Open a build, finish onboarding, then report whether Playtest saves exists. */
+async function playtestEntryVisible(file, query = '') {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
   await page.goto(`file://${resolve(file)}${query}`);
@@ -62,24 +61,32 @@ async function badgeVisible(file, query = '') {
     } else break;
   }
   await page.waitForTimeout(1200);
-  const reached = await page.locator('[data-testid="dialogue-panel"]').first().count();
-  const badge = await page.locator('[data-testid="playtest-badge"]').count();
+  const reached = (await page.locator('[data-testid="dialogue-panel"]').first().count()) > 0;
+
+  let entry = false;
+  const settings = page.getByRole('button', { name: 'Settings' }).first();
+  if (await settings.count()) {
+    await settings.click();
+    await page.waitForTimeout(500);
+    entry = (await page.getByRole('button', { name: 'Playtest saves' }).count()) > 0;
+  }
+
   await ctx.close();
-  return { reached: reached > 0, badge: badge > 0 };
+  return { reached, entry };
 }
 
 const problems = [];
 
-const plain = await badgeVisible(player);
+const plain = await playtestEntryVisible(player);
 if (!plain.reached) problems.push(`${player}: never reached the room, so this proved nothing`);
-if (plain.badge) problems.push(`${player}: shows the PLAYTEST badge — the player build must not`);
+if (plain.entry) problems.push(`${player}: exposes Playtest saves — the player build must not`);
 
-const coaxed = await badgeVisible(player, '?playtest=1');
-if (coaxed.badge) problems.push(`${player}: ?playtest=1 unlocked the playtester on a player build`);
+const coaxed = await playtestEntryVisible(player, '?playtest=1');
+if (coaxed.entry) problems.push(`${player}: ?playtest=1 unlocked the playtester on a player build`);
 
-const armed = await badgeVisible(playtest);
+const armed = await playtestEntryVisible(playtest);
 if (!armed.reached) problems.push(`${playtest}: never reached the room, so this proved nothing`);
-if (!armed.badge) problems.push(`${playtest}: no PLAYTEST badge — the build flag did not take`);
+if (!armed.entry) problems.push(`${playtest}: no Playtest saves entry — the build flag did not take`);
 
 await browser.close();
 
@@ -88,4 +95,4 @@ if (problems.length) {
   process.exit(1);
 }
 console.log('player build: no playtester, and ?playtest=1 does not summon one.');
-console.log('playtest build: badge present.');
+console.log('playtest build: Playtest saves is reachable from Settings.');
