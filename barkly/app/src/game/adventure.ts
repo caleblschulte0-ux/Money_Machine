@@ -47,8 +47,19 @@ export interface AdventureInput {
 
 export const PLAN_REWARD = { coins: 24, xp: 32 };
 
+const two = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * A PLAN DAY is the player's local calendar day, not UTC.
+ *
+ * `toISOString().slice(0, 10)` silently rolls the plan at UTC midnight. In the
+ * US that means a fresh "today" can appear in the evening, which is exactly
+ * the sort of tiny software smell that makes a virtual pet feel like a task
+ * app. The device already knows what day the player thinks it is, so use it.
+ */
 export function adventureDay(now: number): string {
-  return new Date(now).toISOString().slice(0, 10);
+  const date = new Date(now);
+  return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())}`;
 }
 
 function hash(text: string): number {
