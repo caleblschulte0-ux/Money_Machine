@@ -1,0 +1,47 @@
+name: Barkly lower-third compact build
+
+on:
+  push:
+    branches:
+      - chatgpt/barkly-bottom-third-compact-20260830
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/barkly-bottom-third-compact-20260830
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: barkly/app/package-lock.json
+      - name: Apply lower-third redesign
+        run: python3 barkly/app/scripts/apply-bottom-third-compact.py
+      - name: Install locked dependencies
+        working-directory: barkly/app
+        run: npm ci
+      - name: Typecheck
+        working-directory: barkly/app
+        run: npm run typecheck
+      - name: App tests
+        working-directory: barkly/app
+        run: npm test -- --runInBand
+      - name: Responsive collision check
+        working-directory: barkly/app
+        run: |
+          npx playwright install --with-deps chromium
+          npm run check:layout
+      - name: Commit verified app changes only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm barkly/app/scripts/apply-bottom-third-compact.py .github/workflows/barkly-bottom-third-compact-build.yml
+          git add barkly/app/src/ui/layout.ts barkly/app/src/ui/BarklyRoom.tsx barkly/app/src/ui/DialoguePanel.tsx barkly/app/__tests__/hero_layout.test.ts
+          git commit -m "Barkly: reclaim the idle lower third for the world"
+          git push origin HEAD:chatgpt/barkly-bottom-third-compact-20260830
