@@ -110,9 +110,9 @@ const NPC_ART: Record<NpcId, ReturnType<typeof require>> = {
  * draw behind him.
  */
 const NPC_SPOTS: Partial<Record<NpcId, { left?: number; right?: number; bottom: number; size: number }>> = {
-  biscuit: { left: 18, bottom: 78, size: 96 },
-  duke: { right: 2, bottom: 72, size: 108 },
-  pepper: { right: 8, bottom: 74, size: 104 },
+  biscuit: { left: 10, bottom: 76, size: 80 },
+  duke: { right: 3, bottom: 70, size: 90 },
+  pepper: { right: 8, bottom: 72, size: 86 },
 };
 
 const STATE_LABEL: Partial<Record<BarklyState, string>> = {
