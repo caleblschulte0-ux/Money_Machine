@@ -20,6 +20,17 @@ export const STATUS_HEIGHT = TAP_MIN;
 export const PLACES_HEIGHT = TAP_MIN + 4;
 export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 6;
 
+/**
+ * Shared portrait rhythm. World art can still bleed edge-to-edge, but interactive
+ * chrome should not: every lower-third surface uses the same inset instead of
+ * inventing its own 7/10/14px margins.
+ */
+export const INTERACTION_GUTTER = 14;
+export const CARE_DOCK_HEIGHT = 68;
+export const CARE_DOCK_GAP = 12;
+export const CARE_DOCK_CLEARANCE = CARE_DOCK_HEIGHT + CARE_DOCK_GAP;
+export const STATE_CHIP_GAP = 8;
+
 export type LayoutMode = 'narrowPortrait' | 'widePortrait' | 'phoneLandscape' | 'tabletLandscape';
 
 export function layoutMode(width: number, height: number): LayoutMode {
@@ -109,7 +120,11 @@ export function spriteScale(
   composerExpanded = false,
 ): number {
   const landscape = isLandscapeMode(mode);
-  const room = stageHeight(screenHeight, mode, dialogueExpanded, composerExpanded) - SPRITE_FOOT - (landscape ? 20 : NOTICE_BAND + 4);
+  const room =
+    stageHeight(screenHeight, mode, dialogueExpanded, composerExpanded) -
+    SPRITE_FOOT -
+    (landscape ? 20 : NOTICE_BAND + 4) -
+    (landscape ? 0 : CARE_DOCK_CLEARANCE);
   const byWidth = (stageWidthPx * 0.82) / SPRITE_BODY_WIDTH;
   const minScale = landscape
     ? screenHeight < 430 ? 0.62 : 0.72
@@ -119,10 +134,10 @@ export function spriteScale(
     : mode === 'tabletLandscape'
       ? 1.25
       : mode === 'widePortrait'
-        ? 1.34
+        ? 1.30
         : mode === 'phoneLandscape'
           ? 1.05
-          : 1.42;
+          : 1.30;
   return Math.max(minScale, Math.min(cap, room / SPRITE_HEIGHT, byWidth));
 }
 
