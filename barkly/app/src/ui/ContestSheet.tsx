@@ -164,7 +164,7 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  worldScrim: { ...StyleSheet.absoluteFillObject, backgroundColor: color.scrim, opacity: 0.34 },
+  worldScrim: { ...StyleSheet.absoluteFill, backgroundColor: color.scrim, opacity: 0.34 },
   scoreFloat: { position: 'absolute', left: space.xl, right: space.xl, top: '13%', alignItems: 'center' },
   eyebrow: { ...type.micro, color: color.inkOn, backgroundColor: color.ink, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: space.xs, overflow: 'hidden' },
   score: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md, marginTop: space.sm, backgroundColor: color.card, borderRadius: radius.pill, paddingHorizontal: space.lg, paddingVertical: space.sm, ...elevation.card },
