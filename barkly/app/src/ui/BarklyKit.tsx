@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 import { color, elevation, radius, space, type } from './theme';
-import { TAP_MIN } from './layout';
+import { CARE_DOCK_HEIGHT, INTERACTION_GUTTER, TAP_MIN } from './layout';
 import { BALL, BRASS, DIORAMA, ITEM } from './scenes/artPalette';
 
 export type KitAction = 'feed' | 'play' | 'sleep';
@@ -142,21 +142,32 @@ export default function BarklyKit({ toyId, playLabel, asleep, wants, disabled, o
 }
 
 const styles = StyleSheet.create({
-  kit: { position: 'absolute', left: 7, right: 7, bottom: 0, height: 72, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', paddingHorizontal: space.xs, zIndex: 8 },
-  dockShadow: { position: 'absolute', left: 13, right: 13, bottom: -3, height: 22, borderRadius: radius.xl, backgroundColor: DIORAMA.shadow, opacity: 0.26 },
-  dock: { position: 'absolute', left: 4, right: 4, bottom: 2, height: 44, borderRadius: radius.md, backgroundColor: DIORAMA.woodMid, borderWidth: 2.5, borderColor: DIORAMA.woodDeep, overflow: 'hidden', ...elevation.low },
+  kit: {
+    position: 'absolute',
+    left: INTERACTION_GUTTER,
+    right: INTERACTION_GUTTER,
+    bottom: 0,
+    height: CARE_DOCK_HEIGHT,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    paddingHorizontal: space.xs,
+    zIndex: 8,
+  },
+  dockShadow: { position: 'absolute', left: 13, right: 13, bottom: -2, height: 20, borderRadius: radius.xl, backgroundColor: DIORAMA.shadow, opacity: 0.26 },
+  dock: { position: 'absolute', left: 4, right: 4, bottom: 2, height: 42, borderRadius: radius.md, backgroundColor: DIORAMA.woodMid, borderWidth: 2.5, borderColor: DIORAMA.woodDeep, overflow: 'hidden', ...elevation.low },
   dockGloss: { position: 'absolute', left: 18, right: 18, top: 5, height: 5, borderRadius: radius.pill, backgroundColor: DIORAMA.woodShine, opacity: 0.76 },
-  dockFront: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 11, borderTopWidth: 2, borderTopColor: DIORAMA.woodWarm, backgroundColor: DIORAMA.woodDeep },
+  dockFront: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 10, borderTopWidth: 2, borderTopColor: DIORAMA.woodWarm, backgroundColor: DIORAMA.woodDeep },
   rivet: { position: 'absolute', bottom: 3, width: 6, height: 6, borderRadius: radius.xs, backgroundColor: BRASS.mid, borderWidth: 1, borderColor: BRASS.edge },
   rivetLeft: { left: 12 },
   rivetRight: { right: 12 },
-  slot: { minWidth: TAP_MIN + 26, minHeight: TAP_MIN + 16, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 2 },
+  slot: { minWidth: TAP_MIN + 26, minHeight: TAP_MIN + 12, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 2 },
   off: { opacity: 0.4 },
-  wellShadow: { position: 'absolute', bottom: 5, width: 82, height: 31, borderRadius: radius.lg, backgroundColor: DIORAMA.shadow, opacity: 0.28 },
+  wellShadow: { position: 'absolute', bottom: 5, width: 82, height: 29, borderRadius: radius.lg, backgroundColor: DIORAMA.shadow, opacity: 0.28 },
   wellShadowWanted: { opacity: 0.38 },
-  well: { position: 'absolute', bottom: 10, width: 82, height: 31, borderRadius: radius.lg, backgroundColor: DIORAMA.cream, borderWidth: 2, borderColor: DIORAMA.woodDeep, overflow: 'hidden' },
+  well: { position: 'absolute', bottom: 9, width: 82, height: 29, borderRadius: radius.lg, backgroundColor: DIORAMA.cream, borderWidth: 2, borderColor: DIORAMA.woodDeep, overflow: 'hidden' },
   wellWanted: { backgroundColor: DIORAMA.goldGlowSoft, borderColor: BRASS.dark },
   wellGloss: { position: 'absolute', left: 10, right: 10, top: 4, height: 4, borderRadius: radius.pill, backgroundColor: DIORAMA.white, opacity: 0.64 },
-  art: { alignItems: 'center', justifyContent: 'flex-end', height: 62, zIndex: 2 },
-  label: { position: 'absolute', bottom: -3, ...type.micro, color: color.inkOn, backgroundColor: color.ink, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden', zIndex: 3 },
+  art: { alignItems: 'center', justifyContent: 'flex-end', height: 58, zIndex: 2 },
+  label: { position: 'absolute', bottom: -2, ...type.micro, color: color.inkOn, backgroundColor: color.ink, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, overflow: 'hidden', zIndex: 3 },
 });
