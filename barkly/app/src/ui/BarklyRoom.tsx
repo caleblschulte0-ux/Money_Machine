@@ -58,6 +58,7 @@ import {
   CONTROLS_HEIGHT,
   DIALOGUE_GAP,
   DIALOGUE_HEIGHT,
+  RESTING_DIALOGUE_HEIGHT,
   PLACES_HEIGHT,
   STATUS_HEIGHT,
   NOTICE_MAX_HEIGHT,
@@ -528,21 +529,27 @@ export default function BarklyRoom() {
   const insets = useSafeAreaInsets();
   const topPad = contentTop(insets.top);
   const bottomPad = contentBottom(insets.bottom);
+  // The idle prompt should not permanently consume a full speech-card slot.
+  // Reclaim that room for the world until Barkly/NPC dialogue actually exists.
+  const dialogueExpanded = Boolean(
+    partialTranscript || lastExchange?.barklyText || barkly.thought || barkly.npcBubble || barkly.showcase
+  );
+  const dialogueHeightPx = dialogueExpanded ? DIALOGUE_HEIGHT : RESTING_DIALOGUE_HEIGHT;
   /**
    * How big he is drawn. The stage is a fixed band between the chrome and the
    * dialogue panel, and he has to live inside it — cropping his paws to make
    * room for a text panel is the kind of thing that makes an app feel like a
    * web page. Capped at 1 so a tall phone gives him air, not a poster.
    */
-  const spriteScale = scaleForScreen(screenH, stageW, layout);
+  const spriteScale = scaleForScreen(screenH, stageW, layout, dialogueExpanded);
   /** How tall the world is: everything above the dialogue panel. */
-  const sceneBand = landscape ? screenH : screenH - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT + 8;
+  const sceneBand = landscape ? screenH : screenH - dialogueHeightPx - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT + 8;
   /**
    * Where his feet meet the ground, measured from the top of the scene layer.
    * Interior scenes are built around this line rather than around percentages
    * of a rectangle — see Scenes.HomeScene.
    */
-  const groundY = topPad + chromeBottomPx + stageHeight(screenH, layout) - SPRITE_FOOT;
+  const groundY = topPad + chromeBottomPx + stageHeight(screenH, layout, dialogueExpanded) - SPRITE_FOOT;
   const stateLabel = STATE_LABEL[snapshot.state];
 
   /**
@@ -798,7 +805,7 @@ export default function BarklyRoom() {
       <LinearGradient
         colors={['rgba(255,249,236,0)', 'rgba(255,249,236,0.72)', 'rgba(255,249,236,1)']}
         locations={[0, 0.55, 1]}
-        style={[styles.horizon, { height: landscape ? 76 : DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 48 }]}
+        style={[styles.horizon, { height: landscape ? 76 : dialogueHeightPx + CONTROLS_HEIGHT + 24 }]}
         pointerEvents="none"
       />
 
@@ -926,7 +933,7 @@ export default function BarklyRoom() {
         <View
           style={[
             styles.stageArea,
-            { height: stageHeight(screenH, layout) },
+            { height: stageHeight(screenH, layout, dialogueExpanded) },
             landscape
               ? { marginLeft: navW + 8, marginRight: interactionW + 8 }
               : { width: '100%', maxWidth: stageW, alignSelf: 'center' },
@@ -1272,7 +1279,9 @@ const styles = StyleSheet.create({
     borderColor: color.dangerLine,
   },
   errorText: { fontSize: 13, lineHeight: 17, color: color.danger, textAlign: 'center' },
-  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 12 },
+  // Keep Barkly's feet out of the foreground care dock without throwing away
+  // the reclaimed world space below him.
+  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 48 },
   heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
   heart: { position: 'absolute', fontSize: 24, color: color.danger },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
@@ -1285,7 +1294,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
   interactionStack: { width: '100%', alignSelf: 'center' },
   interactionStackLandscape: { position: 'absolute', right: 0, top: STATUS_HEIGHT + 8, bottom: 0, justifyContent: 'flex-end', paddingBottom: 2 },
-  controls: { gap: 6 },
+  controls: { gap: 3 },
   talk: { flex: 1, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 12, overflow: 'hidden', ...elevation.card },
   talkActive: { backgroundColor: color.popDeep },
   micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT },

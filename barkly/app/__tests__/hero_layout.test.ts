@@ -55,4 +55,11 @@ describe('hero-first phone composition', () => {
     expect(stageHeight(390, mode)).toBeGreaterThan(280);
   });
 
+  it('gives idle portrait space back to the world', () => {
+    const active = stageHeight(844, 'narrowPortrait', true);
+    const idle = stageHeight(844, 'narrowPortrait', false);
+    expect(idle - active).toBeGreaterThanOrEqual(60);
+    expect(idle).toBeGreaterThan(600);
+  });
+
 });

@@ -10,7 +10,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { color, elevation, radius, space, type } from './theme';
-import { DIALOGUE_GAP, DIALOGUE_HEIGHT, SPEECH_MAX_LINES } from './layout';
+import { DIALOGUE_GAP, DIALOGUE_HEIGHT, RESTING_DIALOGUE_HEIGHT, SPEECH_MAX_LINES } from './layout';
 import { getVoiceActivity, subscribeVoiceActivity } from '../audio/voiceActivity';
 import { npcReadMs } from '../world/npcExchange';
 
@@ -207,7 +207,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     ...elevation.card,
   },
-  panelResting: { ...elevation.flat },
+  panelResting: {
+    height: RESTING_DIALOGUE_HEIGHT,
+    marginVertical: 1,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    ...elevation.flat,
+  },
   edge: {
     position: 'absolute',
     left: 4,

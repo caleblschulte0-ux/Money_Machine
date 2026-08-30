@@ -43,8 +43,13 @@ export function noticeTop(top: number, mode: LayoutMode = 'narrowPortrait'): num
 export const NOTICE_MAX_HEIGHT = 38;
 
 export const DIALOGUE_HEIGHT = 96;
-export const DIALOGUE_GAP = 6;
-export const CONTROLS_HEIGHT = TAP_MIN + 14;
+export const RESTING_DIALOGUE_HEIGHT = 34;
+export const DIALOGUE_GAP = 3;
+export const CONTROLS_HEIGHT = TAP_MIN + 6;
+
+export function dialogueHeight(expanded: boolean): number {
+  return expanded ? DIALOGUE_HEIGHT : RESTING_DIALOGUE_HEIGHT;
+}
 export const SPEECH_MAX_LINES = 3;
 
 export function contentFrameWidth(width: number, mode: LayoutMode): number {
@@ -71,11 +76,15 @@ export function stageWidth(width: number, mode: LayoutMode): number {
   return Math.max(mode === 'tabletLandscape' ? 360 : 210, Math.min(cap, available));
 }
 
-export function stageHeight(screenHeight: number, mode: LayoutMode = 'narrowPortrait'): number {
+export function stageHeight(
+  screenHeight: number,
+  mode: LayoutMode = 'narrowPortrait',
+  dialogueExpanded = true,
+): number {
   if (isLandscapeMode(mode)) return Math.max(230, screenHeight - STATUS_HEIGHT - 18);
   return Math.max(
     212,
-    screenHeight - CHROME_BOTTOM - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT - 18,
+    screenHeight - CHROME_BOTTOM - dialogueHeight(dialogueExpanded) - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT - 10,
   );
 }
 
@@ -88,14 +97,23 @@ export function spriteScale(
   screenHeight: number,
   stageWidthPx = 390,
   mode: LayoutMode = 'narrowPortrait',
+  dialogueExpanded = true,
 ): number {
   const landscape = isLandscapeMode(mode);
-  const room = stageHeight(screenHeight, mode) - SPRITE_FOOT - (landscape ? 20 : NOTICE_BAND + 4);
+  const room = stageHeight(screenHeight, mode, dialogueExpanded) - SPRITE_FOOT - (landscape ? 20 : NOTICE_BAND + 4);
   const byWidth = (stageWidthPx * 0.82) / SPRITE_BODY_WIDTH;
   const minScale = landscape
     ? screenHeight < 430 ? 0.62 : 0.72
     : screenHeight < 590 ? 0.60 : screenHeight < 680 ? 0.66 : 0.72;
-  const cap = mode === 'tabletLandscape' ? 1.25 : mode === 'widePortrait' ? 1.34 : mode === 'phoneLandscape' ? 1.05 : 1.42;
+  const cap = mode === 'narrowPortrait' && screenHeight < 680
+    ? 0.75
+    : mode === 'tabletLandscape'
+      ? 1.25
+      : mode === 'widePortrait'
+        ? 1.34
+        : mode === 'phoneLandscape'
+          ? 1.05
+          : 1.42;
   return Math.max(minScale, Math.min(cap, room / SPRITE_HEIGHT, byWidth));
 }
 
