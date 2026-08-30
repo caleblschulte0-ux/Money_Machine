@@ -1,18 +1,11 @@
 /**
- * The duel, on screen.
- *
- * The tested timing mechanic stays exactly where it belongs: game/contest.ts.
- * This pass changes only presentation. A contest used to replace Barkly and his
- * opponent with a centered white timing card, so the most game-like moment in
- * the app looked the least like the game. The world now remains visible and
- * the timing input sits low like a contest HUD.
- *
- * A future BarklyRoom pass should animate the dogs and ball from each result;
- * this component is deliberately the bridge, not the final cinematic system.
+ * The duel HUD. Mechanics stay in game/contest.ts; this surface makes the
+ * timing game read like a colorful dog-game moment instead of a white form.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, DimensionValue, Easing, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ContestRules,
   ContestState,
@@ -31,20 +24,22 @@ interface Props {
   onClose: () => void;
 }
 
+function duelPaint(kind: ContestRules['kind']): { main: string; edge: string } {
+  if (kind === 'race') return { main: color.coral, edge: color.coralDeep };
+  if (kind === 'dig') return { main: color.mint, edge: color.mintDeep };
+  return { main: color.pop, edge: color.popDeep };
+}
+
 export default function ContestSheet({ visible, rules, onDone, onClose }: Props) {
   const [state, setState] = useState<ContestState | null>(null);
   const [spec, setSpec] = useState<RoundSpec | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const sweep = useRef(new Animated.Value(0)).current;
-  // Animated.Value cannot be read synchronously in a tap handler, so the
-  // listener keeps a plain number in step with it.
   const position = useRef(0);
 
   useEffect(() => {
-    const id = sweep.addListener(({ value }) => {
-      position.current = value;
-    });
+    const id = sweep.addListener(({ value }) => { position.current = value; });
     return () => sweep.removeListener(id);
   }, [sweep]);
 
@@ -95,6 +90,7 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
 
   const pct = (n: number) => `${Math.round(n * 100)}%` as DimensionValue;
   const kind = rules.kind === 'race' ? 'RACE' : rules.kind === 'dig' ? 'DIG-OFF' : 'FETCH DUEL';
+  const paint = duelPaint(rules.kind);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -102,54 +98,53 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
         <View style={styles.worldScrim} pointerEvents="none" />
 
         <View style={styles.scoreFloat} pointerEvents="none">
-          <Text style={styles.eyebrow}>{kind} · VS {rules.opponent.toUpperCase()}</Text>
+          <View style={[styles.duelBadge, { backgroundColor: paint.main, borderColor: paint.edge }]}>
+            <View style={styles.badgeGloss} />
+            <Text style={styles.eyebrow}>{kind} · VS {rules.opponent.toUpperCase()}</Text>
+          </View>
           <View style={styles.score}>
-            <Text style={styles.scoreSide}>Barkly {state?.you ?? 0}</Text>
-            <Text style={styles.scoreDash}>—</Text>
-            <Text style={styles.scoreSide}>{state?.them ?? 0} {rules.opponent}</Text>
+            <View style={[styles.scorePod, { backgroundColor: color.lemon }]}>
+              <Text style={styles.scoreName}>BARKLY</Text>
+              <Text style={styles.scoreNumber}>{state?.you ?? 0}</Text>
+            </View>
+            <Text style={styles.scoreDash}>VS</Text>
+            <View style={[styles.scorePod, { backgroundColor: color.violet }]}>
+              <Text style={styles.scoreName}>{rules.opponent.toUpperCase()}</Text>
+              <Text style={styles.scoreNumber}>{state?.them ?? 0}</Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.tray}>
+          <LinearGradient colors={[paint.main, color.paper]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.trayPaint} pointerEvents="none" />
+          <View style={[styles.trayEdge, { backgroundColor: paint.edge }]} pointerEvents="none" />
+          <View style={styles.trayGloss} pointerEvents="none" />
           <View style={styles.handle} />
-          <Text style={styles.title}>
-            {state?.done
-              ? verdictLine(state)
-              : `Round ${Math.min((state?.round ?? 0) + 1, rules.rounds)} of ${rules.rounds}`}
-          </Text>
-          <Text style={styles.instruction}>{flash ?? (running ? 'Hit it when the marker crosses the gold.' : ' ')}</Text>
+
+          <Text style={styles.title}>{state?.done ? verdictLine(state) : `ROUND ${Math.min((state?.round ?? 0) + 1, rules.rounds)} / ${rules.rounds}`}</Text>
+          <Text style={styles.instruction}>{flash ?? (running ? 'Hit it when the marker crosses the yellow.' : ' ')}</Text>
 
           <Pressable
-            style={styles.track}
+            style={({ pressed }) => [styles.track, pressed && running && styles.trackPressed]}
             onPress={tap}
             disabled={!running}
             accessibilityRole="button"
             accessibilityLabel="Tap when the marker is in the target"
           >
-            {spec && (
-              <View
-                style={[
-                  styles.zone,
-                  {
-                    left: pct(spec.target - spec.halfWidth),
-                    width: pct(spec.halfWidth * 2),
-                  },
-                ]}
-              />
-            )}
+            <View style={styles.trackGloss} pointerEvents="none" />
+            {spec && <View style={[styles.zone, { left: pct(spec.target - spec.halfWidth), width: pct(spec.halfWidth * 2) }]} />}
             {spec && <View style={[styles.zoneCore, { left: pct(spec.target - 0.006), width: '1.2%' as DimensionValue }]} />}
-            <Animated.View
-              style={[
-                styles.marker,
-                { left: sweep.interpolate({ inputRange: [0, 1], outputRange: ['0%', '98%'] }) },
-              ]}
-            />
+            <Animated.View style={[styles.marker, { left: sweep.interpolate({ inputRange: [0, 1], outputRange: ['0%', '98%'] }) }]} />
           </Pressable>
 
+          <View style={styles.tapHint} pointerEvents="none">
+            <Text style={styles.tapHintText}>{state?.done ? 'DUEL SETTLED' : running ? 'TAP!' : 'NICE'}</Text>
+          </View>
+
           {state?.done ? (
-            <Pressable style={styles.primary} onPress={() => onDone(state)} accessibilityRole="button">
+            <Pressable style={({ pressed }) => [styles.primary, pressed && styles.pressed]} onPress={() => onDone(state)} accessibilityRole="button">
               <View style={styles.gloss} pointerEvents="none" />
-              <Text style={styles.primaryText}>back to Barkly</Text>
+              <Text style={styles.primaryText}>BACK TO BARKLY</Text>
             </Pressable>
           ) : (
             <Pressable style={styles.cancel} onPress={onClose} accessibilityRole="button">
@@ -164,24 +159,36 @@ export default function ContestSheet({ visible, rules, onDone, onClose }: Props)
 
 const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
-  worldScrim: { ...StyleSheet.absoluteFill, backgroundColor: color.scrim, opacity: 0.34 },
-  scoreFloat: { position: 'absolute', left: space.xl, right: space.xl, top: '13%', alignItems: 'center' },
-  eyebrow: { ...type.micro, color: color.inkOn, backgroundColor: color.ink, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: space.xs, overflow: 'hidden' },
-  score: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md, marginTop: space.sm, backgroundColor: color.card, borderRadius: radius.pill, paddingHorizontal: space.lg, paddingVertical: space.sm, ...elevation.card },
-  scoreSide: { ...type.strong, color: color.ink },
-  scoreDash: { ...type.strong, color: color.inkSoft },
+  worldScrim: { ...StyleSheet.absoluteFill, backgroundColor: color.scrim, opacity: 0.26 },
+  scoreFloat: { position: 'absolute', left: space.xl, right: space.xl, top: '11%', alignItems: 'center' },
+  duelBadge: { borderRadius: radius.pill, paddingHorizontal: space.lg, paddingVertical: space.sm, borderWidth: 2, overflow: 'hidden', ...elevation.card },
+  badgeGloss: { position: 'absolute', left: space.sm, right: space.sm, top: space.xxs, height: space.xs, borderRadius: radius.pill, backgroundColor: color.gloss },
+  eyebrow: { ...type.micro, color: color.ink },
+  score: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, marginTop: space.md },
+  scorePod: { minWidth: 92, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.sm, alignItems: 'center', borderWidth: 2, borderColor: color.inkMid, ...elevation.toy },
+  scoreName: { ...type.micro, color: color.inkSoft },
+  scoreNumber: { ...type.display, color: color.ink, marginTop: space.xxs },
+  scoreDash: { ...type.micro, color: color.inkOn, backgroundColor: color.ink, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: space.xs, overflow: 'hidden' },
 
-  tray: { backgroundColor: color.paper, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.xl, ...elevation.sheet },
-  handle: { alignSelf: 'center', width: 50, height: 5, borderRadius: radius.pill, backgroundColor: color.line, marginBottom: space.md },
-  title: { ...type.title, color: color.ink, textAlign: 'center' },
-  instruction: { ...type.small, minHeight: 40, color: color.inkSoft, textAlign: 'center', marginTop: space.sm },
-  track: { height: 58, borderRadius: radius.sm, backgroundColor: color.fill, marginTop: space.sm, overflow: 'hidden', justifyContent: 'center', borderWidth: 1, borderColor: color.line },
-  zone: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.goldWell },
-  zoneCore: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.gold, opacity: 0.7 },
-  marker: { position: 'absolute', top: space.xs, bottom: space.xs, width: 8, borderRadius: radius.pill, backgroundColor: color.ink },
-  primary: { backgroundColor: color.pop, borderRadius: radius.pill, paddingVertical: space.lg, alignItems: 'center', marginTop: space.lg, overflow: 'hidden', ...elevation.card },
-  gloss: { position: 'absolute', top: space.xs, left: space.lg, right: space.lg, height: 12, borderRadius: radius.pill, backgroundColor: color.inkOn, opacity: 0.4 },
-  primaryText: { ...type.strong, color: color.ink },
+  tray: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.xl, borderTopWidth: 2, borderColor: color.inkMid, overflow: 'visible', ...elevation.sheet },
+  trayPaint: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
+  trayEdge: { position: 'absolute', left: space.lg, right: space.lg, bottom: -6, height: space.md, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg },
+  trayGloss: { position: 'absolute', left: space.xl, right: space.xl, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.glossSoft },
+  handle: { alignSelf: 'center', width: 50, height: 5, borderRadius: radius.pill, backgroundColor: color.inkMid, opacity: 0.55, marginBottom: space.md },
+  title: { ...type.title, fontWeight: '900', color: color.ink, textAlign: 'center' },
+  instruction: { ...type.small, minHeight: 40, color: color.inkMid, fontWeight: '700', textAlign: 'center', marginTop: space.sm },
+  track: { height: 64, borderRadius: radius.lg, backgroundColor: color.ink, marginTop: space.sm, overflow: 'hidden', justifyContent: 'center', borderWidth: 2, borderColor: color.inkMid, ...elevation.toy },
+  trackPressed: { transform: [{ scale: 0.99 }] },
+  trackGloss: { position: 'absolute', left: space.md, right: space.md, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.glossSoft },
+  zone: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.lemon },
+  zoneCore: { position: 'absolute', top: 0, bottom: 0, backgroundColor: color.card, opacity: 0.9 },
+  marker: { position: 'absolute', top: space.xs, bottom: space.xs, width: 8, borderRadius: radius.pill, backgroundColor: color.coral },
+  tapHint: { alignSelf: 'center', marginTop: -12, minWidth: 72, borderRadius: radius.pill, backgroundColor: color.card, borderWidth: 2, borderColor: color.inkMid, paddingHorizontal: space.md, paddingVertical: space.xs, alignItems: 'center', ...elevation.low },
+  tapHintText: { ...type.micro, color: color.ink },
+  primary: { backgroundColor: color.lemon, borderRadius: radius.pill, paddingVertical: space.lg, alignItems: 'center', marginTop: space.lg, overflow: 'hidden', borderWidth: 2, borderColor: color.lemonDeep, ...elevation.toy },
+  gloss: { position: 'absolute', top: space.xs, left: space.lg, right: space.lg, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
+  primaryText: { ...type.strong, fontWeight: '900', color: color.ink },
   cancel: { alignItems: 'center', paddingVertical: space.md, marginTop: space.sm },
   cancelText: { ...type.small, color: color.inkSoft },
+  pressed: { transform: [{ scale: 0.985 }] },
 });
