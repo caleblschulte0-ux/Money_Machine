@@ -344,7 +344,10 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
   // viewport at every supported phone height (640 -> 640, 844 -> 844), so the
   // scenery now lands where the composition says it should.
   const canvasHeight = ground + 264;
-  const hillY = Math.max(168, ground - 360);
+  // The HUD's soft top scrim visually erases low-contrast scenery until about
+  // y=190. Anchor the park itself above that fade instead of letting the
+  // ground calculation push the treeline into the middle of the phone.
+  const hillY = Math.max(138, Math.min(166, ground - 480));
   const grass = night ? DIORAMA.parkGrassNight : DIORAMA.parkGrassDay;
   const grassLight = night ? DIORAMA.parkGrassNightLight : DIORAMA.parkGrassDayLight;
   const grassEdge = night ? DIORAMA.parkGrassNightEdge : DIORAMA.parkGrassDayEdge;
@@ -368,8 +371,8 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Path d={`M209 ${hillY + 87}C214 ${hillY + 138} 190 ${ground + 29} 151 ${canvasHeight}`} stroke={DIORAMA.white} strokeWidth={6} fill="none" opacity={night ? 0.05 : 0.24} />
         <Path d={`M18 ${hillY + 118}Q94 ${hillY + 91} 162 ${hillY + 112}`} stroke={DIORAMA.white} strokeWidth={7} fill="none" strokeLinecap="round" opacity={night ? 0.04 : 0.16} />
       </Svg>
-      <View style={{ position: 'absolute', left: -58, top: hillY - 142 }}><Tree night={night} scale={1.05} /></View>
-      <View style={{ position: 'absolute', right: -62, top: hillY - 130 }}><Tree night={night} scale={1.01} flip /></View>
+      <View style={{ position: 'absolute', left: -25, top: 46 }}><Tree night={night} scale={1.16} /></View>
+      <View style={{ position: 'absolute', right: -28, top: 57 }}><Tree night={night} scale={1.12} flip /></View>
       <View style={{ position: 'absolute', left: 108, top: hillY + 1 }}><Bush night={night} width={112} /></View>
       <View style={{ position: 'absolute', right: 82, top: hillY + 24 }}><Bush night={night} width={104} /></View>
       <View style={{ position: 'absolute', left: 22, top: hillY + 143 }}><Bench night={night} /></View>
@@ -441,7 +444,9 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
   const ground = groundY ?? bandHeight * 0.72;
   const canvasHeight = ground + 264;
   const sidewalkY = Math.max(350, ground - 132);
-  const roof = Math.max(146, ground - 414);
+  // Roofs deliberately begin behind the chrome scrim. Their molded bodies
+  // then emerge directly below navigation instead of leaving a blue void.
+  const roof = 62;
   const walk = night ? DIORAMA.townSidewalkNight : DIORAMA.townSidewalkDay;
   const walkEdge = night ? DIORAMA.townSidewalkNightEdge : DIORAMA.townSidewalkDayEdge;
   const road = night ? DIORAMA.townRoadNight : DIORAMA.townRoadDay;
@@ -529,7 +534,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
   const night = band === 'night';
   const ground = groundY ?? bandHeight * 0.72;
   const canvasHeight = ground + 264;
-  const horizon = Math.max(195, ground - 340);
+  const horizon = 188;
   const tide = horizon + 128;
   const sandTop = tide + 14;
   const oceanLight = night ? DIORAMA.oceanNightLight : DIORAMA.oceanDayLight;
@@ -554,7 +559,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
         <Circle cx={318} cy={ground + 44} r={7} fill={DIORAMA.starfish} /><Path d={`M313 ${ground + 37}L323 ${ground + 51}M325 ${ground + 37}L311 ${ground + 50}`} stroke={DIORAMA.starfish} strokeWidth={5} strokeLinecap="round" />
       </Svg>
       <View style={{ position: 'absolute', left: -35, top: sandTop + 38 }}><Dune night={night} /></View>
-      <View style={{ position: 'absolute', right: -18, top: horizon + 35 }}><Umbrella night={night} /></View>
+      <View style={{ position: 'absolute', right: -12, top: 186 }}><Umbrella night={night} /></View>
       <View style={{ position: 'absolute', left: 76, top: ground + 12 }}><Castle night={night} /></View>
       <BeachLife night={night} />
     </View>
