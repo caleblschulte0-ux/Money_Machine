@@ -15,7 +15,7 @@ A screenshot should read as a game before anyone sees Barkly speak.
 1. **Bright does not mean random rainbow.** Use a small candy family deliberately: sky blue for primary action, yellow for rewards/notes, violet for Pack/relationship things, mint for positive/owned states, coral for food/drama. Barkly's tan/brown coat remains the visual anchor.
 2. **No large dead white cards unless the object is literally paper.** A speech surface should be a toy console. A shop should be a shelf. A plan can be paper. A memory can be a scrapbook card.
 3. **Every important tap target has physical depth.** Highlight + body + darker lower edge + contact shadow. Flat fill + radius is not enough.
-4. **Avoid generic equal-width segmented controls.** Location navigation should eventually feel like four destination tokens/signs, not browser tabs.
+4. **Avoid generic equal-width segmented controls.** Location navigation should feel like four destination tokens/signs, not browser tabs.
 5. **World labels are not app labels.** NPC names, dig prompts and object hints should feel painted/stamped into the scene.
 6. **Use asymmetry and authored composition.** Perfectly centered stacks of rectangles look generated. Tilt notes, offset props, overlap foreground objects, let visual weight differ.
 7. **Scene art must converge on Barkly's material language.** The long-term target is molded/clay/vinyl diorama art, not increasingly elaborate flat vector backgrounds.
@@ -25,15 +25,31 @@ A screenshot should read as a game before anyone sees Barkly speak.
 
 ## Main-screen target
 
-The main room should eventually have:
-- a much less UI-like location selector; each destination has its own color/material and tiny illustrated cue;
-- coin/level pod that looks like a toy HUD, not a white pill;
-- Pack Book control that looks like a small physical book/tab;
-- Plan control that looks like a taped/stuck note;
+The main room should have:
+- a much less UI-like location selector; each destination has its own color/material and illustrated cue;
+- a coin/level pod that looks like a toy HUD, not a white pill;
+- a Pack Book control that looks like a small physical book;
+- a Plan control that looks like a taped note;
 - dialogue as a molded character console with speaker-specific color;
 - talk as the loudest candy control on screen;
 - typing secondary but still playful;
 - no generic white control dock behind Barkly's in-world bowl/toy/bed.
+
+`src/ui/ToyHud.tsx` is the concrete replacement prototype for the first four bullets. It is intentionally a reviewable drop-in component rather than a risky blind rewrite of the 60KB BarklyRoom orchestrator. Claude should wire or rework it into `BarklyRoom` and remove the old segmented location tabs after the standard five viewport checks pass.
+
+### ToyHud acceptance
+
+- HOME = coral physical destination tile with a house glyph.
+- PARK = mint tile with a tree glyph.
+- TOWN = violet tile with a storefront glyph.
+- BEACH = sky-blue tile with a wave/sun glyph.
+- Locked places keep their identity and add a small physical lock badge rather than turning into grey text.
+- Pack control visibly looks like a tiny violet book with a spine/pages.
+- Plan visibly looks like a taped yellow note, turning mint when complete.
+- Settings is a toy control, not a white circle.
+- Coin/level pod is bright yellow and molded.
+- No destination label truncates on the standard five viewport tests.
+- Main-stage vertical budget must not shrink enough to crop Barkly or his foreground objects.
 
 ## Scene target
 
@@ -58,20 +74,21 @@ Turquoise sea, warm sand, big foam shapes, shells/gulls/seaweed. It should be th
 - Shop rebuilt as a colorful toy shelf with category colors and molded item trays;
 - Food picker rebuilt as a snack tray with large colorful physical choices;
 - Barkly's Plan rebuilt as a colorful kid-made object instead of a white productivity note;
-- Pack Book already moved from analytics toward scrapbook language and should continue getting more visual assets/portraits.
+- Encounters rebuilt as bright physical choice moments over the still-visible world;
+- Contests rebuilt as a colorful arcade-style dog duel HUD while preserving the tested timing mechanic;
+- Pack Book already moved from analytics toward scrapbook language and should continue getting more portraits/object visuals;
+- `ToyHud.tsx` supplies the main-screen structural replacement so cosmetics are not limited to sheets.
 
 ## Next cosmetic implementation order
 
-1. Main location navigation — replace pill tabs with four authored destination controls.
-2. Pack button — make it visibly a tiny book/object.
-3. Plan chip — make it visibly a pinned note object in the main scene chrome.
-4. Typing field — stop looking like a web input; make it a toy-console speech slot.
-5. Pack Book — add actual portrait/treasure/rival visual modules and stronger color blocks.
-6. Store items — eventually show mini Barkly previews wearing/using the selected object, not just an icon row.
-7. Food — animate bowl/food preview before choosing.
-8. Unique NPC silhouettes/assets.
-9. Replace major code-drawn scene furniture with authored diorama assets.
-10. Add SFX and micro-motion to every high-frequency surface.
+1. Wire/rework `ToyHud.tsx` into BarklyRoom and pass the five viewport/layout contracts.
+2. Pack Book — add actual portrait/treasure/rival visual modules and stronger color blocks.
+3. Typing field — stop looking like a web input; make it a toy-console speech slot.
+4. Store items — eventually show mini Barkly previews wearing/using the selected object, not just an icon row.
+5. Food — animate bowl/food preview before choosing.
+6. Unique NPC silhouettes/assets.
+7. Replace major code-drawn scene furniture with authored diorama assets.
+8. Add SFX and micro-motion to every high-frequency surface.
 
 ## Rejection test
 
