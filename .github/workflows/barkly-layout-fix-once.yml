@@ -27,6 +27,7 @@ jobs:
         run: |
           sed -i 's/stageHeight(screenH) }]>/stageHeight(screenH) }]}>/' .github/scripts/barkly-responsive-stage-once.py
           python .github/scripts/barkly-responsive-stage-once.py
+          python .github/scripts/barkly-landscape-tab-fix.py
 
       - name: Install locked dependencies
         working-directory: barkly/app
@@ -68,6 +69,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add barkly/app/src/ui/BarklyRoom.tsx barkly/app/src/ui/layout.ts barkly/app/src/ui/DialoguePanel.tsx barkly/app/src/ui/BarklyKit.tsx barkly/app/src/ui/SettingsSheet.tsx barkly/app/scripts/playtest-acceptance.mjs barkly/app/scripts/overlap-check.mjs barkly/app/__tests__/hero_layout.test.ts
-          git rm .github/workflows/barkly-layout-fix-once.yml .github/scripts/barkly-responsive-stage-once.py
+          git rm .github/workflows/barkly-layout-fix-once.yml .github/scripts/barkly-responsive-stage-once.py .github/scripts/barkly-landscape-tab-fix.py
           git commit -m "Barkly: add responsive protected-stage layout"
           git push origin HEAD:chatgpt/barkly-layout-space-fix-20260830
