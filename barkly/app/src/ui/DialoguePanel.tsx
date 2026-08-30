@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     marginVertical: DIALOGUE_GAP,
     justifyContent: 'center',
     paddingHorizontal: space.xl,
-    paddingVertical: space.md,
+    paddingVertical: space.sm,
     borderRadius: radius.lg,
     overflow: 'visible',
     backgroundColor: 'transparent',

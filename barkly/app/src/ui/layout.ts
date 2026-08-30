@@ -1,23 +1,9 @@
 /**
- * Phone-first screen geometry for Barkly.
+ * Responsive screen geometry for Barkly.
  *
- * The rule is simple: chrome owns the edges, Barkly owns the middle, and
- * transient UI is never allowed to borrow his face just because a browser
- * viewport happened to have enough room in one screenshot.
- *
- * HERO PASS:
- * The earlier responsive pass solved collisions, but it solved them too
- * conservatively on normal/tall phones. Barkly ended up looking like a small
- * object inside a UI composition. A kid should see the DOG first. The maths
- * below now lets him use substantially more of the available width whenever
- * the vertical room genuinely exists, while preserving the smaller short-phone
- * floor that keeps Safari/browser-chrome layouts safe.
- */
-
-/**
- * Web previews have no native safe-area inset. Give them ordinary breathing
- * room, not a fake 54px notch. Native devices report the real inset and get a
- * small cushion beyond it.
+ * More screen reveals more world. It does not make Barkly or the HUD grow
+ * without bound. Portrait uses two shallow top rows; landscape moves location
+ * navigation and conversation controls into side rails around a center stage.
  */
 export const CONTENT_TOP = 12;
 export const CONTENT_BOTTOM = 12;
@@ -29,41 +15,64 @@ export function contentBottom(insetBottom: number): number {
   return insetBottom > 0 ? insetBottom + 8 : CONTENT_BOTTOM;
 }
 
-/** Real child-sized tap targets on every platform. */
 export const TAP_MIN = 44;
 export const STATUS_HEIGHT = TAP_MIN;
-/**
- * Keep navigation comfortable without giving it more vertical authority than
- * the character. It was 54px; 50px keeps the same 44px tap target plus air.
- */
-export const PLACES_HEIGHT = TAP_MIN + 6;
-export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 8;
+export const PLACES_HEIGHT = TAP_MIN + 4;
+export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 6;
 
-/** One compact transient notice, above the character stage. */
-export function noticeTop(top: number): number {
-  return top + CHROME_BOTTOM + 4;
+export type LayoutMode = 'narrowPortrait' | 'widePortrait' | 'phoneLandscape' | 'tabletLandscape';
+
+export function layoutMode(width: number, height: number): LayoutMode {
+  const landscape = width > height;
+  const tablet = Math.min(width, height) >= 600;
+  if (landscape) return tablet ? 'tabletLandscape' : 'phoneLandscape';
+  return width >= 600 ? 'widePortrait' : 'narrowPortrait';
+}
+
+export function isLandscapeMode(mode: LayoutMode): boolean {
+  return mode === 'phoneLandscape' || mode === 'tabletLandscape';
+}
+
+export function chromeBottom(mode: LayoutMode = 'narrowPortrait'): number {
+  return isLandscapeMode(mode) ? STATUS_HEIGHT + 6 : CHROME_BOTTOM;
+}
+
+export function noticeTop(top: number, mode: LayoutMode = 'narrowPortrait'): number {
+  return top + chromeBottom(mode) + 4;
 }
 export const NOTICE_MAX_HEIGHT = 38;
 
-/** Dialogue has its own band below the world. */
-export const DIALOGUE_HEIGHT = 100;
-export const DIALOGUE_GAP = 8;
-
-/**
- * There is one 44px talk/type row now. Keep it fully usable, but do not reserve
- * web-form-sized whitespace around it. This gives the dog room without making
- * the interaction controls smaller.
- */
-export const CONTROLS_HEIGHT = TAP_MIN + 20;
-
+export const DIALOGUE_HEIGHT = 96;
+export const DIALOGUE_GAP = 6;
+export const CONTROLS_HEIGHT = TAP_MIN + 14;
 export const SPEECH_MAX_LINES = 3;
 
-/**
- * `screenHeight` here means the usable content height AFTER real safe areas
- * have been removed by the caller. Short browser viewports are allowed; the
- * stage shrinks gracefully instead of making fixed chrome overlap the dog.
- */
-export function stageHeight(screenHeight: number): number {
+export function contentFrameWidth(width: number, mode: LayoutMode): number {
+  if (mode === 'narrowPortrait') return width;
+  if (mode === 'widePortrait') return Math.min(620, Math.max(560, width - 40));
+  if (mode === 'phoneLandscape') return Math.max(540, width - 24);
+  return Math.min(1120, Math.max(760, width - 48));
+}
+
+export function navRailWidth(mode: LayoutMode): number {
+  return mode === 'tabletLandscape' ? 112 : mode === 'phoneLandscape' ? 92 : 0;
+}
+
+export function interactionRailWidth(mode: LayoutMode): number {
+  return mode === 'tabletLandscape' ? 300 : mode === 'phoneLandscape' ? 250 : 0;
+}
+
+export function stageWidth(width: number, mode: LayoutMode): number {
+  if (mode === 'narrowPortrait') return width;
+  if (mode === 'widePortrait') return Math.min(560, width - 40);
+  const gutters = mode === 'tabletLandscape' ? 64 : 52;
+  const available = width - navRailWidth(mode) - interactionRailWidth(mode) - gutters;
+  const cap = mode === 'tabletLandscape' ? 620 : 430;
+  return Math.max(mode === 'tabletLandscape' ? 360 : 210, Math.min(cap, available));
+}
+
+export function stageHeight(screenHeight: number, mode: LayoutMode = 'narrowPortrait'): number {
+  if (isLandscapeMode(mode)) return Math.max(230, screenHeight - STATUS_HEIGHT - 18);
   return Math.max(
     212,
     screenHeight - CHROME_BOTTOM - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT - 18,
@@ -75,21 +84,19 @@ export const SPRITE_FOOT = 78;
 export const NOTICE_BAND = 4 + NOTICE_MAX_HEIGHT;
 const SPRITE_BODY_WIDTH = 244;
 
-/**
- * Barkly is the hero, not another widget.
- *
- * The previous width cap used only 67% of the phone, which was excellent for
- * proving nothing collided and bad for a pet game: on a 390px phone it capped
- * him around 1.07x even when there was hundreds of pixels of empty vertical
- * stage. We now allow up to 82% of the phone width. Height still wins on short
- * screens, so a 360x640 browser remains conservative while an 844/932px phone
- * finally gives the dog the scale the product needs.
- */
-export function spriteScale(screenHeight: number, screenWidth = 390): number {
-  const room = stageHeight(screenHeight) - SPRITE_FOOT - NOTICE_BAND - 4;
-  const byWidth = (screenWidth * 0.82) / SPRITE_BODY_WIDTH;
-  const minScale = screenHeight < 590 ? 0.60 : screenHeight < 680 ? 0.66 : 0.72;
-  return Math.max(minScale, Math.min(1.42, room / SPRITE_HEIGHT, byWidth));
+export function spriteScale(
+  screenHeight: number,
+  stageWidthPx = 390,
+  mode: LayoutMode = 'narrowPortrait',
+): number {
+  const landscape = isLandscapeMode(mode);
+  const room = stageHeight(screenHeight, mode) - SPRITE_FOOT - (landscape ? 20 : NOTICE_BAND + 4);
+  const byWidth = (stageWidthPx * 0.82) / SPRITE_BODY_WIDTH;
+  const minScale = landscape
+    ? screenHeight < 430 ? 0.62 : 0.72
+    : screenHeight < 590 ? 0.60 : screenHeight < 680 ? 0.66 : 0.72;
+  const cap = mode === 'tabletLandscape' ? 1.25 : mode === 'widePortrait' ? 1.34 : mode === 'phoneLandscape' ? 1.05 : 1.42;
+  return Math.max(minScale, Math.min(cap, room / SPRITE_HEIGHT, byWidth));
 }
 
 export type NoticeKind = 'error' | 'degraded' | 'promotion' | 'reward';

@@ -39,8 +39,6 @@ import { Ball, DigMound, FoodBowl, WetSandMound } from './StageProps';
 import BarklyKit, { KitAction } from './BarklyKit';
 import PlaytestSheet from './PlaytestSheet';
 import { playtestAllowed } from '../dev/playtest';
-import { asyncStorageStore } from '../storage/asyncStorageStore';
-import { activeSlot } from '../dev/saveSlots';
 import { useAttention } from './useAttention';
 import { feel, setFeelMuted } from './feel';
 import {
@@ -55,7 +53,8 @@ import {
 import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import {
-  CHROME_BOTTOM,
+  chromeBottom,
+  contentFrameWidth,
   CONTROLS_HEIGHT,
   DIALOGUE_GAP,
   DIALOGUE_HEIGHT,
@@ -65,11 +64,16 @@ import {
   NOTICE_PRIORITY,
   contentBottom,
   contentTop,
+  interactionRailWidth,
+  isLandscapeMode,
+  layoutMode,
+  navRailWidth,
   noticeTop,
   NoticeKind,
   SPEECH_MAX_LINES,
   SPRITE_FOOT,
   stageHeight,
+  stageWidth,
   TAP_MIN,
   spriteScale as scaleForScreen,
 } from './layout';
@@ -507,6 +511,14 @@ export default function BarklyRoom() {
   const listening = snapshot.state === 'listening';
   const asleep = snapshot.state === 'sleepy';
   const { height: screenH, width: screenW } = useWindowDimensions();
+  const layout = layoutMode(screenW, screenH);
+  const landscape = isLandscapeMode(layout);
+  const widePortrait = layout === 'widePortrait';
+  const frameW = contentFrameWidth(screenW, layout);
+  const stageW = stageWidth(screenW, layout);
+  const navW = navRailWidth(layout);
+  const interactionW = interactionRailWidth(layout);
+  const chromeBottomPx = chromeBottom(layout);
   /**
    * The real hardware insets, floored by the layout constants. On the web
    * these report zero and the floors carry it; on a notched phone the
@@ -522,15 +534,15 @@ export default function BarklyRoom() {
    * room for a text panel is the kind of thing that makes an app feel like a
    * web page. Capped at 1 so a tall phone gives him air, not a poster.
    */
-  const spriteScale = scaleForScreen(screenH, screenW);
+  const spriteScale = scaleForScreen(screenH, stageW, layout);
   /** How tall the world is: everything above the dialogue panel. */
-  const sceneBand = screenH - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT + 8;
+  const sceneBand = landscape ? screenH : screenH - DIALOGUE_HEIGHT - DIALOGUE_GAP * 2 - CONTROLS_HEIGHT + 8;
   /**
    * Where his feet meet the ground, measured from the top of the scene layer.
    * Interior scenes are built around this line rather than around percentages
    * of a rectangle — see Scenes.HomeScene.
    */
-  const groundY = topPad + CHROME_BOTTOM + stageHeight(screenH) - SPRITE_FOOT;
+  const groundY = topPad + chromeBottomPx + stageHeight(screenH, layout) - SPRITE_FOOT;
   const stateLabel = STATE_LABEL[snapshot.state];
 
   /**
@@ -681,11 +693,6 @@ export default function BarklyRoom() {
    */
   const playtest = playtestAllowed();
   const [playtestOpen, setPlaytestOpen] = useState(false);
-  const [slotName, setSlotName] = useState<string | null>(null);
-  useEffect(() => {
-    if (!playtest) return;
-    void activeSlot(asyncStorageStore).then((s) => setSlotName(s?.name ?? null));
-  }, [playtest, playtestOpen]);
 
   const [beat, setBeat] = useState<{ kind: 'pet' | 'refuse' | 'arrive' | 'delight'; at: number } | null>(null);
   const react = (kind: 'pet' | 'refuse' | 'arrive' | 'delight') => setBeat({ kind, at: Date.now() });
@@ -776,7 +783,7 @@ export default function BarklyRoom() {
       <Animated.View
         style={[styles.sceneLayer, { opacity: sceneFade }]}
       >
-        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + CHROME_BOTTOM} />}
+        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + chromeBottomPx} />}
         {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
         {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
         {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
@@ -785,17 +792,20 @@ export default function BarklyRoom() {
 
       <LinearGradient
         colors={['rgba(255,249,236,0.55)', 'rgba(255,249,236,0.22)', 'rgba(255,249,236,0)']}
-        style={styles.chromeScrim}
+        style={[styles.chromeScrim, { height: chromeBottomPx + 78 }]}
         pointerEvents="none"
       />
       <LinearGradient
         colors={['rgba(255,249,236,0)', 'rgba(255,249,236,0.72)', 'rgba(255,249,236,1)']}
         locations={[0, 0.55, 1]}
-        style={styles.horizon}
+        style={[styles.horizon, { height: landscape ? 76 : DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 48 }]}
         pointerEvents="none"
       />
 
-      <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={[styles.content, { maxWidth: frameW, paddingHorizontal: landscape ? 12 : widePortrait ? 20 : 16 }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={styles.header}>
           <Pressable
             style={styles.walletTap}
@@ -825,7 +835,14 @@ export default function BarklyRoom() {
         </View>
 
         {notice && (
-          <View style={[styles.noticeLayer, { top: noticeTop(topPad) }]} pointerEvents="box-none">
+          <View
+            style={[
+              styles.noticeLayer,
+              { top: noticeTop(topPad, layout) },
+              landscape ? { left: navW + 12, right: interactionW + 12 } : { left: 22, right: 22 },
+            ]}
+            pointerEvents="box-none"
+          >
             {notice === 'error' && (
               <View style={styles.errorNotice} pointerEvents="none" accessibilityLiveRegion="polite">
                 <Text style={styles.errorText} numberOfLines={3}>
@@ -868,25 +885,14 @@ export default function BarklyRoom() {
           </View>
         )}
 
-        <View style={styles.places}>
-          {playtest && (
-            <Pressable
-              onPress={() => setPlaytestOpen(true)}
-              style={styles.playtest}
-              accessibilityRole="button"
-              accessibilityLabel={slotName ? `Playtest build. Now playing ${slotName}. Open save slots.` : 'Playtest build. Open save slots.'}
-              testID="playtest-badge"
-            >
-              <Text style={styles.playtestText} numberOfLines={1}>PLAYTEST</Text>
-            </Pressable>
-          )}
-          <View style={styles.tabs}>
+        <View style={[styles.places, landscape && styles.placesLandscape, landscape && { width: navW }]}>
+          <View style={[styles.tabs, landscape && styles.tabsLandscape]}>
           {LOCATION_ORDER.map((loc: LocationId) => {
             const areaLocked = !barkly.isUnlocked(loc);
             return (
               <Pressable
                 key={loc}
-                style={[styles.tab, location === loc && styles.tabActive, areaLocked && styles.tabLocked]}
+                style={[styles.tab, landscape && styles.tabLandscape, location === loc && styles.tabActive, areaLocked && styles.tabLocked]}
                 disabled={locked || fetching}
                 onPress={() => { react('arrive'); barkly.goTo(loc); }}
                 accessibilityRole="tab"
@@ -900,10 +906,9 @@ export default function BarklyRoom() {
               </Pressable>
             );
           })}
-          </View>
           {barkly.adventure && (
             <Pressable
-              style={[styles.planChip, planComplete && styles.planChipDone]}
+              style={[styles.planChip, planComplete && styles.planChipDone, landscape && styles.planChipLandscape]}
               onPress={() => openOnly(setPlanOpen)}
               accessibilityRole="button"
               accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete. ${
@@ -915,9 +920,18 @@ export default function BarklyRoom() {
               </Text>
             </Pressable>
           )}
+          </View>
         </View>
 
-        <View style={[styles.stageArea, { height: stageHeight(screenH) }]}>
+        <View
+          style={[
+            styles.stageArea,
+            { height: stageHeight(screenH, layout) },
+            landscape
+              ? { marginLeft: navW + 8, marginRight: interactionW + 8 }
+              : { width: '100%', maxWidth: stageW, alignSelf: 'center' },
+          ]}
+        >
           {!asleep && <GroundShadow location={location} width={196 * spriteScale} style={{ bottom: 20 }} />}
           {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
           {npcsHere.map((id) => (
@@ -994,6 +1008,13 @@ export default function BarklyRoom() {
           )}
         </View>
 
+        <View
+          style={[
+            styles.interactionStack,
+            landscape && styles.interactionStackLandscape,
+            landscape ? { width: interactionW } : { maxWidth: stageW },
+          ]}
+        >
         <DialoguePanel
           speaker={
             npcBubble
@@ -1072,6 +1093,7 @@ export default function BarklyRoom() {
             </View>
           )}
         </View>
+        </View>
       </KeyboardAvoidingView>
 
       <ContestSheet visible={barkly.pendingContest !== null} rules={barkly.pendingContest} onDone={(result) => void barkly.finishContest(result)} onClose={() => void barkly.finishContest(null)} />
@@ -1115,6 +1137,7 @@ export default function BarklyRoom() {
         onGrantLevel={barkly.devGrantLevel}
         onGrantEverything={barkly.devGrantEverything}
         onForgetEverything={barkly.forgetEverything}
+        onOpenPlaytest={playtest ? () => { setSettingsOpen(false); setPlaytestOpen(true); } : undefined}
       />
     </View>
   );
@@ -1132,47 +1155,47 @@ const SHOWCASE_PROMOTION = {
 const styles = StyleSheet.create({
   room: { flex: 1, backgroundColor: color.well },
   sceneLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  chromeScrim: { position: 'absolute', left: 0, right: 0, top: 0, height: CHROME_BOTTOM + 92 },
+  chromeScrim: { position: 'absolute', left: 0, right: 0, top: 0 },
   horizon: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 56,
+    height: DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 48,
   },
-  content: { flex: 1, paddingHorizontal: 22 },
+  content: { flex: 1, width: '100%', alignSelf: 'center', paddingHorizontal: 16 },
   header: {
     height: STATUS_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
   },
-  playtest: {
-    marginTop: 10,
-    minHeight: TAP_MIN,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: color.ink,
-  },
-  playtestText: { fontSize: 10, fontWeight: '900', letterSpacing: 0.8, color: color.inkOn },
   places: {
     height: PLACES_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
-    marginTop: space.sm,
+    gap: 6,
+    marginTop: 4,
+  },
+  placesLandscape: {
+    position: 'absolute',
+    left: 0,
+    top: STATUS_HEIGHT + 8,
+    height: 248,
+    marginTop: 0,
+    zIndex: 30,
   },
   planChip: {
-    minWidth: 46,
+    minWidth: TAP_MIN,
     height: TAP_MIN,
-    paddingHorizontal: space.md,
+    paddingHorizontal: 8,
     borderRadius: radius.pill,
-    backgroundColor: color.card,
+    backgroundColor: color.goldWell,
     alignItems: 'center',
     justifyContent: 'center',
-    ...elevation.low,
+    ...elevation.flat,
   },
+  planChipLandscape: { width: '100%', height: TAP_MIN, marginTop: 2 },
   planChipDone: { backgroundColor: color.goodWell },
   planChipText: { ...type.caption, fontWeight: '900', color: color.inkSoft },
   planChipTextDone: { color: color.good },
@@ -1188,8 +1211,8 @@ const styles = StyleSheet.create({
     ...elevation.card,
   },
   gearDot: { width: 4, height: 4, borderRadius: 8, backgroundColor: color.inkSoft },
-  headerButtons: { flexDirection: 'row', gap: 7 },
-  walletTap: { flex: 1, marginHorizontal: 8 },
+  headerButtons: { flexDirection: 'row', gap: 6 },
+  walletTap: { flex: 1 },
   packButton: {
     minWidth: 46,
     height: TAP_MIN,
@@ -1205,8 +1228,6 @@ const styles = StyleSheet.create({
   tabLocked: { opacity: 0.5 },
   noticeLayer: {
     position: 'absolute',
-    left: 22,
-    right: 22,
     height: NOTICE_MAX_HEIGHT,
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -1232,7 +1253,9 @@ const styles = StyleSheet.create({
   degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: color.fill },
   degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished },
   degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
-  tabs: { flex: 1, flexDirection: 'row', marginTop: 10, backgroundColor: 'rgba(255,253,247,0.85)', borderRadius: 999, padding: 4, gap: 2, ...elevation.card },
+  tabs: { flex: 1, height: TAP_MIN, flexDirection: 'row', backgroundColor: 'rgba(255,253,247,0.90)', borderRadius: 999, padding: 3, gap: 2, ...elevation.card },
+  tabsLandscape: { flex: 0, width: '100%', height: 248, flexDirection: 'column', padding: 4, gap: 4 },
+  tabLandscape: { flexGrow: 0, flexShrink: 0, width: '100%', height: TAP_MIN },
   tab: { flexGrow: 1, flexShrink: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   tabActive: { backgroundColor: color.pop },
   tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 },
@@ -1249,7 +1272,7 @@ const styles = StyleSheet.create({
     borderColor: color.dangerLine,
   },
   errorText: { fontSize: 13, lineHeight: 17, color: color.danger, textAlign: 'center' },
-  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 22 },
+  stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 12 },
   heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
   heart: { position: 'absolute', fontSize: 24, color: color.danger },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
@@ -1260,8 +1283,10 @@ const styles = StyleSheet.create({
   chip: { position: 'absolute', bottom: 72, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
-  controls: { gap: 9 },
-  talk: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 18, overflow: 'hidden', ...elevation.card },
+  interactionStack: { width: '100%', alignSelf: 'center' },
+  interactionStackLandscape: { position: 'absolute', right: 0, top: STATUS_HEIGHT + 8, bottom: 0, justifyContent: 'flex-end', paddingBottom: 2 },
+  controls: { gap: 6 },
+  talk: { flex: 1, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: color.pop, borderRadius: 999, paddingVertical: 12, overflow: 'hidden', ...elevation.card },
   talkActive: { backgroundColor: color.popDeep },
   micDot: { width: 9, height: 9, borderRadius: 8, backgroundColor: ACCENT },
   micDotLive: { backgroundColor: color.dangerWell },

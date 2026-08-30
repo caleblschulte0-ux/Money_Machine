@@ -48,7 +48,7 @@ if (!existsSync(html)) {
  */
 const sizes = arg(
   '--sizes',
-  '360x568,360x600,360x640,375x667,390x720,390x844,412x915,430x932',
+  '360x568,360x640,390x844,430x932,667x375,844x390,768x1024,1024x768,820x1180,1180x820,1366x1024',
 )
   .split(',')
   .map((s) => {
@@ -116,7 +116,7 @@ for (const size of sizes) {
   await page.waitForTimeout(400);
   const close = page.getByText('✕', { exact: true }).first();
   if (await close.count()) await close.click();
-  const park = page.getByText('park', { exact: true }).first();
+  const park = page.getByRole('tab', { name: 'Park', exact: true }).first();
   if (await park.count()) await park.click();
   await page.waitForTimeout(1600);
 
@@ -178,7 +178,7 @@ for (const size of sizes) {
    * into Barkly's ears even if the rig's visible pixels overflow its wrapper.
    */
   const notice = boxes.find((b) => b.name === 'notice');
-  if (notice && size.height <= 720) {
+  if (notice && size.height <= 720 && size.height >= size.width) {
     const clearLine = size.height * 0.30;
     const noticeBottom = notice.y + notice.height;
     if (noticeBottom > clearLine) {

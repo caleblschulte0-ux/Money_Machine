@@ -60,6 +60,7 @@ interface Props {
   onGrantLevel: (n: number) => void;
   onGrantEverything: () => void;
   onForgetEverything: () => Promise<void>;
+  onOpenPlaytest?: () => void;
 }
 
 /** A plain +/- stepper. No slider dependency, and it is reachable by name. */
@@ -140,6 +141,7 @@ export default function SettingsSheet(props: Props) {
     onGrantCoins,
     onGrantLevel,
     onGrantEverything,
+    onOpenPlaytest,
   } = props;
   const [wiping, setWiping] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
@@ -172,6 +174,21 @@ export default function SettingsSheet(props: Props) {
           </View>
 
           <ScrollView style={styles.scroll}>
+            {onOpenPlaytest && (
+              <Pressable
+                style={styles.devRow}
+                onPress={onOpenPlaytest}
+                accessibilityRole="button"
+                accessibilityLabel="Playtest saves"
+                testID="playtest-settings"
+              >
+                <View style={styles.devRowText}>
+                  <Text style={styles.devTitle}>Playtest saves</Text>
+                  <Text style={styles.devBlurb}>Jump between testing states without using permanent game-screen space.</Text>
+                </View>
+                <Text style={styles.devState}>open</Text>
+              </Pressable>
+            )}
             <Text style={styles.section}>How Barkly is doing</Text>
             <StatBar label="mood" value={stats.mood} />
             <StatBar label="energy" value={stats.energy} />

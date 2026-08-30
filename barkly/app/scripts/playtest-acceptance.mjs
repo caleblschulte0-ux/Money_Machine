@@ -134,15 +134,43 @@ async function dismissAnything() {
   }
 }
 
+async function openPlaytestPanel() {
+  const badge = byId('playtest-badge');
+  if (await badge.count()) {
+    await badge.click();
+    await settle(800);
+    return true;
+  }
+  const settings = page.getByRole('button', { name: 'Settings' }).first();
+  if (!(await settings.count())) return false;
+  await settings.click();
+  await settle(600);
+  const entry = page.getByRole('button', { name: 'Playtest saves' }).first();
+  if (!(await entry.count())) return false;
+  await entry.click();
+  await settle(800);
+  return true;
+}
+
+async function playtestEntryReachable() {
+  const settings = page.getByRole('button', { name: 'Settings' }).first();
+  if (!(await settings.count())) return false;
+  await settings.click();
+  await settle(500);
+  const entry = page.getByRole('button', { name: 'Playtest saves' }).first();
+  const ok = (await entry.count()) > 0;
+  const close = page.getByRole('button', { name: 'Close settings' }).first();
+  if (await close.count()) await close.click();
+  await settle(500);
+  return ok;
+}
+
 async function loadPreset(id) {
   await dismissAnything();
-  const badge = byId('playtest-badge');
-  if (!(await badge.count())) {
-    await page.screenshot({ path: `/tmp/acceptance-no-badge-${id}.png` });
+  if (!(await openPlaytestPanel())) {
+    await page.screenshot({ path: `/tmp/acceptance-no-playtest-entry-${id}.png` });
     return false;
   }
-  await badge.click();
-  await settle(800);
   const slot = byId(`playtest-${id}`);
   if (!(await slot.count())) return false;
   await slot.click();
@@ -178,7 +206,7 @@ await page.goto(url);
 await settle(2600);
 await onboard();
 check('1-2. opens and gets through onboarding', (await byId('dialogue-panel').count()) > 0);
-check('24. playtest badge present on the playtest build', (await byId('playtest-badge').count()) > 0);
+check('24. playtest saves reachable from Settings', await playtestEntryReachable());
 
 // 3. talk to him
 const input = page.locator('input:visible').first();
