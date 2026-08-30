@@ -35,8 +35,21 @@ const UI = join(__dirname, '..', 'src', 'ui');
  * actively wrong (his coat is not "the coins colour" just because the hex
  * matched). They keep their own sampled palettes, on purpose, and are named
  * here so the exemption is a decision rather than an oversight.
+ *
+ * Scene renderers belong here too. Their radii describe clouds, halos, light
+ * pools and toy-diorama geometry — not interactive card/button corners. The
+ * chrome rules still apply to the controls layered over those scenes.
  */
-const ART = new Set(['theme.ts', 'artPalette.ts', 'BarklyView.tsx', 'StageProps.tsx', 'Scenes.tsx', 'depth.tsx']);
+const ART = new Set([
+  'theme.ts',
+  'artPalette.ts',
+  'BarklyView.tsx',
+  'StageProps.tsx',
+  'Scenes.tsx',
+  'PolishedScenes.tsx',
+  'LivingScenes.tsx',
+  'depth.tsx',
+]);
 
 function uiFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
