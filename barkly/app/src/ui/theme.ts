@@ -9,60 +9,46 @@
 
 import { Platform, TextStyle, ViewStyle } from 'react-native';
 
-// --------------------------------------------------------------- colour
-
 export const color = {
-  /** Primary text. Warm/dark enough to sit on every candy-light surface. */
   ink: '#3E3428',
   inkMid: '#5C4F3E',
   inkSoft: '#685A44',
-  /** Hairlines / disabled glyphs only — never body text. */
   inkFaint: '#A8987C',
   inkOn: '#FFF7E8',
 
-  /**
-   * The old UI was cream-on-cream. These three surfaces deliberately separate
-   * the layers now: peach paper, clean white raised cards, sunny yellow wells.
-   */
   paper: '#FFF7E8',
   card: '#FFFFFF',
   well: '#FFE7A8',
-  /** A cool sky-blue recess so inactive controls stop reading as beige forms. */
   fill: '#D9F0FF',
   line: '#B8D6EA',
 
-  /** Earned/reward family. */
   gold: '#F3C63F',
   goldSoft: '#FFE49A',
   goldInk: '#72591E',
   goldWell: '#FFF0A8',
 
-  /** Barkly's alert/red family. */
   brand: '#C43C50',
   danger: '#8E2F20',
   dangerWell: '#FFD8D0',
   dangerLine: '#D8867A',
 
-  /** Positive / grass family. */
   good: '#3F7A3A',
   goodWell: '#D7F4CC',
   goodLine: '#75B467',
 
-  /** Rivalry / warm unresolved family. */
   warm: '#B76435',
   warmWell: '#FFE0C2',
   warmLine: '#E0A26F',
 
-  /**
-   * Primary candy control. Blue is deliberately far away from Barkly's tan
-   * coat, so the action control reads instantly without making the dog itself
-   * look like UI.
-   */
   pop: '#4CC9F0',
   popDeep: '#2FA9D0',
 
-  /** Secondary toy accents used sparingly for real hierarchy. */
-  violet: '#A985F4',
+  /**
+   * Lighter than the first candy-purple (#A985F4). That version looked good
+   * but dark 12px labels measured only 4.26:1. This one keeps the toy-store
+   * purple while clearing the phone readability gate comfortably.
+   */
+  violet: '#BDA7FF',
   violetDeep: '#7B5CC7',
   mint: '#79E08A',
   mintDeep: '#4DBB62',
@@ -71,14 +57,11 @@ export const color = {
   coral: '#FF7A59',
   coralDeep: '#DA5A3E',
 
-  /** Gloss/light used only as a physical highlight, never text. */
   gloss: 'rgba(255,255,255,0.52)',
   glossSoft: 'rgba(255,255,255,0.28)',
 
   scrim: 'rgba(40,32,22,0.45)',
 } as const;
-
-// ----------------------------------------------------------------- type
 
 export const type = {
   display: { fontSize: 24, lineHeight: 29, fontWeight: '900', letterSpacing: -0.4 },
@@ -101,8 +84,6 @@ export const TYPE_SIZES: number[] = [
   ...new Set([...Object.values(type).map((t) => t.fontSize), ...Object.values(glyph)]),
 ];
 
-// -------------------------------------------------------------- spacing
-
 export const space = {
   xxs: 2,
   xs: 4,
@@ -112,8 +93,6 @@ export const space = {
   xl: 22,
   xxl: 30,
 } as const;
-
-// --------------------------------------------------------------- radius
 
 export const radius = {
   xs: 8,
@@ -125,8 +104,6 @@ export const radius = {
 } as const;
 
 export const RADII: number[] = Object.values(radius);
-
-// ------------------------------------------------------------ elevation
 
 function shadow(y: number, blur: number, alpha: number): ViewStyle {
   return Platform.select({
@@ -146,11 +123,8 @@ export const elevation = {
     web: { boxShadow: 'none' } as ViewStyle,
     default: { shadowOpacity: 0, shadowRadius: 0, elevation: 0 } as ViewStyle,
   }) as ViewStyle,
-  /** Small chips now have a real physical edge instead of barely-there CSS. */
   low: shadow(3, 7, 0.13),
-  /** Main controls feel like molded toy buttons. */
   card: shadow(7, 14, 0.18),
-  /** Extra punch for the primary control / hero surface. */
   toy: shadow(9, 16, 0.24),
   sheet: shadow(-4, 26, 0.2),
 } as const;
