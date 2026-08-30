@@ -24,7 +24,9 @@ jobs:
           cache-dependency-path: barkly/app/package-lock.json
 
       - name: Apply responsive protected-stage patch
-        run: python .github/scripts/barkly-responsive-stage-once.py
+        run: |
+          sed -i 's/stageHeight(screenH) }]>/stageHeight(screenH) }]}>/' .github/scripts/barkly-responsive-stage-once.py
+          python .github/scripts/barkly-responsive-stage-once.py
 
       - name: Install locked dependencies
         working-directory: barkly/app
