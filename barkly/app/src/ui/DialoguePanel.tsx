@@ -1,45 +1,26 @@
 /**
- * Everything anyone says, in one place, at the bottom of the screen.
+ * One dialogue surface for Barkly, NPCs and thoughts.
  *
- * This replaces four separate floating things: his speech bubble anchored
- * over his head, his thought bubble, the NPC's bubble in its own band, and
- * the idle hint. Each had its own position, its own width, its own rules
- * about when it could appear, and a shared job of not landing on anybody's
- * face. They were negotiating for the same region of screen and the result
- * looked exactly like what it was.
- *
- * One panel, always in the same place, below the stage:
- *
- * - It can never cover him, because the stage ends where the panel starts.
- * - The eye learns one place to read, instead of tracking a bubble that moves
- *   with his head and changes size with the sentence.
- * - A conversation with another dog reads as a conversation — same panel, the
- *   speaker's name changes — rather than two bubbles at different altitudes.
- *
- * The tail is gone deliberately. A tail is what a bubble uses to say who is
- * talking; a panel says it with a name, which is legible at a glance and does
- * not need to point at anything.
+ * The important cosmetic rule here is that this must not look like a white
+ * web card. When somebody is speaking it becomes a chunky toy-console panel:
+ * colored shell, molded lower edge, shine, and a speaker badge. At rest it
+ * disappears so the dog keeps the screen.
  */
 
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { color, elevation, radius, space, type } from './theme';
 import { DIALOGUE_GAP, DIALOGUE_HEIGHT, SPEECH_MAX_LINES } from './layout';
 
 export type Speaker = { name: string; kind: 'barkly' | 'npc' } | null;
 
 interface Props {
-  /** Who is talking. Null for his inner voice or the idle hint. */
   speaker: Speaker;
-  /** The line itself. Null shows the resting state. */
   line: string | null;
-  /** Echoed back above the line, so you can see what he answered. */
   youSaid?: string | null;
-  /** His unspoken thought — same panel, italic, no speaker. */
   thought?: string | null;
-  /** What to show when nothing has been said yet. */
   hint: string;
-  /** He is asleep: the panel goes quiet rather than nagging. */
   asleep?: boolean;
 }
 
@@ -47,8 +28,6 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
   const shown = line ?? thought ?? null;
   const enter = useRef(new Animated.Value(1)).current;
 
-  // A small settle on each new line. Enough to notice it changed, not enough
-  // to make you wait for it.
   useEffect(() => {
     if (!shown) return;
     enter.setValue(0);
@@ -61,45 +40,54 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
   }, [shown, enter]);
 
   const translateY = enter.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
+  const npc = speaker?.kind === 'npc';
+  const thinking = Boolean(thought && !line);
+  const shell = npc ? color.violet : thinking ? color.fill : color.lemon;
+  const edge = npc ? color.violetDeep : thinking ? color.popDeep : color.lemonDeep;
 
   return (
     <View
       style={[styles.panel, !shown && styles.panelResting]}
       accessibilityLiveRegion="polite"
-      /* Stable handle for scripts/overlap-check.mjs, which asserts this panel
-         never intersects the stage — the "speech never covers a face" rule. */
       testID="dialogue-panel"
     >
-      {/*
-        The TAIL is what makes this a speech bubble instead of an HTML card:
-        a card with words in it belongs to the page, a bubble with a tail
-        belongs to HIM. A rotated square poking out of the top edge, placed
-        under the dog, only while someone is actually speaking — a thought or
-        the resting hint gets no tail, because nobody is saying those aloud.
-      */}
-      {shown && speaker ? <View style={styles.tail} pointerEvents="none" /> : null}
       {shown ? (
-        <Animated.View style={{ opacity: enter, transform: [{ translateY }] }}>
-          {youSaid ? (
-            <Text style={styles.youSaid} numberOfLines={1}>
-              you said “{youSaid}”
+        <>
+          <LinearGradient
+            colors={[shell, color.paper]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.shell}
+            pointerEvents="none"
+          />
+          <View style={[styles.lowerEdge, { backgroundColor: edge }]} pointerEvents="none" />
+          <View style={styles.gloss} pointerEvents="none" />
+          {speaker ? <View style={[styles.tail, { backgroundColor: shell }]} pointerEvents="none" /> : null}
+
+          <Animated.View style={{ opacity: enter, transform: [{ translateY }] }}>
+            {youSaid ? (
+              <View style={styles.badgeSoft}>
+                <Text style={styles.youSaid} numberOfLines={1}>
+                  YOU SAID · “{youSaid}”
+                </Text>
+              </View>
+            ) : speaker ? (
+              <View style={[styles.badge, npc && styles.badgeNpc]}>
+                <Text style={[styles.who, npc && styles.whoNpc]}>{speaker.name.toUpperCase()}</Text>
+              </View>
+            ) : (
+              <View style={styles.badgeSoft}>
+                <Text style={styles.who}>BARKLY BRAIN</Text>
+              </View>
+            )}
+            <Text style={[styles.line, !line && styles.thought]} numberOfLines={SPEECH_MAX_LINES}>
+              {shown}
             </Text>
-          ) : speaker ? (
-            <Text style={[styles.who, speaker.kind === 'npc' && styles.whoNpc]}>
-              {speaker.name.toUpperCase()}
-            </Text>
-          ) : (
-            <Text style={styles.who}>THINKING</Text>
-          )}
-          <Text
-            style={[styles.line, !line && styles.thought]}
-            numberOfLines={SPEECH_MAX_LINES}
-          >
-            {shown}
-          </Text>
-        </Animated.View>
+          </Animated.View>
+        </>
       ) : (
         <View style={styles.restingWrap}>
+          <View style={styles.restingDot} />
           <Text style={styles.resting}>{asleep ? 'shh — he’s asleep' : hint}</Text>
         </View>
       )}
@@ -108,27 +96,46 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
 }
 
 const styles = StyleSheet.create({
-  /**
-   * The panel is only a CARD when it has something in it. At rest it drops to
-   * a transparent strip with a quiet line of text — a big empty white box
-   * sitting there between sentences is exactly the dead weight that makes a
-   * screen feel like a form.
-   */
-  panelResting: {
-    backgroundColor: 'transparent',
-    ...elevation.flat,
-  },
   panel: {
     height: DIALOGUE_HEIGHT,
-    // The air either side of the card — see layout.DIALOGUE_GAP. In the
-    // math up there too, so the stage really cedes this space.
     marginVertical: DIALOGUE_GAP,
     justifyContent: 'center',
     paddingHorizontal: space.lg,
     paddingVertical: space.md,
     borderRadius: radius.lg,
+    overflow: 'visible',
+    borderWidth: 2,
+    borderColor: color.inkMid,
     backgroundColor: color.card,
-    ...elevation.card,
+    ...elevation.toy,
+  },
+  panelResting: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+    ...elevation.flat,
+  },
+  shell: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.lg,
+  },
+  lowerEdge: {
+    position: 'absolute',
+    left: space.sm,
+    right: space.sm,
+    bottom: -5,
+    height: space.sm,
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+    opacity: 0.9,
+  },
+  gloss: {
+    position: 'absolute',
+    left: space.md,
+    right: space.md,
+    top: space.xs,
+    height: space.sm,
+    borderRadius: radius.pill,
+    backgroundColor: color.gloss,
   },
   tail: {
     position: 'absolute',
@@ -137,33 +144,34 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: radius.xs / 2,
-    backgroundColor: color.card,
+    borderLeftWidth: 2,
+    borderTopWidth: 2,
+    borderColor: color.inkMid,
     transform: [{ rotate: '45deg' }],
   },
-  who: {
-    ...type.micro,
-    color: color.inkSoft,
+  badge: {
+    alignSelf: 'flex-start',
     marginBottom: space.xs,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs,
+    borderRadius: radius.pill,
+    backgroundColor: color.ink,
   },
-  whoNpc: { color: color.warm },
-  youSaid: {
-    ...type.caption,
-    color: color.inkSoft,
+  badgeNpc: { backgroundColor: color.violetDeep },
+  badgeSoft: {
+    alignSelf: 'flex-start',
     marginBottom: space.xs,
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xs,
+    borderRadius: radius.pill,
+    backgroundColor: color.card,
   },
-  line: {
-    ...type.speech,
-    color: color.ink,
-  },
-  thought: {
-    fontStyle: 'italic',
-    fontWeight: '400',
-    color: color.inkSoft,
-  },
-  restingWrap: { alignItems: 'center' },
-  resting: {
-    ...type.body,
-    color: color.inkSoft,
-    textAlign: 'center',
-  },
+  who: { ...type.micro, color: color.inkOn },
+  whoNpc: { color: color.card },
+  youSaid: { ...type.caption, color: color.inkSoft },
+  line: { ...type.speech, color: color.ink },
+  thought: { fontStyle: 'italic', fontWeight: '400', color: color.inkSoft },
+  restingWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
+  restingDot: { width: space.sm, height: space.sm, borderRadius: radius.pill, backgroundColor: color.pop },
+  resting: { ...type.body, color: color.inkSoft, textAlign: 'center' },
 });
