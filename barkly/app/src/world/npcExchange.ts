@@ -1,47 +1,27 @@
 /**
  * Who says what when Barkly greets another dog.
  *
- * This replaces three lines of code that were doing more damage than their
- * size suggested:
- *
- *     const i = npcLineCounter.current++ % npc.lines.length;
- *     setNpcBubble({ id, line: npc.lines[i] });
- *     speak(npc.barklyLines[i], ...)
- *
- * Three separate problems in one index.
- *
- * 1. ONE COUNTER FOR ALL THREE DOGS. `npcLineCounter` was a single ref, so
- *    which line Biscuit said depended on how many times you had tapped Duke.
- *    Greet Duke twice and Biscuit opens on his third line for no reason a
- *    player could ever discover.
- * 2. THE REPLY WAS WELDED TO THE GREETING. Line i always drew reply i, so
- *    three greetings meant three fixed scripts, forever, in order. Drawing
- *    them independently turns 3 + 3 lines into 9 exchanges, and the pools
- *    below are now 6 + 6, which is 36.
- * 3. STRICT ROTATION. `i++ % n` is a cycle, and a cycle is the one pattern a
- *    player notices fastest. Picking at random while refusing the last one
- *    used reads as variety instead.
- *
- * Pure: state in, state out, injectable randomness.
+ * The exchange picker is deliberately pure: the UI/controller decides WHEN a
+ * line gets the floor; this module decides WHAT gets said and how long an
+ * unvoiced NPC line should remain readable once it appears.
  */
 
 import { Npc, NpcId, NpcStagePool } from './npcs';
 
-/** Last index used per dog, per pool. Nothing else needs to persist. */
+/** Last indices plus a tiny anti-repeat window, isolated per dog. */
 export interface ExchangeMemory {
   line: Partial<Record<NpcId, number>>;
   reply: Partial<Record<NpcId, number>>;
+  /** Optional for backwards compatibility with in-memory callers/tests. */
+  recentLine?: Partial<Record<NpcId, number[]>>;
+  recentReply?: Partial<Record<NpcId, number[]>>;
 }
 
 /**
  * The pool the CURRENT relationship earns: the highest stage at or below the
  * bond's encounter count, or the base (acquaintance) pool below the first
- * stage. This is the seam that was missing — pickExchange drew from one flat
- * pool per dog, so "Biscuit Best Friend" (34 hangouts) and a fresh save got
- * the same introductions, and a nemesis Duke opened with small talk. The
- * thresholds are the escalation ladder's rungs; keeping them on the data
- * (each stage's `at`) rather than hardcoded here means a new rung is a data
- * change, not a logic change.
+ * stage. The thresholds live on the NPC data so adding a relationship rung is
+ * a data change, not a second hard-coded progression ladder.
  */
 export function poolFor(npc: Npc, encounters: number): Pick<NpcStagePool, 'lines' | 'barklyLines'> {
   let best: NpcStagePool | undefined;
@@ -52,7 +32,7 @@ export function poolFor(npc: Npc, encounters: number): Pick<NpcStagePool, 'lines
 }
 
 export function freshExchangeMemory(): ExchangeMemory {
-  return { line: {}, reply: {} };
+  return { line: {}, reply: {}, recentLine: {}, recentReply: {} };
 }
 
 /**
@@ -61,22 +41,50 @@ export function freshExchangeMemory(): ExchangeMemory {
  */
 export function pickFresh(poolSize: number, last: number | undefined, rng: () => number): number {
   if (poolSize <= 1) return 0;
-  const choices = [];
+  const choices: number[] = [];
   for (let i = 0; i < poolSize; i++) if (i !== last) choices.push(i);
   return choices[Math.min(choices.length - 1, Math.floor(rng() * choices.length))];
+}
+
+/**
+ * Avoid the last two choices when the pool is large enough. A -> B -> A is not
+ * technically an immediate repeat, but players notice that loop very quickly.
+ * Tiny pools gracefully fall back to the one-slot rule instead of deadlocking.
+ */
+function pickFreshWindow(poolSize: number, recent: number[], rng: () => number): number {
+  if (poolSize <= 1) return 0;
+  const blocked = new Set(recent.slice(-2));
+  const choices: number[] = [];
+  for (let i = 0; i < poolSize; i++) if (!blocked.has(i)) choices.push(i);
+  if (choices.length === 0) return pickFresh(poolSize, recent[recent.length - 1], rng);
+  return choices[Math.min(choices.length - 1, Math.floor(rng() * choices.length))];
+}
+
+function remember(history: number[] | undefined, next: number): number[] {
+  return [...(history ?? []), next].slice(-2);
+}
+
+/**
+ * Suggested dwell for an UNVOICED NPC caption once it receives the floor.
+ * Short quips still get a comfortable minimum; long lines scale with word
+ * count but are capped so a stale bubble cannot dominate the scene forever.
+ */
+export function npcReadMs(line: string): number {
+  const words = line.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(4200, Math.min(9000, 2200 + words * 285));
 }
 
 export interface Exchange {
   npcLine: string;
   barklyLine: string;
+  /** Suggested dwell once the NPC half is shown after Barkly's voiced half. */
+  npcReadMs: number;
   memory: ExchangeMemory;
 }
 
 /**
- * `encounters` is the current bond count for this dog (0 for a stranger) and
- * selects the stage pool — see poolFor. The remembered index carries across a
- * stage change; pickFresh only uses it as "not this one", so at worst the
- * first line after a promotion avoids an arbitrary slot.
+ * `encounters` selects the current relationship-stage pool. Session memory
+ * only controls presentation variety; it never changes relationship state.
  */
 export function pickExchange(
   npc: Npc,
@@ -85,14 +93,24 @@ export function pickExchange(
   rng: () => number = Math.random,
 ): Exchange {
   const pool = poolFor(npc, encounters);
-  const lineIndex = pickFresh(pool.lines.length, memory.line[npc.id], rng);
-  const replyIndex = pickFresh(pool.barklyLines.length, memory.reply[npc.id], rng);
+  const priorLines = memory.recentLine?.[npc.id] ??
+    (memory.line[npc.id] === undefined ? [] : [memory.line[npc.id] as number]);
+  const priorReplies = memory.recentReply?.[npc.id] ??
+    (memory.reply[npc.id] === undefined ? [] : [memory.reply[npc.id] as number]);
+
+  const lineIndex = pickFreshWindow(pool.lines.length, priorLines, rng);
+  const replyIndex = pickFreshWindow(pool.barklyLines.length, priorReplies, rng);
+  const npcLine = pool.lines[lineIndex];
+
   return {
-    npcLine: pool.lines[lineIndex],
+    npcLine,
     barklyLine: pool.barklyLines[replyIndex],
+    npcReadMs: npcReadMs(npcLine),
     memory: {
       line: { ...memory.line, [npc.id]: lineIndex },
       reply: { ...memory.reply, [npc.id]: replyIndex },
+      recentLine: { ...memory.recentLine, [npc.id]: remember(priorLines, lineIndex) },
+      recentReply: { ...memory.recentReply, [npc.id]: remember(priorReplies, replyIndex) },
     },
   };
 }
