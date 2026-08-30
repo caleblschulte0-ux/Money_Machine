@@ -284,6 +284,7 @@ function NpcDog({
   scale,
   talking,
   bond,
+  compactLabel = false,
 }: {
   id: NpcId;
   onPress: () => void;
@@ -294,6 +295,8 @@ function NpcDog({
   talking: boolean;
   /** The live relationship, so the HISTORY is visible in how they stand. */
   bond?: { kind: 'friend' | 'rival'; encounters: number };
+  /** Short portrait phones put the name above the dog so the care dock cannot cover it. */
+  compactLabel?: boolean;
 }) {
   const spot = NPC_SPOTS[id]!;
   const fromLeft = spot.left !== undefined;
@@ -407,7 +410,12 @@ function NpcDog({
         </Animated.View>
       </Pressable>
       {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
-      <Text style={[styles.npcName, { bottom: -19 * scale }]}>{NPCS[id].name.toUpperCase()}</Text>
+      <Text
+        testID={`npc-name-${id}`}
+        style={[styles.npcName, { bottom: compactLabel ? spot.size * 1.25 * scale + 4 : -19 * scale }]}
+      >
+        {NPCS[id].name.toUpperCase()}
+      </Text>
     </Animated.View>
   );
 }
@@ -977,6 +985,7 @@ export default function BarklyRoom() {
               scale={spriteScale}
               talking={npcBubble?.id === id}
               bond={bondFor(barkly.character, NPCS[id].name)}
+              compactLabel={!landscape && screenH < 650}
               onPress={() => barkly.npcTalk(id)}
             />
           ))}
