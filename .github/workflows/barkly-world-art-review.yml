@@ -1,0 +1,58 @@
+name: Barkly world art review
+
+on:
+  push:
+    branches:
+      - 'chatgpt/barkly-world-rehaul-build-*'
+    paths:
+      - 'barkly/app/**'
+      - '.github/workflows/barkly-world-art-review.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: barkly-world-art-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapshots:
+    name: Render world at phone size
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: barkly/app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: barkly/app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build local playtest review page
+        env:
+          EXPO_PUBLIC_BARKLY_PLAYTEST: always
+        run: node scripts/build-artifact.mjs --out world-artifact.html
+
+      - name: Capture Home Park Town Beach
+        run: node scripts/world-art-snapshot.mjs --html world-artifact.html --out world-art
+
+      - name: Upload world-art screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: barkly-world-art-${{ github.sha }}
+          path: barkly/app/world-art/*.png
+          if-no-files-found: error
+          retention-days: 7
