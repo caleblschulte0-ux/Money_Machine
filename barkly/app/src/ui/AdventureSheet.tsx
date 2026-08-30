@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   goalLabel: { ...type.strong, color: color.ink },
   goalLabelDone: { textDecorationLine: 'line-through', color: color.inkSoft },
   goalDetail: { ...type.small, color: color.inkSoft, marginTop: space.xs },
-  goalNumber: { ...type.micro, color: color.inkFaint, marginLeft: space.sm, transform: [{ rotate: '5deg' }] },
+  goalNumber: { ...type.micro, color: color.inkSoft, marginLeft: space.sm, transform: [{ rotate: '5deg' }] },
   bottomRow: { gap: space.sm },
   progressText: { ...type.caption, color: color.inkMid },
   rewardScribble: { ...type.caption, color: color.goldInk, fontStyle: 'italic', textAlign: 'right', transform: [{ rotate: '-1deg' }] },
