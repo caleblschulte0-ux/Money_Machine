@@ -3,7 +3,8 @@
 // The old renderer accumulated good individual fixes but still mixed several
 // illustration languages: soft vector haze, one-off furniture, and flat scene
 // bands. The new renderer keeps the same public API while giving every place
-// one crisp toy-diorama material language.
+// one crisp toy-diorama material language, then adds a restrained ambient
+// motion layer so the world feels inhabited without stealing focus from Barkly.
 
 /**
  * Store-to-room contract. Every purchasable home object listed here is drawn
@@ -13,4 +14,4 @@
  */
 export const HOME_SCENE_PURCHASES = ['home_bed', 'home_rug', 'home_window'] as const;
 
-export * from './PolishedScenes';
+export * from './LivingScenes';
