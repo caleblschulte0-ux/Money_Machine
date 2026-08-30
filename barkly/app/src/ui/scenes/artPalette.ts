@@ -182,6 +182,7 @@ export const DIORAMA = {
   couchNightEdge: '#563441',
 
   parkHillDay: '#93D86D',
+  parkHillDayLight: '#B8EE8A',
   parkHillDayEdge: '#5EAA48',
   parkHillNight: '#486441',
   parkHillNightEdge: '#30482F',
