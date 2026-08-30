@@ -1,8 +1,9 @@
 import React from 'react';
-import ItemIcon, { BowlIcon } from './ItemIcon';
-import { color } from './theme';
-import { TAP_MIN } from './layout';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import ItemIcon, { BowlIcon } from './ItemIcon';
+import { color, elevation, glyph, radius, space, type } from './theme';
+import { TAP_MIN } from './layout';
 import { STORE, Wallet } from '../game/progression';
 
 interface Props {
@@ -11,10 +12,14 @@ interface Props {
   wallet: Wallet;
   hungry: boolean;
   onFeed: (itemId?: string) => void;
-  /** Take them to the shop. An empty cupboard should be a door, not a notice. */
   onOpenShop: () => void;
 }
 
+function treatSurface(index: number): string {
+  if (index % 3 === 0) return color.coral;
+  if (index % 3 === 1) return color.lemon;
+  return color.violet;
+}
 
 export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, onOpenShop }: Props) {
   const treats = STORE.filter((item) => item.slot === 'treat')
@@ -28,51 +33,45 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-            {/*
-        Tapping the dimmed area closes the sheet.
-
-        Five bottom sheets shipped without it. The backdrop looks tappable,
-        every other app on the phone behaves that way, and the only way out was
-        a 15px ✕ in the corner — which is also the smallest tap target in the
-        app. `accessible={false}` keeps it out of the screen-reader order; the
-        ✕ is the labelled way out.
-      */}
       <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
         <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+          <LinearGradient colors={[color.coral, color.lemon]} style={styles.hero} pointerEvents="none" />
+          <View style={styles.heroGloss} pointerEvents="none" />
+
           <View style={styles.header}>
-            <View>
-              <Text style={styles.eyebrow}>THE FOOD SITUATION</Text>
-              <Text style={styles.title}>{hungry ? 'Barkly is accepting proposals.' : 'He is not exactly starving.'}</Text>
+            <View style={styles.headerCopy}>
+              <View style={styles.kicker}><Text style={styles.eyebrow}>FOOD SITUATION</Text></View>
+              <Text style={styles.title}>{hungry ? 'Barkly is taking offers.' : 'He claims he can wait.'}</Text>
             </View>
-            <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close food">
+            <Pressable style={styles.closeButton} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close food">
               <Text style={styles.close}>✕</Text>
             </Pressable>
           </View>
 
           <Pressable
-            style={styles.meal}
+            style={({ pressed }) => [styles.meal, pressed && styles.pressed]}
             onPress={() => choose()}
             accessibilityRole="button"
             accessibilityLabel="Regular dinner"
             accessibilityHint="Feed him his ordinary food."
           >
-            <View style={styles.iconBubble}><BowlIcon /></View>
+            <View style={styles.mealGloss} pointerEvents="none" />
+            <View style={styles.iconBubbleMeal}><BowlIcon /></View>
             <View style={styles.copy}>
               <Text style={styles.name}>Regular dinner</Text>
-              <Text style={styles.detail}>Reliable. Nutritionally uninteresting. Gets the job done.</Text>
+              <Text style={styles.detail}>Reliable. Nutritionally uninteresting. Apparently acceptable.</Text>
             </View>
             <Text style={styles.arrow}>›</Text>
           </Pressable>
 
-          <Text style={styles.section}>From the cupboard</Text>
+          <View style={styles.sectionPod}><Text style={styles.section}>THE GOOD STUFF</Text></View>
+
           {treats.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Cupboard's empty.</Text>
-              <Text style={styles.emptyText}>
-                The shop has biscuits, cheese and eventually a completely unreasonable steak.
-              </Text>
+              <Text style={styles.emptyText}>Biscuits, cheese and eventually an unreasonable steak live in the shop.</Text>
               <Pressable
-                style={styles.emptyCta}
+                style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
                 onPress={() => {
                   onClose();
                   onOpenShop();
@@ -81,29 +80,32 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
                 accessibilityLabel="Go to the shop"
                 accessibilityHint="Buy treats for him."
               >
-                <Text style={styles.emptyCtaText}>go to the shop</Text>
+                <View style={styles.ctaGloss} pointerEvents="none" />
+                <Text style={styles.emptyCtaText}>GET SNACKS</Text>
               </Pressable>
             </View>
           ) : (
-            treats.map(({ item, count }) => (
-              <Pressable
-                key={item.id}
-                style={styles.treat}
-                onPress={() => choose(item.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.name}, ${count} left`}
-                accessibilityHint="Give him this instead of dinner."
-              >
-                <View style={styles.iconBubble}><ItemIcon id={item.id} tint={item.color} /></View>
-                <View style={styles.copy}>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.detail}>{item.blurb}</Text>
-                </View>
-                <View style={styles.countPill}><Text style={styles.count}>×{count}</Text></View>
-              </Pressable>
-            ))
+            <View style={styles.treatGrid}>
+              {treats.map(({ item, count }, index) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [styles.treat, { backgroundColor: treatSurface(index) }, pressed && styles.pressed]}
+                  onPress={() => choose(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.name}, ${count} left`}
+                  accessibilityHint="Give him this instead of dinner."
+                >
+                  <View style={styles.treatGloss} pointerEvents="none" />
+                  <View style={styles.iconBubble}><ItemIcon id={item.id} tint={item.color} /></View>
+                  <View style={styles.copy}>
+                    <Text style={styles.name}>{item.name}</Text>
+                    <Text style={styles.detail}>{item.blurb}</Text>
+                  </View>
+                  <View style={styles.countPill}><Text style={styles.count}>×{count}</Text></View>
+                </Pressable>
+              ))}
+            </View>
           )}
-
         </Pressable>
       </Pressable>
     </Modal>
@@ -111,41 +113,45 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(29,24,18,0.48)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 28 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 },
-  eyebrow: { fontSize: 10, fontWeight: '900', letterSpacing: 1.5, color: color.goldInk },
-  title: { marginTop: 4, maxWidth: 300, fontSize: 24, lineHeight: 27, fontWeight: '900', color: color.ink, letterSpacing: -0.5 },
-  /**
-   * The way out of a sheet, at a real tap size.
-   *
-   * Seven sheets each declared this separately and every one of them measured
-   * about 23x22 — a 15-18px glyph with 4px of padding. Six of the seven even
-   * carried a comment saying the X was "the labelled way out", which was true
-   * and beside the point: it was the smallest target in the app, on the
-   * control a child needs when they are stuck. layout.TAP_MIN, like the rest.
-   */
-  close: { fontSize: 18, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
-  section: { marginTop: 18, marginBottom: 7, fontSize: 12, fontWeight: '900', letterSpacing: 1.2, color: color.inkSoft, textTransform: 'uppercase' },
-  meal: { marginTop: 16, minHeight: 76, borderRadius: 18, padding: 12, backgroundColor: color.fill, flexDirection: 'row', alignItems: 'center' },
-  treat: { minHeight: 76, borderRadius: 18, padding: 12, marginBottom: 8, backgroundColor: color.card, borderWidth: 1, borderColor: color.line, flexDirection: 'row', alignItems: 'center' },
-  iconBubble: { width: 46, height: 46, borderRadius: 22, backgroundColor: color.well, alignItems: 'center', justifyContent: 'center' },
-  copy: { flex: 1, marginLeft: 12 },
-  name: { fontSize: 15, fontWeight: '800', color: color.ink },
-  detail: { marginTop: 3, fontSize: 12, lineHeight: 17, color: color.inkSoft },
-  arrow: { fontSize: 26, color: color.inkSoft, marginLeft: 8 },
-  countPill: { minWidth: 36, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: color.fill, alignItems: 'center' },
-  count: { fontSize: 12, fontWeight: '900', color: color.goldInk },
-  empty: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.line, padding: 15 },
-  emptyTitle: { fontSize: 15, fontWeight: '800', color: color.ink },
-  emptyText: { marginTop: 4, fontSize: 12, lineHeight: 18, color: color.inkSoft },
-  emptyCta: {
-    alignSelf: 'flex-start',
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 999,
-    backgroundColor: color.ink,
+  backdrop: { flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: color.paper,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: space.xl,
+    paddingBottom: space.xxl,
+    overflow: 'hidden',
+    ...elevation.sheet,
   },
-  emptyCtaText: { color: color.paper, fontSize: 13, fontWeight: '800' },
+  hero: { position: 'absolute', left: 0, right: 0, top: 0, height: 126, opacity: 0.85 },
+  heroGloss: { position: 'absolute', left: space.xl, right: space.xl, top: space.sm, height: space.md, borderRadius: radius.pill, backgroundColor: color.glossSoft },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.md },
+  headerCopy: { flex: 1 },
+  kicker: { alignSelf: 'flex-start', backgroundColor: color.ink, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: space.xs },
+  eyebrow: { ...type.micro, color: color.inkOn },
+  title: { marginTop: space.sm, maxWidth: 300, ...type.display, color: color.ink },
+  closeButton: { width: TAP_MIN, height: TAP_MIN, borderRadius: radius.pill, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center', ...elevation.low },
+  close: { fontSize: glyph.close, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
+  meal: { marginTop: space.xl, minHeight: 82, borderRadius: radius.lg, padding: space.md, backgroundColor: color.pop, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 2, borderColor: color.popDeep, ...elevation.toy },
+  mealGloss: { position: 'absolute', left: space.md, right: space.md, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
+  sectionPod: { alignSelf: 'flex-start', marginTop: space.xl, marginBottom: space.sm, backgroundColor: color.violet, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: space.sm, ...elevation.low },
+  section: { ...type.micro, color: color.ink },
+  treatGrid: { gap: space.sm },
+  treat: { minHeight: 78, borderRadius: radius.lg, padding: space.md, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 2, borderColor: color.inkMid, ...elevation.card },
+  treatGloss: { position: 'absolute', left: space.md, right: space.md, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.glossSoft },
+  iconBubbleMeal: { width: 50, height: 50, borderRadius: radius.lg, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center', ...elevation.low },
+  iconBubble: { width: 50, height: 50, borderRadius: radius.lg, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center' },
+  copy: { flex: 1, marginLeft: space.md },
+  name: { ...type.strong, fontWeight: '900', color: color.ink },
+  detail: { marginTop: space.xs, ...type.caption, color: color.inkMid },
+  arrow: { fontSize: glyph.arrow, color: color.ink, marginLeft: space.sm },
+  countPill: { minWidth: 36, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: space.sm, backgroundColor: color.card, alignItems: 'center', ...elevation.low },
+  count: { ...type.caption, fontWeight: '900', color: color.ink },
+  empty: { borderRadius: radius.lg, borderWidth: 2, borderStyle: 'dashed', borderColor: color.violetDeep, backgroundColor: color.fill, padding: space.lg },
+  emptyTitle: { ...type.strong, color: color.ink },
+  emptyText: { marginTop: space.xs, ...type.small, color: color.inkSoft },
+  emptyCta: { alignSelf: 'flex-start', marginTop: space.md, paddingHorizontal: space.lg, minHeight: TAP_MIN, borderRadius: radius.pill, backgroundColor: color.violet, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...elevation.card },
+  ctaGloss: { position: 'absolute', left: space.sm, right: space.sm, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
+  emptyCtaText: { ...type.caption, fontWeight: '900', color: color.ink },
+  pressed: { transform: [{ scale: 0.985 }] },
 });
