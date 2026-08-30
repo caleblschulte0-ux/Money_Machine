@@ -37,9 +37,9 @@ jobs:
               raise SystemExit(f'expected one animated-style match, got {s.count(old)}')
           p.write_text(s.replace(old, new, 1))
 
-          # The acceptance walk must use the adaptive UI the same way a player
-          # does: the room is the conversation dock, while an input only exists
-          # after Type has been explicitly opened.
+          # The main patcher already converts the preset reload selector to
+          # conversation-dock. These remaining acceptance paths must also use
+          # the adaptive UI the same way a player does.
           p = Path('barkly/app/scripts/playtest-acceptance.mjs')
           s = p.read_text()
 
@@ -50,10 +50,6 @@ jobs:
                   raise SystemExit(f'acceptance patch expected one match, got {count}: {old[:100]!r}')
               s = s.replace(old, new, 1)
 
-          one(
-              "await page.waitForSelector('[data-testid=\"dialogue-panel\"]', { timeout: 25_000 });",
-              "await page.waitForSelector('[data-testid=\"conversation-dock\"]', { timeout: 25_000 });",
-          )
           one(
               "check('6b. woke him back up', (await byId('dialogue-panel').count()) > 0);",
               "check('6b. woke him back up', (await byId('conversation-dock').count()) > 0);",
