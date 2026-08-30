@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     ...elevation.toy,
   },
-  noteFill: { ...StyleSheet.absoluteFillObject, borderRadius: radius.xl },
+  noteFill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: radius.xl },
   noteEdge: { position: 'absolute', left: space.md, right: space.md, bottom: -6, height: space.md, backgroundColor: color.lemonDeep, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg },
   noteGloss: { position: 'absolute', left: space.lg, right: space.lg, top: space.xs, height: space.sm, backgroundColor: color.gloss, borderRadius: radius.pill },
   tape: { position: 'absolute', top: -10, left: '36%', width: 92, height: 22, borderRadius: radius.xs, backgroundColor: color.violet, opacity: 0.84, transform: [{ rotate: '3deg' }] },
