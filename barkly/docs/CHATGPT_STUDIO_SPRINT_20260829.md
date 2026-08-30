@@ -19,637 +19,437 @@ And the presentation rule is now equally important:
 
 ---
 
-# What ChatGPT changed in this branch
+# P0 now: stop looking like generated app UI
 
-These are intentionally reviewable slices, not a giant rewrite.
+Read `barkly/docs/VISUAL_DIRECTION_KIDS_GAME.md` before changing any player-facing surface.
 
-## 1. Barkly's Plan uses the player's local calendar day
+The current biggest product risk is that increasingly sophisticated Barkly systems are still capable of being presented with the visual grammar of a generated React app: cream cards, rounded pills, flat vectors, equal-width rows and generic modal sheets.
 
-`src/game/adventure.ts`
+The target is a **bright, toy-like, polished kids game**. A screenshot should read as a game from five feet away, before anybody sees Barkly speak.
 
-The old `toISOString().slice(0, 10)` used UTC. In US time zones a plan could roll over in the evening. `adventureDay()` now uses the device-local year/month/date. A test was added.
+The ChatGPT branch now includes a cosmetic wave for Claude to review/rework:
 
-**Claude review:** confirm this agrees with the intended product definition of "today" and that the full Plan persistence flow still rolls correctly when the app backgrounds/resumes.
+- a candy/toy global theme instead of cream-on-cream;
+- stronger molded elevation and gloss hierarchy;
+- a colored molded `DialoguePanel` rather than a white speech card;
+- a colorful `StoreSheet` toy shelf;
+- a colorful `FoodSheet` snack tray;
+- Barkly's Plan as a bright kid-made artifact;
+- encounters as physical colorful choice moments over the visible world;
+- contests as bright arcade-style dog duel HUDs while retaining the tested timing engine;
+- `ToyHud.tsx`, a reviewable main-screen replacement prototype with four illustrated destination tiles, a physical mini Pack Book, a taped Plan note, a toy settings control and molded coin pod.
 
-## 2. Treasure favorites are earned instead of newest-wins
+`ToyHud.tsx` is deliberately not jammed into the 60KB `BarklyRoom.tsx` without the normal viewport pass. Wire/rework it there, delete the old segmented-tabs presentation, and verify the five standard phone sizes before accepting it.
 
-`src/barkly/character.ts`
+Cosmetic rejection test:
 
-The old `withTreasure()` made every new find the favorite. That made "favorite" mean "the last thing RNG returned."
-
-This branch adds durable `treasureAffinities` and `noteTreasureAffinity()`:
-
-- first treasure can become the initial favorite;
-- a later discovery becomes a temporary obsession but does not automatically erase the old favorite;
-- repeated history can actually change Barkly's preference;
-- old saves with a `favoriteTreasure` but no affinity record are backfilled without rerolling the dog;
-- future systems (naming, displaying, defending from Duke, story use, repeated handling) have one shared way to strengthen attachment.
-
-**Claude review:** inspect save compatibility carefully. Then wire meaningful object interactions into `noteTreasureAffinity()` instead of inventing new favorite flags elsewhere.
-
-## 3. Pack Book v2 — relationship scrapbook, not analytics
-
-`src/ui/PackBookSheet.tsx`
-
-The underlying relationship system is strong. The old presentation exposed machinery: numeric trait scores, meters, intensity dots, numbered memory rows and a long explanation of the product thesis.
-
-This branch keeps the same data model but presents:
-
-- relationship identity as the cover;
-- stage as a quiet five-step visual rather than a progress KPI;
-- traits as identity stamps, with no visible score;
-- current saga as "current drama";
-- rituals as running bits;
-- lore as receipts / beef files / sacred junk;
-- memories as taped cards;
-- almost all product-explainer copy removed.
-
-**Claude review:** screenshot every saved-life preset at the five standard phone sizes. Keep the scrapbook direction even if individual styling needs rework.
-
-## 4. Barkly's Plan v2 — Barkly's note, not a productivity sheet
-
-`src/ui/AdventureSheet.tsx`
-
-Same mechanics, different emotional framing:
-
-- three ideas on a taped note;
-- checkboxes and scribbles instead of KPI cards;
-- rewards demoted to a small side note;
-- no streak pressure remains;
-- completion is Barkly's verdict rather than a task-app success state.
-
-**Claude review:** preserve this framing. The long-term target is eventually an in-world object (fridge/corkboard/note) rather than a bottom sheet.
-
-## 5. Onboarding happens in Barkly's actual Home scene
-
-`src/ui/Onboarding.tsx`
-
-The source comment claimed first launch happened in Barkly's room, but implementation used a generic gradient. This branch reuses `HomeScene` directly and keeps the same character renderer and candy-control language.
-
-**Claude review:** visually inspect very short and very tall phones. If the positioning needs tuning, fix the layout without reverting to a separate onboarding universe.
+- If it could belong to a finance app after removing Barkly, redesign it.
+- If the main read is beige/white rounded rectangles, redesign it.
+- If color is the only state cue, redesign it.
+- If a child needs to read a paragraph to find the fun thing, redesign it.
+- If the art does not look like the same physical universe as Barkly, redesign it.
 
 ---
 
-# Claude's next pass: do this first
+# Already implemented in this ChatGPT branch
 
-1. Rebase/recreate these changes against the latest Barkly head if Claude has advanced beyond the base SHA.
-2. Run the complete Barkly gate: Jest, server tests, typecheck, layout/overlap, a11y, voice check, release gate and the 29-step acceptance playthrough.
-3. Open all standard playtester saves and visually inspect Pack Book, Plan and onboarding at 360x640, 375x667, 390x844, 412x915 and 430x932.
-4. Fix regressions in this branch's ideas rather than dropping the ideas because a first implementation needs tuning.
-5. Once green, continue the roadmap below in priority order.
+## Real product fixes
 
----
+### Local calendar day
 
-# P0 — finish the illusion before adding breadth
+Barkly's Plan now rolls over on the player's actual local calendar date rather than UTC midnight.
 
-## A. Move major moments out of software-looking modals
+### Treasure attachment
 
-### Encounters
+Newest find no longer automatically means favorite. Character state now carries durable treasure affinity, old saves backfill the previous favorite without rerolling Barkly's identity, and later systems have one `noteTreasureAffinity()` path for strengthening attachment.
 
-Keep the existing durable choice mechanics, but stop replacing the world with a centered form.
+### Pack Book presentation
 
-Target:
+Pack Book has moved away from raw scores/dashboard language toward scrapbook evidence: stamps, memories, receipts, rituals and current drama.
 
-- scene remains visible;
-- camera/attention pushes toward Barkly + NPC;
-- NPC says the setup in-world;
-- Barkly physically reacts and looks to the player;
-- three choices live near the bottom of the scene;
-- selection produces body animation + dialogue + durable consequence;
-- learned routines may appear as unique choices when relevant.
+### Onboarding continuity
 
-### Contests
-
-Keep the tested timing rules, but render the fiction.
-
-Fetch duel target:
-
-- Barkly and Duke visible;
-- ball visible;
-- timing input controls the throw/start;
-- both dogs animate the result;
-- score is secondary, not the entire screen.
-
-The mechanic may still be a timing bar internally. The player should experience dogs competing, not a React Native meter.
-
-## B. Barkly Rig v3
-
-The front puppet is the correct direction but is incomplete.
-
-Add independent or properly parented control for, in roughly this order:
-
-- tail;
-- front paws;
-- chest/shoulders;
-- jaw/muzzle where practical;
-- three-quarter pose rig;
-- later, lying/sleep interaction rig.
-
-Required new physical beats:
-
-- paw bowl / nose toward food;
-- scratch;
-- stretch;
-- play bow;
-- brace during tug;
-- paw at object;
-- lean into petting;
-- turn away unimpressed;
-- partial flop/roll;
-- better pick-up/carry transitions.
-
-Do not redesign Barkly. At rest he must remain the locked approved character.
-
-## C. Unique NPC bodies
-
-Biscuit, Pepper and Duke should no longer read as Barkly recolors.
-
-Same collectible toy universe, different silhouettes.
-
-- Biscuit: floppy/long-eared, loose, goofy, slightly uncoordinated physical acting.
-- Pepper: sleek/narrow, economical movement, controlled eye language.
-- Duke: broad/chunky, chest-forward, eyebrow swagger, takes up space.
-
-Black-silhouette test: each should be identifiable without color.
-
-## D. Real soundscape
-
-Voice is strong. The world is still comparatively quiet.
-
-Add a small event-driven SFX/ambience layer:
-
-- collar jingle;
-- paws by surface;
-- bowl clink;
-- chew/crunch;
-- ball squeak;
-- rope/tug friction;
-- digging dirt and sand;
-- bed rustle;
-- body shake/sniff/exhale;
-- park ambience;
-- town ambience;
-- beach ambience/waves/gulls;
-- subtle contest/story accents.
-
-Speech should duck ambience slightly. Mute must silence body/ambience/haptics consistently with existing feel philosophy.
-
-## E. Settings cleanup
-
-Consumer Settings should eventually be:
-
-- Sound
-- Voice
-- speech/text preference
-- Accessibility
-- Memory & Privacy
-- Help
-- About
-
-Move fun state out:
-
-- stash -> room / Pack Book;
-- tricks -> Pack Book / training;
-- care stats -> Barkly/body or a lightweight care surface;
-- memories -> Pack Book.
-
-Provider, breaker, fallback and implementation details belong in dev diagnostics, not normal consumer IA.
+First launch happens in Barkly's actual Home scene rather than a disposable gradient world.
 
 ---
 
-# P1 — make *this* Barkly impossible to replace
+# New large-scale systems for Claude to integrate
 
-## F. Story Engine v2: persistent chapters, not inferred labels
+## Barkly Identity Engine — `barkly/identity.ts`
 
-Current Story Engine derives the strongest implied saga from state. Keep that discovery layer, then persist actual arcs.
+History-derived identity instead of a personality picker. It produces formed preferences, Barkly's own opinions, personality axes and evidence receipts from the actual relationship history.
 
-Suggested shape:
+It should eventually affect:
+- dialogue
+- idle behavior
+- Plan generation
+- room composition
+- story triggers
+- Barkly's reactions
+- Pack Book presentation
 
-```ts
-interface StoryState {
-  active?: StoryInstance;
-  archive: StoryInstance[];
-}
+## Barkly Co-Authorship — `barkly/coauthor.ts`
 
-interface StoryInstance {
-  id: string;
-  template: string;
-  startedAt: number;
-  cast: string[];
-  subjectIds: string[];
-  chapter: number;
-  branch: string;
-  decisions: StoryDecision[];
-  status: 'active' | 'resolved' | 'abandoned';
-  resolvedAt?: number;
-  souvenirId?: string;
-}
-```
+Once the player has authored enough history, Barkly starts proposing canon back:
+- naming a treasured object;
+- declaring a frequently visited place “our spot”;
+- declaring a repeated cue “our thing”;
+- giving a recurring dog a private nickname.
 
-Stories should:
+Player accepts/rejects. Either answer is durable. The same proposal does not nag forever.
 
-- begin from actual relationship/object/routine state;
-- persist across sessions;
-- branch from player choices;
-- alter social/object history;
-- resolve;
-- archive forever;
-- leave a room/Pack Book souvenir;
-- be recallable in future dialogue.
+This is the concrete implementation of:
 
-Example: Duke insults favorite treasure -> user defends it -> treasure goes missing -> Biscuit knows something -> recover it -> create permanent "Treasure Security" lore/souvenir.
+> User authors Barkly, then Barkly starts co-authoring the relationship.
 
-## G. Object identity
+## Autonomous World Incidents — `world/incidents.ts`
 
-Do not stop at item ownership.
+History can create world beats without the user tapping an NPC first:
+- Duke notices a treasured object;
+- Biscuit needs help;
+- Pepper has heard about a private routine;
+- gull treasure chaos;
+- private rituals leaking into public life.
 
-Important toys/treasures should be able to accumulate:
+Includes cooldown/durable-choice state so this does not become a notification machine.
 
-- stable id;
-- user/Barkly name;
-- acquired/found date;
-- interaction count;
-- last interaction;
-- preference/affinity;
-- story references;
-- NPC references;
-- visible wear state;
-- lost/recovered state later;
-- display/home placement later.
+## Home-as-Biography — `world/biography.ts`
 
-A random rock is content. A rock Barkly calls Steve, defended from Duke, displayed for three months is relationship state.
+Relationship history can become a curated set of physical room evidence:
+- favorite treasure display;
+- Biscuit photo;
+- Duke dossier;
+- ritual award;
+- current-saga souvenir.
 
-## H. Wire treasure affinity into the world
+The room should become a biography, not an inventory dump.
 
-The branch adds the shared `noteTreasureAffinity()` primitive. Use it when something actually happens:
+## Story Engine v2 — `barkly/storyV2.ts`
 
-- object is named;
-- object is displayed at Home;
-- Barkly chooses/references it repeatedly;
-- an NPC interacts with it;
-- a story is about it;
-- user protects/recovers it;
-- Barkly carries/uses it later.
+Persistent branching sagas with:
+- durable chapters;
+- route/decision state;
+- consequences;
+- finales;
+- resolved-story archive.
 
-Do not award affinity merely because a value was rendered on screen.
+Resolved stories must not silently reset to Chapter I.
 
-## I. Formed preferences beyond treasures
+---
 
-Build one coherent opinion/preference model rather than many unrelated favorite flags.
+# P0 remaining illusion breaks
 
-Candidates:
+## Barkly Rig v3
 
-- favorite toy;
-- favorite food;
-- favorite location;
-- favorite sleeping spot;
-- favorite routine;
-- favorite time/context;
-- likes/dislikes of recurring world things.
+Preserve the exact approved Barkly design. Expand the layered rig beyond current front-pose head/ears/pupils/body control.
 
-Preferences should change slowly from evidence.
+Independent targets:
+- tail
+- front-left paw
+- front-right paw
+- rear/body mass
+- chest
+- muzzle/jaw
+- neck/head
+- ears
+- eyelids/pupils
 
-## J. Barkly opinions
+Rig at least front and three-quarter poses.
 
-Facts answer "what happened." Character requires "what does Barkly think about it?"
+Desired behaviors:
+- eyes lead head
+- one-ear perk / ear flick
+- paw bowl
+- brace during tug
+- watch thrown object
+- play bow
+- stretch
+- scratch
+- sit unevenly
+- recoil annoyed
+- lean into petting
+- independent tail
+- sleepy eyelids
+- stronger speech mouth
 
-Persist bounded opinions such as:
+## Unique NPC bodies
 
-- loves cheese;
-- thinks Beach is overrated;
-- distrusts pigeons;
-- trusts Pepper's judgment;
-- thinks the vacuum is evil;
-- loves one particular rope.
+Biscuit, Pepper and Duke must stop being recolored Barkly variants.
 
-Dialogue and initiative should use them as texture. Opinions can strengthen, weaken or reverse from experience.
+Same toy universe, distinct silhouettes:
+- Biscuit: lanky/smaller, huge floppy ears, big paws, goofy open stance.
+- Pepper: sleek/narrow, smaller elegant ears, composed skeptical face.
+- Duke: stockier, wide chest, heavier muzzle, proud brow/stance.
 
-## K. Barkly invents things back
+Give each a different movement personality too.
 
-The player authors Barkly first. High-bond Barkly should then co-author the relationship.
+## Real soundscape
 
+Add physical SFX/ambience rather than constant music:
+- paws by surface
+- collar jingle
+- bowl clink
+- crunch/chew
+- squeaky ball
+- rope friction
+- digging
+- bed rustle
+- body shake
+- Home/Park/Town/Beach ambience
+- gulls/waves/bakery/park life
+
+Duck ambience slightly under Barkly speech.
+
+## Authored diorama art
+
+The current code-drawn scenes are technically improved but remain a visual ceiling. Major environment assets should gradually become authored molded/clay/vinyl diorama pieces that look manufactured from the same physical world as Barkly. Continue layering/animating them programmatically.
+
+---
+
+# Make history visible
+
+## Object identity
+
+Meaningful possessions should accumulate:
+- acquiredAt
+- use count
+- stories/contests
+- Barkly affinity
+- nickname
+- visible wear
+- lost/recovered state
+- NPC interactions
+
+A ball should be able to become **The Ball**.
+
+## Emergent favorites
+
+Build sticky preference scoring for:
+- treasure
+- toy
+- food
+- location
+- NPC
+- sleeping spot
+- routine
+
+Favorites may change slowly from evidence, not every session.
+
+## Barkly opinions
+
+Separate Barkly's persistent opinions from facts about the player.
 Examples:
+- loves cheese
+- distrusts pigeons
+- thinks the Beach is overrated
+- trusts Pepper
+- thinks Duke is insecure
 
-- invent nickname for player;
-- rename a routine;
-- name a treasure;
-- declare a chair/spot "mine";
-- invent a greeting ritual;
-- declare a favorite;
-- refuse/retire an overused bit;
-- create a two-part routine and ask the player to participate.
-
-Where appropriate, give the player accept/reject/tease-back agency.
-
-## L. Home becomes biography
-
-Home must visibly accumulate history.
-
-Possible evidence:
-
-- favorite toy lying around;
-- treasure shelf;
-- named treasure label;
-- Biscuit photo/card;
-- Duke photo vandalized or annotated;
-- contest trophy/souvenir;
-- resolved-story artifact;
-- worn bed/rope/ball;
-- routine certificate or ridiculous note;
-- seasonal/time-of-day clutter later.
-
-A veteran Home screenshot should immediately look different from a fresh Home screenshot.
+Opinions should evolve through experience.
 
 ---
 
-# P1 — living world instead of waiting room
+# Story Engine v2 integration
 
-## M. World Incidents
+Persist story state through the existing hydrated controller/save layer:
+- arc ID
+- chapter
+- route
+- trigger
+- cast
+- possessions/memories involved
+- decisions
+- consequences
+- next beats
+- resolution
+- souvenir
+- resolved archive
 
-Ambient motion is good. Add semantic events that Barkly can notice.
-
-Examples:
-
-- squirrel crosses Park;
-- pigeon lands in Town;
-- bakery crumb drops;
-- wave carries something in;
-- gull steals/eyes an object;
-- someone passes Home window;
-- lamp clicks on;
-- distant bark;
-- ball rolls;
-- Biscuit arrives/leaves;
-- Duke storms off;
-- weather/thunder later.
-
-Some incidents are pure flavor. Some are tappable. Some become memory/story material.
-
-The key difference: a moving cloud decorates the world; a squirrel Barkly notices makes him seem alive.
-
-## N. NPC agency
-
-NPCs should not exist only after a tap.
-
-They should be able to:
-
-- arrive/leave;
-- initiate a greeting;
-- ask for a favor;
-- interrupt a location with a situation;
-- react to each other;
-- react to Barkly's possessions/routines/reputation;
-- remember last specific incident;
-- bring back unresolved business.
-
-## O. NPC-to-NPC relationships
-
-The town cannot revolve entirely around Barkly.
-
-Examples:
-
-- Biscuit is intimidated by Duke;
-- Pepper tolerates Duke but respects one thing about him;
-- Biscuit tells Pepper something Barkly did;
-- Duke resents Biscuit siding with Barkly;
-- relationships change after shared incidents.
-
-This creates the promised tiny soap opera.
-
-## P. Deeper locations, not more locations
-
-Do not add twenty generic tabs.
-
-Make the four existing places mechanically distinct:
-
-- **Home:** intimacy, training, personal conversation, possessions, rest, memories.
-- **Park:** social chaos, Biscuit/Duke, fetch, dig, contests, incidents.
-- **Town:** Pepper, observation, bakery/pigeons, gossip, local social events.
-- **Beach:** physical play, waves, sand, unique finds, gulls/tide incidents.
-
-Add a location only when it supports a genuinely new relationship/world loop.
+Example treasure saga:
+1. Duke insults treasured object.
+2. Object disappears.
+3. Biscuit had it “for protection.”
+4. Player chooses forgive / blame / security protocol.
+5. Resolution creates lasting relationship changes + a room souvenir.
+6. Barkly later references it naturally.
 
 ---
 
-# P1 — direct physical interaction
+# Autonomous world / NPC agency
 
-## Q. Gesture play
+Integrate `world/incidents.ts` and build staging for semantic incidents:
+- squirrel runs by
+- gull eyes treasure
+- Biscuit arrives with a problem
+- Duke notices favorite object
+- Pepper heard about a private routine
+- bakery drops crumb
+- wave exposes something
+- shadow passes Home window
 
-Expand the correct move away from PLAY/FEED/SLEEP buttons.
+Some are ambient, some become choices, some create memory/story.
 
-- drag/throw the ball;
-- hold and pull the rope;
-- drag/select special food with physical confirmation;
-- contextual pet regions;
-- tap/hold treasure on shelf;
-- tap bed/spot;
-- tap world incident.
-
-Touch location should matter where understandable:
-
-- head pet;
-- ear touch;
-- back rub;
-- paw touch reaction;
-- belly rub while lying down later.
-
-Do not turn this into hidden-gesture frustration. Affordances can be taught by Barkly looking/moving, subtle object motion and first-use hints.
-
-## R. Training v2
-
-Current routines are a real differentiator. Expand carefully:
-
-- pauses/timing;
-- repeated beats;
-- intensity;
-- routine chaining;
-- user naming/renaming;
-- Barkly naming/renaming later;
-- favorite/signature routine;
-- imperfect early performance / mastery where fun;
-- NPC reputation from repeated public performance.
-
-Share-worthy target: "Look what I taught my Barkly."
+NPCs should eventually:
+- arrive and leave on their own
+- interact with each other
+- develop NPC-to-NPC relationships
+- remember prior incidents
 
 ---
 
-# P2 — retention, growth and shipping foundations
+# Direct manipulation
 
-## S. Shareable Barkly moments
+Continue replacing abstract buttons with physical gestures:
+- drag/throw ball
+- grab/pull rope
+- pet specific body regions
+- drag special food toward Barkly
+- pick treasure off room shelf
 
-Build a lightweight "Barkly Reel" / memory-card output for naturally good moments, not referral spam.
-
-Candidate triggers:
-
-- learned routine;
-- signature ritual;
-- first nemesis/best-friend promotion;
-- ridiculous treasure;
-- Barkly-created nickname;
-- story resolution;
-- contest upset;
-- bizarre dream later.
-
-Output should be visually Barkly-native and easy to save/share.
-
-## T. Personalized dreams
-
-A short dream scene can remix the day's actual inputs:
-
-- steak moon;
-- giant Duke;
-- rubber duck army;
-- user's custom routine;
-- weird treasure;
-- Beach/waves.
-
-Dreams should be personalized state combinations, not random prewritten cutscenes.
-
-## U. Return-from-absence scenes
-
-No guilt, no "you abandoned me" engagement manipulation.
-
-Use actual unfinished context:
-
-- "You missed the pigeon situation."
-- "Duke came by. I handled it badly."
-- "I kept thinking about Steve."
-
-The return greeting system already exists; evolve it from elapsed-time flavor into history-based continuation.
-
-## V. Privacy-conscious product analytics before external beta
-
-Do **not** log private conversation contents as generic analytics.
-
-Useful events:
-
-- session start/end;
-- onboarding steps/complete;
-- first conversation/pet/feed/play;
-- routine taught/used;
-- NPC relationship promotion;
-- encounter entered/choice made;
-- contest played;
-- Pack Book opened;
-- Plan completed;
-- location visited;
-- shop purchase/equip;
-- return day/session.
-
-Questions to answer:
-
-- where do players stop in first 20 minutes?
-- does teaching a routine correlate with next-day return?
-- do retained players use relationships/Pack Book more?
-- which world verbs actually get repeated voluntarily?
-
-## W. Save schema versioning and migrations
-
-Barkly's moat is his history. Treat persisted state as sacred.
-
-Before state grows much further, introduce explicit schema versions and deterministic migrations for durable profile domains. Never silently reset incompatible relationship/memory/object history.
-
-Test migrations with real old fixtures / playtester saves.
-
-## X. Longitudinal simulation tests
-
-Add simulation coverage beyond unit correctness:
-
-- day 1;
-- day 30;
-- day 100;
-- day 365;
-- huge fact/memory counts;
-- all NPC rungs;
-- repeated story resolution;
-- old-save migration;
-- preferences changing without thrashing;
-- no duplicate/corrupt relationship identities.
-
-## Y. Accessibility next pass
-
-Existing a11y discipline is good. Add explicit coverage for:
-
-- Dynamic Type / larger text;
-- Reduce Motion;
-- motion-independent state communication;
-- high-contrast/system accessibility where practical;
-- gesture alternatives for direct-manipulation actions.
-
-## Z. Break up `BarklyRoom.tsx` before the next giant feature wave
-
-The screen currently orchestrates too many concerns.
-
-Suggested extraction boundaries:
-
-- `WorldStage`
-- `StageMotionController`
-- `BarklyInteractionController`
-- `NPCStage`
-- `NoticeLayer`
-- `ConversationControls`
-- `SurfaceRouter`
-
-Also replace the collection of mutually exclusive sheet booleans with one typed surface state where practical.
-
-Do this as a behavior-preserving refactor with screenshot/acceptance coverage, not a simultaneous redesign.
+Barkly should react to HOW and WHERE the player touched, not merely that a verb fired.
 
 ---
 
-# Things we should deliberately NOT chase right now
+# Training v2
 
-- generic endless runner;
-- match-3;
-- generic minigame count as a KPI;
-- battle pass;
-- streak pressure;
-- random loot boxes/chests;
-- leaderboards;
-- many currencies;
-- 50 costume recolors;
-- 20 shallow locations;
-- "AI can see your camera" as the marketing hook by itself;
-- generic chatbot assistant behavior.
+Current reusable custom routines are a differentiator. Extend carefully:
+- pauses/timing
+- repeated beats
+- intensity/speed variants
+- Barkly making small early mistakes
+- mastery through repetition
+- private vs public routine reputation
+- routines affecting NPC encounters and stories
 
-Camera later should be **Teach Barkly your real world**, not generic object detection: show him an object, name it, build a relationship/routine around that specific real thing.
+Keep choreography device-agnostic so it can later drive physical Barkly.
 
 ---
 
-# Marketing/product test
+# Shareability / growth
 
-The app should produce moments that can be described as:
+Build Barkly-native share moments rather than referral spam.
 
-- **"Look what I taught my Barkly."**
-- **"This idiot remembers why he hates Duke."**
-- **"My Barkly named this stupid rock and now it has lore."**
+Potential Barkly Reel moments:
+- ridiculous learned routine
+- Nemesis promotion
+- weird treasure
+- relationship archetype
+- story resolution
+- Barkly-created nickname/tradition
+- contest upset
 
-Do not lead consumer positioning with "AI virtual pet." AI is machinery.
+Marketing should sell consequence rather than “AI”:
+- Your dog learns your weirdness.
+- No two Barklys grow up the same.
+- Teach him things you'll regret.
+- Raise a little menace.
 
-The emotional proposition is closer to:
-
-- **No two Barklys grow up the same.**
-- **Teach him things you'll regret.**
-- **Raise a little menace.**
-
-Long-term physical continuation remains:
-
+Later physical extension:
 > **Give your Barkly a body.**
 
-The physical product must inherit the Barkly the user already raised rather than resetting identity.
+---
+
+# Engineering guardrails
+
+## Save schema
+
+History is the moat. Add explicit schema versioning and deterministic migrations before new persistent systems land.
+
+Never silently discard old memories, relationships, stories, preferences or routines.
+
+## Hydration
+
+Continue using the existing hydration gate. No new store writes defaults before load completes.
+
+## Controller decomposition
+
+`useBarkly.ts` and `BarklyRoom.tsx` are large orchestration surfaces. Before another tightly coupled feature wave, extract coherent subsystems rather than adding independent booleans/timers.
+
+Suggested boundaries:
+- world/incident controller
+- story controller
+- identity/preference controller
+- stage motion controller
+- surface router
+- NPC stage
+- world HUD
+
+## Analytics
+
+Before external beta, add privacy-conscious product events only. Do not collect raw conversation contents as product analytics.
+
+Useful events:
+- onboarding complete
+- first talk/pet/feed/play
+- first NPC
+- routine taught/repeated
+- encounter/choice
+- contest
+- Pack Book opened
+- Plan completed
+- purchase
+- location visit
+- return day
 
 ---
 
-# Definition of "better" for Claude's continuation
+# QA / simulation
 
-A change is good when it makes at least one of these more true:
+Add longitudinal state simulation:
+- Day 1
+- Day 30
+- Day 100
+- Day 365
 
-1. Barkly physically reacts instead of UI explaining.
-2. History produces a visible consequence.
-3. Different player behavior produces a different Barkly.
-4. Existing systems collide to create new outcomes.
-5. The world keeps moving without demanding chores.
-6. A screenshot/video looks like a designed toy/game universe, not a web app.
-7. A player has a story worth telling another person.
-8. The code preserves durable history safely enough that attachment is not a liability.
+Check:
+- contradictory preferences/opinions
+- duplicate memories
+- stuck stories
+- save migration
+- relationship coherence
+- huge fact/memory lists
+- old resolved arcs restarting
+- favorites thrashing
 
-If a feature adds another menu but does none of those, question it hard.
+Visual acceptance must cover the existing five phone sizes. Also test Reduce Motion and larger text.
+
+---
+
+# Do not redo already-solved work
+
+Do not spend a sprint rebuilding these from scratch unless there is a regression:
+- action row removed
+- in-world bowl/toy/bed
+- haptics
+- voice + typing
+- mute moved out of header
+- FoodSheet wired
+- Home purchases visible
+- rope/ball behavior
+- Barkly enlarged/grounded
+- collar rendering
+- Beach
+- contest mechanics
+- relationship ladders
+- learned routines
+- current voice bank/dialect foundation
+- accessibility/layout testing
+
+---
+
+# Final quality questions
+
+Before calling a feature done:
+
+1. Did we add a menu, or make Barkly/the world more alive?
+2. Can the player SEE the consequence?
+3. Does Barkly physically react?
+4. Does it change future history?
+5. Will two long-term users experience it differently?
+6. Would someone screen-record it and send it?
+7. Does this screen look like a polished kids game from five feet away?
+8. Could it belong to a finance app if Barkly disappeared? If yes, redesign it.
+
+Goal:
+
+> **Make people forget they are interacting with software for a minute.**
