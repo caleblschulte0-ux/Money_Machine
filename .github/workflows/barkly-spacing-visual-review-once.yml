@@ -1,3 +1,4 @@
+# Re-run after the landscape notice fix so the artifact represents the final candidate.
 name: Barkly spacing visual review once
 
 on:
