@@ -10,9 +10,13 @@
  */
 export const HOME_SCENE_PURCHASES = ['home_bed', 'home_rug', 'home_window'] as const;
 
+// Home is intentionally isolated while the hero-screen art direction is being
+// worked through in code. Nothing here changes Barkly, HUD logic, or the other
+// locations.
+export { HomeScene } from './HomeHeroScene';
+
 export {
   BeachScene,
-  HomeScene,
   NightOverlay,
   ParkScene,
   TownScene,
