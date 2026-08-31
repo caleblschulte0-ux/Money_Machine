@@ -65,6 +65,35 @@ function StageLight({ y, night, warm = false }: { y: number; night: boolean; war
   );
 }
 
+/**
+ * Deterministic surface breakup. These marks are deliberately drawn by the
+ * renderer instead of baked into a scene bitmap, so every ground plane can
+ * keep its own perspective, tint and time-of-day treatment.
+ */
+function SurfaceGrain({ fromY, canvasHeight, color, night }: { fromY: number; canvasHeight: number; color: string; night: boolean }) {
+  const span = Math.max(120, canvasHeight - fromY);
+  return (
+    <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
+      {Array.from({ length: 34 }, (_, i) => {
+        const depth = (i % 9) / 8;
+        const x = (i * 97 + (i % 4) * 29) % 430 - 5;
+        const y = fromY + 18 + ((i * 71) % Math.max(40, span - 30));
+        const width = 2.5 + depth * 8;
+        return (
+          <Path
+            key={i}
+            d={`M${x} ${y}q${width * 0.55} ${1 + depth * 2} ${width} 0`}
+            stroke={color}
+            strokeWidth={1 + depth * 1.25}
+            strokeLinecap="round"
+            opacity={(night ? 0.055 : 0.1) + depth * 0.045}
+          />
+        );
+      })}
+    </Svg>
+  );
+}
+
 function Sky({ band, compact = false }: { band: SkyBand; compact?: boolean }) {
   const night = band === 'night';
   const cloudA = useLoop(12000);
@@ -262,9 +291,23 @@ export function HomeScene({ hour, upgrades = [], asleep = false, groundY, chrome
       <RNGradient colors={night ? [DIORAMA.floorNightFar, DIORAMA.floorNightNear] : [DIORAMA.floorDayFar, DIORAMA.floorDayNear]} style={{ position: 'absolute', left: 0, right: 0, top: floorTop, bottom: 0 }} />
       <View style={{ position: 'absolute', left: 0, right: 0, top: floorTop, height: 12, backgroundColor: floorEdge, opacity: night ? 0.58 : 0.72 }} />
       <Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
+        <Path d={`M210 ${chromeBottom + 46}V${floorTop}L248 760`} stroke={trim} strokeWidth={4} opacity={night ? 0.12 : 0.24} />
+        <Path d={`M0 ${floorTop - 13}Q210 ${floorTop - 1} 420 ${floorTop - 13}`} stroke={DIORAMA.white} strokeWidth={4} opacity={night ? 0.025 : 0.13} />
         {[48, 126, 207, 291, 373].map((x) => <Path key={x} d={`M${x} ${floorTop}L${210 + (x - 210) * 1.7} 760`} stroke={floorEdge} strokeWidth={2.6} opacity={night ? 0.14 : 0.27} />)}
         {[floorTop + 52, floorTop + 111, floorTop + 179].map((y) => <Path key={y} d={`M0 ${y}H420`} stroke={floorEdge} strokeWidth={2.2} opacity={night ? 0.11 : 0.19} />)}
       </Svg>
+      <SurfaceGrain fromY={floorTop} canvasHeight={760} color={floorEdge} night={night} />
+      <HomeObjectLayer band={band} night={night} floorTop={floorTop} chromeBottom={chromeBottom} has={has} />
+      <StageLight y={groundY} night={night} warm />
+      <HomeLife night={night} />
+    </View>
+  );
+}
+
+/** Every room object owns its own draw call and z-position. */
+function HomeObjectLayer({ band, night, floorTop, chromeBottom, has }: { band: SkyBand; night: boolean; floorTop: number; chromeBottom: number; has: (id: string) => boolean }) {
+  return (
+    <View style={styles.fill}>
       <View style={{ position: 'absolute', left: 22, top: chromeBottom + 70 }}><Window band={band} upgraded={has('home_window')} /></View>
       <View style={{ position: 'absolute', right: 18, top: chromeBottom + 60 }}><WallPortrait night={night} /></View>
       <View style={{ position: 'absolute', right: -8, top: floorTop - 105 }}><Sofa night={night} /></View>
@@ -280,8 +323,6 @@ export function HomeScene({ hour, upgrades = [], asleep = false, groundY, chrome
           <Path d="M22 23Q56 10 91 23" stroke={DIORAMA.white} strokeWidth={6} strokeLinecap="round" opacity={0.36} />
         </Svg>
       )}
-      <StageLight y={groundY} night={night} warm />
-      <HomeLife night={night} />
     </View>
   );
 }
@@ -393,6 +434,8 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Path d={`M209 ${hillY + 87}C214 ${hillY + 138} 190 ${ground + 29} 151 ${canvasHeight}`} stroke={DIORAMA.white} strokeWidth={6} fill="none" opacity={night ? 0.05 : 0.24} />
         <Path d={`M18 ${hillY + 118}Q94 ${hillY + 91} 162 ${hillY + 112}`} stroke={DIORAMA.white} strokeWidth={7} fill="none" strokeLinecap="round" opacity={night ? 0.04 : 0.16} />
       </Svg>
+      {[74, 166, 254, 336].map((left, i) => <View key={left} style={{ position: 'absolute', left, top: hillY + 30 + (i % 2) * 14 }}><Tree night={night} scale={0.28 + (i % 2) * 0.05} flip={i % 2 === 1} /></View>)}
+      <SurfaceGrain fromY={hillY + 95} canvasHeight={canvasHeight} color={grassEdge} night={night} />
       <View style={{ position: 'absolute', left: -25, top: 46 }}><Tree night={night} scale={1.16} /></View>
       <View style={{ position: 'absolute', right: -28, top: 57 }}><Tree night={night} scale={1.12} flip /></View>
       <View style={{ position: 'absolute', left: 108, top: hillY + 1 }}><Bush night={night} width={112} /></View>
@@ -457,6 +500,21 @@ function LampPost({ night }: { night: boolean }) {
   );
 }
 
+function TownFountain({ night }: { night: boolean }) {
+  return (
+    <Svg width={104} height={92} viewBox="0 0 104 92">
+      <Ellipse cx={52} cy={84} rx={47} ry={7} fill={DIORAMA.shadow} opacity={0.18} />
+      <Ellipse cx={52} cy={69} rx={46} ry={16} fill={DIORAMA.townRoadNightEdge} />
+      <Ellipse cx={52} cy={62} rx={44} ry={15} fill={night ? DIORAMA.townSidewalkNight : DIORAMA.townSidewalkDay} />
+      <Ellipse cx={52} cy={59} rx={34} ry={10} fill={night ? DIORAMA.oceanNightA : DIORAMA.oceanDayA} />
+      <Rect x={47} y={21} width={10} height={39} rx={5} fill={DIORAMA.woodWarm} />
+      <Ellipse cx={52} cy={27} rx={22} ry={8} fill={DIORAMA.woodDeep} />
+      <Ellipse cx={52} cy={22} rx={20} ry={7} fill={DIORAMA.goldLight} />
+      <Path d="M43 24Q52 37 61 24" stroke={DIORAMA.white} strokeWidth={3} fill="none" opacity={night ? 0.16 : 0.46} />
+    </Svg>
+  );
+}
+
 function TownLife({ night }: { night: boolean }) {
   const glint = useLoop(4000);
   const walker = useLoop(9000, 1000);
@@ -496,6 +554,8 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Rect x={0} y={ground + 99} width={420} height={canvasHeight - ground - 99} fill={road} />
         <Path d={`M22 ${ground + 126}H112M166 ${ground + 126}H256M310 ${ground + 126}H400`} stroke={DIORAMA.cream} strokeWidth={8} strokeLinecap="round" opacity={night ? 0.12 : 0.47} />
       </Svg>
+      <SurfaceGrain fromY={sidewalkY} canvasHeight={canvasHeight} color={walkEdge} night={night} />
+      <View style={{ position: 'absolute', left: '50%', marginLeft: -52, top: sidewalkY - 58 }}><TownFountain night={night} /></View>
       <StageLight y={ground} night={night} warm />
       <View style={{ position: 'absolute', left: 11, top: sidewalkY - 115 }}><LampPost night={night} /></View>
       <View style={{ position: 'absolute', right: 10, top: sidewalkY - 115 }}><LampPost night={night} /></View>
@@ -601,6 +661,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
         })}
         <Circle cx={318} cy={ground + 44} r={7} fill={DIORAMA.starfish} /><Path d={`M313 ${ground + 37}L323 ${ground + 51}M325 ${ground + 37}L311 ${ground + 50}`} stroke={DIORAMA.starfish} strokeWidth={5} strokeLinecap="round" />
       </Svg>
+      <SurfaceGrain fromY={sandTop + 12} canvasHeight={canvasHeight} color={sandEdge} night={night} />
       <StageLight y={ground} night={night} warm />
       <View style={{ position: 'absolute', left: -35, top: sandTop + 38 }}><Dune night={night} /></View>
       <View style={{ position: 'absolute', right: -12, top: 186 }}><Umbrella night={night} /></View>
