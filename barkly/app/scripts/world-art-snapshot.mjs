@@ -70,8 +70,21 @@ async function onboard() {
 
 async function loadRichPreset() {
   const badge = page.locator('[data-testid="playtest-badge"]').first();
-  if (!(await badge.count())) throw new Error('playtest badge missing — snapshot build must set EXPO_PUBLIC_BARKLY_PLAYTEST=always');
-  await badge.click();
+  if (await badge.count()) {
+    await badge.click();
+  } else {
+    // Current responsive builds keep test tooling inside Settings so the
+    // actual world composition is not paying for a permanent dev badge.
+    const settings = page.getByLabel('Settings').first();
+    if (!(await settings.count())) throw new Error('Settings missing while opening playtest saves');
+    await settings.click();
+    await settle(500);
+    const playtest = page.locator('[data-testid="playtest-settings"]').first();
+    if (!(await playtest.count())) {
+      throw new Error('Playtest saves missing in Settings — snapshot build must set EXPO_PUBLIC_BARKLY_PLAYTEST=always');
+    }
+    await playtest.click();
+  }
   await settle(650);
   const slot = page.locator('[data-testid="playtest-rich"]').first();
   if (!(await slot.count())) throw new Error('Rich Barkly playtest slot missing');
