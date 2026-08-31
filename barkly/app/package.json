@@ -56,7 +56,8 @@
     "art:materials": "node scripts/material-lab.mjs art-review/material-lab",
     "art:juice": "node scripts/juice-lab.mjs art-review/juice-lab",
     "art:performance": "node scripts/performance-review.mjs --html art-toolbox.html --out art-review/performance",
-    "art:debug-layout": "node scripts/layout-debug.mjs --html art-toolbox.html --out art-review/layout-debug"
+    "art:debug-layout": "node scripts/layout-debug.mjs --html art-toolbox.html --out art-review/layout-debug",
+    "art:sfx": "python3 scripts/sfx-lab.py art-review/sfx-lab"
   },
   "private": true,
   "jest": {
