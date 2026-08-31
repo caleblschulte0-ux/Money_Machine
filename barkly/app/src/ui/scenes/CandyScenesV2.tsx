@@ -633,29 +633,6 @@ function Castle({ night }: { night: boolean }) {
   );
 }
 
-function Palm({ night, flip = false }: { night: boolean; flip?: boolean }) {
-  const leaf = night ? DIORAMA.grassBeachNight : DIORAMA.grassBeachDay;
-  const leafLight = night ? DIORAMA.grassBeachNight : DIORAMA.grassBeachLight;
-  return (
-    <Svg width={122} height={218} viewBox="0 0 122 218" style={flip ? { transform: [{ scaleX: -1 }] } : undefined}>
-      <Defs>
-        <SvgLinearGradient id="palmTrunk" x1="0" y1="0" x2="1" y2="0">
-          <Stop offset="0" stopColor={DIORAMA.woodDeep} /><Stop offset="0.42" stopColor={DIORAMA.woodWarm} /><Stop offset="1" stopColor={DIORAMA.woodDark} />
-        </SvgLinearGradient>
-        <SvgLinearGradient id="palmLeaf" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={leafLight} /><Stop offset="1" stopColor={leaf} />
-        </SvgLinearGradient>
-      </Defs>
-      <Ellipse cx={61} cy={209} rx={37} ry={7} fill={DIORAMA.shadow} opacity={0.16} />
-      <Path d="M55 199Q64 139 58 72L75 70Q79 141 72 203Z" fill="url(#palmTrunk)" />
-      {[[-1, 12, 64, 76], [14, 2, 65, 70], [40, -3, 67, 70], [72, 0, 68, 70], [99, 12, 68, 75], [104, 42, 69, 77], [5, 42, 65, 77]].map(([x, y, cx, cy], i) => (
-        <Path key={i} d={`M${cx} ${cy}Q${(x + cx) / 2} ${y - 12} ${x} ${y + 22}Q${(x + cx) / 2} ${y + 11} ${cx} ${cy}Z`} fill="url(#palmLeaf)" />
-      ))}
-      <Path d="M64 77Q44 30 12 30M67 73Q90 26 112 37" stroke={DIORAMA.white} strokeWidth={4} strokeLinecap="round" opacity={night ? 0.04 : 0.2} />
-    </Svg>
-  );
-}
-
 function BeachLife({ night }: { night: boolean }) {
   const gull = useLoop(8500, 400);
   const glint = useLoop(2500);
@@ -716,7 +693,6 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
         <Circle cx={318} cy={ground + 44} r={7} fill={DIORAMA.starfish} /><Path d={`M313 ${ground + 37}L323 ${ground + 51}M325 ${ground + 37}L311 ${ground + 50}`} stroke={DIORAMA.starfish} strokeWidth={5} strokeLinecap="round" />
       </Svg>
       <SurfaceGrain fromY={sandTop + 12} canvasHeight={canvasHeight} color={sandEdge} night={night} />
-      <View style={{ position: 'absolute', right: -32, top: horizon - 116 }}><Palm night={night} flip /></View>
       <StageLight y={ground} night={night} warm />
       <View style={{ position: 'absolute', left: -35, top: sandTop + 38 }}><Dune night={night} /></View>
       <View style={{ position: 'absolute', right: -12, top: 186 }}><Umbrella night={night} /></View>
