@@ -12,8 +12,8 @@ export const HOME_SCENE_PURCHASES = ['home_bed', 'home_rug', 'home_window'] as c
 
 // Home is intentionally isolated while the hero-screen art direction is being
 // worked through in code. Nothing here changes Barkly, HUD logic, or the other
-// locations.
-export { HomeScene } from './HomeHeroScene';
+// locations. V2 is the reviewed continuation from the off-to-the-side art pass.
+export { HomeScene } from './HomeHeroSceneV2';
 
 export {
   BeachScene,
