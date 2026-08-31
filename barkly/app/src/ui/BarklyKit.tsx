@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 import { color, elevation, radius, space, type } from './theme';
 import { CARE_DOCK_HEIGHT, INTERACTION_GUTTER, TAP_MIN } from './layout';
@@ -115,6 +115,8 @@ function Slot({ action, label, hint, wanted, disabled, onPress, children }: {
 }
 
 export default function BarklyKit({ toyId, playLabel, asleep, wants, disabled, onPress }: Props) {
+  const { width, height } = useWindowDimensions();
+  const dockBottom = width > height ? 0 : -2;
   const action = playLabel.toLowerCase();
   const visual = action.includes('tug') ? 'rope'
     : action.includes('fetch') || action.includes('throw') ? 'ball'
@@ -125,7 +127,7 @@ export default function BarklyKit({ toyId, playLabel, asleep, wants, disabled, o
       : visual === 'waves' ? 'Tap to let him charge the waves.'
         : 'Whatever he can find. It is usually a stick.';
 
-  return <View style={styles.kit}>
+  return <View style={[styles.kit, { bottom: dockBottom }]}>
     <View style={styles.dockShadow} pointerEvents="none" />
     <View style={styles.dock} pointerEvents="none">
       <View style={styles.dockGloss} />
@@ -146,7 +148,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: INTERACTION_GUTTER,
     right: INTERACTION_GUTTER,
-    bottom: -2,
     height: CARE_DOCK_HEIGHT,
     flexDirection: 'row',
     justifyContent: 'space-around',
