@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   rivet: { position: 'absolute', bottom: 3, width: 6, height: 6, borderRadius: radius.xs, backgroundColor: BRASS.mid, borderWidth: 1, borderColor: BRASS.edge },
   rivetLeft: { left: 12 },
   rivetRight: { right: 12 },
-  slot: { minWidth: TAP_MIN + 26, minHeight: TAP_MIN + 12, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 2 },
+  slot: { minWidth: TAP_MIN + 26, minHeight: TAP_MIN + 10, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 2 },
   off: { opacity: 0.4 },
   wellShadow: { position: 'absolute', bottom: 5, width: 82, height: 29, borderRadius: radius.lg, backgroundColor: DIORAMA.shadow, opacity: 0.28 },
   wellShadowWanted: { opacity: 0.38 },
