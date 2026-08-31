@@ -134,9 +134,11 @@ export function spriteScale(
   const minScale = landscape
     ? screenHeight < 430 ? 0.78 : 0.84
     : screenHeight < 590 ? 0.76 : screenHeight < 680 ? 0.82 : 0.78;
-  // At 1.34 Barkly became the room instead of the hero inside it. The art
-  // review found the world reads far better around ~1.1; 1.16 keeps that
-  // composition while preserving the NPC/care-rack depth lane on tall phones.
+  // Home now has enough authored depth to deserve screen space. 1.14 keeps
+  // Barkly unmistakably primary on a 390px phone while leaving visible room on
+  // both sides for furniture, architecture and NPCs. Short phones retain their
+  // separate guarded caps, and tablets still reveal more world rather than
+  // inheriting the phone ceiling.
   const cap = mode === 'narrowPortrait' && screenHeight < 680
     ? screenHeight < 590 ? 0.80 : 0.90
     : mode === 'tabletLandscape'
@@ -145,7 +147,7 @@ export function spriteScale(
         ? 1.95
         : mode === 'phoneLandscape'
           ? 1.10
-          : 1.16;
+          : 1.14;
   return Math.max(minScale, Math.min(cap, room / SPRITE_HEIGHT, byWidth));
 }
 
