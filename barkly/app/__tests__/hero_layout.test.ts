@@ -54,8 +54,15 @@ describe('hero-first phone composition', () => {
     const width = stageWidth(1024, mode);
     const scale = spriteScale(768, width, mode);
     expect(width).toBeLessThan(1024 * 0.7);
-    expect(scale).toBeGreaterThanOrEqual(1.35);
-    expect(scale).toBeLessThanOrEqual(1.7);
+    expect(scale).toBeGreaterThanOrEqual(1.55);
+    expect(scale).toBeLessThanOrEqual(1.65);
+  });
+
+  it('uses tall tablet portrait space for Barkly instead of dead middle', () => {
+    const mode = layoutMode(768, 1024);
+    const scale = spriteScale(1024, stageWidth(768, mode), mode, true);
+    expect(scale).toBeGreaterThanOrEqual(1.9);
+    expect(scale).toBeLessThanOrEqual(1.95);
   });
 
   it('reserves real side rails in landscape', () => {
