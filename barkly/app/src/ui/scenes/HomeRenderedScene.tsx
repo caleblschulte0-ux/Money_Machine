@@ -90,19 +90,8 @@ function RenderedWindow({
   );
 }
 
-function PictureMedallion({ top, night }: { top: number; night: boolean }) {
-  return (
-    <View style={[styles.pictureShadow, { top, opacity: night ? 0.5 : 0.2 }]}>
-      <View style={styles.picture}>
-        <View style={styles.pictureInset}>
-          <View style={styles.pawPalm} />
-          <View style={[styles.pawToe, { left: 12, top: 9 }]} />
-          <View style={[styles.pawToe, { left: 25, top: 5 }]} />
-          <View style={[styles.pawToe, { left: 38, top: 9 }]} />
-        </View>
-      </View>
-    </View>
-  );
+function PictureMedallion({ top: _top, night: _night }: { top: number; night: boolean }) {
+  return null;
 }
 
 function WallMillwork({ floorTop, night }: { floorTop: number; night: boolean }) {
