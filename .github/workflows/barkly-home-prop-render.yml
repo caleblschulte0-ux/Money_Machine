@@ -1,0 +1,49 @@
+name: Barkly Home prop render
+
+on:
+  push:
+    branches:
+      - 'chatgpt/barkly-supercell-home-*'
+    paths:
+      - 'barkly/app/tools/blender/home_prop_pack.py'
+      - '.github/workflows/barkly-home-prop-render.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-home-props:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: barkly/app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install free Blender renderer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender libegl1 libgl1-mesa-dri xvfb
+          blender --version
+
+      - name: Render modular Home prop pack
+        run: xvfb-run -a blender -b --python tools/blender/home_prop_pack.py
+
+      - name: Confirm transparent prop outputs
+        run: |
+          test -s art-review/home-props/chair.png
+          test -s art-review/home-props/lamp.png
+          test -s art-review/home-props/bed.png
+          test -s art-review/home-props/shelf.png
+          test -s art-review/home-props/manifest.json
+
+      - name: Upload Home prop pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: barkly-home-props-${{ github.sha }}
+          path: barkly/app/art-review/home-props/**
+          if-no-files-found: error
+          retention-days: 14
