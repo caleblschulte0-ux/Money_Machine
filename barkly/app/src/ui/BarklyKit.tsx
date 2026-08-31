@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: INTERACTION_GUTTER,
     right: INTERACTION_GUTTER,
-    bottom: 0,
+    bottom: -2,
     height: CARE_DOCK_HEIGHT,
     flexDirection: 'row',
     justifyContent: 'space-around',
