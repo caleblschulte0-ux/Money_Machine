@@ -356,22 +356,6 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 29, bottom: 25, height: 5,
     borderRadius: radius.pill, backgroundColor: DIORAMA.goldLight, opacity: 0.72,
   },
-  pictureShadow: {
-    position: 'absolute', left: '49%', width: 80, height: 94, marginLeft: -40,
-    borderRadius: radius.lg, backgroundColor: DIORAMA.shadow,
-    transform: [{ translateX: 4 }, { translateY: 6 }, { rotate: '-2deg' }],
-  },
-  picture: {
-    position: 'absolute', left: -4, top: -6, width: 76, height: 88,
-    padding: 7, borderRadius: radius.lg,
-    backgroundColor: DIORAMA.woodWarm,
-  },
-  pictureInset: {
-    flex: 1, borderRadius: radius.md, backgroundColor: DIORAMA.cream,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  pawPalm: { position: 'absolute', left: 21, top: 28, width: 30, height: 25, borderRadius: radius.md, backgroundColor: DIORAMA.woodDeep },
-  pawToe: { position: 'absolute', width: 10, height: 13, borderRadius: radius.xs, backgroundColor: DIORAMA.woodDeep },
   rug: {
     position: 'absolute', left: '22%', right: '22%', height: 78,
     borderRadius: radius.pill, padding: 6, backgroundColor: DIORAMA.goldDeep,
