@@ -1,0 +1,88 @@
+name: Barkly modular world prop render
+
+on:
+  push:
+    branches:
+      - 'chatgpt/barkly-world-2p5d-*'
+      - 'chatgpt/barkly-supercell-home-*'
+    paths:
+      - 'barkly/app/tools/blender/world_prop_pack.py'
+      - '.github/workflows/barkly-world-prop-render.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: barkly-world-props-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render-world-props:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: barkly/app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install free Blender renderer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender libegl1 libgl1-mesa-dri xvfb imagemagick
+          blender --version
+
+      - name: Render modular world prop pack
+        run: xvfb-run -a blender -b --python tools/blender/world_prop_pack.py
+
+      - name: Trim transparent render canvases
+        run: |
+          find art-review/world-props -name '*.png' -print0 | while IFS= read -r -d '' file; do
+            convert "$file" -trim +repage "$file"
+          done
+          find art-review/world-props -name '*.png' -print0 | xargs -0 identify
+
+      - name: Confirm modular transparent outputs
+        run: |
+          for file in \
+            park/tree park/bench park/hedge \
+            town/store_coral town/store_aqua town/store_violet town/fountain town/lamp town/planter \
+            beach/umbrella beach/lifeguard beach/dune beach/castle beach/palm \
+            home/rug; do
+            test -s "art-review/world-props/${file}.png"
+          done
+          test -s art-review/world-props/manifest.json
+
+      - name: Sync branch before promotion
+        run: git pull --rebase origin "${GITHUB_REF_NAME}"
+
+      - name: Promote rendered modules into app
+        run: |
+          mkdir -p assets/world/park/props assets/world/town/props assets/world/beach/props assets/world/home/props
+          cp art-review/world-props/park/*.png assets/world/park/props/
+          cp art-review/world-props/town/*.png assets/world/town/props/
+          cp art-review/world-props/beach/*.png assets/world/beach/props/
+          cp art-review/world-props/home/rug.png assets/world/home/props/rug.png
+          cp art-review/world-props/manifest.json assets/world/manifest.json
+
+      - name: Commit generated modules to branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/world/park assets/world/town assets/world/beach assets/world/home/props/rug.png assets/world/manifest.json
+          if git diff --cached --quiet; then
+            echo "Rendered assets unchanged."
+          else
+            git commit -m "Barkly art: render modular 2.5D world pack"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload world prop pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: barkly-world-props-${{ github.sha }}
+          path: barkly/app/art-review/world-props/**
+          if-no-files-found: error
+          retention-days: 14

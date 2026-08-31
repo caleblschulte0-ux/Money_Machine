@@ -6,6 +6,7 @@ on:
       - 'chatgpt/barkly-world-rehaul-build-*'
       - 'chatgpt/barkly-spacing-overhaul-*'
       - 'chatgpt/barkly-supercell-home-*'
+      - 'chatgpt/barkly-world-2p5d-*'
     paths:
       - 'barkly/app/**'
       - '.github/workflows/barkly-world-art-review.yml'
