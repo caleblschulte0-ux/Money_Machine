@@ -65,6 +65,35 @@ function StageLight({ y, night, warm = false }: { y: number; night: boolean; war
   );
 }
 
+/**
+ * Deterministic surface breakup. These marks are deliberately drawn by the
+ * renderer instead of baked into a scene bitmap, so every ground plane can
+ * keep its own perspective, tint and time-of-day treatment.
+ */
+function SurfaceGrain({ fromY, canvasHeight, color, night }: { fromY: number; canvasHeight: number; color: string; night: boolean }) {
+  const span = Math.max(120, canvasHeight - fromY);
+  return (
+    <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
+      {Array.from({ length: 34 }, (_, i) => {
+        const depth = (i % 9) / 8;
+        const x = (i * 97 + (i % 4) * 29) % 430 - 5;
+        const y = fromY + 18 + ((i * 71) % Math.max(40, span - 30));
+        const width = 2.5 + depth * 8;
+        return (
+          <Path
+            key={i}
+            d={`M${x} ${y}q${width * 0.55} ${1 + depth * 2} ${width} 0`}
+            stroke={color}
+            strokeWidth={1 + depth * 1.25}
+            strokeLinecap="round"
+            opacity={(night ? 0.055 : 0.1) + depth * 0.045}
+          />
+        );
+      })}
+    </Svg>
+  );
+}
+
 function Sky({ band, compact = false }: { band: SkyBand; compact?: boolean }) {
   const night = band === 'night';
   const cloudA = useLoop(12000);
@@ -262,9 +291,26 @@ export function HomeScene({ hour, upgrades = [], asleep = false, groundY, chrome
       <RNGradient colors={night ? [DIORAMA.floorNightFar, DIORAMA.floorNightNear] : [DIORAMA.floorDayFar, DIORAMA.floorDayNear]} style={{ position: 'absolute', left: 0, right: 0, top: floorTop, bottom: 0 }} />
       <View style={{ position: 'absolute', left: 0, right: 0, top: floorTop, height: 12, backgroundColor: floorEdge, opacity: night ? 0.58 : 0.72 }} />
       <Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
+        <Rect x={224} y={chromeBottom + 63} width={172} height={145} rx={24} fill="none" stroke={trim} strokeWidth={5} opacity={night ? 0.12 : 0.32} />
+        <Path d={`M239 ${chromeBottom + 78}H378`} stroke={DIORAMA.white} strokeWidth={4} strokeLinecap="round" opacity={night ? 0.03 : 0.16} />
+        <Path d={`M30 ${floorTop - 3}L154 760H240L128 ${floorTop - 3}Z`} fill={DIORAMA.goldLight} opacity={night ? 0.015 : 0.055} />
+        <Path d={`M210 ${chromeBottom + 46}V${floorTop}L248 760`} stroke={trim} strokeWidth={4} opacity={night ? 0.12 : 0.24} />
+        <Path d={`M0 ${floorTop - 13}Q210 ${floorTop - 1} 420 ${floorTop - 13}`} stroke={DIORAMA.white} strokeWidth={4} opacity={night ? 0.025 : 0.13} />
         {[48, 126, 207, 291, 373].map((x) => <Path key={x} d={`M${x} ${floorTop}L${210 + (x - 210) * 1.7} 760`} stroke={floorEdge} strokeWidth={2.6} opacity={night ? 0.14 : 0.27} />)}
         {[floorTop + 52, floorTop + 111, floorTop + 179].map((y) => <Path key={y} d={`M0 ${y}H420`} stroke={floorEdge} strokeWidth={2.2} opacity={night ? 0.11 : 0.19} />)}
       </Svg>
+      <SurfaceGrain fromY={floorTop} canvasHeight={760} color={floorEdge} night={night} />
+      <HomeObjectLayer band={band} night={night} floorTop={floorTop} chromeBottom={chromeBottom} has={has} />
+      <StageLight y={groundY} night={night} warm />
+      <HomeLife night={night} />
+    </View>
+  );
+}
+
+/** Every room object owns its own draw call and z-position. */
+function HomeObjectLayer({ band, night, floorTop, chromeBottom, has }: { band: SkyBand; night: boolean; floorTop: number; chromeBottom: number; has: (id: string) => boolean }) {
+  return (
+    <View style={styles.fill}>
       <View style={{ position: 'absolute', left: 22, top: chromeBottom + 70 }}><Window band={band} upgraded={has('home_window')} /></View>
       <View style={{ position: 'absolute', right: 18, top: chromeBottom + 60 }}><WallPortrait night={night} /></View>
       <View style={{ position: 'absolute', right: -8, top: floorTop - 105 }}><Sofa night={night} /></View>
@@ -280,8 +326,6 @@ export function HomeScene({ hour, upgrades = [], asleep = false, groundY, chrome
           <Path d="M22 23Q56 10 91 23" stroke={DIORAMA.white} strokeWidth={6} strokeLinecap="round" opacity={0.36} />
         </Svg>
       )}
-      <StageLight y={groundY} night={night} warm />
-      <HomeLife night={night} />
     </View>
   );
 }
@@ -298,19 +342,31 @@ function Tree({ night, scale = 1, flip = false }: { night: boolean; scale?: numb
           <Stop offset={0.45} stopColor={base} />
           <Stop offset="1" stopColor={edge} />
         </SvgLinearGradient>
+        <RadialGradient id="treeOrb" cx="31%" cy="24%" r="74%">
+          <Stop offset="0" stopColor={DIORAMA.white} stopOpacity={night ? 0.08 : 0.42} />
+          <Stop offset="0.2" stopColor={light} />
+          <Stop offset="0.7" stopColor={base} />
+          <Stop offset="1" stopColor={edge} />
+        </RadialGradient>
+        <SvgLinearGradient id="treeTrunk" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor={DIORAMA.woodDeep} />
+          <Stop offset="0.42" stopColor={DIORAMA.woodWarm} />
+          <Stop offset="0.72" stopColor={DIORAMA.woodDark} />
+          <Stop offset="1" stopColor={DIORAMA.woodDeep} />
+        </SvgLinearGradient>
       </Defs>
       <Ellipse cx={84} cy={222} rx={55} ry={8} fill={DIORAMA.shadow} opacity={0.17} />
-      <Path d="M68 82Q67 145 55 213H112Q99 145 95 82Z" fill={DIORAMA.woodDeep} />
+      <Path d="M68 82Q67 145 55 213H112Q99 145 95 82Z" fill="url(#treeTrunk)" />
       <Path d="M76 93Q76 145 67 194" stroke={DIORAMA.woodShine} strokeWidth={8} strokeLinecap="round" opacity={0.32} />
-      <Circle cx={79} cy={65} r={58} fill="url(#treeD)" opacity={night ? 0 : 1} />
-      {night && <Circle cx={79} cy={65} r={58} fill="url(#treeN)" />}
-      <Circle cx={40} cy={72} r={35} fill={base} />
-      <Circle cx={126} cy={75} r={37} fill={base} />
-      <Circle cx={80} cy={31} r={38} fill={light} />
-      <Circle cx={42} cy={36} r={25} fill={light} />
-      <Circle cx={119} cy={41} r={27} fill={light} />
+      <Circle cx={79} cy={65} r={58} fill="url(#treeOrb)" />
+      <Circle cx={40} cy={72} r={35} fill="url(#treeOrb)" />
+      <Circle cx={126} cy={75} r={37} fill="url(#treeOrb)" />
+      <Circle cx={80} cy={31} r={38} fill="url(#treeOrb)" />
+      <Circle cx={42} cy={36} r={25} fill="url(#treeOrb)" />
+      <Circle cx={119} cy={41} r={27} fill="url(#treeOrb)" />
       <Path d="M29 39Q75 2 126 36" stroke={DIORAMA.white} strokeWidth={10} strokeLinecap="round" opacity={night ? 0.06 : 0.28} />
       <Path d="M23 87Q78 111 140 84" stroke={edge} strokeWidth={9} strokeLinecap="round" opacity={0.3} />
+      <Path d="M59 53q9-9 18-2M100 69q10-8 18 0M51 88q8-6 14-1" stroke={light} strokeWidth={4} strokeLinecap="round" opacity={night ? 0.12 : 0.42} />
     </Svg>
   );
 }
@@ -321,9 +377,17 @@ function Bush({ night, width = 128 }: { night: boolean; width?: number }) {
   const edge = night ? DIORAMA.parkTreeNightEdge : DIORAMA.parkTreeDayEdge;
   return (
     <Svg width={width} height={72} viewBox="0 0 128 72">
+      <Defs>
+        <RadialGradient id="bushOrb" cx="30%" cy="20%" r="78%">
+          <Stop offset="0" stopColor={DIORAMA.white} stopOpacity={night ? 0.06 : 0.34} />
+          <Stop offset="0.22" stopColor={light} />
+          <Stop offset="0.72" stopColor={base} />
+          <Stop offset="1" stopColor={edge} />
+        </RadialGradient>
+      </Defs>
       <Ellipse cx={64} cy={66} rx={56} ry={5} fill={DIORAMA.shadow} opacity={0.13} />
-      <Circle cx={26} cy={42} r={25} fill={edge} /><Circle cx={54} cy={30} r={31} fill={base} /><Circle cx={88} cy={33} r={29} fill={base} /><Circle cx={108} cy={45} r={21} fill={edge} />
-      <Circle cx={52} cy={21} r={19} fill={light} /><Circle cx={87} cy={23} r={16} fill={light} />
+      <Circle cx={26} cy={42} r={25} fill="url(#bushOrb)" /><Circle cx={54} cy={30} r={31} fill="url(#bushOrb)" /><Circle cx={88} cy={33} r={29} fill="url(#bushOrb)" /><Circle cx={108} cy={45} r={21} fill="url(#bushOrb)" />
+      <Circle cx={52} cy={21} r={19} fill="url(#bushOrb)" /><Circle cx={87} cy={23} r={16} fill="url(#bushOrb)" />
       <Path d="M31 29Q57 10 83 19" stroke={DIORAMA.white} strokeWidth={6} strokeLinecap="round" opacity={night ? 0.05 : 0.28} />
     </Svg>
   );
@@ -393,6 +457,8 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Path d={`M209 ${hillY + 87}C214 ${hillY + 138} 190 ${ground + 29} 151 ${canvasHeight}`} stroke={DIORAMA.white} strokeWidth={6} fill="none" opacity={night ? 0.05 : 0.24} />
         <Path d={`M18 ${hillY + 118}Q94 ${hillY + 91} 162 ${hillY + 112}`} stroke={DIORAMA.white} strokeWidth={7} fill="none" strokeLinecap="round" opacity={night ? 0.04 : 0.16} />
       </Svg>
+      {[74, 166, 254, 336].map((left, i) => <View key={left} style={{ position: 'absolute', left, top: hillY + 30 + (i % 2) * 14 }}><Tree night={night} scale={0.28 + (i % 2) * 0.05} flip={i % 2 === 1} /></View>)}
+      <SurfaceGrain fromY={hillY + 95} canvasHeight={canvasHeight} color={grassEdge} night={night} />
       <View style={{ position: 'absolute', left: -25, top: 46 }}><Tree night={night} scale={1.16} /></View>
       <View style={{ position: 'absolute', right: -28, top: 57 }}><Tree night={night} scale={1.12} flip /></View>
       <View style={{ position: 'absolute', left: 108, top: hillY + 1 }}><Bush night={night} width={112} /></View>
@@ -413,9 +479,12 @@ function Shop({ x, y, w, h, base, light, edge, night, accent }: { x: number; y: 
     <>
       <Defs>
         <SvgLinearGradient id={`shop-${x}`} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={light} /><Stop offset={0.24} stopColor={base} /><Stop offset="1" stopColor={edge} /></SvgLinearGradient>
+        <SvgLinearGradient id={`glass-${x}`} x1="0" y1="0" x2="1" y2="1"><Stop offset="0" stopColor={DIORAMA.white} stopOpacity={night ? 0.12 : 0.56} /><Stop offset="0.28" stopColor={glass} /><Stop offset="1" stopColor={glassEdge} /></SvgLinearGradient>
       </Defs>
       <Rect x={x + 7} y={y + 13} width={w} height={h} rx={26} fill={edge} />
       <Rect x={x} y={y} width={w} height={h} rx={26} fill={`url(#shop-${x})`} />
+      <Path d={`M${x + w - 22} ${y + 12}Q${x + w + 1} ${y + 28} ${x + w} ${y + h - 18}L${x + w - 15} ${y + h - 6}Z`} fill={edge} opacity={0.58} />
+      <Path d={`M${x + 22} ${y + 4}Q${x + w / 2} ${y - 19} ${x + w - 21} ${y + 5}`} stroke={light} strokeWidth={15} strokeLinecap="round" opacity={0.9} />
       <Path d={`M${x + 16} ${y + 17}Q${x + w / 2} ${y + 2} ${x + w - 16} ${y + 18}`} stroke={DIORAMA.white} strokeWidth={9} strokeLinecap="round" opacity={night ? 0.06 : 0.28} />
       <Rect x={x + 16} y={y + 48} width={w - 32} height={31} rx={12} fill={edge} opacity={0.56} />
       <Rect x={x + 19} y={y + 43} width={w - 38} height={31} rx={12} fill={DIORAMA.signFace} />
@@ -425,7 +494,7 @@ function Shop({ x, y, w, h, base, light, edge, night, accent }: { x: number; y: 
         return <Rect key={i} x={x + 11 + i * sw} y={y + 84} width={sw + 1} height={28} rx={5} fill={i % 2 === 0 ? DIORAMA.white : accent} opacity={night ? 0.62 : 0.98} />;
       })}
       <Rect x={x + 17} y={y + 118} width={w - 34} height={h - 137} rx={16} fill={glassEdge} />
-      <Rect x={x + 21} y={y + 113} width={w - 42} height={h - 137} rx={14} fill={glass} />
+      <Rect x={x + 21} y={y + 113} width={w - 42} height={h - 137} rx={14} fill={`url(#glass-${x})`} />
       <Path d={`M${x + 31} ${y + 125}H${x + w - 31}`} stroke={DIORAMA.white} strokeWidth={10} strokeLinecap="round" opacity={night ? 0.12 : 0.48} />
       <Path d={`M${x + 29} ${y + 135}L${x + 54} ${y + h - 32}`} stroke={DIORAMA.white} strokeWidth={8} strokeLinecap="round" opacity={night ? 0.04 : 0.15} />
       <Rect x={x + w * 0.51} y={y + 114} width={7} height={h - 138} rx={3} fill={glassEdge} opacity={0.64} />
@@ -454,6 +523,21 @@ function LampPost({ night }: { night: boolean }) {
         <Ellipse cx={29} cy={145} rx={16} ry={6} fill={DIORAMA.inkSoft} />
       </Svg>
     </View>
+  );
+}
+
+function TownFountain({ night }: { night: boolean }) {
+  return (
+    <Svg width={104} height={92} viewBox="0 0 104 92">
+      <Ellipse cx={52} cy={84} rx={47} ry={7} fill={DIORAMA.shadow} opacity={0.18} />
+      <Ellipse cx={52} cy={69} rx={46} ry={16} fill={DIORAMA.townRoadNightEdge} />
+      <Ellipse cx={52} cy={62} rx={44} ry={15} fill={night ? DIORAMA.townSidewalkNight : DIORAMA.townSidewalkDay} />
+      <Ellipse cx={52} cy={59} rx={34} ry={10} fill={night ? DIORAMA.oceanNightA : DIORAMA.oceanDayA} />
+      <Rect x={47} y={21} width={10} height={39} rx={5} fill={DIORAMA.woodWarm} />
+      <Ellipse cx={52} cy={27} rx={22} ry={8} fill={DIORAMA.woodDeep} />
+      <Ellipse cx={52} cy={22} rx={20} ry={7} fill={DIORAMA.goldLight} />
+      <Path d="M43 24Q52 37 61 24" stroke={DIORAMA.white} strokeWidth={3} fill="none" opacity={night ? 0.16 : 0.46} />
+    </Svg>
   );
 }
 
@@ -496,6 +580,8 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Rect x={0} y={ground + 99} width={420} height={canvasHeight - ground - 99} fill={road} />
         <Path d={`M22 ${ground + 126}H112M166 ${ground + 126}H256M310 ${ground + 126}H400`} stroke={DIORAMA.cream} strokeWidth={8} strokeLinecap="round" opacity={night ? 0.12 : 0.47} />
       </Svg>
+      <SurfaceGrain fromY={sidewalkY} canvasHeight={canvasHeight} color={walkEdge} night={night} />
+      <View style={{ position: 'absolute', left: '50%', marginLeft: -52, top: sidewalkY - 58 }}><TownFountain night={night} /></View>
       <StageLight y={ground} night={night} warm />
       <View style={{ position: 'absolute', left: 11, top: sidewalkY - 115 }}><LampPost night={night} /></View>
       <View style={{ position: 'absolute', right: 10, top: sidewalkY - 115 }}><LampPost night={night} /></View>
@@ -579,12 +665,17 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
       <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Path d={`M-18 ${horizon + 31}Q18 ${horizon - 32} 70 ${horizon + 16}Q102 ${horizon - 10} 141 ${horizon + 29}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.72} />
         <Path d={`M438 ${horizon + 38}Q401 ${horizon - 24} 350 ${horizon + 17}Q321 ${horizon - 8} 286 ${horizon + 31}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.68} />
+        <Path d={`M126 ${horizon + 27}Q165 ${horizon - 12} 204 ${horizon + 28}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDayLight} opacity={0.48} />
+        <Path d={`M233 ${horizon + 28}Q264 ${horizon + 1} 294 ${horizon + 29}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDayLight} opacity={0.42} />
         <Path d={`M0 ${horizon + 32}Q83 ${horizon + 17} 163 ${horizon + 30}T315 ${horizon + 28}T430 ${horizon + 31}`} stroke={oceanLight} strokeWidth={8} fill="none" opacity={night ? .11 : .42} />
+        <Path d={`M18 ${horizon + 72}Q92 ${horizon + 58} 162 ${horizon + 71}T302 ${horizon + 67}T410 ${horizon + 70}`} stroke={oceanLight} strokeWidth={5} fill="none" opacity={night ? .08 : .28} />
+        <Path d={`M-20 ${horizon + 104}Q46 ${horizon + 91} 112 ${horizon + 106}T246 ${horizon + 102}T442 ${horizon + 99}`} stroke={DIORAMA.white} strokeWidth={3} fill="none" opacity={night ? .04 : .2} />
         <Path d={`M-15 ${tide + 8}Q49 ${tide - 11} 117 ${tide + 5}T242 ${tide + 4}T360 ${tide + 3}T438 ${tide + 5}`} stroke={night ? DIORAMA.foamNightShade : DIORAMA.foamDayShade} strokeWidth={20} fill="none" />
         <Path d={`M-15 ${tide}Q49 ${tide - 19} 117 ${tide}T242 ${tide - 2}T360 ${tide - 3}T438 ${tide - 2}`} stroke={night ? DIORAMA.foamNight : DIORAMA.foamDay} strokeWidth={11} fill="none" />
       </Svg>
       <View style={{ position: 'absolute', left: 0, right: 0, top: sandTop + 8, bottom: 0, backgroundColor: sandEdge }} />
       <RNGradient colors={night ? [DIORAMA.sandNightFar, DIORAMA.sandNightNear] : [DIORAMA.sandDayFar, DIORAMA.sandDayNear]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, bottom: 0 }} />
+      <RNGradient colors={night ? [DIORAMA.oceanNightLight, DIORAMA.sandNightFar] : [DIORAMA.foamDayShade, DIORAMA.sandDayFar]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, height: 72, opacity: night ? 0.18 : 0.34 }} />
       <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Path d={`M18 ${sandTop + 46}Q132 ${sandTop + 26} 236 ${sandTop + 45}Q327 ${sandTop + 61} 414 ${sandTop + 42}`} stroke={DIORAMA.white} strokeWidth={6} fill="none" opacity={night ? .03 : .16} />
         <Path d={`M-12 ${sandTop + 118}Q98 ${sandTop + 90} 211 ${sandTop + 119}T432 ${sandTop + 112}`} stroke={sandEdge} strokeWidth={3} fill="none" opacity={night ? .17 : .25} />
@@ -601,6 +692,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
         })}
         <Circle cx={318} cy={ground + 44} r={7} fill={DIORAMA.starfish} /><Path d={`M313 ${ground + 37}L323 ${ground + 51}M325 ${ground + 37}L311 ${ground + 50}`} stroke={DIORAMA.starfish} strokeWidth={5} strokeLinecap="round" />
       </Svg>
+      <SurfaceGrain fromY={sandTop + 12} canvasHeight={canvasHeight} color={sandEdge} night={night} />
       <StageLight y={ground} night={night} warm />
       <View style={{ position: 'absolute', left: -35, top: sandTop + 38 }}><Dune night={night} /></View>
       <View style={{ position: 'absolute', right: -12, top: 186 }}><Umbrella night={night} /></View>
