@@ -17,7 +17,7 @@ export {
   ParkScene,
   TownScene,
   skyBand,
-} from './CandyScenesV2';
+} from './DioramaScenes';
 
 // Sleeping-bed pieces already have the right silhouette/overlap contract and
 // are kept stable while the scenery behind them changes.
