@@ -1,0 +1,63 @@
+name: Barkly art toolbox
+
+on:
+  push:
+    branches:
+      - 'chatgpt/barkly-art-*'
+    paths:
+      - 'barkly/app/**'
+      - '.github/workflows/barkly-art-toolbox.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  review-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: barkly/app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: barkly/app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck toolbox candidate
+        run: npm run typecheck
+
+      - name: Build isolated playtest artifact
+        env:
+          EXPO_PUBLIC_BARKLY_PLAYTEST: always
+        run: node scripts/build-artifact.mjs --out art-toolbox.html
+
+      - name: Audit production art assets
+        run: node scripts/asset-audit.mjs assets art-review/asset-audit.txt
+
+      - name: Render multi-device art matrix
+        run: node scripts/art-matrix.mjs --html art-toolbox.html --out art-review
+
+      - name: Record motion review
+        run: node scripts/motion-review.mjs --html art-toolbox.html --out art-review/motion
+
+      - name: Upload art toolbox review
+        uses: actions/upload-artifact@v4
+        with:
+          name: barkly-art-toolbox-${{ github.sha }}
+          path: |
+            barkly/app/art-review/**
+          if-no-files-found: error
+          retention-days: 14
