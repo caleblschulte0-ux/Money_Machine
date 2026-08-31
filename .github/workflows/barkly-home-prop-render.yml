@@ -27,7 +27,7 @@ jobs:
       - name: Install free Blender renderer
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender libegl1 libgl1-mesa-dri xvfb
+          sudo apt-get install -y blender libegl1 libgl1-mesa-dri xvfb imagemagick
           blender --version
 
       - name: Render modular Home prop pack
@@ -35,6 +35,18 @@ jobs:
 
       - name: Render modular Home architecture
         run: xvfb-run -a blender -b --python tools/blender/home_architecture.py
+
+      - name: Trim transparent render canvases
+        run: |
+          for file in \
+            art-review/home-props/chair.png \
+            art-review/home-props/lamp.png \
+            art-review/home-props/bed.png \
+            art-review/home-props/shelf.png \
+            art-review/home-architecture/window_frame.png; do
+            convert "$file" -trim +repage "$file"
+          done
+          identify art-review/home-props/*.png art-review/home-architecture/window_frame.png
 
       - name: Confirm transparent outputs
         run: |
