@@ -339,19 +339,31 @@ function Tree({ night, scale = 1, flip = false }: { night: boolean; scale?: numb
           <Stop offset={0.45} stopColor={base} />
           <Stop offset="1" stopColor={edge} />
         </SvgLinearGradient>
+        <RadialGradient id="treeOrb" cx="31%" cy="24%" r="74%">
+          <Stop offset="0" stopColor={DIORAMA.white} stopOpacity={night ? 0.08 : 0.42} />
+          <Stop offset="0.2" stopColor={light} />
+          <Stop offset="0.7" stopColor={base} />
+          <Stop offset="1" stopColor={edge} />
+        </RadialGradient>
+        <SvgLinearGradient id="treeTrunk" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor={DIORAMA.woodDeep} />
+          <Stop offset="0.42" stopColor={DIORAMA.woodWarm} />
+          <Stop offset="0.72" stopColor={DIORAMA.woodDark} />
+          <Stop offset="1" stopColor={DIORAMA.woodDeep} />
+        </SvgLinearGradient>
       </Defs>
       <Ellipse cx={84} cy={222} rx={55} ry={8} fill={DIORAMA.shadow} opacity={0.17} />
-      <Path d="M68 82Q67 145 55 213H112Q99 145 95 82Z" fill={DIORAMA.woodDeep} />
+      <Path d="M68 82Q67 145 55 213H112Q99 145 95 82Z" fill="url(#treeTrunk)" />
       <Path d="M76 93Q76 145 67 194" stroke={DIORAMA.woodShine} strokeWidth={8} strokeLinecap="round" opacity={0.32} />
-      <Circle cx={79} cy={65} r={58} fill="url(#treeD)" opacity={night ? 0 : 1} />
-      {night && <Circle cx={79} cy={65} r={58} fill="url(#treeN)" />}
-      <Circle cx={40} cy={72} r={35} fill={base} />
-      <Circle cx={126} cy={75} r={37} fill={base} />
-      <Circle cx={80} cy={31} r={38} fill={light} />
-      <Circle cx={42} cy={36} r={25} fill={light} />
-      <Circle cx={119} cy={41} r={27} fill={light} />
+      <Circle cx={79} cy={65} r={58} fill="url(#treeOrb)" />
+      <Circle cx={40} cy={72} r={35} fill="url(#treeOrb)" />
+      <Circle cx={126} cy={75} r={37} fill="url(#treeOrb)" />
+      <Circle cx={80} cy={31} r={38} fill="url(#treeOrb)" />
+      <Circle cx={42} cy={36} r={25} fill="url(#treeOrb)" />
+      <Circle cx={119} cy={41} r={27} fill="url(#treeOrb)" />
       <Path d="M29 39Q75 2 126 36" stroke={DIORAMA.white} strokeWidth={10} strokeLinecap="round" opacity={night ? 0.06 : 0.28} />
       <Path d="M23 87Q78 111 140 84" stroke={edge} strokeWidth={9} strokeLinecap="round" opacity={0.3} />
+      <Path d="M59 53q9-9 18-2M100 69q10-8 18 0M51 88q8-6 14-1" stroke={light} strokeWidth={4} strokeLinecap="round" opacity={night ? 0.12 : 0.42} />
     </Svg>
   );
 }
@@ -362,9 +374,17 @@ function Bush({ night, width = 128 }: { night: boolean; width?: number }) {
   const edge = night ? DIORAMA.parkTreeNightEdge : DIORAMA.parkTreeDayEdge;
   return (
     <Svg width={width} height={72} viewBox="0 0 128 72">
+      <Defs>
+        <RadialGradient id="bushOrb" cx="30%" cy="20%" r="78%">
+          <Stop offset="0" stopColor={DIORAMA.white} stopOpacity={night ? 0.06 : 0.34} />
+          <Stop offset="0.22" stopColor={light} />
+          <Stop offset="0.72" stopColor={base} />
+          <Stop offset="1" stopColor={edge} />
+        </RadialGradient>
+      </Defs>
       <Ellipse cx={64} cy={66} rx={56} ry={5} fill={DIORAMA.shadow} opacity={0.13} />
-      <Circle cx={26} cy={42} r={25} fill={edge} /><Circle cx={54} cy={30} r={31} fill={base} /><Circle cx={88} cy={33} r={29} fill={base} /><Circle cx={108} cy={45} r={21} fill={edge} />
-      <Circle cx={52} cy={21} r={19} fill={light} /><Circle cx={87} cy={23} r={16} fill={light} />
+      <Circle cx={26} cy={42} r={25} fill="url(#bushOrb)" /><Circle cx={54} cy={30} r={31} fill="url(#bushOrb)" /><Circle cx={88} cy={33} r={29} fill="url(#bushOrb)" /><Circle cx={108} cy={45} r={21} fill="url(#bushOrb)" />
+      <Circle cx={52} cy={21} r={19} fill="url(#bushOrb)" /><Circle cx={87} cy={23} r={16} fill="url(#bushOrb)" />
       <Path d="M31 29Q57 10 83 19" stroke={DIORAMA.white} strokeWidth={6} strokeLinecap="round" opacity={night ? 0.05 : 0.28} />
     </Svg>
   );
@@ -456,9 +476,12 @@ function Shop({ x, y, w, h, base, light, edge, night, accent }: { x: number; y: 
     <>
       <Defs>
         <SvgLinearGradient id={`shop-${x}`} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={light} /><Stop offset={0.24} stopColor={base} /><Stop offset="1" stopColor={edge} /></SvgLinearGradient>
+        <SvgLinearGradient id={`glass-${x}`} x1="0" y1="0" x2="1" y2="1"><Stop offset="0" stopColor={DIORAMA.white} stopOpacity={night ? 0.12 : 0.56} /><Stop offset="0.28" stopColor={glass} /><Stop offset="1" stopColor={glassEdge} /></SvgLinearGradient>
       </Defs>
       <Rect x={x + 7} y={y + 13} width={w} height={h} rx={26} fill={edge} />
       <Rect x={x} y={y} width={w} height={h} rx={26} fill={`url(#shop-${x})`} />
+      <Path d={`M${x + w - 22} ${y + 12}Q${x + w + 1} ${y + 28} ${x + w} ${y + h - 18}L${x + w - 15} ${y + h - 6}Z`} fill={edge} opacity={0.58} />
+      <Path d={`M${x + 22} ${y + 4}Q${x + w / 2} ${y - 19} ${x + w - 21} ${y + 5}`} stroke={light} strokeWidth={15} strokeLinecap="round" opacity={0.9} />
       <Path d={`M${x + 16} ${y + 17}Q${x + w / 2} ${y + 2} ${x + w - 16} ${y + 18}`} stroke={DIORAMA.white} strokeWidth={9} strokeLinecap="round" opacity={night ? 0.06 : 0.28} />
       <Rect x={x + 16} y={y + 48} width={w - 32} height={31} rx={12} fill={edge} opacity={0.56} />
       <Rect x={x + 19} y={y + 43} width={w - 38} height={31} rx={12} fill={DIORAMA.signFace} />
@@ -468,7 +491,7 @@ function Shop({ x, y, w, h, base, light, edge, night, accent }: { x: number; y: 
         return <Rect key={i} x={x + 11 + i * sw} y={y + 84} width={sw + 1} height={28} rx={5} fill={i % 2 === 0 ? DIORAMA.white : accent} opacity={night ? 0.62 : 0.98} />;
       })}
       <Rect x={x + 17} y={y + 118} width={w - 34} height={h - 137} rx={16} fill={glassEdge} />
-      <Rect x={x + 21} y={y + 113} width={w - 42} height={h - 137} rx={14} fill={glass} />
+      <Rect x={x + 21} y={y + 113} width={w - 42} height={h - 137} rx={14} fill={`url(#glass-${x})`} />
       <Path d={`M${x + 31} ${y + 125}H${x + w - 31}`} stroke={DIORAMA.white} strokeWidth={10} strokeLinecap="round" opacity={night ? 0.12 : 0.48} />
       <Path d={`M${x + 29} ${y + 135}L${x + 54} ${y + h - 32}`} stroke={DIORAMA.white} strokeWidth={8} strokeLinecap="round" opacity={night ? 0.04 : 0.15} />
       <Rect x={x + w * 0.51} y={y + 114} width={7} height={h - 138} rx={3} fill={glassEdge} opacity={0.64} />
