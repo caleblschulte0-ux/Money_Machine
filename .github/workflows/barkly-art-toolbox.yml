@@ -70,6 +70,9 @@ jobs:
       - name: Render animation juice lab
         run: npm run art:juice
 
+      - name: Generate procedural SFX studies
+        run: npm run art:sfx
+
       - name: Render layout debug overlays
         run: npm run art:debug-layout
 
