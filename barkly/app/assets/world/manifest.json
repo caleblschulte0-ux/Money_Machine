@@ -1,0 +1,82 @@
+{
+  "camera": "Barkly shared 3/4 orthographic v2",
+  "light": "warm upper-left key + cool fill + warm rim",
+  "contract": "modular transparent props; app owns scene composition",
+  "assets": {
+    "park/tree": {
+      "file": "park/tree.png",
+      "displayWidth": 190,
+      "anchor": "bottom"
+    },
+    "park/bench": {
+      "file": "park/bench.png",
+      "displayWidth": 136,
+      "anchor": "bottom"
+    },
+    "park/hedge": {
+      "file": "park/hedge.png",
+      "displayWidth": 154,
+      "anchor": "bottom"
+    },
+    "town/store_coral": {
+      "file": "town/store_coral.png",
+      "displayWidth": 176,
+      "anchor": "bottom"
+    },
+    "town/store_aqua": {
+      "file": "town/store_aqua.png",
+      "displayWidth": 190,
+      "anchor": "bottom"
+    },
+    "town/store_violet": {
+      "file": "town/store_violet.png",
+      "displayWidth": 176,
+      "anchor": "bottom"
+    },
+    "town/fountain": {
+      "file": "town/fountain.png",
+      "displayWidth": 114,
+      "anchor": "bottom"
+    },
+    "town/lamp": {
+      "file": "town/lamp.png",
+      "displayWidth": 70,
+      "anchor": "bottom"
+    },
+    "town/planter": {
+      "file": "town/planter.png",
+      "displayWidth": 74,
+      "anchor": "bottom"
+    },
+    "beach/umbrella": {
+      "file": "beach/umbrella.png",
+      "displayWidth": 152,
+      "anchor": "bottom"
+    },
+    "beach/lifeguard": {
+      "file": "beach/lifeguard.png",
+      "displayWidth": 170,
+      "anchor": "bottom"
+    },
+    "beach/dune": {
+      "file": "beach/dune.png",
+      "displayWidth": 158,
+      "anchor": "bottom"
+    },
+    "beach/castle": {
+      "file": "beach/castle.png",
+      "displayWidth": 112,
+      "anchor": "bottom"
+    },
+    "beach/palm": {
+      "file": "beach/palm.png",
+      "displayWidth": 142,
+      "anchor": "bottom"
+    },
+    "home/rug": {
+      "file": "home/rug.png",
+      "displayWidth": 188,
+      "anchor": "bottom"
+    }
+  }
+}
