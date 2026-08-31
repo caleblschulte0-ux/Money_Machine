@@ -12,10 +12,10 @@ export { HomeScene } from './HomeRenderedScene';
 
 export {
   BeachScene,
-  NightOverlay,
   ParkScene,
   TownScene,
-  skyBand,
-} from './CandyScenesV2';
+} from './OutdoorRenderedScenes';
+
+export { NightOverlay, skyBand } from './CandyScenesV2';
 
 export { DogBedBack, DogBedFront, RoomBed } from './PolishedScenes';

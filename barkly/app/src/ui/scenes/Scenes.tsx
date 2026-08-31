@@ -16,11 +16,11 @@ export { HomeScene } from './HomeRenderedScene';
 
 export {
   BeachScene,
-  NightOverlay,
   ParkScene,
   TownScene,
-  skyBand,
-} from './CandyScenesV2';
+} from './OutdoorRenderedScenes';
+
+export { NightOverlay, skyBand } from './CandyScenesV2';
 
 // Sleeping-bed pieces already have the right silhouette/overlap contract and
 // are kept stable while the scenery behind them changes.

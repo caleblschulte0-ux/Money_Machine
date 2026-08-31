@@ -9,6 +9,7 @@ import { skyBand, SkyBand } from './CandyScenesV2';
 const CHAIR = require('../../../assets/world/home/props/chair.png');
 const LAMP = require('../../../assets/world/home/props/lamp.png');
 const BED = require('../../../assets/world/home/props/bed.png');
+const RUG = require('../../../assets/world/home/props/rug.png');
 const SHELF = require('../../../assets/world/home/props/shelf.png');
 const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_frame.png');
 
@@ -163,30 +164,34 @@ function RenderedProp({
   );
 }
 
-function Rug({ groundY, night }: { groundY: number; night: boolean }) {
+function Rug({ groundY, night, scale }: { groundY: number; night: boolean; scale: number }) {
+  const width = 228 * scale;
   return (
-    <View style={[styles.rug, { top: groundY - 50, opacity: night ? 0.68 : 1 }]}>
-      <LinearGradient colors={[DIORAMA.goldLight, DIORAMA.gold, DIORAMA.goldDeep]} style={styles.rugInner} />
-      <View style={styles.rugRing} />
-      <View style={styles.rugHighlight} />
-    </View>
+    <Image
+      source={RUG}
+      resizeMode="contain"
+      style={[
+        styles.rug,
+        {
+          top: groundY - 62,
+          width,
+          height: 92 * scale,
+          marginLeft: -width / 2,
+          opacity: night ? 0.72 : 1,
+        },
+      ]}
+    />
   );
 }
 
 function ForegroundVignette() {
   return (
-    <>
-      <LinearGradient
-        colors={['rgba(35,18,8,0)', 'rgba(35,18,8,0.22)']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.bottomVignette}
-      />
-      <View style={[styles.foregroundLeaf, styles.leafLeftA]} />
-      <View style={[styles.foregroundLeaf, styles.leafLeftB]} />
-      <View style={[styles.foregroundLeaf, styles.leafRightA]} />
-      <View style={[styles.foregroundLeaf, styles.leafRightB]} />
-    </>
+    <LinearGradient
+      colors={['rgba(35,18,8,0)', 'rgba(35,18,8,0.16)']}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={styles.bottomVignette}
+    />
   );
 }
 
@@ -291,7 +296,7 @@ export function HomeScene({
         rotate="1deg"
       />
 
-      {has('home_rug') && <Rug groundY={groundY} night={night} />}
+      {has('home_rug') && <Rug groundY={groundY} night={night} scale={propScale} />}
 
       <View style={[styles.floorBounce, { top: groundY - 24, opacity: night ? 0.035 : 0.11 }]} />
       <ForegroundVignette />
@@ -357,18 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill, backgroundColor: DIORAMA.goldLight, opacity: 0.72,
   },
   rug: {
-    position: 'absolute', left: '22%', right: '22%', height: 78,
-    borderRadius: radius.pill, padding: 6, backgroundColor: DIORAMA.goldDeep,
-    transform: [{ scaleX: 1.2 }],
-  },
-  rugInner: { flex: 1, borderRadius: radius.pill },
-  rugRing: {
-    position: 'absolute', left: '29%', right: '29%', top: 26, bottom: 17,
-    borderRadius: radius.pill, borderWidth: 4, borderColor: DIORAMA.goldLight, opacity: 0.4,
-  },
-  rugHighlight: {
-    position: 'absolute', left: 28, right: 28, top: 11, height: 7,
-    borderRadius: radius.pill, backgroundColor: DIORAMA.white, opacity: 0.2,
+    position: 'absolute', left: '50%',
   },
   floorBounce: {
     position: 'absolute', left: '18%', right: '18%', height: 110,
@@ -376,12 +370,4 @@ const styles = StyleSheet.create({
     transform: [{ scaleX: 1.35 }],
   },
   bottomVignette: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 120 },
-  foregroundLeaf: {
-    position: 'absolute', bottom: -26, width: 92, height: 42,
-    borderRadius: radius.pill, backgroundColor: DIORAMA.parkTreeDayEdge, opacity: 0.84,
-  },
-  leafLeftA: { left: -35, transform: [{ rotate: '34deg' }] },
-  leafLeftB: { left: 5, bottom: -39, transform: [{ rotate: '62deg' }], opacity: 0.72 },
-  leafRightA: { right: -36, transform: [{ rotate: '-32deg' }] },
-  leafRightB: { right: 4, bottom: -39, transform: [{ rotate: '-61deg' }], opacity: 0.72 },
 });
