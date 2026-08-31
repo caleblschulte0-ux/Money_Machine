@@ -75,7 +75,10 @@ const TARGETS = [
 const NEVER_OVER_THE_DOG = ['dialogue', 'notice'];
 const BELOW_HIS_MIDLINE = ['kit-feed', 'kit-play', 'kit-sleep'];
 const KIT_NAMES = ['kit-feed', 'kit-play', 'kit-sleep'];
-const MIN_STAGE_GAP = 8;
+// The rack is a foreground prop. It should cross the very bottom of Barkly's
+// pressable box, but never climb his body or float away from his paws.
+const MAX_DOCK_OVERLAP = 22;
+const MAX_DOCK_DETACHMENT = 18;
 const MIN_EDGE_GUTTER = 10;
 
 const overlap = (a, b) => {
@@ -165,18 +168,21 @@ for (const size of sizes) {
   if (dog && kitTop !== null && size.height >= size.width) {
     const dogBottom = dog.y + dog.height;
     const gap = kitTop - dogBottom;
-    if (gap < MIN_STAGE_GAP) {
+    if (gap < -MAX_DOCK_OVERLAP) {
       failures++;
-      console.log(`  DOG/DOCK CROWDING: only ${Math.round(gap)}px between Barkly and care dock; need ${MIN_STAGE_GAP}px`);
+      console.log(`  DOCK CLIMBING DOG: ${Math.round(-gap)}px overlap; maximum is ${MAX_DOCK_OVERLAP}px`);
+    } else if (gap > MAX_DOCK_DETACHMENT) {
+      failures++;
+      console.log(`  DOCK FLOATING AWAY: ${Math.round(gap)}px from Barkly; maximum is ${MAX_DOCK_DETACHMENT}px`);
     }
   }
 
   if (stateChip && kitTop !== null && size.height >= size.width) {
     const chipBottom = stateChip.y + stateChip.height;
     const gap = kitTop - chipBottom;
-    if (gap < MIN_STAGE_GAP) {
+    if (gap < 8) {
       failures++;
-      console.log(`  CHIP/DOCK CROWDING: only ${Math.round(gap)}px between state chip and care dock; need ${MIN_STAGE_GAP}px`);
+      console.log(`  CHIP/DOCK CROWDING: only ${Math.round(gap)}px between state chip and care dock; need 8px`);
     }
   }
 

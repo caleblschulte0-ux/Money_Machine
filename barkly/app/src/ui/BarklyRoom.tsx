@@ -54,6 +54,7 @@ import { BarklyState } from '../barkly/types';
 import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
 import {
   CARE_DOCK_CLEARANCE,
+  CARE_DOCK_HEIGHT,
   INTERACTION_GUTTER,
   STATE_CHIP_GAP,
   chromeBottom,
@@ -1338,7 +1339,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.sm,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 5,
     borderRadius: radius.pill,
     borderWidth: 1.5,
     maxWidth: '100%',
@@ -1380,7 +1381,7 @@ const styles = StyleSheet.create({
   digSpot: { position: 'absolute', left: -42, bottom: 67, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: -11, ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodSoft, paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodWarm, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
-  chip: { position: 'absolute', bottom: CARE_DOCK_CLEARANCE + STATE_CHIP_GAP, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
+  chip: { position: 'absolute', bottom: CARE_DOCK_HEIGHT + STATE_CHIP_GAP, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
   interactionStack: { width: '100%', alignSelf: 'center', minHeight: TAP_MIN, paddingHorizontal: INTERACTION_GUTTER },
