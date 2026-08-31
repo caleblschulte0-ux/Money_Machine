@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   render-home-props:
@@ -39,6 +39,27 @@ jobs:
           test -s art-review/home-props/bed.png
           test -s art-review/home-props/shelf.png
           test -s art-review/home-props/manifest.json
+
+      - name: Promote rendered props into app assets
+        run: |
+          mkdir -p assets/world/home/props
+          cp art-review/home-props/chair.png assets/world/home/props/chair.png
+          cp art-review/home-props/lamp.png assets/world/home/props/lamp.png
+          cp art-review/home-props/bed.png assets/world/home/props/bed.png
+          cp art-review/home-props/shelf.png assets/world/home/props/shelf.png
+          cp art-review/home-props/manifest.json assets/world/home/props/manifest.json
+
+      - name: Commit generated Home props to branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/world/home/props
+          if git diff --cached --quiet; then
+            echo "Rendered assets unchanged."
+          else
+            git commit -m "Barkly art: render production Home prop pack"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
 
       - name: Upload Home prop pack
         uses: actions/upload-artifact@v4
