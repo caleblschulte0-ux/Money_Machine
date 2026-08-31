@@ -40,6 +40,9 @@ jobs:
           test -s art-review/home-props/shelf.png
           test -s art-review/home-props/manifest.json
 
+      - name: Sync branch before promotion
+        run: git pull --rebase origin "${GITHUB_REF_NAME}"
+
       - name: Promote rendered props into app assets
         run: |
           mkdir -p assets/world/home/props
