@@ -15,13 +15,14 @@ import {
 } from '../src/ui/layout';
 
 describe('hero-first phone composition', () => {
-  it('lets Barkly dominate a normal modern phone without swallowing the stage', () => {
+  it('keeps Barkly dominant without swallowing the authored world on a modern phone', () => {
     const scale = spriteScale(844, 390);
     const renderedBodyWidth = 244 * scale;
 
-    expect(scale).toBeGreaterThanOrEqual(1.25);
-    expect(scale).toBeLessThanOrEqual(1.34);
-    expect(renderedBodyWidth / 390).toBeGreaterThanOrEqual(0.78);
+    expect(scale).toBeGreaterThanOrEqual(1.12);
+    expect(scale).toBeLessThanOrEqual(1.14);
+    expect(renderedBodyWidth / 390).toBeGreaterThanOrEqual(0.70);
+    expect(renderedBodyWidth / 390).toBeLessThanOrEqual(0.72);
   });
 
   it('keeps Barkly substantial on a browser-chrome-short phone', () => {

@@ -1,16 +1,17 @@
 // Web must render the exact same authored world as native.
 //
-// This file used to carry a second, older implementation of every scene.
-// Metro prefers `.web.tsx`, so the phone screenshot workflow was reviewing
-// that stale renderer while native builds used CandyScenesV2 through
-// `Scenes.tsx`. Keeping this as a facade makes the review pixels authoritative
-// and prevents the two worlds from drifting apart again.
+// Metro prefers `.web.tsx`, so this facade has to mirror Scenes.tsx exactly.
+// The screenshot workflow is a release-quality gate; it cannot review an older
+// Home implementation while native ships a newer one.
 
 export const HOME_SCENE_PURCHASES = ['home_bed', 'home_rug', 'home_window'] as const;
 
+// Home uses code-owned architecture plus independently rendered 3D props on
+// both native and web so review pixels are authoritative.
+export { HomeScene } from './HomeRenderedScene';
+
 export {
   BeachScene,
-  HomeScene,
   NightOverlay,
   ParkScene,
   TownScene,

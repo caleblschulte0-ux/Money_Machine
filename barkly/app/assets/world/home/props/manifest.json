@@ -1,0 +1,26 @@
+{
+  "camera": "Barkly Home 3/4 orthographic v1",
+  "light": "warm upper-left key + cool fill + warm rim",
+  "assets": {
+    "chair": {
+      "file": "chair.png",
+      "displayWidth": 168,
+      "anchor": "bottom"
+    },
+    "lamp": {
+      "file": "lamp.png",
+      "displayWidth": 100,
+      "anchor": "bottom"
+    },
+    "bed": {
+      "file": "bed.png",
+      "displayWidth": 164,
+      "anchor": "bottom"
+    },
+    "shelf": {
+      "file": "shelf.png",
+      "displayWidth": 174,
+      "anchor": "bottom"
+    }
+  }
+}
