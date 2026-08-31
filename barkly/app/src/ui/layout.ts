@@ -27,9 +27,14 @@ export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 6;
  */
 export const INTERACTION_GUTTER = 14;
 export const CARE_DOCK_HEIGHT = 68;
-export const CARE_DOCK_GAP = 12;
-export const CARE_DOCK_CLEARANCE = CARE_DOCK_HEIGHT + CARE_DOCK_GAP;
-export const STATE_CHIP_GAP = 8;
+/**
+ * The care rack is foreground scenery, not a toolbar that needs a moat.
+ * Let it cross Barkly's paws slightly so the room has a real foreground plane
+ * and short phones do not pay for that depth by making him tiny.
+ */
+export const CARE_DOCK_OVERLAP = 14;
+export const CARE_DOCK_CLEARANCE = CARE_DOCK_HEIGHT - CARE_DOCK_OVERLAP;
+export const STATE_CHIP_GAP = 10;
 
 export type LayoutMode = 'narrowPortrait' | 'widePortrait' | 'phoneLandscape' | 'tabletLandscape';
 
@@ -123,21 +128,21 @@ export function spriteScale(
   const room =
     stageHeight(screenHeight, mode, dialogueExpanded, composerExpanded) -
     SPRITE_FOOT -
-    (landscape ? 20 : NOTICE_BAND + 4) -
-    (landscape ? 0 : CARE_DOCK_CLEARANCE);
-  const byWidth = (stageWidthPx * 0.82) / SPRITE_BODY_WIDTH;
+    (landscape ? 10 : 14) -
+    CARE_DOCK_CLEARANCE;
+  const byWidth = (stageWidthPx * (landscape ? 0.78 : 0.86)) / SPRITE_BODY_WIDTH;
   const minScale = landscape
-    ? screenHeight < 430 ? 0.62 : 0.72
-    : screenHeight < 590 ? 0.60 : screenHeight < 680 ? 0.66 : 0.72;
+    ? screenHeight < 430 ? 0.78 : 0.84
+    : screenHeight < 590 ? 0.76 : screenHeight < 680 ? 0.82 : 0.78;
   const cap = mode === 'narrowPortrait' && screenHeight < 680
-    ? 0.75
+    ? screenHeight < 590 ? 0.80 : 0.90
     : mode === 'tabletLandscape'
-      ? 1.25
+      ? 1.40
       : mode === 'widePortrait'
-        ? 1.30
+        ? 1.70
         : mode === 'phoneLandscape'
-          ? 1.05
-          : 1.30;
+          ? 1.10
+          : 1.34;
   return Math.max(minScale, Math.min(cap, room / SPRITE_HEIGHT, byWidth));
 }
 
