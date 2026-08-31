@@ -15,7 +15,7 @@ permissions:
 jobs:
   review-art:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: barkly/app
@@ -30,8 +30,16 @@ jobs:
           cache: npm
           cache-dependency-path: barkly/app/package-lock.json
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Install free image tooling
+        run: python -m pip install 'Pillow>=10,<13'
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
@@ -45,13 +53,25 @@ jobs:
         run: node scripts/build-artifact.mjs --out art-toolbox.html
 
       - name: Audit production art assets
-        run: node scripts/asset-audit.mjs assets art-review/asset-audit.txt
+        run: npm run art:audit
+
+      - name: Smoke-test asset intake
+        run: python scripts/asset-intake.py assets/barkly/renders/front.png art-review/intake/front.png --trim --max-edge 1024 --report art-review/intake/front.json
 
       - name: Render multi-device art matrix
-        run: node scripts/art-matrix.mjs --html art-toolbox.html --out art-review
+        run: npm run art:matrix
+
+      - name: Compare approved Home target
+        run: python scripts/reference-compare.py --actual art-review/home-390x844-iphone-portrait.png --reference art-reference/home-target.png --out art-review/reference/home-comparison.png
+
+      - name: Render material lab
+        run: npm run art:materials
+
+      - name: Render animation juice lab
+        run: npm run art:juice
 
       - name: Record motion review
-        run: node scripts/motion-review.mjs --html art-toolbox.html --out art-review/motion
+        run: npm run art:motion
 
       - name: Upload art toolbox review
         uses: actions/upload-artifact@v4
