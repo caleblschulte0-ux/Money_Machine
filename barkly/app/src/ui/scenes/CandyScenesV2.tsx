@@ -75,6 +75,26 @@ function ForegroundDepth({ night, strength = 1 }: { night: boolean; strength?: n
   );
 }
 
+function SceneGrade({ night, tone, id }: { night: boolean; tone: 'warm' | 'cool'; id: string }) {
+  const glow = tone === 'warm' ? 'rgba(255, 230, 174, 0.14)' : 'rgba(210, 235, 226, 0.11)';
+  const edge = night ? 'rgba(22, 20, 28, 0.22)' : 'rgba(54, 38, 27, 0.13)';
+  return (
+    <View style={styles.fill} pointerEvents="none">
+      <RNGradient colors={['rgba(255,255,255,0)', glow, 'rgba(255,255,255,0)']} locations={[0, 0.58, 1]} style={styles.fill} />
+      <Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
+        <Defs>
+          <RadialGradient id={`sceneGrade-${id}`} cx="50%" cy="52%" r="72%">
+            <Stop offset="0" stopColor={DIORAMA.white} stopOpacity={night ? 0.015 : 0.045} />
+            <Stop offset="0.58" stopColor={DIORAMA.white} stopOpacity={0} />
+            <Stop offset="1" stopColor={edge} stopOpacity={1} />
+          </RadialGradient>
+        </Defs>
+        <Rect width={420} height={760} fill={`url(#sceneGrade-${id})`} />
+      </Svg>
+    </View>
+  );
+}
+
 function Sky({ band, compact = false }: { band: SkyBand; compact?: boolean }) {
   const night = band === 'night';
   const cloudA = useLoop(12000);
@@ -283,6 +303,7 @@ export function HomeScene({ hour, upgrades = [], asleep = false, groundY, chrome
         <Path d={`M0 ${floorTop + 132}H420`} stroke={floorEdge} strokeWidth={2} opacity={night ? 0.07 : 0.12} />
       </Svg>
       <HomeObjectLayer band={band} night={night} floorTop={floorTop} chromeBottom={chromeBottom} has={has} />
+      <SceneGrade night={night} tone="warm" id="home" />
       <StageLight y={groundY} night={night} warm />
       <ForegroundDepth night={night} strength={0.72} />
       <HomeLife night={night} />
@@ -421,6 +442,7 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
       <View style={{ position: 'absolute', left: -34, top: 69 }}><Tree night={night} scale={0.98} /></View>
       <View style={{ position: 'absolute', right: -36, top: 77 }}><Tree night={night} scale={0.95} flip /></View>
       <View style={{ position: 'absolute', left: 22, top: hillY + 143 }}><Bench night={night} /></View>
+      <SceneGrade night={night} tone="cool" id="park" />
       <StageLight y={ground} night={night} />
       <ParkLife night={night} />
     </View>
@@ -431,7 +453,7 @@ function Shop({ x, y, w, h, base, light, edge, night, accent, quiet = false }: {
   const glass = night ? DIORAMA.glassNight : DIORAMA.glassDay;
   const glassEdge = night ? DIORAMA.glassNightEdge : DIORAMA.glassDayEdge;
   return (
-    <G opacity={quiet ? 0.7 : 1}>
+    <G opacity={quiet ? 0.56 : 1}>
       <Defs>
         <SvgLinearGradient id={`shop-${x}`} x1="0" y1="0" x2="0" y2="1"><Stop offset="0" stopColor={light} /><Stop offset={0.24} stopColor={base} /><Stop offset="1" stopColor={edge} /></SvgLinearGradient>
         <SvgLinearGradient id={`glass-${x}`} x1="0" y1="0" x2="1" y2="1"><Stop offset="0" stopColor={DIORAMA.white} stopOpacity={night ? 0.12 : 0.56} /><Stop offset="0.28" stopColor={glass} /><Stop offset="1" stopColor={glassEdge} /></SvgLinearGradient>
@@ -537,6 +559,7 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Rect x={0} y={ground + 99} width={420} height={canvasHeight - ground - 99} fill={road} />
         <Path d={`M22 ${ground + 126}H112M166 ${ground + 126}H256M310 ${ground + 126}H400`} stroke={DIORAMA.cream} strokeWidth={8} strokeLinecap="round" opacity={night ? 0.12 : 0.47} />
       </Svg>
+      <SceneGrade night={night} tone="warm" id="town" />
       <View style={{ position: 'absolute', left: '50%', marginLeft: -52, top: sidewalkY - 58 }}><TownFountain night={night} /></View>
       <StageLight y={ground} night={night} warm />
       <View style={{ position: 'absolute', left: 11, top: sidewalkY - 115 }}><LampPost night={night} /></View>
@@ -644,6 +667,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
       <View style={{ position: 'absolute', left: -35, top: sandTop + 38 }}><Dune night={night} /></View>
       <View style={{ position: 'absolute', right: -12, top: 186 }}><Umbrella night={night} /></View>
       <View style={{ position: 'absolute', left: 76, top: ground + 12 }}><Castle night={night} /></View>
+      <SceneGrade night={night} tone="warm" id="beach" />
       <ForegroundDepth night={night} strength={0.58} />
       <BeachLife night={night} />
     </View>
