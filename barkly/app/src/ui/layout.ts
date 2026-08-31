@@ -134,6 +134,10 @@ export function spriteScale(
   const minScale = landscape
     ? screenHeight < 430 ? 0.78 : 0.84
     : screenHeight < 590 ? 0.76 : screenHeight < 680 ? 0.82 : 0.78;
+  // The phone art review is the source of truth here: at 1.34 Barkly became
+  // the room instead of the hero inside the room. A 1.12 ceiling keeps him
+  // emotionally dominant while exposing enough authored world to read as a
+  // game board rather than wallpaper behind a portrait.
   const cap = mode === 'narrowPortrait' && screenHeight < 680
     ? screenHeight < 590 ? 0.80 : 0.90
     : mode === 'tabletLandscape'
@@ -142,7 +146,7 @@ export function spriteScale(
         ? 1.95
         : mode === 'phoneLandscape'
           ? 1.10
-          : 1.34;
+          : 1.12;
   return Math.max(minScale, Math.min(cap, room / SPRITE_HEIGHT, byWidth));
 }
 
