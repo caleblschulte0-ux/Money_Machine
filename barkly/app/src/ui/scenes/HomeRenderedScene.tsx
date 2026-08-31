@@ -222,22 +222,8 @@ export function HomeScene({
       <ArchWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 36} scale={propScale} />
       <PictureMedallion top={chromeBottom + 72} night={night} />
 
-      <RenderedProp
-        source={SHELF}
-        right={-5}
-        top={chromeBottom + 24}
-        width={shelfW}
-        height={shelfH}
-        night={night}
-      />
-      <RenderedProp
-        source={LAMP}
-        left={-5}
-        top={floorTop - lampH + 12}
-        width={lampW}
-        height={lampH}
-        night={night}
-      />
+      <RenderedProp source={SHELF} right={-5} top={chromeBottom + 24} width={shelfW} height={shelfH} night={night} />
+      <RenderedProp source={LAMP} left={-5} top={floorTop - lampH + 12} width={lampW} height={lampH} night={night} />
       <RenderedProp
         source={CHAIR}
         left={10}
@@ -278,28 +264,28 @@ const styles = StyleSheet.create({
   windowDepth: {
     position: 'absolute', left: 17, top: 16,
     backgroundColor: DIORAMA.shadow, opacity: 0.26,
-    borderTopLeftRadius: 96, borderTopRightRadius: 96,
+    borderTopLeftRadius: radius.pill, borderTopRightRadius: radius.pill,
     borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg,
   },
   windowFrame: {
     position: 'absolute', left: 2, top: 1, padding: 8,
     backgroundColor: DIORAMA.windowFrameDayEdge,
-    borderTopLeftRadius: 98, borderTopRightRadius: 98,
+    borderTopLeftRadius: radius.pill, borderTopRightRadius: radius.pill,
     borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg,
   },
   windowGlass: {
     overflow: 'hidden',
-    borderTopLeftRadius: 90, borderTopRightRadius: 90,
+    borderTopLeftRadius: radius.pill, borderTopRightRadius: radius.pill,
     borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md,
   },
-  sunMoon: { position: 'absolute', right: 29, top: 28, width: 34, height: 34, borderRadius: 17 },
+  sunMoon: { position: 'absolute', right: 29, top: 28, width: 34, height: 34, borderRadius: radius.md },
   hillBack: {
     position: 'absolute', left: -18, right: 48, bottom: -34, height: 96,
-    borderRadius: 80, transform: [{ rotate: '-7deg' }],
+    borderRadius: radius.pill, transform: [{ rotate: '-7deg' }],
   },
   hillFront: {
     position: 'absolute', left: 52, right: -34, bottom: -42, height: 104,
-    borderRadius: 90, transform: [{ rotate: '8deg' }],
+    borderRadius: radius.pill, transform: [{ rotate: '8deg' }],
   },
   windowVertical: { position: 'absolute', top: 0, bottom: 0, left: '49%', width: 7, backgroundColor: DIORAMA.windowFrameDayEdge },
   windowHorizontal: { position: 'absolute', left: 0, right: 0, top: '58%', height: 7, backgroundColor: DIORAMA.windowFrameDayEdge },
@@ -326,8 +312,8 @@ const styles = StyleSheet.create({
     flex: 1, borderRadius: radius.md, backgroundColor: DIORAMA.cream,
     alignItems: 'center', justifyContent: 'center',
   },
-  pawPalm: { position: 'absolute', left: 21, top: 28, width: 30, height: 25, borderRadius: 15, backgroundColor: DIORAMA.woodDeep },
-  pawToe: { position: 'absolute', width: 10, height: 13, borderRadius: 7, backgroundColor: DIORAMA.woodDeep },
+  pawPalm: { position: 'absolute', left: 21, top: 28, width: 30, height: 25, borderRadius: radius.md, backgroundColor: DIORAMA.woodDeep },
+  pawToe: { position: 'absolute', width: 10, height: 13, borderRadius: radius.xs, backgroundColor: DIORAMA.woodDeep },
   rug: {
     position: 'absolute', left: '22%', right: '22%', height: 78,
     borderRadius: radius.pill, padding: 6, backgroundColor: DIORAMA.goldDeep,
