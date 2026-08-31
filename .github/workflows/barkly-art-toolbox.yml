@@ -15,7 +15,7 @@ permissions:
 jobs:
   review-art:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: barkly/app
@@ -69,6 +69,12 @@ jobs:
 
       - name: Render animation juice lab
         run: npm run art:juice
+
+      - name: Render layout debug overlays
+        run: npm run art:debug-layout
+
+      - name: Measure frame pacing
+        run: npm run art:performance
 
       - name: Record motion review
         run: npm run art:motion
