@@ -291,6 +291,9 @@ export function HomeScene({ hour, upgrades = [], asleep = false, groundY, chrome
       <RNGradient colors={night ? [DIORAMA.floorNightFar, DIORAMA.floorNightNear] : [DIORAMA.floorDayFar, DIORAMA.floorDayNear]} style={{ position: 'absolute', left: 0, right: 0, top: floorTop, bottom: 0 }} />
       <View style={{ position: 'absolute', left: 0, right: 0, top: floorTop, height: 12, backgroundColor: floorEdge, opacity: night ? 0.58 : 0.72 }} />
       <Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
+        <Rect x={224} y={chromeBottom + 63} width={172} height={145} rx={24} fill="none" stroke={trim} strokeWidth={5} opacity={night ? 0.12 : 0.32} />
+        <Path d={`M239 ${chromeBottom + 78}H378`} stroke={DIORAMA.white} strokeWidth={4} strokeLinecap="round" opacity={night ? 0.03 : 0.16} />
+        <Path d={`M30 ${floorTop - 3}L154 760H240L128 ${floorTop - 3}Z`} fill={DIORAMA.goldLight} opacity={night ? 0.015 : 0.055} />
         <Path d={`M210 ${chromeBottom + 46}V${floorTop}L248 760`} stroke={trim} strokeWidth={4} opacity={night ? 0.12 : 0.24} />
         <Path d={`M0 ${floorTop - 13}Q210 ${floorTop - 1} 420 ${floorTop - 13}`} stroke={DIORAMA.white} strokeWidth={4} opacity={night ? 0.025 : 0.13} />
         {[48, 126, 207, 291, 373].map((x) => <Path key={x} d={`M${x} ${floorTop}L${210 + (x - 210) * 1.7} 760`} stroke={floorEdge} strokeWidth={2.6} opacity={night ? 0.14 : 0.27} />)}
@@ -630,6 +633,29 @@ function Castle({ night }: { night: boolean }) {
   );
 }
 
+function Palm({ night, flip = false }: { night: boolean; flip?: boolean }) {
+  const leaf = night ? DIORAMA.grassBeachNight : DIORAMA.grassBeachDay;
+  const leafLight = night ? DIORAMA.grassBeachNight : DIORAMA.grassBeachLight;
+  return (
+    <Svg width={122} height={218} viewBox="0 0 122 218" style={flip ? { transform: [{ scaleX: -1 }] } : undefined}>
+      <Defs>
+        <SvgLinearGradient id="palmTrunk" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor={DIORAMA.woodDeep} /><Stop offset="0.42" stopColor={DIORAMA.woodWarm} /><Stop offset="1" stopColor={DIORAMA.woodDark} />
+        </SvgLinearGradient>
+        <SvgLinearGradient id="palmLeaf" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={leafLight} /><Stop offset="1" stopColor={leaf} />
+        </SvgLinearGradient>
+      </Defs>
+      <Ellipse cx={61} cy={209} rx={37} ry={7} fill={DIORAMA.shadow} opacity={0.16} />
+      <Path d="M55 199Q64 139 58 72L75 70Q79 141 72 203Z" fill="url(#palmTrunk)" />
+      {[[-1, 12, 64, 76], [14, 2, 65, 70], [40, -3, 67, 70], [72, 0, 68, 70], [99, 12, 68, 75], [104, 42, 69, 77], [5, 42, 65, 77]].map(([x, y, cx, cy], i) => (
+        <Path key={i} d={`M${cx} ${cy}Q${(x + cx) / 2} ${y - 12} ${x} ${y + 22}Q${(x + cx) / 2} ${y + 11} ${cx} ${cy}Z`} fill="url(#palmLeaf)" />
+      ))}
+      <Path d="M64 77Q44 30 12 30M67 73Q90 26 112 37" stroke={DIORAMA.white} strokeWidth={4} strokeLinecap="round" opacity={night ? 0.04 : 0.2} />
+    </Svg>
+  );
+}
+
 function BeachLife({ night }: { night: boolean }) {
   const gull = useLoop(8500, 400);
   const glint = useLoop(2500);
@@ -662,12 +688,17 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
       <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Path d={`M-18 ${horizon + 31}Q18 ${horizon - 32} 70 ${horizon + 16}Q102 ${horizon - 10} 141 ${horizon + 29}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.72} />
         <Path d={`M438 ${horizon + 38}Q401 ${horizon - 24} 350 ${horizon + 17}Q321 ${horizon - 8} 286 ${horizon + 31}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.68} />
+        <Path d={`M126 ${horizon + 27}Q165 ${horizon - 12} 204 ${horizon + 28}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDayLight} opacity={0.48} />
+        <Path d={`M233 ${horizon + 28}Q264 ${horizon + 1} 294 ${horizon + 29}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDayLight} opacity={0.42} />
         <Path d={`M0 ${horizon + 32}Q83 ${horizon + 17} 163 ${horizon + 30}T315 ${horizon + 28}T430 ${horizon + 31}`} stroke={oceanLight} strokeWidth={8} fill="none" opacity={night ? .11 : .42} />
+        <Path d={`M18 ${horizon + 72}Q92 ${horizon + 58} 162 ${horizon + 71}T302 ${horizon + 67}T410 ${horizon + 70}`} stroke={oceanLight} strokeWidth={5} fill="none" opacity={night ? .08 : .28} />
+        <Path d={`M-20 ${horizon + 104}Q46 ${horizon + 91} 112 ${horizon + 106}T246 ${horizon + 102}T442 ${horizon + 99}`} stroke={DIORAMA.white} strokeWidth={3} fill="none" opacity={night ? .04 : .2} />
         <Path d={`M-15 ${tide + 8}Q49 ${tide - 11} 117 ${tide + 5}T242 ${tide + 4}T360 ${tide + 3}T438 ${tide + 5}`} stroke={night ? DIORAMA.foamNightShade : DIORAMA.foamDayShade} strokeWidth={20} fill="none" />
         <Path d={`M-15 ${tide}Q49 ${tide - 19} 117 ${tide}T242 ${tide - 2}T360 ${tide - 3}T438 ${tide - 2}`} stroke={night ? DIORAMA.foamNight : DIORAMA.foamDay} strokeWidth={11} fill="none" />
       </Svg>
       <View style={{ position: 'absolute', left: 0, right: 0, top: sandTop + 8, bottom: 0, backgroundColor: sandEdge }} />
       <RNGradient colors={night ? [DIORAMA.sandNightFar, DIORAMA.sandNightNear] : [DIORAMA.sandDayFar, DIORAMA.sandDayNear]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, bottom: 0 }} />
+      <RNGradient colors={night ? [DIORAMA.oceanNightLight, DIORAMA.sandNightFar] : [DIORAMA.foamDayShade, DIORAMA.sandDayFar]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, height: 72, opacity: night ? 0.18 : 0.34 }} />
       <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Path d={`M18 ${sandTop + 46}Q132 ${sandTop + 26} 236 ${sandTop + 45}Q327 ${sandTop + 61} 414 ${sandTop + 42}`} stroke={DIORAMA.white} strokeWidth={6} fill="none" opacity={night ? .03 : .16} />
         <Path d={`M-12 ${sandTop + 118}Q98 ${sandTop + 90} 211 ${sandTop + 119}T432 ${sandTop + 112}`} stroke={sandEdge} strokeWidth={3} fill="none" opacity={night ? .17 : .25} />
@@ -685,6 +716,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
         <Circle cx={318} cy={ground + 44} r={7} fill={DIORAMA.starfish} /><Path d={`M313 ${ground + 37}L323 ${ground + 51}M325 ${ground + 37}L311 ${ground + 50}`} stroke={DIORAMA.starfish} strokeWidth={5} strokeLinecap="round" />
       </Svg>
       <SurfaceGrain fromY={sandTop + 12} canvasHeight={canvasHeight} color={sandEdge} night={night} />
+      <View style={{ position: 'absolute', right: -32, top: horizon - 116 }}><Palm night={night} flip /></View>
       <StageLight y={ground} night={night} warm />
       <View style={{ position: 'absolute', left: -35, top: sandTop + 38 }}><Dune night={night} /></View>
       <View style={{ position: 'absolute', right: -12, top: 186 }}><Umbrella night={night} /></View>
