@@ -10,9 +10,12 @@
  */
 export const HOME_SCENE_PURCHASES = ['home_bed', 'home_rug', 'home_window'] as const;
 
+// Home now uses the reviewed, design-system-backed hero scene while the rest of
+// the retail-clarity world remains on the current production scene set.
+export { HomeScene } from './HomeHeroScene';
+
 export {
   BeachScene,
-  HomeScene,
   NightOverlay,
   ParkScene,
   TownScene,
