@@ -137,9 +137,9 @@ export function spriteScale(
   const cap = mode === 'narrowPortrait' && screenHeight < 680
     ? screenHeight < 590 ? 0.80 : 0.90
     : mode === 'tabletLandscape'
-      ? 1.40
+      ? 1.65
       : mode === 'widePortrait'
-        ? 1.70
+        ? 1.95
         : mode === 'phoneLandscape'
           ? 1.10
           : 1.34;
