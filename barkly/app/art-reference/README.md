@@ -16,9 +16,13 @@ The art-toolbox workflow will automatically compare it to the real `390x844` Hom
 
 Pixel difference is **not** a quality score. It is for composition: Barkly scale, HUD footprint, care-dock position, negative space, and major depth masses.
 
+## Upper-bound concept
+
+`upper-bound-gloss.jpg` is a tiny, deliberately compressed reference copied directly into GitHub through the binary Git-data pipeline. It proves ChatGPT-generated images can be moved into isolated repo work without making the operator manually transfer files. It is **not** the approved production target and must never be imported by the app.
+
 ## Approval rule
 
-Only put an image here after the operator explicitly chooses it as a direction. Experimental AI generations belong outside this folder. The target can be replaced later when art direction changes; production code never imports these files.
+Only put an image at `home-target.png` after the operator explicitly chooses it as a direction. Experimental AI generations belong outside the canonical target slot. The target can be replaced later when art direction changes; production code never imports these files.
 
 ## Current art direction
 
