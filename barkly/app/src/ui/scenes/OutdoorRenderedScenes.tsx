@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, ColorValue, Easing, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { DIORAMA } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
 import { radius } from '../theme';
@@ -268,8 +268,11 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
   const road = night ? DIORAMA.townRoadNight : DIORAMA.townRoadDay;
   const roadEdge = night ? DIORAMA.townRoadNightEdge : DIORAMA.townRoadDayEdge;
 
-  const shopW = 176 * scale;
-  const shopH = 344 * scale;
+  // Match the trimmed render's real 422x519 aspect ratio. Oversized side
+  // modules crop like a street continuing off-screen instead of three icons
+  // floating in the middle of the sky.
+  const shopW = 248 * scale;
+  const shopH = shopW * (519 / 422);
   const lampW = 62 * scale;
   const lampH = 174 * scale;
   const fountainW = 112 * scale;
@@ -280,9 +283,9 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
   return (
     <View style={styles.fill} pointerEvents="none">
       <SceneSky band={band} horizon={horizon + 30} />
-      <RenderedProp source={TOWN_STORE_CORAL} left={-46} top={horizon + 41} width={shopW * 0.92} height={shopH * 0.92} night={night} opacity={0.88} />
-      <RenderedProp source={TOWN_STORE_AQUA} left={112} top={horizon} width={shopW * 1.08} height={shopH * 1.08} night={night} />
-      <RenderedProp source={TOWN_STORE_VIOLET} right={-48} top={horizon + 30} width={shopW * 0.94} height={shopH * 0.94} night={night} opacity={0.90} />
+      <RenderedProp source={TOWN_STORE_CORAL} left={-142} top={horizon + 28} width={shopW * 0.96} height={shopH * 0.96} night={night} opacity={0.88} />
+      <RenderedProp source={TOWN_STORE_AQUA} left={84} top={horizon} width={shopW * 1.04} height={shopH * 1.04} night={night} />
+      <RenderedProp source={TOWN_STORE_VIOLET} right={-143} top={horizon + 20} width={shopW * 0.98} height={shopH * 0.98} night={night} opacity={0.90} />
       <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Rect x={0} y={sidewalk + 9} width={420} height={canvasHeight - sidewalk} fill={walkEdge} />
         <Rect x={0} y={sidewalk} width={420} height={canvasHeight - sidewalk - 9} fill={walk} />
@@ -387,7 +390,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
       <RenderedProp source={BEACH_UMBRELLA} right={-9} top={horizon + 34} width={umbrellaW} height={umbrellaH} night={night} />
       <RenderedProp source={BEACH_DUNE} left={-38} top={sandTop + 92} width={duneW} height={duneH} night={night} opacity={0.90} />
       <RenderedProp source={BEACH_DUNE} right={-48} top={sandTop + 132} width={duneW * 0.90} height={duneH * 0.90} night={night} opacity={0.82} flip />
-      <RenderedProp source={BEACH_CASTLE} right={76} top={ground + 8} width={castleW} height={castleH} night={night} rotate="1deg" />
+      <RenderedProp source={BEACH_CASTLE} right={15} top={sandTop + 118} width={castleW} height={castleH * 1.56} night={night} rotate="1deg" />
       <StageLight ground={ground} night={night} warm />
       <BeachMotion night={night} tide={tide} />
       <SceneFinish night={night} warm />

@@ -272,6 +272,8 @@ export function HomeScene({
       <View style={[styles.baseboard, { top: floorTop - 27, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
       <View style={[styles.baseboardGlint, { top: floorTop - 24, opacity: night ? 0.04 : 0.22 }]} />
 
+      {has('home_rug') && <Rug groundY={groundY} night={night} scale={propScale} />}
+
       <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 46} scale={propScale} />
       <PictureMedallion top={chromeBottom + 94} night={night} />
 
@@ -295,8 +297,6 @@ export function HomeScene({
         night={night}
         rotate="1deg"
       />
-
-      {has('home_rug') && <Rug groundY={groundY} night={night} scale={propScale} />}
 
       <View style={[styles.floorBounce, { top: groundY - 24, opacity: night ? 0.035 : 0.11 }]} />
       <ForegroundVignette />
