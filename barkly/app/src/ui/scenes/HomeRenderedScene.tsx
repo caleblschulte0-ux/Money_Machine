@@ -10,6 +10,7 @@ const CHAIR = require('../../../assets/world/home/props/chair.png');
 const LAMP = require('../../../assets/world/home/props/lamp.png');
 const BED = require('../../../assets/world/home/props/bed.png');
 const SHELF = require('../../../assets/world/home/props/shelf.png');
+const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_frame.png');
 
 const SKY: Record<SkyBand, readonly [ColorValue, ColorValue]> = {
   morning: [DIORAMA.skyMorningA, DIORAMA.skyMorningB],
@@ -22,7 +23,14 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function ArchWindow({
+/**
+ * A real rendered frame around a live, code-owned view.
+ *
+ * The timber, bevels and sill come from Blender, while the sky and hills remain
+ * React Native layers behind the transparent panes. Home therefore gets real
+ * material depth without becoming one baked background image.
+ */
+function RenderedWindow({
   band,
   upgraded,
   top,
@@ -34,47 +42,96 @@ function ArchWindow({
   scale: number;
 }) {
   const night = band === 'night';
-  const width = (upgraded ? 208 : 188) * scale;
-  const height = (upgraded ? 238 : 218) * scale;
+  const width = (upgraded ? 224 : 208) * scale;
+  const height = width * (760 / 720);
 
   return (
-    <View style={[styles.windowWrap, { top, width: width + 26, height: height + 42 }]}>
-      <View style={[styles.windowDepth, { width: width + 16, height: height + 18 }]} />
-      <View style={[styles.windowFrame, { width: width + 7, height: height + 8 }]}>
-        <View style={[styles.windowGlass, { width, height }]}>
-          <LinearGradient colors={SKY[band]} style={styles.fill} />
-          <View
-            style={[
-              styles.sunMoon,
-              {
-                backgroundColor: night ? DIORAMA.goldLight : DIORAMA.lemon,
-                opacity: night ? 0.85 : 1,
-              },
-            ]}
-          />
-          <View style={[styles.hillBack, { backgroundColor: night ? DIORAMA.hillNight : DIORAMA.parkHillDayLight }]} />
-          <View style={[styles.hillFront, { backgroundColor: night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay }]} />
-          <View style={styles.windowVertical} />
-          <View style={styles.windowHorizontal} />
-          {!night && <View style={styles.windowGlint} />}
-        </View>
+    <View style={[styles.windowWrap, { top, width, height }]}>
+      <View
+        style={[
+          styles.windowCastShadow,
+          {
+            left: 16 * scale,
+            top: 20 * scale,
+            width: width * 0.83,
+            height: height * 0.74,
+            opacity: night ? 0.34 : 0.22,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.skyAperture,
+          {
+            left: width * 0.19,
+            top: height * 0.22,
+            width: width * 0.61,
+            height: height * 0.53,
+          },
+        ]}
+      >
+        <LinearGradient colors={SKY[band]} style={styles.fill} />
+        <View
+          style={[
+            styles.sunMoon,
+            {
+              backgroundColor: night ? DIORAMA.goldLight : DIORAMA.lemon,
+              opacity: night ? 0.82 : 1,
+            },
+          ]}
+        />
+        <View style={[styles.hillBack, { backgroundColor: night ? DIORAMA.hillNight : DIORAMA.parkHillDayLight }]} />
+        <View style={[styles.hillFront, { backgroundColor: night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay }]} />
+        {!night && <View style={styles.windowGlint} />}
       </View>
-      <View style={[styles.windowSill, { width: width + 28 }]} />
-      {upgraded && <View style={[styles.windowUpgradeTrim, { width: width + 42 }]} />}
+      <Image source={WINDOW_FRAME} resizeMode="contain" style={[styles.windowImage, { width, height }]} />
+      {upgraded && <View style={[styles.windowUpgradeSpark, { width: width * 0.46 }]} />}
     </View>
   );
 }
 
 function PictureMedallion({ top, night }: { top: number; night: boolean }) {
   return (
-    <View style={[styles.picture, { top, opacity: night ? 0.66 : 1 }]}>
-      <View style={styles.pictureInset}>
-        <View style={styles.pawPalm} />
-        <View style={[styles.pawToe, { left: 12, top: 9 }]} />
-        <View style={[styles.pawToe, { left: 25, top: 5 }]} />
-        <View style={[styles.pawToe, { left: 38, top: 9 }]} />
+    <View style={[styles.pictureShadow, { top, opacity: night ? 0.5 : 0.2 }]}>
+      <View style={styles.picture}>
+        <View style={styles.pictureInset}>
+          <View style={styles.pawPalm} />
+          <View style={[styles.pawToe, { left: 12, top: 9 }]} />
+          <View style={[styles.pawToe, { left: 25, top: 5 }]} />
+          <View style={[styles.pawToe, { left: 38, top: 9 }]} />
+        </View>
       </View>
     </View>
+  );
+}
+
+function WallMillwork({ floorTop, night }: { floorTop: number; night: boolean }) {
+  const rail = night ? DIORAMA.woodNight : DIORAMA.woodMid;
+  return (
+    <>
+      <LinearGradient
+        colors={night ? ['rgba(46,38,51,0.42)', 'rgba(35,30,44,0.16)'] : ['rgba(255,241,208,0.18)', 'rgba(197,139,78,0.12)']}
+        style={[styles.wainscot, { top: floorTop - 132, height: 105 }]}
+      />
+      <View style={[styles.wainscotRailShadow, { top: floorTop - 137 }]} />
+      <View style={[styles.wainscotRail, { top: floorTop - 142, backgroundColor: rail }]} />
+      {[82, 205, 328].map((left) => (
+        <View
+          key={left}
+          style={[
+            styles.panelStile,
+            {
+              left,
+              top: floorTop - 129,
+              height: 94,
+              backgroundColor: rail,
+              opacity: night ? 0.32 : 0.26,
+            },
+          ]}
+        />
+      ))}
+      <View style={[styles.panelBaseGlow, { top: floorTop - 34, opacity: night ? 0.04 : 0.18 }]} />
+    </>
   );
 }
 
@@ -87,6 +144,7 @@ function RenderedProp({
   height,
   night,
   rotate,
+  opacity = 1,
 }: {
   source: ReturnType<typeof require>;
   left?: number;
@@ -96,6 +154,7 @@ function RenderedProp({
   height: number;
   night: boolean;
   rotate?: string;
+  opacity?: number;
 }) {
   return (
     <Image
@@ -108,7 +167,7 @@ function RenderedProp({
         top,
         width,
         height,
-        opacity: night ? 0.76 : 1,
+        opacity: (night ? 0.78 : 1) * opacity,
         transform: rotate ? [{ rotate }] : undefined,
       }}
     />
@@ -145,10 +204,9 @@ function ForegroundVignette() {
 /**
  * Home's production renderer.
  *
- * The room architecture remains deterministic React Native code, but the
- * furniture is authored as real 3D volumes and rendered to transparent PNGs.
- * That keeps every chair/lamp/bed/shelf independently placeable, replaceable,
- * and upgradeable without baking the room into one background image.
+ * The room shell stays deterministic React Native. High-value objects and
+ * architecture are transparent renders from a shared Blender camera/light rig.
+ * Every object remains individually placeable, replaceable and upgradeable.
  */
 export function HomeScene({
   hour,
@@ -164,12 +222,12 @@ export function HomeScene({
   chromeBottom: number;
 }) {
   const { width } = useWindowDimensions();
-  // More screen reveals more room; furniture does not balloon on tablets.
+  // More screen reveals more room; the authored objects do not inflate forever.
   const propScale = clamp(width / 390, 0.92, 1.05);
   const band = skyBand(hour);
   const night = band === 'night' || asleep;
   const has = (id: string) => upgrades.includes(id);
-  const floorTop = Math.max(chromeBottom + 188, groundY - 158);
+  const floorTop = Math.max(chromeBottom + 190, groundY - 158);
 
   const wall: readonly [ColorValue, ColorValue] = night
     ? [DIORAMA.wallNightA, DIORAMA.wallNightB]
@@ -178,13 +236,13 @@ export function HomeScene({
   const floorNear = night ? DIORAMA.floorNightNear : DIORAMA.floorDayNear;
   const floorLine = night ? DIORAMA.floorNightEdge : DIORAMA.floorDayEdge;
 
-  const chairW = 156 * propScale;
+  const chairW = 158 * propScale;
   const chairH = chairW * (398 / 374);
-  const lampW = 79 * propScale;
+  const lampW = 82 * propScale;
   const lampH = lampW * 2;
-  const shelfW = 148 * propScale;
+  const shelfW = 152 * propScale;
   const shelfH = shelfW * (481 / 298);
-  const bedW = (has('home_bed') ? 150 : 130) * propScale;
+  const bedW = (has('home_bed') ? 154 : 136) * propScale;
   const bedH = bedW * (254 / 512);
 
   return (
@@ -209,25 +267,26 @@ export function HomeScene({
       </Svg>
 
       <LinearGradient
-        colors={night ? ['rgba(16,18,35,0.18)', 'rgba(16,18,35,0)'] : ['rgba(255,218,132,0.28)', 'rgba(255,218,132,0)']}
-        start={{ x: 0, y: 0.2 }}
-        end={{ x: 0.72, y: 0.75 }}
-        style={[styles.lightPool, { top: chromeBottom + 20, height: Math.max(260, groundY - chromeBottom + 20) }]}
+        colors={night ? ['rgba(16,18,35,0.18)', 'rgba(16,18,35,0)'] : ['rgba(255,218,132,0.30)', 'rgba(255,218,132,0)']}
+        start={{ x: 0, y: 0.18 }}
+        end={{ x: 0.74, y: 0.76 }}
+        style={[styles.lightPool, { top: chromeBottom + 18, height: Math.max(270, groundY - chromeBottom + 28) }]}
       />
 
       <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
+      <WallMillwork floorTop={floorTop} night={night} />
       <View style={[styles.baseboard, { top: floorTop - 27, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
       <View style={[styles.baseboardGlint, { top: floorTop - 24, opacity: night ? 0.04 : 0.22 }]} />
 
-      <ArchWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 36} scale={propScale} />
-      <PictureMedallion top={chromeBottom + 72} night={night} />
+      <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 46} scale={propScale} />
+      <PictureMedallion top={chromeBottom + 94} night={night} />
 
-      <RenderedProp source={SHELF} right={-5} top={chromeBottom + 24} width={shelfW} height={shelfH} night={night} />
-      <RenderedProp source={LAMP} left={-5} top={floorTop - lampH + 12} width={lampW} height={lampH} night={night} />
+      <RenderedProp source={SHELF} right={-9} top={chromeBottom + 48} width={shelfW} height={shelfH} night={night} />
+      <RenderedProp source={LAMP} left={-3} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} />
       <RenderedProp
         source={CHAIR}
-        left={10}
-        top={floorTop - chairH + 31}
+        left={8}
+        top={floorTop - chairH + 36}
         width={chairW}
         height={chairH}
         night={night}
@@ -235,8 +294,8 @@ export function HomeScene({
       />
       <RenderedProp
         source={BED}
-        right={14}
-        top={floorTop + 13}
+        right={10}
+        top={floorTop + 12}
         width={bedW}
         height={bedH}
         night={night}
@@ -245,7 +304,7 @@ export function HomeScene({
 
       {has('home_rug') && <Rug groundY={groundY} night={night} />}
 
-      <View style={[styles.floorBounce, { top: groundY - 24, opacity: night ? 0.035 : 0.105 }]} />
+      <View style={[styles.floorBounce, { top: groundY - 24, opacity: night ? 0.035 : 0.11 }]} />
       <ForegroundVignette />
     </View>
   );
@@ -253,60 +312,70 @@ export function HomeScene({
 
 const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  lightPool: { position: 'absolute', left: 0, width: '72%' },
+  lightPool: { position: 'absolute', left: 0, width: '74%' },
   ceilingTrim: {
     position: 'absolute', left: 0, right: 0, height: 12,
     borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm,
   },
   baseboard: { position: 'absolute', left: 0, right: 0, height: 28 },
   baseboardGlint: { position: 'absolute', left: 0, right: 0, height: 5, backgroundColor: DIORAMA.white },
-  windowWrap: { position: 'absolute', left: -17 },
-  windowDepth: {
-    position: 'absolute', left: 17, top: 16,
-    backgroundColor: DIORAMA.shadow, opacity: 0.26,
-    borderTopLeftRadius: radius.pill, borderTopRightRadius: radius.pill,
-    borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg,
+  wainscot: { position: 'absolute', left: 0, right: 0 },
+  wainscotRailShadow: {
+    position: 'absolute', left: 0, right: 0, height: 18,
+    backgroundColor: DIORAMA.shadow, opacity: 0.11,
   },
-  windowFrame: {
-    position: 'absolute', left: 2, top: 1, padding: 8,
-    backgroundColor: DIORAMA.windowFrameDayEdge,
-    borderTopLeftRadius: radius.pill, borderTopRightRadius: radius.pill,
-    borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg,
+  wainscotRail: {
+    position: 'absolute', left: 0, right: 0, height: 12,
+    borderRadius: radius.sm,
   },
-  windowGlass: {
-    overflow: 'hidden',
-    borderTopLeftRadius: radius.pill, borderTopRightRadius: radius.pill,
-    borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md,
+  panelStile: {
+    position: 'absolute', width: 5,
+    borderRadius: radius.xs,
   },
-  sunMoon: { position: 'absolute', right: 29, top: 28, width: 34, height: 34, borderRadius: radius.md },
+  panelBaseGlow: {
+    position: 'absolute', left: 0, right: 0, height: 6,
+    backgroundColor: DIORAMA.white,
+  },
+  windowWrap: { position: 'absolute', left: -5 },
+  windowCastShadow: {
+    position: 'absolute',
+    backgroundColor: DIORAMA.shadow,
+    borderRadius: radius.lg,
+    transform: [{ rotate: '1deg' }],
+  },
+  skyAperture: {
+    position: 'absolute', overflow: 'hidden',
+    borderRadius: radius.md,
+    backgroundColor: DIORAMA.skyDayA,
+  },
+  windowImage: { position: 'absolute', left: 0, top: 0 },
+  sunMoon: { position: 'absolute', right: 18, top: 16, width: 28, height: 28, borderRadius: radius.md },
   hillBack: {
-    position: 'absolute', left: -18, right: 48, bottom: -34, height: 96,
-    borderRadius: radius.pill, transform: [{ rotate: '-7deg' }],
+    position: 'absolute', left: -24, right: 32, bottom: -30, height: 82,
+    borderRadius: radius.pill, transform: [{ rotate: '-6deg' }],
   },
   hillFront: {
-    position: 'absolute', left: 52, right: -34, bottom: -42, height: 104,
+    position: 'absolute', left: 34, right: -26, bottom: -36, height: 88,
     borderRadius: radius.pill, transform: [{ rotate: '8deg' }],
   },
-  windowVertical: { position: 'absolute', top: 0, bottom: 0, left: '49%', width: 7, backgroundColor: DIORAMA.windowFrameDayEdge },
-  windowHorizontal: { position: 'absolute', left: 0, right: 0, top: '58%', height: 7, backgroundColor: DIORAMA.windowFrameDayEdge },
   windowGlint: {
-    position: 'absolute', left: 19, top: 20, width: '54%', height: 10,
-    borderRadius: radius.pill, backgroundColor: DIORAMA.white, opacity: 0.22,
-    transform: [{ rotate: '-8deg' }],
+    position: 'absolute', left: 12, top: 15, width: '44%', height: 7,
+    borderRadius: radius.pill, backgroundColor: DIORAMA.white, opacity: 0.2,
+    transform: [{ rotate: '-9deg' }],
   },
-  windowSill: {
-    position: 'absolute', left: -6, bottom: 17, height: 23,
-    borderRadius: radius.md, backgroundColor: DIORAMA.woodMid,
+  windowUpgradeSpark: {
+    position: 'absolute', left: 29, bottom: 25, height: 5,
+    borderRadius: radius.pill, backgroundColor: DIORAMA.goldLight, opacity: 0.72,
   },
-  windowUpgradeTrim: {
-    position: 'absolute', left: -13, bottom: 8, height: 8,
-    borderRadius: radius.pill, backgroundColor: DIORAMA.gold,
+  pictureShadow: {
+    position: 'absolute', left: '49%', width: 80, height: 94, marginLeft: -40,
+    borderRadius: radius.lg, backgroundColor: DIORAMA.shadow,
+    transform: [{ translateX: 4 }, { translateY: 6 }, { rotate: '-2deg' }],
   },
   picture: {
-    position: 'absolute', left: '48%', width: 72, height: 86,
-    marginLeft: -36, padding: 7, borderRadius: radius.lg,
+    position: 'absolute', left: -4, top: -6, width: 76, height: 88,
+    padding: 7, borderRadius: radius.lg,
     backgroundColor: DIORAMA.woodWarm,
-    transform: [{ rotate: '-2deg' }],
   },
   pictureInset: {
     flex: 1, borderRadius: radius.md, backgroundColor: DIORAMA.cream,
