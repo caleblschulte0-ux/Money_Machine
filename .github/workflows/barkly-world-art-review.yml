@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'chatgpt/barkly-world-rehaul-build-*'
+      - 'chatgpt/barkly-spacing-overhaul-*'
     paths:
       - 'barkly/app/**'
       - '.github/workflows/barkly-world-art-review.yml'
@@ -49,10 +50,15 @@ jobs:
       - name: Capture Home Park Town Beach
         run: node scripts/world-art-snapshot.mjs --html world-artifact.html --out world-art
 
+      - name: Audit responsive composition
+        run: node scripts/overlap-check.mjs --html world-artifact.html
+
       - name: Upload world-art screenshots
         uses: actions/upload-artifact@v4
         with:
           name: barkly-world-art-${{ github.sha }}
-          path: barkly/app/world-art/*.png
+          path: |
+            barkly/app/world-art/*.png
+            barkly/app/overlap-*.png
           if-no-files-found: error
           retention-days: 7
