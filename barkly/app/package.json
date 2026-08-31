@@ -49,7 +49,12 @@
     "check:voice": "node scripts/voice-check.mjs",
     "build:pages": "node scripts/build-artifact.mjs --out dist/index.html && EXPO_PUBLIC_BARKLY_PLAYTEST=always node scripts/build-artifact.mjs --out dist/playtest/index.html",
     "check:gate": "node scripts/no-playtest-check.mjs dist/index.html dist/playtest/index.html",
-    "check:playtest": "node scripts/playtest-acceptance.mjs http://localhost:8099/playtest/"
+    "check:playtest": "node scripts/playtest-acceptance.mjs http://localhost:8099/playtest/",
+    "art:audit": "node scripts/asset-audit.mjs assets art-review/asset-audit.txt",
+    "art:matrix": "node scripts/art-matrix.mjs --html art-toolbox.html --out art-review",
+    "art:motion": "node scripts/motion-review.mjs --html art-toolbox.html --out art-review/motion",
+    "art:materials": "node scripts/material-lab.mjs art-review/material-lab",
+    "art:juice": "node scripts/juice-lab.mjs art-review/juice-lab"
   },
   "private": true,
   "jest": {
