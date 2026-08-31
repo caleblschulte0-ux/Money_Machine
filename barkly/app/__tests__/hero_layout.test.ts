@@ -20,9 +20,9 @@ describe('hero-first phone composition', () => {
     const renderedBodyWidth = 244 * scale;
 
     expect(scale).toBeGreaterThanOrEqual(1.12);
-    expect(scale).toBeLessThanOrEqual(1.16);
-    expect(renderedBodyWidth / 390).toBeGreaterThanOrEqual(0.7);
-    expect(renderedBodyWidth / 390).toBeLessThanOrEqual(0.74);
+    expect(scale).toBeLessThanOrEqual(1.14);
+    expect(renderedBodyWidth / 390).toBeGreaterThanOrEqual(0.70);
+    expect(renderedBodyWidth / 390).toBeLessThanOrEqual(0.72);
   });
 
   it('keeps Barkly substantial on a browser-chrome-short phone', () => {
