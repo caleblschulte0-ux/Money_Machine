@@ -10,9 +10,9 @@
  */
 export const HOME_SCENE_PURCHASES = ['home_bed', 'home_rug', 'home_window'] as const;
 
-// Home now uses the reviewed, design-system-backed hero scene while the rest of
-// the retail-clarity world remains on the current production scene set.
-export { HomeScene } from './HomeHeroScene';
+// Home now uses code-owned architecture plus independently rendered 3D props.
+// Furniture can be replaced/upgraded without baking the room into one image.
+export { HomeScene } from './HomeRenderedScene';
 
 export {
   BeachScene,
