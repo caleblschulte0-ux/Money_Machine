@@ -25,11 +25,17 @@ Free-only production tooling for pushing Barkly toward premium toy-diorama mobil
 - `scripts/reference-compare.py` — compare the real Home render with an explicitly approved target in `app/art-reference/home-target.png`.
 - `scripts/material-lab.mjs` — render the Barkly material grammar before applying it everywhere.
 - `scripts/juice-lab.mjs` — prototype button squash, reward pops, care nudges, conversation morphing and depth motion.
+- `scripts/layout-debug.mjs` — overlay the real app with Barkly/UI hitboxes and clear-line references without changing app code.
+- `scripts/performance-review.mjs` — collect headless frame pacing, long-task and memory trend signals on phone/tablet Home and Park.
 - `scripts/motion-review.mjs` — record the real app moving through scenes at phone size.
+
+## Generated-image intake
+
+The Git-data path (`create blob → create tree → create commit → fast-forward isolated branch`) supports binary art, so ChatGPT-generated images can move into the isolated repo without making the operator manually download and re-upload them. `app/art-reference/upper-bound-gloss.jpg` is the proof artifact; it is deliberately compressed and explicitly **not** production art.
 
 ## 3D lab
 
-`tools/blender/material_scene.py` uses free/open-source Blender in headless GitHub Actions. It can be extended into:
+`tools/blender/material_scene.py` uses free/open-source Blender in headless GitHub Actions. The lab is validated and already emits a real `.blend` file plus a rendered PNG. It can be extended into:
 
 - pre-rendered toy props
 - controlled lighting studies
@@ -41,7 +47,7 @@ The workflow is `.github/workflows/barkly-blender-lab.yml` and does not run in t
 
 ## CI artifacts
 
-`.github/workflows/barkly-art-toolbox.yml` packages the device matrix, asset report, normalized-asset smoke test, reference comparison status, material lab, juice lab and real motion review into one artifact.
+`.github/workflows/barkly-art-toolbox.yml` packages the device matrix, asset report, normalized-asset smoke test, reference comparison status, material lab, juice lab, geometry overlays, frame-pacing report and real motion review into one artifact.
 
 `.github/workflows/barkly-blender-lab.yml` packages Blender renders and the generated `.blend` study file separately.
 
@@ -53,9 +59,11 @@ From `barkly/app`:
 - `npm run art:matrix`
 - `npm run art:materials`
 - `npm run art:juice`
+- `npm run art:debug-layout`
+- `npm run art:performance`
 - `npm run art:motion`
 
-Python image tools require free Pillow (`python -m pip install Pillow`). CI installs it automatically.
+Python image tools require free Pillow (`python -m pip install Pillow`). CI installs it automatically. Blender is installed only in its isolated GitHub Actions workflow.
 
 ## What may require the operator later
 
