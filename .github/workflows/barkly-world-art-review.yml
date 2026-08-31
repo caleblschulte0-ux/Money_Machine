@@ -55,6 +55,7 @@ jobs:
         run: node scripts/overlap-check.mjs --html world-artifact.html
 
       - name: Upload world-art screenshots
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: barkly-world-art-${{ github.sha }}
