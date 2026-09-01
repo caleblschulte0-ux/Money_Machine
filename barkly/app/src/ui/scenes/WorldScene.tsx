@@ -262,7 +262,7 @@ export function worldScale(viewportWidth: number, viewportHeight = 844): number 
   // rendered world in the same physical scale family as Barkly while wider
   // screens reveal more environment instead of stretching phone blocking.
   const cameraEdge = viewportWidth > viewportHeight ? viewportHeight / 390 : viewportWidth / 390;
-  return Math.max(0.90, Math.min(1.24, cameraEdge));
+  return Math.max(0.90, Math.min(1.34, cameraEdge));
 }
 
 const styles = StyleSheet.create({

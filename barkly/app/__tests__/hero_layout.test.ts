@@ -56,16 +56,16 @@ describe('hero-first phone composition', () => {
     const width = stageWidth(1024, mode);
     const scale = spriteScale(768, width, mode);
     expect(width).toBeLessThan(1024 * 0.7);
-    expect(scale).toBeGreaterThanOrEqual(1.16);
-    expect(scale).toBeLessThanOrEqual(1.2);
+    expect(scale).toBeGreaterThanOrEqual(1.3);
+    expect(scale).toBeLessThanOrEqual(1.34);
     expect(Math.abs(scale - worldScale(1024, 768))).toBeLessThanOrEqual(0.05);
   });
 
   it('reveals more world on tall tablets instead of turning Barkly into a poster', () => {
     const mode = layoutMode(768, 1024);
     const scale = spriteScale(1024, stageWidth(768, mode), mode, true);
-    expect(scale).toBeGreaterThanOrEqual(1.2);
-    expect(scale).toBeLessThanOrEqual(1.24);
+    expect(scale).toBeGreaterThanOrEqual(1.3);
+    expect(scale).toBeLessThanOrEqual(1.34);
     expect(scale).toBe(worldScale(768, 1024));
   });
 
