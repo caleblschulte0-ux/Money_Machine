@@ -83,9 +83,10 @@ describe('world scenery stays modular', () => {
   });
 
   it('uses atmospheric lighting without a hard-edged screen sweep', () => {
-    expect(presentation).toContain('styles.ambientWash');
     expect(presentation).toContain('styles.horizonHaze');
+    expect(presentation).toContain('styles.bottomGrade');
     expect(presentation).not.toContain('styles.keySweep');
+    expect(presentation).not.toContain('styles.keyPool');
   });
 
   it('lets outdoor worlds react to active gameplay', () => {

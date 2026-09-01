@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { DIORAMA } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
-import { elevation, radius } from '../theme';
+import { elevation, radius, type } from '../theme';
 import {
   WorldLayer,
   WorldLighting,
@@ -205,8 +205,11 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
   const grassFar = night ? DIORAMA.parkGrassNightLight : DIORAMA.parkGrassDayLight;
   const grass = night ? DIORAMA.parkGrassNight : DIORAMA.parkGrassDay;
   const grassNear = night ? DIORAMA.parkGrassNightEdge : DIORAMA.parkGrassDayEdge;
-  const path = night ? DIORAMA.parkPathNight : DIORAMA.parkPathDay;
-  const pathEdge = night ? DIORAMA.parkPathNightEdge : DIORAMA.parkPathDayEdge;
+  // A worn grass lane creates depth without a bright tan stripe competing
+  // with Barkly. The earlier path used the strongest warm value in the scene
+  // and read like a slide attached to the hero tree on every wide viewport.
+  const path = night ? DIORAMA.parkGrassNightLight : DIORAMA.parkGrassDayLight;
+  const pathEdge = night ? DIORAMA.parkGrassNightEdge : DIORAMA.parkGrassDayEdge;
 
   const treeW = 204 * scale;
   const treeH = 292 * scale;
@@ -241,12 +244,12 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
         <Svg width={Math.min(width, 520)} height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.parkPathLayer}>
           <Defs>
             <SvgLinearGradient id="parkPathV3" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={night ? DIORAMA.parkPathNightLight : DIORAMA.parkPathDayLight} />
+              <Stop offset="0" stopColor={grassFar} />
               <Stop offset="1" stopColor={path} />
             </SvgLinearGradient>
           </Defs>
-          <Path d={`M310 ${horizon + 70}C336 ${horizon + 116} 350 ${horizon + 164} 332 ${ground - 10}C314 ${ground + 20} 320 ${ground + 56} 360 ${ground + 92}L405 ${ground + 82}C360 ${ground + 48} 354 ${ground + 18} 372 ${ground - 16}C394 ${horizon + 154} 376 ${horizon + 106} 330 ${horizon + 68}Z`} fill={pathEdge} />
-          <Path d={`M318 ${horizon + 72}C342 ${horizon + 118} 354 ${horizon + 160} 340 ${ground - 8}C326 ${ground + 18} 334 ${ground + 48} 370 ${ground + 80}L393 ${ground + 75}C354 ${ground + 43} 348 ${ground + 16} 364 ${ground - 14}C384 ${horizon + 151} 369 ${horizon + 111} 328 ${horizon + 72}Z`} fill="url(#parkPathV3)" />
+          <Path d={`M310 ${horizon + 70}C336 ${horizon + 116} 350 ${horizon + 164} 332 ${ground - 10}C314 ${ground + 20} 320 ${ground + 56} 360 ${ground + 92}L405 ${ground + 82}C360 ${ground + 48} 354 ${ground + 18} 372 ${ground - 16}C394 ${horizon + 154} 376 ${horizon + 106} 330 ${horizon + 68}Z`} fill={pathEdge} opacity={night ? 0.42 : 0.54} />
+          <Path d={`M318 ${horizon + 72}C342 ${horizon + 118} 354 ${horizon + 160} 340 ${ground - 8}C326 ${ground + 18} 334 ${ground + 48} 370 ${ground + 80}L393 ${ground + 75}C354 ${ground + 43} 348 ${ground + 16} 364 ${ground - 14}C384 ${horizon + 151} 369 ${horizon + 111} 328 ${horizon + 72}Z`} fill="url(#parkPathV3)" opacity={night ? 0.52 : 0.68} />
           <Path d={`M330 ${horizon + 86}C349 ${horizon + 125} 359 ${horizon + 158} 349 ${ground - 5}C340 ${ground + 16} 345 ${ground + 37} 374 ${ground + 64}`} stroke={DIORAMA.white} strokeWidth={4} fill="none" opacity={night ? 0.04 : 0.16} />
         </Svg>
       </WorldLayer>
@@ -257,6 +260,9 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
       <WorldLayer name="landmark">
         <WorldObject source={PARK_TREE} left={treeLeft + 4} top={horizon - 54} width={treeW * 0.88} height={treeH * 0.88} night={night} depth={0.48} opacity={0.90} ambient="sway" contactShadow />
         <WorldObject source={PARK_TREE} right={treeRight - 8} top={horizon - 108} width={treeW * 1.08} height={treeH * 1.08} night={night} depth={0.58} ambient="sway" motionDelay={900} flip contactShadow />
+        <View style={[styles.parkHeroSign, { right: Math.max(12, treeRight + 58 * scale), top: horizon + 102, transform: [{ rotate: '-2deg' }] }]}>
+          <Text style={styles.parkHeroSignText}>BARKLY PARK</Text>
+        </View>
       </WorldLayer>
       <WorldLayer name="props">
         <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 145} width={benchW} height={benchH} night={night} depth={0.78} contactShadow />
@@ -467,6 +473,8 @@ export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }:
   const duneLeft = width >= 600 ? wideInset - 6 : COMPOSITION.beach.duneLeft;
   const duneRight = width >= 600 ? wideInset - 12 : COMPOSITION.beach.duneRight;
   const castleRight = width >= 600 ? wideInset + 112 * scale : COMPOSITION.beach.castleRight;
+  const towerRenderW = lifeguardW * 0.94;
+  const towerRenderH = lifeguardH * 0.94;
 
   return (
     <WorldScene motion={motion} testID="world-scene-beach">
@@ -492,7 +500,10 @@ export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }:
       </WorldLayer>
       <WorldLayer name="landmark">
         <WorldObject source={BEACH_PALM} left={palmLeft} top={horizon - 82} width={palmW} height={palmH} night={night} depth={0.44} opacity={0.86} ambient="sway" contactShadow />
-        <WorldObject source={BEACH_LIFEGUARD} left={towerLeft} top={horizon + 16} width={lifeguardW * 0.94} height={lifeguardH * 0.94} night={night} depth={0.50} opacity={0.92} contactShadow />
+        <WorldObject source={BEACH_LIFEGUARD} left={towerLeft} top={horizon + 16} width={towerRenderW} height={towerRenderH} night={night} depth={0.50} opacity={0.92} contactShadow />
+        <View style={[styles.beachTowerSign, { left: towerLeft + towerRenderW * 0.23, top: horizon + 16 + towerRenderH * 0.25, width: towerRenderW * 0.48 }]}>
+          <Text style={[styles.beachTowerSignText, { fontSize: Math.max(7, 8 * scale) }]}>BARKLY BAY</Text>
+        </View>
         <WorldObject source={BEACH_UMBRELLA} right={umbrellaRight} top={horizon + 38} width={umbrellaW} height={umbrellaH} night={night} depth={0.56} ambient="sway" motionDelay={500} contactShadow />
       </WorldLayer>
       <WorldLayer name="foreground">
@@ -519,6 +530,8 @@ const styles = StyleSheet.create({
   butterfly: { position: 'absolute', left: 0, width: 22, height: 14 },
   butterflyLeft: { position: 'absolute', left: 1, top: 3, width: 10, height: 7, borderRadius: radius.pill, backgroundColor: DIORAMA.lemon, transform: [{ rotate: '-24deg' }] },
   butterflyRight: { position: 'absolute', right: 1, top: 3, width: 10, height: 7, borderRadius: radius.pill, backgroundColor: DIORAMA.coralLight, transform: [{ rotate: '24deg' }] },
+  parkHeroSign: { position: 'absolute', width: 96, height: 32, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: DIORAMA.woodMid, borderWidth: 2, borderColor: DIORAMA.woodDeep, ...elevation.low },
+  parkHeroSignText: { ...type.micro, fontWeight: '900', letterSpacing: 0.8, color: DIORAMA.cream },
   townGlint: { position: 'absolute', left: 0, width: 18, height: 190, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   fountainSpark: { position: 'absolute', width: 9, height: 9, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   shopSign: { position: 'absolute', height: 24, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: DIORAMA.cream, borderWidth: 2, borderColor: DIORAMA.townBlueEdge, ...elevation.low },
@@ -526,6 +539,8 @@ const styles = StyleSheet.create({
   waveGlint: { position: 'absolute', right: 62, width: 64, height: 5, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   waveGlintNear: { position: 'absolute', left: 38, width: 96, height: 4, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   beachActionDrop: { position: 'absolute', left: '50%', width: 12, height: 18, borderRadius: radius.pill, backgroundColor: DIORAMA.aquaLight },
+  beachTowerSign: { position: 'absolute', height: 23, borderRadius: radius.xs, alignItems: 'center', justifyContent: 'center', backgroundColor: DIORAMA.cream, borderWidth: 1.5, borderColor: DIORAMA.aquaDeep, ...elevation.low },
+  beachTowerSignText: { fontWeight: '900', letterSpacing: 0.45, color: DIORAMA.aquaDeep },
   gull: { position: 'absolute', left: 0, width: 32, height: 18 },
   gullLeft: { position: 'absolute', left: 0, top: 8, width: 18, height: 3, borderRadius: radius.sm, backgroundColor: DIORAMA.inkSoft, transform: [{ rotate: '-22deg' }] },
   gullRight: { position: 'absolute', right: 0, top: 8, width: 18, height: 3, borderRadius: radius.sm, backgroundColor: DIORAMA.inkSoft, transform: [{ rotate: '22deg' }] },

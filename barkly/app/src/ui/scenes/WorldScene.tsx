@@ -209,8 +209,9 @@ export function WorldObject({
  *
  * The previous revision used a 68%-wide rectangular sweep. Its transparent
  * endpoint still left a visible vertical edge over the world, so the light
- * read as a UI overlay instead of atmosphere. The new pass is made from soft,
- * oversized pools with rounded bounds plus full-width vertical grades.
+ * read as a UI overlay instead of atmosphere. This pass deliberately uses
+ * only full-width vertical grades; bounded light rectangles cannot leak into
+ * the composition because there are none.
  */
 export function WorldLighting({
   night,
@@ -223,32 +224,6 @@ export function WorldLighting({
 }) {
   return (
     <View style={[styles.fill, { zIndex: WORLD_LAYER_Z.fx }]} pointerEvents="none">
-      <LinearGradient
-        style={[
-          styles.keyPool,
-          {
-            top: ground - 54,
-            opacity: night ? 0.025 : warm ? 0.09 : 0.065,
-          },
-        ]}
-        colors={[
-          warm ? 'rgba(255,236,184,0)' : 'rgba(230,249,241,0)',
-          warm ? 'rgba(255,236,184,0.92)' : 'rgba(230,249,241,0.82)',
-          'rgba(255,255,255,0)',
-        ]}
-        locations={[0, 0.42, 1]}
-        start={{ x: 0, y: 0.35 }}
-        end={{ x: 1, y: 0.62 }}
-      />
-      <LinearGradient
-        colors={[
-          night ? 'rgba(255,255,255,0.01)' : warm ? 'rgba(255,244,210,0.11)' : 'rgba(235,251,246,0.09)',
-          'rgba(255,255,255,0.035)',
-          'rgba(255,255,255,0)',
-        ]}
-        locations={[0, 0.38, 1]}
-        style={styles.ambientWash}
-      />
       <LinearGradient
         colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0)']}
         locations={[0, 0.5, 1]}
@@ -291,15 +266,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     transform: [{ scaleX: 1.14 }],
   },
-  keyPool: {
-    position: 'absolute',
-    left: '-8%',
-    width: '92%',
-    height: 150,
-    borderRadius: radius.pill,
-    transform: [{ rotate: '-4deg' }],
-  },
-  ambientWash: { position: 'absolute', left: 0, right: 0, top: 0, height: '58%' },
   horizonHaze: { position: 'absolute', left: 0, right: 0, height: 156 },
   bottomGrade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 140 },
 });
