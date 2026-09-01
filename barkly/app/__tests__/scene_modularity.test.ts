@@ -15,6 +15,7 @@ function source(...parts: string[]): string {
 describe('world scenery stays modular', () => {
   const outdoorScenes = source('src', 'ui', 'scenes', 'OutdoorRenderedScenes.tsx');
   const homeScene = source('src', 'ui', 'scenes', 'HomeRenderedScene.tsx');
+  const presentation = source('src', 'ui', 'scenes', 'WorldScene.tsx');
   const nativeFacade = source('src', 'ui', 'scenes', 'Scenes.tsx');
   const webFacade = source('src', 'ui', 'scenes', 'Scenes.web.tsx');
 
@@ -34,7 +35,7 @@ describe('world scenery stays modular', () => {
     for (const asset of ['chair.png', 'lamp.png', 'bed.png', 'rug.png', 'shelf.png', 'window_frame.png']) {
       expect(homeScene).toContain(asset);
     }
-    expect(homeScene).toContain('function RenderedProp');
+    expect(homeScene).toContain('<WorldObject');
     expect(homeScene).toContain('function RenderedWindow');
   });
 
@@ -57,9 +58,23 @@ describe('world scenery stays modular', () => {
     ]) {
       expect(outdoorScenes).toContain(asset);
     }
-    expect(outdoorScenes).toContain('function RenderedProp');
+    expect(outdoorScenes).toContain('<WorldObject');
     expect(outdoorScenes).toContain('function SceneSky');
     expect(outdoorScenes).toMatch(/<Path\b/);
+  });
+
+  it('routes every location through one presentation engine', () => {
+    for (const scene of [homeScene, outdoorScenes]) {
+      expect(scene).toContain("from './WorldScene'");
+      expect(scene).toContain('<WorldScene');
+      expect(scene).toContain('<WorldLayer');
+      expect(scene).toContain('<WorldLighting');
+    }
+    for (const layer of ['sky', 'distant', 'ground', 'landmark', 'props', 'foreground', 'fx']) {
+      expect(presentation).toContain(`'${layer}'`);
+    }
+    expect(presentation).toContain('export function WorldObject');
+    expect(presentation).toContain('export function WorldScene');
   });
 
   for (const item of STORE.filter((entry) => entry.slot === 'home')) {

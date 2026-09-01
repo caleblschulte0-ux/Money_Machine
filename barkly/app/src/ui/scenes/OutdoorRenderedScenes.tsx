@@ -1,10 +1,18 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, ColorValue, Easing, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Animated, ColorValue, Easing, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { DIORAMA } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
 import { radius } from '../theme';
+import {
+  WorldLayer,
+  WorldLighting,
+  WorldMotion,
+  WorldObject,
+  WorldScene,
+  worldScale,
+} from './WorldScene';
 
 const PARK_TREE = require('../../../assets/world/park/props/tree.png');
 const PARK_BENCH = require('../../../assets/world/park/props/bench.png');
@@ -85,82 +93,6 @@ function SceneSky({ band, horizon }: { band: SkyBand; horizon: number }) {
   );
 }
 
-function RenderedProp({
-  source,
-  left,
-  right,
-  top,
-  width,
-  height,
-  night,
-  opacity = 1,
-  rotate,
-  flip = false,
-}: {
-  source: ReturnType<typeof require>;
-  left?: number;
-  right?: number;
-  top: number;
-  width: number;
-  height: number;
-  night: boolean;
-  opacity?: number;
-  rotate?: string;
-  flip?: boolean;
-}) {
-  const transforms: Array<{ rotate: string } | { scaleX: number }> = [];
-  if (rotate) transforms.push({ rotate });
-  if (flip) transforms.push({ scaleX: -1 });
-  return (
-    <Image
-      source={source}
-      resizeMode="contain"
-      style={{
-        position: 'absolute',
-        left,
-        right,
-        top,
-        width,
-        height,
-        opacity: opacity * (night ? 0.76 : 1),
-        transform: transforms.length ? transforms : undefined,
-      }}
-    />
-  );
-}
-
-function StageLight({ ground, night, warm = false }: { ground: number; night: boolean; warm?: boolean }) {
-  return (
-    <View
-      style={[
-        styles.stageLight,
-        {
-          top: ground - 52,
-          backgroundColor: warm ? DIORAMA.goldGlowSoft : DIORAMA.white,
-          opacity: night ? 0.035 : warm ? 0.12 : 0.09,
-        },
-      ]}
-    />
-  );
-}
-
-function SceneFinish({ night, warm = false }: { night: boolean; warm?: boolean }) {
-  return (
-    <View style={styles.fill} pointerEvents="none">
-      <LinearGradient
-        colors={[
-          warm ? 'rgba(255,226,172,0.08)' : 'rgba(214,239,229,0.06)',
-          'rgba(255,255,255,0)',
-          night ? 'rgba(20,22,34,0.20)' : 'rgba(48,34,24,0.08)',
-        ]}
-        locations={[0, 0.55, 1]}
-        style={styles.fill}
-      />
-      <LinearGradient colors={['rgba(20,18,25,0)', night ? 'rgba(16,18,30,0.20)' : 'rgba(38,28,20,0.10)']} style={styles.bottomGrade} />
-    </View>
-  );
-}
-
 function ParkMotion({ night, horizon }: { night: boolean; horizon: number }) {
   const leaf = useAmbientLoop(6200);
   return (
@@ -182,9 +114,9 @@ function ParkMotion({ night, horizon }: { night: boolean; horizon: number }) {
 }
 
 /** Park keeps terrain live in code and composes independent rendered landmarks over it. */
-export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; bandHeight?: number; groundY?: number }) {
+export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; motion?: WorldMotion }) {
   const { width } = useWindowDimensions();
-  const scale = clamp(width / 390, 0.92, 1.06);
+  const scale = worldScale(width);
   const band = skyBand(hour);
   const night = band === 'night';
   const ground = groundY ?? bandHeight * 0.72;
@@ -204,9 +136,9 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
   const hedgeH = 72 * scale;
 
   return (
-    <View style={styles.fill} pointerEvents="none">
-      <SceneSky band={band} horizon={horizon} />
-      <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
+    <WorldScene motion={motion} testID="world-scene-park">
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} /></WorldLayer>
+      <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Defs>
           <SvgLinearGradient id="parkGroundV3" x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={grassFar} />
@@ -224,16 +156,21 @@ export function ParkScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Path d={`M197 ${horizon + 70}C205 ${horizon + 150} 157 ${ground + 64} 88 ${canvasHeight}H332C264 ${ground + 64} 216 ${horizon + 150} 226 ${horizon + 70}Z`} fill={pathEdge} />
         <Path d={`M203 ${horizon + 69}C212 ${horizon + 148} 176 ${ground + 55} 118 ${canvasHeight}H304C248 ${ground + 56} 211 ${horizon + 148} 220 ${horizon + 69}Z`} fill="url(#parkPathV3)" />
         <Path d={`M211 ${horizon + 84}C216 ${horizon + 154} 190 ${ground + 35} 150 ${canvasHeight}`} stroke={DIORAMA.white} strokeWidth={5} fill="none" opacity={night ? 0.04 : 0.18} />
-      </Svg>
-      <RenderedProp source={PARK_HEDGE} left={112} top={horizon + 43} width={hedgeW * 0.62} height={hedgeH * 0.62} night={night} opacity={0.70} />
-      <RenderedProp source={PARK_HEDGE} right={82} top={horizon + 57} width={hedgeW * 0.55} height={hedgeH * 0.55} night={night} opacity={0.62} />
-      <RenderedProp source={PARK_TREE} left={-43} top={horizon - 88} width={treeW} height={treeH} night={night} />
-      <RenderedProp source={PARK_TREE} right={-42} top={horizon - 80} width={treeW * 0.96} height={treeH * 0.96} night={night} flip />
-      <RenderedProp source={PARK_BENCH} left={18} top={horizon + 145} width={benchW} height={benchH} night={night} rotate="-1deg" />
-      <StageLight ground={ground} night={night} />
-      <ParkMotion night={night} horizon={horizon} />
-      <SceneFinish night={night} />
-    </View>
+      </Svg></WorldLayer>
+      <WorldLayer name="distant">
+        <WorldObject source={PARK_HEDGE} left={112} top={horizon + 43} width={hedgeW * 0.62} height={hedgeH * 0.62} night={night} depth={0.25} opacity={0.70} />
+        <WorldObject source={PARK_HEDGE} right={82} top={horizon + 57} width={hedgeW * 0.55} height={hedgeH * 0.55} night={night} depth={0.22} opacity={0.62} />
+      </WorldLayer>
+      <WorldLayer name="landmark">
+        <WorldObject source={PARK_TREE} left={-43} top={horizon - 88} width={treeW} height={treeH} night={night} depth={0.55} contactShadow />
+        <WorldObject source={PARK_TREE} right={-42} top={horizon - 80} width={treeW * 0.96} height={treeH * 0.96} night={night} depth={0.52} flip contactShadow />
+      </WorldLayer>
+      <WorldLayer name="props">
+        <WorldObject source={PARK_BENCH} left={18} top={horizon + 145} width={benchW} height={benchH} night={night} depth={0.78} rotate="-1deg" contactShadow />
+      </WorldLayer>
+      <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
+      <WorldLighting ground={ground} night={night} />
+    </WorldScene>
   );
 }
 
@@ -254,9 +191,9 @@ function TownGlint({ night, top }: { night: boolean; top: number }) {
 }
 
 /** Town buildings are separate rendered modules; sidewalk, road, and weather stay live. */
-export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; bandHeight?: number; groundY?: number }) {
+export function TownScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; motion?: WorldMotion }) {
   const { width } = useWindowDimensions();
-  const scale = clamp(width / 390, 0.92, 1.06);
+  const scale = worldScale(width);
   const band = skyBand(hour);
   const night = band === 'night';
   const ground = groundY ?? bandHeight * 0.72;
@@ -281,12 +218,14 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
   const planterH = 92 * scale;
 
   return (
-    <View style={styles.fill} pointerEvents="none">
-      <SceneSky band={band} horizon={horizon + 30} />
-      <RenderedProp source={TOWN_STORE_CORAL} left={-142} top={horizon + 28} width={shopW * 0.96} height={shopH * 0.96} night={night} opacity={0.88} />
-      <RenderedProp source={TOWN_STORE_AQUA} left={84} top={horizon} width={shopW * 1.04} height={shopH * 1.04} night={night} />
-      <RenderedProp source={TOWN_STORE_VIOLET} right={-143} top={horizon + 20} width={shopW * 0.98} height={shopH * 0.98} night={night} opacity={0.90} />
-      <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
+    <WorldScene motion={motion} testID="world-scene-town">
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon + 30} /></WorldLayer>
+      <WorldLayer name="distant">
+        <WorldObject source={TOWN_STORE_CORAL} left={-142} top={horizon + 28} width={shopW * 0.96} height={shopH * 0.96} night={night} depth={0.32} opacity={0.88} />
+        <WorldObject source={TOWN_STORE_AQUA} left={84} top={horizon} width={shopW * 1.04} height={shopH * 1.04} night={night} depth={0.38} />
+        <WorldObject source={TOWN_STORE_VIOLET} right={-143} top={horizon + 20} width={shopW * 0.98} height={shopH * 0.98} night={night} depth={0.34} opacity={0.90} />
+      </WorldLayer>
+      <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Rect x={0} y={sidewalk + 9} width={420} height={canvasHeight - sidewalk} fill={walkEdge} />
         <Rect x={0} y={sidewalk} width={420} height={canvasHeight - sidewalk - 9} fill={walk} />
         <Path d={`M0 ${sidewalk + 7}H420`} stroke={DIORAMA.white} strokeWidth={7} opacity={night ? 0.05 : 0.22} />
@@ -294,16 +233,17 @@ export function TownScene({ hour, bandHeight = 620, groundY }: { hour: number; b
         <Rect x={0} y={ground + 92} width={420} height={canvasHeight - ground - 92} fill={roadEdge} />
         <Rect x={0} y={ground + 100} width={420} height={canvasHeight - ground - 100} fill={road} />
         <Path d={`M20 ${ground + 128}H112M166 ${ground + 128}H258M312 ${ground + 128}H402`} stroke={DIORAMA.cream} strokeWidth={7} strokeLinecap="round" opacity={night ? 0.10 : 0.38} />
-      </Svg>
-      <RenderedProp source={TOWN_PLANTER} left={8} top={sidewalk - planterH + 11} width={planterW} height={planterH} night={night} />
-      <RenderedProp source={TOWN_PLANTER} right={11} top={sidewalk - planterH + 12} width={planterW} height={planterH} night={night} flip />
-      <RenderedProp source={TOWN_LAMP} left={45} top={sidewalk - lampH + 16} width={lampW} height={lampH} night={night} />
-      <RenderedProp source={TOWN_LAMP} right={42} top={sidewalk - lampH + 16} width={lampW} height={lampH} night={night} flip />
-      <RenderedProp source={TOWN_FOUNTAIN} left={154} top={sidewalk - 40} width={fountainW} height={fountainH} night={night} />
-      <StageLight ground={ground} night={night} warm />
-      <TownGlint night={night} top={horizon + 132} />
-      <SceneFinish night={night} warm />
-    </View>
+      </Svg></WorldLayer>
+      <WorldLayer name="props">
+        <WorldObject source={TOWN_PLANTER} left={8} top={sidewalk - planterH + 11} width={planterW} height={planterH} night={night} depth={0.72} contactShadow />
+        <WorldObject source={TOWN_PLANTER} right={11} top={sidewalk - planterH + 12} width={planterW} height={planterH} night={night} depth={0.72} flip contactShadow />
+        <WorldObject source={TOWN_LAMP} left={45} top={sidewalk - lampH + 16} width={lampW} height={lampH} night={night} depth={0.64} contactShadow />
+        <WorldObject source={TOWN_LAMP} right={42} top={sidewalk - lampH + 16} width={lampW} height={lampH} night={night} depth={0.64} flip contactShadow />
+        <WorldObject source={TOWN_FOUNTAIN} left={154} top={sidewalk - 40} width={fountainW} height={fountainH} night={night} depth={0.76} contactShadow />
+      </WorldLayer>
+      <WorldLayer name="fx"><TownGlint night={night} top={horizon + 132} /></WorldLayer>
+      <WorldLighting ground={ground} night={night} warm />
+    </WorldScene>
   );
 }
 
@@ -343,9 +283,9 @@ function BeachMotion({ night, tide }: { night: boolean; tide: number }) {
 }
 
 /** Beach landmarks are modular props over code-owned ocean, tide, and sand. */
-export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; bandHeight?: number; groundY?: number }) {
+export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; motion?: WorldMotion }) {
   const { width } = useWindowDimensions();
-  const scale = clamp(width / 390, 0.92, 1.06);
+  const scale = worldScale(width);
   const band = skyBand(hour);
   const night = band === 'night';
   const ground = groundY ?? bandHeight * 0.72;
@@ -372,29 +312,36 @@ export function BeachScene({ hour, bandHeight = 620, groundY }: { hour: number; 
   const castleH = 92 * scale;
 
   return (
-    <View style={styles.fill} pointerEvents="none">
-      <SceneSky band={band} horizon={horizon} />
-      <LinearGradient colors={[oceanA, oceanB]} style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: tide - horizon + 28 }} />
-      <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
+    <WorldScene motion={motion} testID="world-scene-beach">
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} /></WorldLayer>
+      <WorldLayer name="distant">
+        <LinearGradient colors={[oceanA, oceanB]} style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: tide - horizon + 28 }} />
+        <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Path d={`M-20 ${horizon + 24}Q32 ${horizon - 22} 84 ${horizon + 19}Q112 ${horizon - 2} 148 ${horizon + 27}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.64} />
         <Path d={`M440 ${horizon + 28}Q398 ${horizon - 18} 350 ${horizon + 17}Q320 ${horizon - 3} 286 ${horizon + 27}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.58} />
         <Path d={`M0 ${horizon + 36}Q82 ${horizon + 18} 164 ${horizon + 34}T316 ${horizon + 32}T430 ${horizon + 35}`} stroke={night ? DIORAMA.oceanNightLight : DIORAMA.oceanDayLight} strokeWidth={7} fill="none" opacity={night ? 0.08 : 0.30} />
         <Path d={`M-18 ${tide + 7}Q50 ${tide - 12} 118 ${tide + 4}T244 ${tide + 2}T362 ${tide + 1}T440 ${tide + 3}`} stroke={night ? DIORAMA.foamNightShade : DIORAMA.foamDayShade} strokeWidth={20} fill="none" />
         <Path d={`M-18 ${tide}Q50 ${tide - 19} 118 ${tide}T244 ${tide - 3}T362 ${tide - 4}T440 ${tide - 2}`} stroke={night ? DIORAMA.foamNight : DIORAMA.foamDay} strokeWidth={10} fill="none" />
-      </Svg>
-      <View style={{ position: 'absolute', left: 0, right: 0, top: sandTop + 8, bottom: 0, backgroundColor: sandEdge }} />
-      <LinearGradient colors={[sandA, sandB]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, bottom: 0 }} />
-      <LinearGradient colors={[oceanEdge, sandA]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, height: 54, opacity: night ? 0.12 : 0.24 }} />
-      <RenderedProp source={BEACH_PALM} left={-48} top={horizon - 82} width={palmW} height={palmH} night={night} opacity={0.86} />
-      <RenderedProp source={BEACH_LIFEGUARD} left={23} top={horizon + 12} width={lifeguardW} height={lifeguardH} night={night} opacity={0.94} />
-      <RenderedProp source={BEACH_UMBRELLA} right={-9} top={horizon + 34} width={umbrellaW} height={umbrellaH} night={night} />
-      <RenderedProp source={BEACH_DUNE} left={-38} top={sandTop + 92} width={duneW} height={duneH} night={night} opacity={0.90} />
-      <RenderedProp source={BEACH_DUNE} right={-48} top={sandTop + 132} width={duneW * 0.90} height={duneH * 0.90} night={night} opacity={0.82} flip />
-      <RenderedProp source={BEACH_CASTLE} right={15} top={sandTop + 118} width={castleW} height={castleH * 1.56} night={night} rotate="1deg" />
-      <StageLight ground={ground} night={night} warm />
-      <BeachMotion night={night} tide={tide} />
-      <SceneFinish night={night} warm />
-    </View>
+        </Svg>
+      </WorldLayer>
+      <WorldLayer name="ground">
+        <View style={{ position: 'absolute', left: 0, right: 0, top: sandTop + 8, bottom: 0, backgroundColor: sandEdge }} />
+        <LinearGradient colors={[sandA, sandB]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, bottom: 0 }} />
+        <LinearGradient colors={[oceanEdge, sandA]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, height: 54, opacity: night ? 0.12 : 0.24 }} />
+      </WorldLayer>
+      <WorldLayer name="landmark">
+        <WorldObject source={BEACH_PALM} left={-48} top={horizon - 82} width={palmW} height={palmH} night={night} depth={0.44} opacity={0.86} contactShadow />
+        <WorldObject source={BEACH_LIFEGUARD} left={23} top={horizon + 12} width={lifeguardW} height={lifeguardH} night={night} depth={0.50} opacity={0.94} contactShadow />
+        <WorldObject source={BEACH_UMBRELLA} right={-9} top={horizon + 34} width={umbrellaW} height={umbrellaH} night={night} depth={0.56} contactShadow />
+      </WorldLayer>
+      <WorldLayer name="foreground">
+        <WorldObject source={BEACH_DUNE} left={-38} top={sandTop + 92} width={duneW} height={duneH} night={night} depth={0.90} opacity={0.90} contactShadow />
+        <WorldObject source={BEACH_DUNE} right={-48} top={sandTop + 132} width={duneW * 0.90} height={duneH * 0.90} night={night} depth={0.94} opacity={0.82} flip contactShadow />
+        <WorldObject source={BEACH_CASTLE} right={15} top={sandTop + 118} width={castleW} height={castleH * 1.56} night={night} depth={0.92} rotate="1deg" contactShadow />
+      </WorldLayer>
+      <WorldLayer name="fx"><BeachMotion night={night} tide={tide} /></WorldLayer>
+      <WorldLighting ground={ground} night={night} warm />
+    </WorldScene>
   );
 }
 
@@ -404,8 +351,6 @@ const styles = StyleSheet.create({
   moonCutout: { position: 'absolute', right: 20, width: 48, height: 48, borderRadius: radius.pill },
   cloud: { position: 'absolute', left: 23, width: 150, height: 46 },
   cloudPuff: { position: 'absolute', borderRadius: radius.pill, backgroundColor: DIORAMA.white },
-  stageLight: { position: 'absolute', left: '9%', right: '9%', height: 132, borderRadius: radius.pill, transform: [{ scaleX: 1.18 }] },
-  bottomGrade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 140 },
   fallingLeaf: { position: 'absolute', left: 34, width: 17, height: 9, borderTopLeftRadius: radius.md, borderBottomRightRadius: radius.md, backgroundColor: DIORAMA.parkTreeDayLight },
   townGlint: { position: 'absolute', left: 0, width: 18, height: 190, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   waveGlint: { position: 'absolute', right: 62, width: 64, height: 5, borderRadius: radius.pill, backgroundColor: DIORAMA.white },

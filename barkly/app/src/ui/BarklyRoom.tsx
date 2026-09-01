@@ -519,6 +519,7 @@ export default function BarklyRoom() {
   const tugX = useRef(new Animated.Value(0)).current;
   const [digging, setDigging] = useState(false);
   const [variant, setVariant] = useState<'runRight' | 'carryLeft' | null>(null);
+  const [arriving, setArriving] = useState(false);
 
   const { snapshot, actions, lastExchange, partialTranscript, error, busy, locked, sttAvailable, location } = barkly;
   const listening = snapshot.state === 'listening';
@@ -600,6 +601,13 @@ export default function BarklyRoom() {
               : Boolean(barkly.reward),
       ) ?? null);
   const hour = new Date().getHours();
+  const worldMotion = asleep
+    ? 'sleep' as const
+    : arriving
+      ? 'arrive' as const
+    : (fetching || tugging || digging || snapshot.state === 'eating' || snapshot.state === 'playing')
+      ? 'active' as const
+      : 'idle' as const;
   const npcsHere = LOCATIONS[location].npcIds;
   const npcBubble =
     showcase && npcsHere.length > 0
@@ -616,10 +624,14 @@ export default function BarklyRoom() {
   useEffect(() => {
     if (prevLocation.current === location) return;
     prevLocation.current = location;
+    setArriving(true);
     sceneFade.setValue(0);
     walkX.setValue(-170);
     setVariant('runRight');
-    setTimeout(() => setVariant(null), 760);
+    const settleTimer = setTimeout(() => {
+      setVariant(null);
+      setArriving(false);
+    }, 760);
     Animated.parallel([
       Animated.timing(sceneFade, { toValue: 1, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(walkX, { toValue: 0, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }),
@@ -632,6 +644,7 @@ export default function BarklyRoom() {
         ),
       ),
     ]).start();
+    return () => clearTimeout(settleTimer);
   }, [location, sceneFade, walkX, hopY]);
 
   const chaseX = useRef(new Animated.Value(0)).current;
@@ -827,10 +840,10 @@ export default function BarklyRoom() {
       <Animated.View
         style={[styles.sceneLayer, { opacity: sceneFade }]}
       >
-        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + chromeBottomPx} />}
-        {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
-        {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
-        {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} />}
+        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} />}
+        {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
+        {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
+        {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
       </Animated.View>
       {asleep && <NightOverlay />}
 

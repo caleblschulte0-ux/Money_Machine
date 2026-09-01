@@ -5,6 +5,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 import { radius } from '../theme';
 import { DIORAMA } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
+import { WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
 
 const CHAIR = require('../../../assets/world/home/props/chair.png');
 const LAMP = require('../../../assets/world/home/props/lamp.png');
@@ -19,10 +20,6 @@ const SKY: Record<SkyBand, readonly [ColorValue, ColorValue]> = {
   evening: [DIORAMA.skyEveningA, DIORAMA.skyEveningB],
   night: [DIORAMA.skyNightA, DIORAMA.skyNightB],
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 /**
  * A real rendered frame around a live, code-owned view.
@@ -125,45 +122,6 @@ function WallMillwork({ floorTop, night }: { floorTop: number; night: boolean })
   );
 }
 
-function RenderedProp({
-  source,
-  left,
-  right,
-  top,
-  width,
-  height,
-  night,
-  rotate,
-  opacity = 1,
-}: {
-  source: ReturnType<typeof require>;
-  left?: number;
-  right?: number;
-  top: number;
-  width: number;
-  height: number;
-  night: boolean;
-  rotate?: string;
-  opacity?: number;
-}) {
-  return (
-    <Image
-      source={source}
-      resizeMode="contain"
-      style={{
-        position: 'absolute',
-        left,
-        right,
-        top,
-        width,
-        height,
-        opacity: (night ? 0.78 : 1) * opacity,
-        transform: rotate ? [{ rotate }] : undefined,
-      }}
-    />
-  );
-}
-
 function Rug({ groundY, night, scale }: { groundY: number; night: boolean; scale: number }) {
   const width = 228 * scale;
   return (
@@ -184,17 +142,6 @@ function Rug({ groundY, night, scale }: { groundY: number; night: boolean; scale
   );
 }
 
-function ForegroundVignette() {
-  return (
-    <LinearGradient
-      colors={['rgba(35,18,8,0)', 'rgba(35,18,8,0.16)']}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-      style={styles.bottomVignette}
-    />
-  );
-}
-
 /**
  * Home's production renderer.
  *
@@ -208,16 +155,18 @@ export function HomeScene({
   asleep = false,
   groundY,
   chromeBottom,
+  motion = 'idle',
 }: {
   hour: number;
   upgrades?: string[];
   asleep?: boolean;
   groundY: number;
   chromeBottom: number;
+  motion?: WorldMotion;
 }) {
   const { width } = useWindowDimensions();
   // More screen reveals more room; the authored objects do not inflate forever.
-  const propScale = clamp(width / 390, 0.92, 1.05);
+  const propScale = worldScale(width);
   const band = skyBand(hour);
   const night = band === 'night' || asleep;
   const has = (id: string) => upgrades.includes(id);
@@ -240,10 +189,12 @@ export function HomeScene({
   const bedH = bedW * (254 / 512);
 
   return (
-    <View style={styles.fill} pointerEvents="none">
-      <LinearGradient colors={wall} style={[styles.fill, { bottom: undefined, height: floorTop }]} />
+    <WorldScene motion={asleep ? 'sleep' : motion} testID="world-scene-home">
+      <WorldLayer name="sky">
+        <LinearGradient colors={wall} style={[styles.fill, { bottom: undefined, height: floorTop }]} />
+      </WorldLayer>
 
-      <Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
+      <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
         <Rect x={0} y={floorTop} width={420} height={760 - floorTop} fill={floorFar} />
         <Rect x={0} y={floorTop + 78} width={420} height={682 - floorTop} fill={floorNear} opacity={0.72} />
         {[34, 106, 178, 250, 322, 394].map((x) => (
@@ -260,47 +211,36 @@ export function HomeScene({
         ))}
       </Svg>
 
-      <LinearGradient
-        colors={night ? ['rgba(16,18,35,0.18)', 'rgba(16,18,35,0)'] : ['rgba(255,218,132,0.30)', 'rgba(255,218,132,0)']}
-        start={{ x: 0, y: 0.18 }}
-        end={{ x: 0.74, y: 0.76 }}
-        style={[styles.lightPool, { top: chromeBottom + 18, height: Math.max(270, groundY - chromeBottom + 28) }]}
-      />
+        {has('home_rug') && <Rug groundY={groundY} night={night} scale={propScale} />}
+      </WorldLayer>
 
-      <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
-      <WallMillwork floorTop={floorTop} night={night} />
-      <View style={[styles.baseboard, { top: floorTop - 27, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
-      <View style={[styles.baseboardGlint, { top: floorTop - 24, opacity: night ? 0.04 : 0.22 }]} />
+      <WorldLayer name="distant">
+        <LinearGradient
+          colors={night ? ['rgba(16,18,35,0.18)', 'rgba(16,18,35,0)'] : ['rgba(255,218,132,0.30)', 'rgba(255,218,132,0)']}
+          start={{ x: 0, y: 0.18 }}
+          end={{ x: 0.74, y: 0.76 }}
+          style={[styles.lightPool, { top: chromeBottom + 18, height: Math.max(270, groundY - chromeBottom + 28) }]}
+        />
+        <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
+        <WallMillwork floorTop={floorTop} night={night} />
+        <View style={[styles.baseboard, { top: floorTop - 27, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
+        <View style={[styles.baseboardGlint, { top: floorTop - 24, opacity: night ? 0.04 : 0.22 }]} />
+      </WorldLayer>
 
-      {has('home_rug') && <Rug groundY={groundY} night={night} scale={propScale} />}
+      <WorldLayer name="landmark">
+        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 46} scale={propScale} />
+        <PictureMedallion top={chromeBottom + 94} night={night} />
+        <WorldObject source={SHELF} right={-9} top={chromeBottom + 48} width={shelfW} height={shelfH} night={night} depth={0.42} contactShadow />
+      </WorldLayer>
 
-      <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 46} scale={propScale} />
-      <PictureMedallion top={chromeBottom + 94} night={night} />
+      <WorldLayer name="props">
+        <WorldObject source={LAMP} left={-3} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
+        <WorldObject source={CHAIR} left={8} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} rotate="-1deg" contactShadow />
+        <WorldObject source={BED} right={10} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} rotate="1deg" contactShadow />
+      </WorldLayer>
 
-      <RenderedProp source={SHELF} right={-9} top={chromeBottom + 48} width={shelfW} height={shelfH} night={night} />
-      <RenderedProp source={LAMP} left={-3} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} />
-      <RenderedProp
-        source={CHAIR}
-        left={8}
-        top={floorTop - chairH + 36}
-        width={chairW}
-        height={chairH}
-        night={night}
-        rotate="-1deg"
-      />
-      <RenderedProp
-        source={BED}
-        right={10}
-        top={floorTop + 12}
-        width={bedW}
-        height={bedH}
-        night={night}
-        rotate="1deg"
-      />
-
-      <View style={[styles.floorBounce, { top: groundY - 24, opacity: night ? 0.035 : 0.11 }]} />
-      <ForegroundVignette />
-    </View>
+      <WorldLighting ground={groundY} night={night} warm />
+    </WorldScene>
   );
 }
 
@@ -364,10 +304,4 @@ const styles = StyleSheet.create({
   rug: {
     position: 'absolute', left: '50%',
   },
-  floorBounce: {
-    position: 'absolute', left: '18%', right: '18%', height: 110,
-    borderRadius: radius.pill, backgroundColor: DIORAMA.goldGlowSoft,
-    transform: [{ scaleX: 1.35 }],
-  },
-  bottomVignette: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 120 },
 });
