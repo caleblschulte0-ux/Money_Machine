@@ -197,20 +197,25 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
             <Stop offset="0.38" stopColor={grass} />
             <Stop offset="1" stopColor={grassNear} />
           </SvgLinearGradient>
-          <SvgLinearGradient id="parkPathV3" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={night ? DIORAMA.parkPathNightLight : DIORAMA.parkPathDayLight} />
-            <Stop offset="1" stopColor={path} />
-          </SvgLinearGradient>
         </Defs>
         <Path d={`M-20 ${horizon + 76}Q70 ${horizon - 12} 160 ${horizon + 50}Q246 ${horizon + 106} 330 ${horizon + 30}Q378 ${horizon - 2} 445 ${horizon + 50}V${canvasHeight}H-20Z`} fill={grassNear} />
         <Path d={`M-20 ${horizon + 61}Q70 ${horizon - 27} 160 ${horizon + 35}Q246 ${horizon + 91} 330 ${horizon + 15}Q378 ${horizon - 17} 445 ${horizon + 35}V${canvasHeight}H-20Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} />
         <Path d={`M-20 ${horizon + 122}Q96 ${horizon + 48} 222 ${horizon + 92}Q322 ${horizon + 122} 448 ${horizon + 62}V${canvasHeight}H-20Z`} fill="url(#parkGroundV3)" />
-        <Path d={`M310 ${horizon + 70}C336 ${horizon + 116} 350 ${horizon + 164} 332 ${ground - 10}C314 ${ground + 20} 320 ${ground + 56} 360 ${ground + 92}L405 ${ground + 82}C360 ${ground + 48} 354 ${ground + 18} 372 ${ground - 16}C394 ${horizon + 154} 376 ${horizon + 106} 330 ${horizon + 68}Z`} fill={pathEdge} />
-        <Path d={`M318 ${horizon + 72}C342 ${horizon + 118} 354 ${horizon + 160} 340 ${ground - 8}C326 ${ground + 18} 334 ${ground + 48} 370 ${ground + 80}L393 ${ground + 75}C354 ${ground + 43} 348 ${ground + 16} 364 ${ground - 14}C384 ${horizon + 151} 369 ${horizon + 111} 328 ${horizon + 72}Z`} fill="url(#parkPathV3)" />
-        <Path d={`M330 ${horizon + 86}C349 ${horizon + 125} 359 ${horizon + 158} 349 ${ground - 5}C340 ${ground + 16} 345 ${ground + 37} 374 ${ground + 64}`} stroke={DIORAMA.white} strokeWidth={4} fill="none" opacity={night ? 0.04 : 0.16} />
         <Path d={`M36 ${ground + 28}q6 -12 12 0M48 ${ground + 28}q6 -14 12 0M166 ${ground + 78}q5 -11 10 0M176 ${ground + 78}q5 -13 10 0M246 ${ground + 36}q5 -10 10 0`} stroke={night ? DIORAMA.parkGrassNightLight : DIORAMA.parkGrassDayLight} strokeWidth={3} fill="none" opacity={0.72} />
         <Path d={`M84 ${ground + 92}l4 -6 4 6 4 -6 4 6M222 ${ground + 116}l4 -6 4 6 4 -6 4 6`} stroke={night ? DIORAMA.gold : DIORAMA.lemon} strokeWidth={2.5} fill="none" opacity={night ? 0.24 : 0.68} />
-      </Svg></WorldLayer>
+      </Svg>
+        <Svg width={Math.min(width, 520)} height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.parkPathLayer}>
+          <Defs>
+            <SvgLinearGradient id="parkPathV3" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={night ? DIORAMA.parkPathNightLight : DIORAMA.parkPathDayLight} />
+              <Stop offset="1" stopColor={path} />
+            </SvgLinearGradient>
+          </Defs>
+          <Path d={`M310 ${horizon + 70}C336 ${horizon + 116} 350 ${horizon + 164} 332 ${ground - 10}C314 ${ground + 20} 320 ${ground + 56} 360 ${ground + 92}L405 ${ground + 82}C360 ${ground + 48} 354 ${ground + 18} 372 ${ground - 16}C394 ${horizon + 154} 376 ${horizon + 106} 330 ${horizon + 68}Z`} fill={pathEdge} />
+          <Path d={`M318 ${horizon + 72}C342 ${horizon + 118} 354 ${horizon + 160} 340 ${ground - 8}C326 ${ground + 18} 334 ${ground + 48} 370 ${ground + 80}L393 ${ground + 75}C354 ${ground + 43} 348 ${ground + 16} 364 ${ground - 14}C384 ${horizon + 151} 369 ${horizon + 111} 328 ${horizon + 72}Z`} fill="url(#parkPathV3)" />
+          <Path d={`M330 ${horizon + 86}C349 ${horizon + 125} 359 ${horizon + 158} 349 ${ground - 5}C340 ${ground + 16} 345 ${ground + 37} 374 ${ground + 64}`} stroke={DIORAMA.white} strokeWidth={4} fill="none" opacity={night ? 0.04 : 0.16} />
+        </Svg>
+      </WorldLayer>
       <WorldLayer name="distant">
         <WorldObject source={PARK_HEDGE} left={hedgeLeft} top={horizon + 43} width={hedgeW * 0.62} height={hedgeH * 0.62} night={night} depth={0.25} opacity={0.70} ambient="sway" />
         <WorldObject source={PARK_HEDGE} right={hedgeRight} top={horizon + 57} width={hedgeW * 0.55} height={hedgeH * 0.55} night={night} depth={0.22} opacity={0.62} ambient="sway" motionDelay={700} />
@@ -437,6 +442,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }:
 
 const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  parkPathLayer: { position: 'absolute', right: 0, top: 0, bottom: 0 },
   sun: { position: 'absolute', right: 34, width: 50, height: 50, borderRadius: radius.pill },
   moonCutout: { position: 'absolute', right: 20, width: 48, height: 48, borderRadius: radius.pill },
   cloud: { position: 'absolute', left: 23, width: 150, height: 46 },
