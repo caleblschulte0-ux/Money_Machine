@@ -1,5 +1,5 @@
 {
-  "camera": "Barkly shared 3/4 orthographic v2",
+  "camera": "Barkly shared front-weighted orthographic v3",
   "light": "warm upper-left key + cool fill + warm rim",
   "contract": "modular transparent props; app owns scene composition",
   "assets": {
