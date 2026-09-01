@@ -848,12 +848,12 @@ export default function BarklyRoom() {
       {asleep && <NightOverlay />}
 
       <LinearGradient
-        colors={['rgba(255,249,236,0.55)', 'rgba(255,249,236,0.22)', 'rgba(255,249,236,0)']}
-        style={[styles.chromeScrim, { height: chromeBottomPx + 34 }]}
+        colors={['rgba(255,249,236,0.40)', 'rgba(255,249,236,0.12)', 'rgba(255,249,236,0)']}
+        style={[styles.chromeScrim, { height: chromeBottomPx + 24 }]}
         pointerEvents="none"
       />
       <LinearGradient
-        colors={['rgba(255,249,236,0)', 'rgba(255,249,236,0.72)', 'rgba(255,249,236,1)']}
+        colors={['rgba(255,249,236,0)', 'rgba(255,249,236,0.58)', 'rgba(255,249,236,0.96)']}
         locations={[0, 0.55, 1]}
         style={[styles.horizon, { height: landscape ? 76 : conversationHeightPx + 24 }]}
         pointerEvents="none"
@@ -1366,11 +1366,11 @@ const styles = StyleSheet.create({
   degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: color.fill },
   degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished },
   degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
-  tabs: { flex: 1, height: TAP_MIN, flexDirection: 'row', backgroundColor: 'rgba(255,253,247,0.82)', borderRadius: 999, padding: 3, gap: 2, ...elevation.low },
+  tabs: { flex: 1, height: TAP_MIN, flexDirection: 'row', backgroundColor: 'rgba(255,253,247,0.68)', borderRadius: 999, padding: 3, gap: 2, ...elevation.flat },
   tabsLandscape: { flex: 0, width: '100%', height: 248, flexDirection: 'column', padding: 4, gap: 4 },
   tabLandscape: { flexGrow: 0, flexShrink: 0, width: '100%', height: TAP_MIN },
   tab: { flexGrow: 1, flexShrink: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  tabActive: { backgroundColor: color.pop },
+  tabActive: { backgroundColor: color.pop, ...elevation.low },
   tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 },
   tabTextActive: { color: color.ink },
   bubble: { maxWidth: '92%', backgroundColor: color.card, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...elevation.card },

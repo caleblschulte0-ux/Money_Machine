@@ -69,6 +69,21 @@ function useAmbientLoop(duration: number, delay = 0) {
   return value;
 }
 
+function useActionPulse(active: boolean) {
+  const value = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!active) return;
+    value.setValue(0);
+    Animated.timing(value, {
+      toValue: 1,
+      duration: 760,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [active, value]);
+  return value;
+}
+
 function SceneSky({ band, horizon }: { band: SkyBand; horizon: number }) {
   const night = band === 'night';
   const drift = useAmbientLoop(15000);
@@ -104,10 +119,11 @@ function SceneSky({ band, horizon }: { band: SkyBand; horizon: number }) {
   );
 }
 
-function ParkMotion({ night, horizon }: { night: boolean; horizon: number }) {
+function ParkMotion({ night, horizon, ground, active }: { night: boolean; horizon: number; ground: number; active: boolean }) {
   const leaf = useAmbientLoop(6200);
   const leafTwo = useAmbientLoop(7600, 1800);
   const butterfly = useAmbientLoop(5200, 900);
+  const action = useActionPulse(active);
   return (
     <View style={styles.fill}>
       <Animated.View
@@ -155,6 +171,24 @@ function ParkMotion({ night, horizon }: { night: boolean; horizon: number }) {
         <View style={styles.butterflyLeft} />
         <View style={styles.butterflyRight} />
       </Animated.View>
+      {[0, 1, 2].map((i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.parkActionPuff,
+            {
+              top: ground + 8 + i * 3,
+              marginLeft: -22 + i * 22,
+              opacity: action.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, night ? 0.16 : 0.34, 0] }),
+              transform: [
+                { translateY: action.interpolate({ inputRange: [0, 1], outputRange: [6, -24 - i * 4] }) },
+                { translateX: action.interpolate({ inputRange: [0, 1], outputRange: [0, (i - 1) * 24] }) },
+                { scale: action.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1.35] }) },
+              ],
+            },
+          ]}
+        />
+      ))}
     </View>
   );
 }
@@ -221,13 +255,13 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
         <WorldObject source={PARK_HEDGE} right={hedgeRight} top={horizon + 57} width={hedgeW * 0.55} height={hedgeH * 0.55} night={night} depth={0.22} opacity={0.62} ambient="sway" motionDelay={700} />
       </WorldLayer>
       <WorldLayer name="landmark">
-        <WorldObject source={PARK_TREE} left={treeLeft} top={horizon - 88} width={treeW} height={treeH} night={night} depth={0.55} ambient="sway" contactShadow />
-        <WorldObject source={PARK_TREE} right={treeRight} top={horizon - 80} width={treeW * 0.96} height={treeH * 0.96} night={night} depth={0.52} ambient="sway" motionDelay={900} flip contactShadow />
+        <WorldObject source={PARK_TREE} left={treeLeft + 4} top={horizon - 54} width={treeW * 0.88} height={treeH * 0.88} night={night} depth={0.48} opacity={0.90} ambient="sway" contactShadow />
+        <WorldObject source={PARK_TREE} right={treeRight - 8} top={horizon - 108} width={treeW * 1.08} height={treeH * 1.08} night={night} depth={0.58} ambient="sway" motionDelay={900} flip contactShadow />
       </WorldLayer>
       <WorldLayer name="props">
         <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 145} width={benchW} height={benchH} night={night} depth={0.78} contactShadow />
       </WorldLayer>
-      <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
+      <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} ground={ground} active={motion === 'active'} /></WorldLayer>
       <WorldLighting ground={ground} night={night} />
     </WorldScene>
   );
@@ -331,9 +365,10 @@ export function TownScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
   );
 }
 
-function BeachMotion({ night, tide }: { night: boolean; tide: number }) {
+function BeachMotion({ night, tide, ground, active }: { night: boolean; tide: number; ground: number; active: boolean }) {
   const wave = useAmbientLoop(3000);
   const gull = useAmbientLoop(9000, 700);
+  const action = useActionPulse(active);
   return (
     <View style={styles.fill}>
       <Animated.View
@@ -343,6 +378,19 @@ function BeachMotion({ night, tide }: { night: boolean; tide: number }) {
             top: tide - 60,
             opacity: wave.interpolate({ inputRange: [0, 1], outputRange: [night ? 0.04 : 0.14, night ? 0.11 : 0.34] }),
             transform: [{ scaleX: wave.interpolate({ inputRange: [0, 1], outputRange: [0.78, 1.18] }) }],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.waveGlintNear,
+          {
+            top: tide - 35,
+            opacity: wave.interpolate({ inputRange: [0, 1], outputRange: [night ? 0.025 : 0.08, night ? 0.07 : 0.22] }),
+            transform: [
+              { translateX: wave.interpolate({ inputRange: [0, 1], outputRange: [-12, 18] }) },
+              { scaleX: wave.interpolate({ inputRange: [0, 1], outputRange: [1.12, 0.74] }) },
+            ],
           },
         ]}
       />
@@ -362,6 +410,24 @@ function BeachMotion({ night, tide }: { night: boolean; tide: number }) {
         <View style={styles.gullLeft} />
         <View style={styles.gullRight} />
       </Animated.View>
+      {[0, 1, 2].map((i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.beachActionDrop,
+            {
+              top: ground - 8,
+              marginLeft: -15 + i * 15,
+              opacity: action.interpolate({ inputRange: [0, 0.18, 1], outputRange: [0, night ? 0.18 : 0.58, 0] }),
+              transform: [
+                { translateX: action.interpolate({ inputRange: [0, 1], outputRange: [0, (i - 1) * 28] }) },
+                { translateY: action.interpolate({ inputRange: [0, 0.45, 1], outputRange: [2, -38 - i * 8, 8] }) },
+                { scale: action.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.5, 1.05, 0.65] }) },
+              ],
+            },
+          ]}
+        />
+      ))}
     </View>
   );
 }
@@ -434,7 +500,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }:
         <WorldObject source={BEACH_DUNE} right={duneRight} top={sandTop + 138} width={duneW * 0.90} height={duneH * 0.90} night={night} depth={0.94} opacity={0.78} flip contactShadow />
         <WorldObject source={BEACH_CASTLE} right={castleRight} top={sandTop + 124} width={castleW} height={castleH * 1.50} night={night} depth={0.92} contactShadow />
       </WorldLayer>
-      <WorldLayer name="fx"><BeachMotion night={night} tide={tide} /></WorldLayer>
+      <WorldLayer name="fx"><BeachMotion night={night} tide={tide} ground={ground} active={motion === 'active'} /></WorldLayer>
       <WorldLighting ground={ground} night={night} warm />
     </WorldScene>
   );
@@ -449,6 +515,7 @@ const styles = StyleSheet.create({
   cloudPuff: { position: 'absolute', borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   fallingLeaf: { position: 'absolute', left: 34, width: 17, height: 9, borderTopLeftRadius: radius.md, borderBottomRightRadius: radius.md, backgroundColor: DIORAMA.parkTreeDayLight },
   fallingLeafSmall: { left: 0, width: 12, height: 7, backgroundColor: DIORAMA.parkTreeDay },
+  parkActionPuff: { position: 'absolute', left: '50%', width: 24, height: 13, borderRadius: radius.pill, backgroundColor: DIORAMA.cream },
   butterfly: { position: 'absolute', left: 0, width: 22, height: 14 },
   butterflyLeft: { position: 'absolute', left: 1, top: 3, width: 10, height: 7, borderRadius: radius.pill, backgroundColor: DIORAMA.lemon, transform: [{ rotate: '-24deg' }] },
   butterflyRight: { position: 'absolute', right: 1, top: 3, width: 10, height: 7, borderRadius: radius.pill, backgroundColor: DIORAMA.coralLight, transform: [{ rotate: '24deg' }] },
@@ -457,6 +524,8 @@ const styles = StyleSheet.create({
   shopSign: { position: 'absolute', height: 24, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: DIORAMA.cream, borderWidth: 2, borderColor: DIORAMA.townBlueEdge, ...elevation.low },
   shopSignText: { fontWeight: '900', letterSpacing: 1.2, color: DIORAMA.townBlueEdge },
   waveGlint: { position: 'absolute', right: 62, width: 64, height: 5, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
+  waveGlintNear: { position: 'absolute', left: 38, width: 96, height: 4, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
+  beachActionDrop: { position: 'absolute', left: '50%', width: 12, height: 18, borderRadius: radius.pill, backgroundColor: DIORAMA.aquaLight },
   gull: { position: 'absolute', left: 0, width: 32, height: 18 },
   gullLeft: { position: 'absolute', left: 0, top: 8, width: 18, height: 3, borderRadius: radius.sm, backgroundColor: DIORAMA.inkSoft, transform: [{ rotate: '-22deg' }] },
   gullRight: { position: 'absolute', right: 0, top: 8, width: 18, height: 3, borderRadius: radius.sm, backgroundColor: DIORAMA.inkSoft, transform: [{ rotate: '22deg' }] },

@@ -82,6 +82,19 @@ describe('world scenery stays modular', () => {
     expect(presentation).toContain('export function WorldScene');
   });
 
+  it('uses atmospheric lighting without a hard-edged screen sweep', () => {
+    expect(presentation).toContain('styles.ambientWash');
+    expect(presentation).toContain('styles.horizonHaze');
+    expect(presentation).not.toContain('styles.keySweep');
+  });
+
+  it('lets outdoor worlds react to active gameplay', () => {
+    expect(outdoorScenes).toContain('function useActionPulse');
+    expect(outdoorScenes).toContain("active={motion === 'active'}");
+    expect(outdoorScenes).toContain('parkActionPuff');
+    expect(outdoorScenes).toContain('beachActionDrop');
+  });
+
   it('keeps every rendered module on one front-weighted camera', () => {
     const camera = 'CAMERA_LOCATION = (3.0, -10.8, 4.5)';
     for (const factory of [worldFactory, homeFactory, architectureFactory]) {

@@ -203,11 +203,11 @@ export function HomeScene({
             d={`M${x} ${floorTop}L${210 + (x - 210) * 1.85} 760`}
             stroke={floorLine}
             strokeWidth={2}
-            opacity={night ? 0.15 : 0.22}
+            opacity={night ? 0.10 : 0.15}
           />
         ))}
         {[floorTop + 44, floorTop + 99, floorTop + 166, floorTop + 244].map((y) => (
-          <Path key={y} d={`M0 ${y}H420`} stroke={floorLine} strokeWidth={2} opacity={night ? 0.12 : 0.18} />
+          <Path key={y} d={`M0 ${y}H420`} stroke={floorLine} strokeWidth={1.5} opacity={night ? 0.08 : 0.12} />
         ))}
       </Svg>
 
@@ -223,19 +223,19 @@ export function HomeScene({
         />
         <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodSoft, opacity: night ? 0.34 : 0.26 }]} />
         <WallMillwork floorTop={floorTop} night={night} />
-        <View style={[styles.baseboard, { top: floorTop - 27, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
-        <View style={[styles.baseboardGlint, { top: floorTop - 24, opacity: night ? 0.04 : 0.22 }]} />
+        <View style={[styles.baseboard, { top: floorTop - 18, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep, opacity: night ? 0.78 : 0.86 }]} />
+        <View style={[styles.baseboardGlint, { top: floorTop - 16, opacity: night ? 0.025 : 0.12 }]} />
       </WorldLayer>
 
       <WorldLayer name="landmark">
-        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 54} scale={propScale * 0.90} />
+        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 62} scale={propScale * 0.82} />
         <PictureMedallion top={chromeBottom + 94} night={night} />
-        <WorldObject source={SHELF} right={7} top={chromeBottom + 56} width={shelfW} height={shelfH} night={night} depth={0.42} contactShadow />
+        <WorldObject source={SHELF} right={12} top={chromeBottom + 66} width={shelfW * 0.92} height={shelfH * 0.92} night={night} depth={0.42} contactShadow />
       </WorldLayer>
 
       <WorldLayer name="props">
-        <WorldObject source={LAMP} left={-3} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
-        <WorldObject source={CHAIR} left={12} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
+        <WorldObject source={LAMP} left={3} top={floorTop - lampH + 15} width={lampW * 0.94} height={lampH * 0.94} night={night} depth={0.66} contactShadow />
+        <WorldObject source={CHAIR} left={18} top={floorTop - chairH + 42} width={chairW * 0.94} height={chairH * 0.94} night={night} depth={0.74} contactShadow />
         <WorldObject source={BED} right={14} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
 
@@ -251,15 +251,15 @@ const styles = StyleSheet.create({
     position: 'absolute', left: '5%', right: '5%', height: 6,
     borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm,
   },
-  baseboard: { position: 'absolute', left: 0, right: 0, height: 28 },
-  baseboardGlint: { position: 'absolute', left: 0, right: 0, height: 5, backgroundColor: DIORAMA.white },
+  baseboard: { position: 'absolute', left: 0, right: 0, height: 18 },
+  baseboardGlint: { position: 'absolute', left: 0, right: 0, height: 3, backgroundColor: DIORAMA.white },
   wainscot: { position: 'absolute', left: 0, right: 0 },
   wainscotRailShadow: {
-    position: 'absolute', left: 0, right: 0, height: 18,
-    backgroundColor: DIORAMA.shadow, opacity: 0.11,
+    position: 'absolute', left: 0, right: 0, height: 9,
+    backgroundColor: DIORAMA.shadow, opacity: 0.07,
   },
   wainscotRail: {
-    position: 'absolute', left: 0, right: 0, height: 12,
+    position: 'absolute', left: 0, right: 0, height: 8,
     borderRadius: radius.sm,
   },
   panelStile: {
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, height: 6,
     backgroundColor: DIORAMA.white,
   },
-  windowWrap: { position: 'absolute', left: -5 },
+  windowWrap: { position: 'absolute', left: 8 },
   windowCastShadow: {
     position: 'absolute',
     backgroundColor: DIORAMA.shadow,
