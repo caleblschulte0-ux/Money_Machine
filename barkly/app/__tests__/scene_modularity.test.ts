@@ -22,6 +22,7 @@ describe('world scenery stays modular', () => {
   const worldFactory = source('tools', 'blender', 'world_prop_pack.py');
   const homeFactory = source('tools', 'blender', 'home_prop_pack.py');
   const architectureFactory = source('tools', 'blender', 'home_architecture.py');
+  const worldManifest = source('assets', 'world', 'manifest.json');
 
   it('web and native route Home through the same production renderer', () => {
     for (const facade of [nativeFacade, webFacade]) {
@@ -88,6 +89,7 @@ describe('world scenery stays modular', () => {
     }
     expect(homeFactory).toContain('yaw = 0');
     expect(worldFactory).toContain('front-weighted orthographic v3');
+    expect(worldManifest).toContain('Barkly shared front-weighted orthographic v3');
   });
 
   it('uses composition lanes instead of arbitrary per-prop tilts', () => {
