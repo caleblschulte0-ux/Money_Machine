@@ -18,6 +18,10 @@ describe('world scenery stays modular', () => {
   const presentation = source('src', 'ui', 'scenes', 'WorldScene.tsx');
   const nativeFacade = source('src', 'ui', 'scenes', 'Scenes.tsx');
   const webFacade = source('src', 'ui', 'scenes', 'Scenes.web.tsx');
+  const characterRig = source('src', 'ui', 'BarklyRig.tsx');
+  const worldFactory = source('tools', 'blender', 'world_prop_pack.py');
+  const homeFactory = source('tools', 'blender', 'home_prop_pack.py');
+  const architectureFactory = source('tools', 'blender', 'home_architecture.py');
 
   it('web and native route Home through the same production renderer', () => {
     for (const facade of [nativeFacade, webFacade]) {
@@ -75,6 +79,27 @@ describe('world scenery stays modular', () => {
     }
     expect(presentation).toContain('export function WorldObject');
     expect(presentation).toContain('export function WorldScene');
+  });
+
+  it('keeps every rendered module on one front-weighted camera', () => {
+    const camera = 'CAMERA_LOCATION = (3.0, -10.8, 4.5)';
+    for (const factory of [worldFactory, homeFactory, architectureFactory]) {
+      expect(factory).toContain(camera);
+    }
+    expect(homeFactory).toContain('yaw = 0');
+    expect(worldFactory).toContain('front-weighted orthographic v3');
+  });
+
+  it('uses composition lanes instead of arbitrary per-prop tilts', () => {
+    expect(outdoorScenes).toContain('const COMPOSITION =');
+    expect(outdoorScenes).not.toMatch(/<WorldObject[^>]*\srotate=/);
+    expect(homeScene).not.toMatch(/<WorldObject[^>]*\srotate=/);
+  });
+
+  it('gives Barkly an autonomous idle performance', () => {
+    expect(characterRig).toContain('function useIdlePerformance');
+    expect(characterRig).toContain('idlePerformance.v');
+    expect(characterRig).toContain('idleEye');
   });
 
   for (const item of STORE.filter((entry) => entry.slot === 'home')) {

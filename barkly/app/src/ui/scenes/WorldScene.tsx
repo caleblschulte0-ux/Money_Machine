@@ -121,6 +121,8 @@ export function WorldObject({
   rotate,
   flip = false,
   contactShadow = false,
+  ambient,
+  motionDelay = 0,
   style,
 }: {
   source: ImageSourcePropType;
@@ -136,6 +138,9 @@ export function WorldObject({
   rotate?: string;
   flip?: boolean;
   contactShadow?: boolean;
+  /** Tiny environmental motion; never used for structural architecture. */
+  ambient?: 'sway' | 'bob';
+  motionDelay?: number;
   style?: StyleProp<ImageStyle>;
 }) {
   const safeDepth = Math.max(0, Math.min(1, depth));
@@ -144,6 +149,26 @@ export function WorldObject({
   if (rotate) transforms.push({ rotate });
   if (flip) transforms.push({ scaleX: -1 });
   const position = { left, right, top, width, height } as const;
+  const motion = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!ambient) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(motionDelay),
+        Animated.timing(motion, { toValue: 1, duration: ambient === 'sway' ? 3600 : 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(motion, { toValue: 0, duration: ambient === 'sway' ? 3600 : 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [ambient, motion, motionDelay]);
+
+  const ambientTransform = ambient === 'sway'
+    ? [{ rotate: motion.interpolate({ inputRange: [0, 1], outputRange: ['-0.55deg', '0.55deg'] }) }]
+    : ambient === 'bob'
+      ? [{ translateY: motion.interpolate({ inputRange: [0, 1], outputRange: [0, -2.5] }) }]
+      : undefined;
 
   return (
     <View style={[styles.object, position]} pointerEvents="none">
@@ -161,18 +186,20 @@ export function WorldObject({
           ]}
         />
       )}
-      <Image
-        source={source}
-        resizeMode="contain"
-        style={[
-          styles.objectImage,
-          {
-            opacity: opacity * atmosphericOpacity * (night ? 0.78 : 1),
-            transform: transforms.length ? transforms : undefined,
-          },
-          style,
-        ]}
-      />
+      <Animated.View style={[styles.objectImage, ambientTransform ? { transform: ambientTransform } : undefined]}>
+        <Image
+          source={source}
+          resizeMode="contain"
+          style={[
+            styles.objectImage,
+            {
+              opacity: opacity * atmosphericOpacity * (night ? 0.78 : 1),
+              transform: transforms.length ? transforms : undefined,
+            },
+            style,
+          ]}
+        />
+      </Animated.View>
     </View>
   );
 }

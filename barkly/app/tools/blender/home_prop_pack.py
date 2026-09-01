@@ -20,6 +20,10 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "art-review" / "home-props"
 OUT.mkdir(parents=True, exist_ok=True)
 
+# Must match world_prop_pack.py. A subtle side plane supplies depth; the
+# objects still face the player and share one vanishing direction.
+CAMERA_LOCATION = (3.0, -10.8, 4.5)
+
 
 def rgb(hex_value: str):
     value = hex_value.lstrip("#")
@@ -126,7 +130,7 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
         except Exception:
             pass
 
-    bpy.ops.object.camera_add(location=(6.4, -8.8, 5.8))
+    bpy.ops.object.camera_add(location=CAMERA_LOCATION)
     cam = bpy.context.object
     cam.data.type = "ORTHO"
     cam.data.ortho_scale = ortho_scale
@@ -167,8 +171,9 @@ def chair():
     pillow = make_material("Butter pillow", "#F3C84B", roughness=0.66)
 
     contact_shadow(1.38, 0.70)
-    # Slightly yawed toward Barkly: this should read as furniture in space, not an icon.
-    yaw = math.radians(-8)
+    # The shared camera supplies the side plane. A second object-level yaw made
+    # this chair disagree with the window, shelf, and floor perspective.
+    yaw = 0
     cube("chair_back", (0.04, 0.42, 1.63), (1.18, 0.34, 0.92), fabric, 0.34, (math.radians(-5), 0, yaw))
     cube("chair_seat", (0.0, -0.13, 0.83), (0.96, 0.67, 0.23), fabric_light, 0.22, (0, 0, yaw))
     cube("chair_arm_l", (-1.03, -0.05, 1.02), (0.25, 0.72, 0.48), fabric, 0.24, (0, 0, yaw))

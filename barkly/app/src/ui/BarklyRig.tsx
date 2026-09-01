@@ -262,6 +262,47 @@ function useLoop(active: boolean, duration: number): Animated.Value {
 }
 
 /**
+ * A small unscripted performance while nobody is asking him to do anything.
+ * Breathing and blinking keep an image from freezing; this makes Barkly feel
+ * as if he is deciding where to look. Eyes lead, the chin follows, one ear
+ * notices, then everything settles before the next cue.
+ */
+function useIdlePerformance(active: boolean): { v: Animated.Value; direction: number } {
+  const v = useRef(new Animated.Value(0)).current;
+  const [direction, setDirection] = React.useState(1);
+  useEffect(() => {
+    if (!active) {
+      v.stopAnimation();
+      Animated.timing(v, { toValue: 0, duration: 260, useNativeDriver: true }).start();
+      return;
+    }
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (!alive) return;
+        setDirection(Math.random() < 0.5 ? -1 : 1);
+        v.setValue(0);
+        Animated.sequence([
+          Animated.timing(v, { toValue: 1, duration: 260, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.delay(460),
+          Animated.timing(v, { toValue: 0, duration: 620, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        ]).start(({ finished }) => {
+          if (finished && alive) schedule();
+        });
+      }, 3600 + Math.random() * 3800);
+    };
+    schedule();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+      v.stopAnimation();
+    };
+  }, [active, v]);
+  return { v, direction };
+}
+
+/**
  * Rotate about a point. React Native rotates about a view's centre, so every
  * hinge in here is translate-to-pivot, turn, translate back — done in the
  * layer's own coordinates, which is why each part is positioned absolutely on a
@@ -345,6 +386,12 @@ function faceFor(state: BarklyState, speaking: boolean, jawOpen: boolean, blink:
 
 export default function BarklyRig({ state, actions, look, speaking = false, scale = 1, collarArt, beat }: RigProps) {
   const has = (a: BodyAction) => actions.includes(a);
+  const idlePerformance = useIdlePerformance(
+    !speaking
+      && !look
+      && !has('HEAD_TILT')
+      && !['sleepy', 'thinking', 'listening', 'eating', 'playing'].includes(state),
+  );
 
   // ------------------------------------------------------------------ blink
   // Two frames, because a blink that is one frame long reads as a glitch and a
@@ -410,13 +457,17 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
   const shape = BEATS[react.kind];
   // ARRIVE sweeps the eyes across rather than holding them somewhere, which is
   // what looking around a new place actually is.
+  const idleEye = Animated.multiply(idlePerformance.v, idlePerformance.direction * 2.4);
   const eyeX = Animated.add(
-    eyeXBase,
+    Animated.add(eyeXBase, idleEye),
     react.v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, shape.eye, -shape.eye * 0.6] }),
   );
   const eyeY = Animated.add(eyeYBase, react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.eye * 0.3] }));
   const tiltDeg = Animated.add(
-    Animated.add(lookLean, cock.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.cock] })),
+    Animated.add(
+      Animated.add(lookLean, cock.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.cock] })),
+      Animated.multiply(idlePerformance.v, idlePerformance.direction * 2.2),
+    ),
     react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.tilt] }),
   );
   // And his shoulders come round last. Without this the head leans off a body
@@ -436,13 +487,14 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
   // permanently, both ears standing to attention is a hood ornament.
   const perked = useGesture(perk, 0.35);
   const beatEar = react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.ear] });
+  const idleEar = idlePerformance.v.interpolate({ inputRange: [0, 1], outputRange: [0, 3.2] });
   const earLDeg = Animated.add(
     Animated.add(earSettle, perked.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.ear] })),
-    beatEar,
+    Animated.add(beatEar, idlePerformance.direction < 0 ? idleEar : 0),
   );
   const earRDeg = Animated.add(
     Animated.add(earSettle, perked.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.ear * 0.86] })),
-    beatEar,
+    Animated.add(beatEar, idlePerformance.direction > 0 ? idleEar : 0),
   );
   const flick = useEarFlick(!droop);
 
@@ -479,7 +531,10 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
       transform: [
         {
           translateY: Animated.add(
-            Animated.add(nodBase, react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.nod] })),
+            Animated.add(
+              Animated.add(nodBase, react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.nod] })),
+              idlePerformance.v.interpolate({ inputRange: [0, 1], outputRange: [0, 1.8] }),
+            ),
             breathe.interpolate({ inputRange: [0, 1], outputRange: [0, -3.4] }),
           ),
         },
@@ -568,5 +623,4 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
     </View>
   );
 }
-
 

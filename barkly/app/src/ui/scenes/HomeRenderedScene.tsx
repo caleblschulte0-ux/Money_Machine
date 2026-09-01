@@ -235,8 +235,8 @@ export function HomeScene({
 
       <WorldLayer name="props">
         <WorldObject source={LAMP} left={-3} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
-        <WorldObject source={CHAIR} left={8} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} rotate="-1deg" contactShadow />
-        <WorldObject source={BED} right={10} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} rotate="1deg" contactShadow />
+        <WorldObject source={CHAIR} left={4} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
+        <WorldObject source={BED} right={4} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
 
       <WorldLighting ground={groundY} night={night} warm />

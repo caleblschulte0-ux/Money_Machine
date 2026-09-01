@@ -22,6 +22,13 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "art-review" / "world-props"
 OUT.mkdir(parents=True, exist_ok=True)
 
+# One front-weighted orthographic camera for the whole world. The first pack
+# used a 36-degree side angle; individual props had nice volume, but a room of
+# them looked as if every object had been rotated toward a different vanishing
+# point. Fifteen degrees keeps a readable side plane without turning the world
+# into a shelf of diagonal product renders.
+CAMERA_LOCATION = (3.0, -10.8, 4.5)
+
 
 def rgb(value: str):
     value = value.lstrip("#")
@@ -165,7 +172,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
         except Exception:
             pass
 
-    bpy.ops.object.camera_add(location=(6.4, -8.8, 5.8))
+    bpy.ops.object.camera_add(location=CAMERA_LOCATION)
     camera = bpy.context.object
     camera.data.type = "ORTHO"
     camera.data.ortho_scale = ortho_scale
@@ -436,7 +443,7 @@ def render_prop(path, builder, ortho_scale, target):
 
 def main():
     manifest = {
-        "camera": "Barkly shared 3/4 orthographic v2",
+        "camera": "Barkly shared front-weighted orthographic v3",
         "light": "warm upper-left key + cool fill + warm rim",
         "contract": "modular transparent props; app owns scene composition",
         "assets": {},

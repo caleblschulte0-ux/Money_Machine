@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "art-review" / "home-architecture"
 OUT.mkdir(parents=True, exist_ok=True)
 
+CAMERA_LOCATION = (3.0, -10.8, 4.5)
+
 
 def rgb(value: str):
     value = value.lstrip('#')
@@ -72,7 +74,7 @@ def setup():
     except Exception:
         pass
 
-    bpy.ops.object.camera_add(location=(4.5, -9.7, 4.8))
+    bpy.ops.object.camera_add(location=CAMERA_LOCATION)
     cam = bpy.context.object
     cam.data.type = 'ORTHO'
     cam.data.ortho_scale = 6.1
