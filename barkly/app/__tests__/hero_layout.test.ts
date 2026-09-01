@@ -13,6 +13,7 @@ import {
   stageHeight,
   stageWidth,
 } from '../src/ui/layout';
+import { worldScale } from '../src/ui/scenes/WorldScene';
 
 describe('hero-first phone composition', () => {
   it('keeps Barkly dominant without swallowing the authored world on a modern phone', () => {
@@ -50,20 +51,22 @@ describe('hero-first phone composition', () => {
     expect(layoutMode(1024, 768)).toBe('tabletLandscape');
   });
 
-  it('uses tablet room to keep Barkly emotionally dominant', () => {
+  it('keeps Barkly and the authored world on one tablet camera', () => {
     const mode = layoutMode(1024, 768);
     const width = stageWidth(1024, mode);
     const scale = spriteScale(768, width, mode);
     expect(width).toBeLessThan(1024 * 0.7);
-    expect(scale).toBeGreaterThanOrEqual(1.55);
-    expect(scale).toBeLessThanOrEqual(1.65);
+    expect(scale).toBeGreaterThanOrEqual(1.16);
+    expect(scale).toBeLessThanOrEqual(1.2);
+    expect(Math.abs(scale - worldScale(1024, 768))).toBeLessThanOrEqual(0.05);
   });
 
-  it('uses tall tablet portrait space for Barkly instead of dead middle', () => {
+  it('reveals more world on tall tablets instead of turning Barkly into a poster', () => {
     const mode = layoutMode(768, 1024);
     const scale = spriteScale(1024, stageWidth(768, mode), mode, true);
-    expect(scale).toBeGreaterThanOrEqual(1.9);
-    expect(scale).toBeLessThanOrEqual(1.95);
+    expect(scale).toBeGreaterThanOrEqual(1.2);
+    expect(scale).toBeLessThanOrEqual(1.24);
+    expect(scale).toBe(worldScale(768, 1024));
   });
 
   it('reserves real side rails in landscape', () => {

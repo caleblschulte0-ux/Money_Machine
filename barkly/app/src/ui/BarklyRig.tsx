@@ -29,6 +29,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
 import rig from '../../assets/barkly/rig/rig.json';
 import { BarklyState, BodyAction } from '../barkly/types';
+import { LocationId } from '../world/locations';
 
 const ART = {
   body: require('../../assets/barkly/rig/body.png'),
@@ -84,6 +85,7 @@ export interface Beat {
 export interface RigProps {
   state: BarklyState;
   actions: BodyAction[];
+  location?: LocationId;
   /** null = looking at you, which is his default and his most flattering. */
   look?: LookTarget | null;
   speaking?: boolean;
@@ -267,7 +269,7 @@ function useLoop(active: boolean, duration: number): Animated.Value {
  * as if he is deciding where to look. Eyes lead, the chin follows, one ear
  * notices, then everything settles before the next cue.
  */
-function useIdlePerformance(active: boolean): { v: Animated.Value; direction: number } {
+function useIdlePerformance(active: boolean, location: LocationId = 'home'): { v: Animated.Value; direction: number } {
   const v = useRef(new Animated.Value(0)).current;
   const [direction, setDirection] = React.useState(1);
   useEffect(() => {
@@ -278,19 +280,21 @@ function useIdlePerformance(active: boolean): { v: Animated.Value; direction: nu
     }
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
+    let first = true;
     const schedule = () => {
       timer = setTimeout(() => {
         if (!alive) return;
+        first = false;
         setDirection(Math.random() < 0.5 ? -1 : 1);
         v.setValue(0);
         Animated.sequence([
-          Animated.timing(v, { toValue: 1, duration: 260, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-          Animated.delay(460),
-          Animated.timing(v, { toValue: 0, duration: 620, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(v, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.delay(location === 'park' ? 920 : 760),
+          Animated.timing(v, { toValue: 0, duration: 720, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         ]).start(({ finished }) => {
           if (finished && alive) schedule();
         });
-      }, 3600 + Math.random() * 3800);
+      }, first ? 1450 : 3000 + Math.random() * 3400);
     };
     schedule();
     return () => {
@@ -298,7 +302,7 @@ function useIdlePerformance(active: boolean): { v: Animated.Value; direction: nu
       clearTimeout(timer);
       v.stopAnimation();
     };
-  }, [active, v]);
+  }, [active, location, v]);
   return { v, direction };
 }
 
@@ -363,7 +367,7 @@ function anchorTopLeft(k: number) {
 }
 
 /** Which face is on the head right now. */
-function faceFor(state: BarklyState, speaking: boolean, jawOpen: boolean, blink: number): HeadArt {
+function faceFor(state: BarklyState, speaking: boolean, jawOpen: boolean, blink: number, location: LocationId): HeadArt {
   if (speaking && jawOpen) return 'head_mouth_open';
   if (blink === 2) return 'head_blink';
   if (blink === 1) return 'head_half';
@@ -380,18 +384,27 @@ function faceFor(state: BarklyState, speaking: boolean, jawOpen: boolean, blink:
     case 'sleepy':
       return 'head_half';
     default:
+      // Same character, different attention. His house keeps the signature
+      // deadpan; the park opens his eyes, Town delights him, and Beach makes
+      // him squint into the sun. A location change should read on Barkly, not
+      // merely swap wallpaper behind an identical passport photo.
+      if (location === 'park') return 'head_wide';
+      if (location === 'town') return 'head_smile';
+      if (location === 'beach') return 'head_squint';
       return 'head';
   }
 }
 
-export default function BarklyRig({ state, actions, look, speaking = false, scale = 1, collarArt, beat }: RigProps) {
+export default function BarklyRig({ state, actions, location = 'home', look, speaking = false, scale = 1, collarArt, beat }: RigProps) {
   const has = (a: BodyAction) => actions.includes(a);
   const idlePerformance = useIdlePerformance(
     !speaking
       && !look
       && !has('HEAD_TILT')
       && !['sleepy', 'thinking', 'listening', 'eating', 'playing'].includes(state),
+    location,
   );
+  const placeEnergy = location === 'park' ? 1.35 : location === 'beach' ? 1.18 : location === 'town' ? 1.08 : 0.82;
 
   // ------------------------------------------------------------------ blink
   // Two frames, because a blink that is one frame long reads as a glitch and a
@@ -457,7 +470,7 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
   const shape = BEATS[react.kind];
   // ARRIVE sweeps the eyes across rather than holding them somewhere, which is
   // what looking around a new place actually is.
-  const idleEye = Animated.multiply(idlePerformance.v, idlePerformance.direction * 2.4);
+  const idleEye = Animated.multiply(idlePerformance.v, idlePerformance.direction * 2.4 * placeEnergy);
   const eyeX = Animated.add(
     Animated.add(eyeXBase, idleEye),
     react.v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, shape.eye, -shape.eye * 0.6] }),
@@ -466,7 +479,7 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
   const tiltDeg = Animated.add(
     Animated.add(
       Animated.add(lookLean, cock.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.cock] })),
-      Animated.multiply(idlePerformance.v, idlePerformance.direction * 2.2),
+      Animated.multiply(idlePerformance.v, idlePerformance.direction * 2.2 * placeEnergy),
     ),
     react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.tilt] }),
   );
@@ -487,7 +500,7 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
   // permanently, both ears standing to attention is a hood ornament.
   const perked = useGesture(perk, 0.35);
   const beatEar = react.v.interpolate({ inputRange: [0, 1], outputRange: [0, shape.ear] });
-  const idleEar = idlePerformance.v.interpolate({ inputRange: [0, 1], outputRange: [0, 3.2] });
+  const idleEar = idlePerformance.v.interpolate({ inputRange: [0, 1], outputRange: [0, 3.2 * placeEnergy] });
   const earLDeg = Animated.add(
     Animated.add(earSettle, perked.interpolate({ inputRange: [0, 1], outputRange: [0, LIMITS.ear] })),
     Animated.add(beatEar, idlePerformance.direction < 0 ? idleEar : 0),
@@ -580,7 +593,7 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
     );
   };
 
-  const face = faceFor(state, speaking, jaw, blink);
+  const face = faceFor(state, speaking, jaw, blink, location);
 
   return (
     <View style={{ width: CANVAS.w * k, height: CANVAS.h * k }} pointerEvents="none">
@@ -623,4 +636,3 @@ export default function BarklyRig({ state, actions, look, speaking = false, scal
     </View>
   );
 }
-

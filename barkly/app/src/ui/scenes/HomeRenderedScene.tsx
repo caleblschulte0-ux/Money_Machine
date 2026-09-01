@@ -164,9 +164,9 @@ export function HomeScene({
   chromeBottom: number;
   motion?: WorldMotion;
 }) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   // More screen reveals more room; the authored objects do not inflate forever.
-  const propScale = worldScale(width);
+  const propScale = worldScale(width, height);
   const band = skyBand(hour);
   const night = band === 'night' || asleep;
   const has = (id: string) => upgrades.includes(id);
@@ -179,13 +179,13 @@ export function HomeScene({
   const floorNear = night ? DIORAMA.floorNightNear : DIORAMA.floorDayNear;
   const floorLine = night ? DIORAMA.floorNightEdge : DIORAMA.floorDayEdge;
 
-  const chairW = 158 * propScale;
+  const chairW = 146 * propScale;
   const chairH = chairW * (398 / 374);
-  const lampW = 82 * propScale;
+  const lampW = 76 * propScale;
   const lampH = lampW * 2;
-  const shelfW = 152 * propScale;
+  const shelfW = 136 * propScale;
   const shelfH = shelfW * (481 / 298);
-  const bedW = (has('home_bed') ? 154 : 136) * propScale;
+  const bedW = (has('home_bed') ? 144 : 126) * propScale;
   const bedH = bedW * (254 / 512);
 
   return (
@@ -221,22 +221,22 @@ export function HomeScene({
           end={{ x: 0.74, y: 0.76 }}
           style={[styles.lightPool, { top: chromeBottom + 18, height: Math.max(270, groundY - chromeBottom + 28) }]}
         />
-        <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
+        <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodSoft, opacity: night ? 0.34 : 0.26 }]} />
         <WallMillwork floorTop={floorTop} night={night} />
         <View style={[styles.baseboard, { top: floorTop - 27, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
         <View style={[styles.baseboardGlint, { top: floorTop - 24, opacity: night ? 0.04 : 0.22 }]} />
       </WorldLayer>
 
       <WorldLayer name="landmark">
-        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 46} scale={propScale} />
+        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 54} scale={propScale * 0.90} />
         <PictureMedallion top={chromeBottom + 94} night={night} />
-        <WorldObject source={SHELF} right={-9} top={chromeBottom + 48} width={shelfW} height={shelfH} night={night} depth={0.42} contactShadow />
+        <WorldObject source={SHELF} right={7} top={chromeBottom + 56} width={shelfW} height={shelfH} night={night} depth={0.42} contactShadow />
       </WorldLayer>
 
       <WorldLayer name="props">
         <WorldObject source={LAMP} left={-3} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
-        <WorldObject source={CHAIR} left={4} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
-        <WorldObject source={BED} right={4} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
+        <WorldObject source={CHAIR} left={12} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
+        <WorldObject source={BED} right={14} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
 
       <WorldLighting ground={groundY} night={night} warm />
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   lightPool: { position: 'absolute', left: 0, width: '74%' },
   ceilingTrim: {
-    position: 'absolute', left: 0, right: 0, height: 12,
+    position: 'absolute', left: '5%', right: '5%', height: 6,
     borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm,
   },
   baseboard: { position: 'absolute', left: 0, right: 0, height: 28 },

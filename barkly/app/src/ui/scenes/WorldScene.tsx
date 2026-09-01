@@ -181,7 +181,7 @@ export function WorldObject({
               width: width * 0.68,
               height: Math.max(8, Math.min(20, height * 0.08)),
               bottom: Math.max(1, height * 0.025),
-              opacity: (night ? 0.24 : 0.16) * (0.7 + safeDepth * 0.3),
+              opacity: (night ? 0.26 : 0.21) * (0.7 + safeDepth * 0.3),
             },
           ]}
         />
@@ -228,6 +228,19 @@ export function WorldLighting({
       />
       <LinearGradient
         colors={[
+          warm ? 'rgba(255,239,191,0.18)' : 'rgba(224,248,239,0.14)',
+          'rgba(255,255,255,0)',
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0.68 }}
+        style={styles.keySweep}
+      />
+      <LinearGradient
+        colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0)']}
+        style={[styles.horizonHaze, { top: ground - 178, opacity: night ? 0.03 : 0.42 }]}
+      />
+      <LinearGradient
+        colors={[
           warm ? 'rgba(255,226,172,0.08)' : 'rgba(214,239,229,0.06)',
           'rgba(255,255,255,0)',
           night ? 'rgba(20,22,34,0.20)' : 'rgba(48,34,24,0.08)',
@@ -243,9 +256,13 @@ export function WorldLighting({
   );
 }
 
-export function worldScale(viewportWidth: number): number {
-  // Wider viewports reveal more world instead of turning every prop giant.
-  return Math.max(0.92, Math.min(1.06, viewportWidth / 390));
+export function worldScale(viewportWidth: number, viewportHeight = 844): number {
+  // The short edge behaves like a camera zoom. Portrait art can grow modestly
+  // on a tablet; landscape art is constrained by its height. This keeps the
+  // rendered world in the same physical scale family as Barkly while wider
+  // screens reveal more environment instead of stretching phone blocking.
+  const cameraEdge = viewportWidth > viewportHeight ? viewportHeight / 390 : viewportWidth / 390;
+  return Math.max(0.90, Math.min(1.24, cameraEdge));
 }
 
 const styles = StyleSheet.create({
@@ -267,5 +284,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     transform: [{ scaleX: 1.18 }],
   },
+  keySweep: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '68%' },
+  horizonHaze: { position: 'absolute', left: 0, right: 0, height: 118 },
   bottomGrade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 140 },
 });

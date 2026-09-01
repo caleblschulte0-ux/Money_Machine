@@ -10,11 +10,14 @@
  */
 
 import { BarklyState, BodyAction } from '../barkly/types';
+import { LocationId } from '../world/locations';
 
 export interface BarklyRenderProps {
   state: BarklyState;
   /** Body commands currently in effect (ambient + dialogue-chosen). */
   actions: BodyAction[];
+  /** Current world, used only to flavour physical performance and attention. */
+  location?: LocationId;
   /**
    * Scene-motion hint from the stage (not the brain): which travel pose to
    * hold while the stage moves him — running right, or carrying the ball

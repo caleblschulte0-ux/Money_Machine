@@ -167,7 +167,7 @@ export function faceFrame({
   }
 }
 
-export default function BarklyPhotoView({ state, actions, variant, collarId, scale = 1, look: lookAt, beat }: BarklyRenderProps) {
+export default function BarklyPhotoView({ state, actions, location, variant, collarId, scale = 1, look: lookAt, beat }: BarklyRenderProps) {
   const collarArt = collarId ? COLLAR_ART[collarId] : undefined;
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
@@ -370,6 +370,7 @@ export default function BarklyPhotoView({ state, actions, variant, collarId, sca
             <BarklyRig
               state={state}
               actions={actions}
+              location={location}
               look={lookAt}
               speaking={talking}
               collarArt={collarArt}

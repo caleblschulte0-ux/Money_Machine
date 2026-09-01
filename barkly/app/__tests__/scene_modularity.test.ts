@@ -102,6 +102,10 @@ describe('world scenery stays modular', () => {
     expect(characterRig).toContain('function useIdlePerformance');
     expect(characterRig).toContain('idlePerformance.v');
     expect(characterRig).toContain('idleEye');
+    expect(characterRig).toContain("location === 'park'");
+    expect(characterRig).toContain("location === 'town'");
+    expect(characterRig).toContain("location === 'beach'");
+    expect(outdoorScenes).toContain("BARKLY'S");
   });
 
   for (const item of STORE.filter((entry) => entry.slot === 'home')) {

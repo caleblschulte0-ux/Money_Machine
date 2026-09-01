@@ -134,19 +134,18 @@ export function spriteScale(
   const minScale = landscape
     ? screenHeight < 430 ? 0.78 : 0.84
     : screenHeight < 590 ? 0.76 : screenHeight < 680 ? 0.82 : 0.78;
-  // Home now has enough authored depth to deserve screen space. 1.14 keeps
-  // Barkly unmistakably primary on a 390px phone while leaving visible room on
-  // both sides for furniture, architecture and NPCs. Short phones retain their
-  // separate guarded caps, and tablets still reveal more world rather than
-  // inheriting the phone ceiling.
+  // Barkly and the world must share one camera. The old wide/tablet caps let
+  // him grow to almost 2x while scenery stopped near 1x, turning every large
+  // screen into a giant dog pasted over phone-sized props. Larger viewports
+  // reveal more authored world; they do not turn Barkly into a poster.
   const cap = mode === 'narrowPortrait' && screenHeight < 680
     ? screenHeight < 590 ? 0.80 : 0.90
     : mode === 'tabletLandscape'
-      ? 1.65
+      ? 1.20
       : mode === 'widePortrait'
-        ? 1.95
+        ? 1.24
         : mode === 'phoneLandscape'
-          ? 1.10
+          ? 0.98
           : 1.14;
   return Math.max(minScale, Math.min(cap, room / SPRITE_HEIGHT, byWidth));
 }

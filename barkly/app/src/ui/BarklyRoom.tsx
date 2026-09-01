@@ -849,7 +849,7 @@ export default function BarklyRoom() {
 
       <LinearGradient
         colors={['rgba(255,249,236,0.55)', 'rgba(255,249,236,0.22)', 'rgba(255,249,236,0)']}
-        style={[styles.chromeScrim, { height: chromeBottomPx + 78 }]}
+        style={[styles.chromeScrim, { height: chromeBottomPx + 34 }]}
         pointerEvents="none"
       />
       <LinearGradient
@@ -1020,7 +1020,7 @@ export default function BarklyRoom() {
               testID="barkly-sprite"
               accessibilityHint="Tap to pet him."
             >
-              <Renderer state={snapshot.state} actions={actions} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} />
+              <Renderer state={snapshot.state} actions={actions} location={location} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} />
             </Pressable>
           </Animated.View>
           {asleep && location === 'home' && <DogBedFront upgraded={barkly.hasHome('home_bed')} />}
@@ -1280,6 +1280,7 @@ const styles = StyleSheet.create({
     height: STATUS_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: space.sm,
   },
   places: {
@@ -1324,7 +1325,7 @@ const styles = StyleSheet.create({
   },
   gearDot: { width: 4, height: 4, borderRadius: 8, backgroundColor: color.inkSoft },
   headerButtons: { flexDirection: 'row', gap: 6 },
-  walletTap: { flex: 1 },
+  walletTap: { flexGrow: 0, flexShrink: 1, width: '62%', maxWidth: 250, minWidth: 176 },
   packButton: {
     minWidth: 46,
     height: TAP_MIN,
@@ -1365,7 +1366,7 @@ const styles = StyleSheet.create({
   degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: color.fill },
   degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished },
   degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
-  tabs: { flex: 1, height: TAP_MIN, flexDirection: 'row', backgroundColor: 'rgba(255,253,247,0.90)', borderRadius: 999, padding: 3, gap: 2, ...elevation.card },
+  tabs: { flex: 1, height: TAP_MIN, flexDirection: 'row', backgroundColor: 'rgba(255,253,247,0.82)', borderRadius: 999, padding: 3, gap: 2, ...elevation.low },
   tabsLandscape: { flex: 0, width: '100%', height: 248, flexDirection: 'column', padding: 4, gap: 4 },
   tabLandscape: { flexGrow: 0, flexShrink: 0, width: '100%', height: TAP_MIN },
   tab: { flexGrow: 1, flexShrink: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
