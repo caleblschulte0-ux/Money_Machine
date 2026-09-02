@@ -300,7 +300,10 @@ def town_fountain():
 
 
 def town_lamp():
-    iron = material("Lamp iron", "#2A3843", roughness=0.34, metallic=0.66)
+    # Metallic 0.66 on a near-neutral navy renders as plain grey pole -- the
+    # two tallest objects in Town were the lastneutral in the scene. A
+    # toy lamppost is painted, not chromed: keep the hue, drop the metal.
+    iron = material("Lamp iron", "#2E5570", roughness=0.42, metallic=0.10)
     brass = material("Lamp brass", "#D07B15", roughness=0.28, metallic=0.72)
     glass = material("Lamp glow glass", "#FFDD8E", roughness=0.22, coat=0.26)
     contact_shadow(0.56, 0.34)

@@ -151,7 +151,16 @@ export function WorldObject({
   style?: StyleProp<ImageStyle>;
 }) {
   const safeDepth = Math.max(0, Math.min(1, depth));
-  const atmosphericOpacity = 0.78 + safeDepth * 0.22;
+  /*
+   * Atmospheric perspective, but barely. At 0.78 + depth*0.22 a mid-depth prop
+   * rendered around 0.85, and combined with a per-prop opacity it dropped the
+   * town side-storefronts to roughly 0.70 over a pale sky -- which is what was
+   * still holding Town at 28% dead-grey pixels after the shopfronts themselves
+   * had been re-rendered in candy colours. The Supercell look keeps chroma at
+   * every depth and separates planes with scale, overlap and shadow instead of
+   * by fading things toward the background.
+   */
+  const atmosphericOpacity = 0.93 + safeDepth * 0.07;
   const transforms: Array<{ rotate: string } | { scaleX: number }> = [];
   if (rotate) transforms.push({ rotate });
   if (flip) transforms.push({ scaleX: -1 });
