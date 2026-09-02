@@ -226,11 +226,21 @@ export function WorldLighting({
           },
         ]}
       />
+      {/*
+        The key light has to reach full transparency INSIDE its own box. It
+        used to be clipped to width:'68%' while its diagonal axis still carried
+        visible tint at that edge, which drew a hard vertical line down the
+        full height of every outdoor scene — over sky, storefronts and ground
+        alike. It read as a compositing seam, not a sunbeam. Spanning the full
+        width and fading out by 0.62 along the axis keeps the same light
+        direction with nothing to clip.
+      */}
       <LinearGradient
         colors={[
           warm ? 'rgba(255,239,191,0.18)' : 'rgba(224,248,239,0.14)',
           'rgba(255,255,255,0)',
         ]}
+        locations={[0, 0.62]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0.68 }}
         style={styles.keySweep}
@@ -284,7 +294,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     transform: [{ scaleX: 1.18 }],
   },
-  keySweep: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '68%' },
+  keySweep: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   horizonHaze: { position: 'absolute', left: 0, right: 0, height: 118 },
   bottomGrade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 140 },
 });

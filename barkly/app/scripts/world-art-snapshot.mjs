@@ -46,7 +46,20 @@ const address = server.address();
 if (!address || typeof address === 'string') throw new Error('could not start local art-review server');
 const url = `http://127.0.0.1:${address.port}/`;
 
-const browser = await chromium.launch({ args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] });
+// Same browser resolution as the other five harnesses (overlap, a11y, voice,
+// acceptance, no-playtest): prefer an explicitly provisioned Chromium so this
+// runs on a machine that has one preinstalled at a different revision than the
+// playwright package expects. Without it this script was the only one in
+// scripts/ that could not run outside CI.
+const browserArgs = ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'];
+const launchOptions = { args: browserArgs };
+for (const candidate of [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium']) {
+  if (candidate && existsSync(candidate)) {
+    launchOptions.executablePath = candidate;
+    break;
+  }
+}
+const browser = await chromium.launch(launchOptions);
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: 'America/Chicago' });
 const page = await ctx.newPage();
 const settle = (ms = 900) => page.waitForTimeout(ms);
