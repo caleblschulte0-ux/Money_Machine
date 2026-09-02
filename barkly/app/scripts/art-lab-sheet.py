@@ -13,8 +13,26 @@ import json, math, sys, colorsys
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-frames = Path(sys.argv[1])
-out = Path(sys.argv[2])
+# Two POSITIONAL arguments, and the script says so rather than indexing argv
+# and hoping. `--frames art-lab/frames` -- a plausible guess at the interface,
+# and the way a previous session actually invoked it -- used to bind
+# frames=Path("--frames"), find no PNGs, and print a table of nothing with exit
+# 0. A measurement tool that answers confidently when it was called wrong is
+# worse than one that refuses.
+def _args(argv):
+    if any(a.startswith("-") for a in argv):
+        sys.exit(f"usage: art-lab-sheet.py <frames-dir> <out-dir>  (positional; got {argv})")
+    if len(argv) != 2:
+        sys.exit("usage: art-lab-sheet.py <frames-dir> <out-dir>")
+    src, dst = Path(argv[0]), Path(argv[1])
+    if not src.is_dir():
+        sys.exit(f"no such frames directory: {src}")
+    if not sorted(src.glob("*.png")):
+        sys.exit(f"no PNG frames in {src} -- did art-lab.mjs run?")
+    return src, dst
+
+
+frames, out = _args(sys.argv[1:])
 
 LOCS = ["home", "park", "town", "beach"]
 # All four light bands. Morning and evening were never measured, which is how

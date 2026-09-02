@@ -116,15 +116,12 @@ export const DIORAMA = {
   violet: '#B449DB',
   violetDeep: '#722497',
   violetLight: '#E184F7',
-  violetShine: '#F9C6FF',
   violetNight: '#67377C',
-  violetNightLight: '#8E54AD',
   aqua: '#47D3FF',
   aquaDeep: '#049AD0',
   aquaLight: '#BCF2FF',
   mint: '#65F483',
   mintDeep: '#25A94D',
-  mintLight: '#C5FED1',
 
   /*
    * SKY AND HIGHLIGHTS KEEP THEIR CHROMA.
@@ -178,7 +175,6 @@ export const DIORAMA = {
   windowFrameDayEdge: '#BB6109',
   windowFrameNight: '#FED574',
   windowFrameNightEdge: '#A27422',
-  windowSillDay: '#D67C21',
   windowSillNight: '#DEB54A',
   hillDay: '#6FDA61',
   hillNight: '#325D55',
@@ -241,11 +237,23 @@ export const DIORAMA = {
   townRoadDayEdge: '#A6773F',
   townRoadNight: '#4E3B45',
   townRoadNightEdge: '#2E2130',
-  townSidewalkDay: '#F8E0A8',
+  /*
+   * The pavement is the single biggest surface in Town -- 19.3% of the frame,
+   * measured -- and it was one flat #F8E0A8 slab at 0.30 chroma, which is why
+   * Town sat 0.10 below every other scene at every hour. Park's dominant
+   * surface is 24% of ITS frame and reads rich because it is a ramp of related
+   * greens rather than one fill. Same treatment: a far tone that holds warmth
+   * at the horizon, a near tone with real chroma under the player's feet.
+   */
+  townSidewalkDay: '#F4D28A',
+  townSidewalkDayFar: '#FFE7AE',
+  townSidewalkDayNear: '#E0AE5A',
   townSidewalkDayLight: '#FFEEB8',
-  townSidewalkDayEdge: '#CBA157',
-  townSidewalkNight: '#765E45',
-  townSidewalkNightEdge: '#4B3C2C',
+  townSidewalkDayEdge: '#B98634',
+  townSidewalkNight: '#6E5740',
+  townSidewalkNightFar: '#87694C',
+  townSidewalkNightNear: '#574333',
+  townSidewalkNightEdge: '#40331F',
 
   oceanDayA: '#23ADD6',
   oceanDayB: '#67D3E3',

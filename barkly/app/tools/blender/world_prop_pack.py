@@ -298,9 +298,15 @@ def storefront(accent_name, body_hex, edge_hex, awning_hex):
 
 
 def town_fountain():
-    stone = material("Fountain stone", "#E5BD76", roughness=0.72)
-    stone_light = material("Fountain stone light", "#FFD98A", roughness=0.68)
-    stone_dark = material("Fountain stone depth", "#9D723E", roughness=0.78)
+    # Measured on the shipped PNG: 15.6% of the fountain's opaque pixels were
+    # under 0.18 chroma and its biggest bucket was #C0C090 at 0.25 -- pale
+    # khaki, the exact tone that made Town read washed. The stone was authored
+    # a couple of shades off white (#E5BD76 lit, #FFD98A on the sun faces), so
+    # the key light finished the job. Deeper sandstone keeps the same read at
+    # a chroma the grade can actually pick up.
+    stone = material("Fountain stone", "#F0B440", roughness=0.72)
+    stone_light = material("Fountain stone light", "#FFCB5E", roughness=0.68)
+    stone_dark = material("Fountain stone depth", "#8C5418", roughness=0.78)
     water = material("Fountain water", "#3DC7EA", roughness=0.18, metallic=0.06, coat=0.30)
     contact_shadow(1.46, 0.72)
     torus("lower_basin", (0, 0, 0.55), 0.98, 0.24, stone, scale=(1.25, 0.82, 0.72))
@@ -312,12 +318,21 @@ def town_fountain():
 
 
 def town_lamp():
-    # Metallic 0.66 on a near-neutral navy renders as plain grey pole -- the
-    # two tallest objects in Town were the lastneutral in the scene. A
+    # Metallic 0.66 on a near-neutral navy renders as a plain grey pole -- the
+    # two tallest objects in Town were the last neutral things in the scene. A
     # toy lamppost is painted, not chromed: keep the hue, drop the metal.
-    iron = material("Lamp iron", "#2E5570", roughness=0.42, metallic=0.10)
-    brass = material("Lamp brass", "#D07B15", roughness=0.28, metallic=0.72)
-    glass = material("Lamp glow glass", "#FFDD8E", roughness=0.22, coat=0.26)
+    # The same argument applies to the brass, which was still at 0.72 and was
+    # rendering as part of the lamp's 18.0% colourless pixels along with a
+    # near-white glass; both are dialled back to painted values here.
+    # ...and the navy still lost: the cool fill is (0.58, 0.78, 1.0), so on a
+    # dark blue post it lands as cyan-grey and the lamp measured 15.7%
+    # colourless even after the metal came off. A painted TEAL post keeps its
+    # hue under that fill instead of dissolving into it, and it is the same
+    # family as townBlueEdge, so the two tallest objects in Town now belong to
+    # Town's palette rather than reading as generic street furniture.
+    iron = material("Lamp iron", "#1A6B84", roughness=0.42, metallic=0.10)
+    brass = material("Lamp brass", "#D07B15", roughness=0.30, metallic=0.24)
+    glass = material("Lamp glow glass", "#FFC93B", roughness=0.22, coat=0.26)
     contact_shadow(0.56, 0.34)
     cylinder("base", (0, 0, 0.20), 0.42, 0.18, iron)
     cylinder("post", (0, 0, 1.72), 0.10, 3.05, iron)
@@ -448,7 +463,10 @@ BUILDERS = {
     "park/hedge": (park_hedge, 4.4, (0, 0, 0.72), {"displayWidth": 154, "anchor": "bottom"}),
     "town/store_coral": (lambda: storefront("Coral", "#E14B45", "#982D32", "#FF6349"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
     "town/store_aqua": (lambda: storefront("Aqua", "#37B4CD", "#216E84", "#3ED3EB"), 6.6, (0, 0, 2.30), {"displayWidth": 190, "anchor": "bottom"}),
-    "town/store_violet": (lambda: storefront("Violet", "#9560D6", "#5A2F93", "#C089EE"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
+    # Violet measured the palest of the three storefronts (0.344 against the
+    # coral's and aqua's 0.40) -- a warm key on a lilac washes it toward grey,
+    # so the base carries more chroma than its neighbours need to.
+    "town/store_violet": (lambda: storefront("Violet", "#8A3FD6", "#4F2189", "#B871F0"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
     "town/fountain": (town_fountain, 4.4, (0, 0, 1.05), {"displayWidth": 114, "anchor": "bottom"}),
     "town/lamp": (town_lamp, 5.4, (0, 0, 2.05), {"displayWidth": 70, "anchor": "bottom"}),
     "town/planter": (town_planter, 3.8, (0, 0, 0.9), {"displayWidth": 74, "anchor": "bottom"}),

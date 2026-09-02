@@ -13,8 +13,8 @@
  */
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { basename, join, resolve } from 'node:path';
 import { chromium } from 'playwright';
 
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
@@ -22,6 +22,47 @@ const htmlPath = resolve(arg('--html', 'dist/playtest/index.html'));
 const outDir = resolve(arg('--out', 'art-lab'));
 const preset = arg('--preset', 'longterm');
 if (!existsSync(htmlPath)) { console.error(`missing ${htmlPath}`); process.exit(2); }
+
+/*
+ * REFUSE TO MEASURE A STALE BUNDLE.
+ *
+ * This script serves a pre-built artifact; it does not build one. So running
+ * it straight after an edit silently measures the LAST build, and the numbers
+ * come out looking like the change did nothing -- which is indistinguishable
+ * from the change genuinely doing nothing, and is the more likely reading when
+ * you are hoping for a small effect. It happened in this session.
+ *
+ * Anything under src/ or assets/ newer than the artifact means the artifact
+ * cannot represent it. `--stale-ok` is there for deliberately re-measuring an
+ * old build (a baseline in a worktree, say), and it says so out loud.
+ */
+const newestUnder = (dir) => {
+  let newest = 0;
+  const walk = (d) => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+      const full = join(d, e.name);
+      if (e.isDirectory()) walk(full);
+      else newest = Math.max(newest, statSync(full).mtimeMs);
+    }
+  };
+  if (existsSync(dir)) walk(dir);
+  return newest;
+};
+const staleOk = process.argv.includes('--stale-ok');
+const builtAt = statSync(htmlPath).mtimeMs;
+const sourceAt = Math.max(newestUnder(resolve('src')), newestUnder(resolve('assets')));
+if (sourceAt > builtAt) {
+  const mins = ((sourceAt - builtAt) / 60000).toFixed(1);
+  if (!staleOk) {
+    console.error(`${basename(htmlPath)} is ${mins} min older than the newest file in src/ or assets/.`);
+    console.error('Build first:  npm run build:web && node scripts/build-artifact.mjs --out dist/playtest/index.html');
+    console.error('Or pass --stale-ok to measure this build on purpose.');
+    process.exit(2);
+  }
+  console.warn(`--stale-ok: measuring a bundle ${mins} min older than the sources.`);
+}
+
 await mkdir(`${outDir}/frames`, { recursive: true });
 
 const html = await readFile(htmlPath);
@@ -63,29 +104,57 @@ async function newPage(hour) {
     else break;
   }
   await page.waitForTimeout(1400);
-  // Load a developed save so the world is furnished and the room has history.
-  // Loading a developed save is a NICE-TO-HAVE for the art review: the world
-  // art is identical either way, only the room's history props differ. It is
-  // wrapped so a harness quirk in the save sheet can never block the capture,
-  // which is the whole point of this tool.
-  try {
-    const gear = page.getByLabel('Settings').first();
-    if (await gear.count()) {
-      await gear.click({ timeout: 6000 });
-      await page.waitForTimeout(520);
-      const entry = page.locator('[data-testid="playtest-settings"]').first();
-      if (await entry.count()) {
-        await entry.click({ timeout: 6000 });
-        await page.waitForTimeout(650);
-        const slot = page.locator(`[data-testid="playtest-${preset}"]`).first();
-        if (await slot.count()) {
-          await slot.click({ force: true, timeout: 6000 });
-          await page.waitForSelector('[data-testid="dialogue-panel"]', { timeout: 20000 }).catch(() => {});
+  /*
+   * LOADING THE SAVE IS REQUIRED, AND IT IS VERIFIED.
+   *
+   * This was wrapped in a try/catch and documented as a NICE-TO-HAVE, on the
+   * stated grounds that "the world art is identical either way, only the
+   * room's history props differ". That is not true in either direction. A
+   * default save is level 1, so Beach and Town are LOCKED -- the run dies four
+   * frames in with "no tab for beach" -- and Home renders without its rug,
+   * bed or shelf, which is most of the room. A silent fallback to the default
+   * save is therefore a silent capture of a different game.
+   *
+   * So: three attempts, then verify against the world rather than against the
+   * click, and fail the run loudly if the save is not in.
+   */
+  const unlocked = async () => {
+    const labels = await page.getByRole('tab').evaluateAll((els) =>
+      els.map((e) => e.getAttribute('aria-label') || e.textContent || ''),
+    );
+    return labels.length >= 4 && !labels.some((l) => /locked/i.test(l));
+  };
+  for (let attempt = 1; attempt <= 3 && !(await unlocked()); attempt += 1) {
+    try {
+      const gear = page.getByLabel('Settings').first();
+      if (await gear.count()) {
+        await gear.click({ timeout: 6000 });
+        await page.waitForTimeout(520);
+        const entry = page.locator('[data-testid="playtest-settings"]').first();
+        if (await entry.count()) {
+          await entry.click({ timeout: 6000 });
+          await page.waitForTimeout(650);
+          const slot = page.locator(`[data-testid="playtest-${preset}"]`).first();
+          if (await slot.count()) {
+            await slot.click({ force: true, timeout: 6000 });
+            await page.waitForSelector('[data-testid="dialogue-panel"]', { timeout: 20000 }).catch(() => {});
+          }
         }
       }
+    } catch {
+      /* retried below */
     }
-  } catch {
-    console.warn('  (preset not loaded; capturing the default save)');
+    await page.waitForTimeout(900);
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(400);
+  }
+  if (!(await unlocked())) {
+    const labels = await page.getByRole('tab').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+    console.error(`could not load the "${preset}" playtest save; tabs read: ${JSON.stringify(labels)}`);
+    console.error('Every location must be unlocked or the contact sheet is of a different game.');
+    console.error('Most likely the artifact has no playtest menu: build it with');
+    console.error('  npm run build:pages   (sets EXPO_PUBLIC_BARKLY_PLAYTEST=always for dist/playtest)');
+    process.exit(3);
   }
   // Whatever happened above, get back to the world. A sheet left open covers
   // the location tabs and every capture after it would be of a modal.
@@ -101,7 +170,21 @@ async function newPage(hour) {
 
 async function goTo(page, loc) {
   const tab = page.getByRole('tab', { name: new RegExp(`^${loc}$`, 'i') }).first();
-  if (!(await tab.count())) throw new Error(`no tab for ${loc}`);
+  /*
+   * WAIT for the tab, and say what WAS there if it never arrives.
+   *
+   * `if (!(await tab.count())) throw new Error('no tab for beach')` is a
+   * single instantaneous poll on a React app that re-renders the whole place
+   * bar on every location change, so it flakes -- it took down a full 16-frame
+   * run on the fourth capture -- and when it does fire the message names the
+   * one thing that was missing and nothing about what the harness could see,
+   * which is the least useful half of the information.
+   */
+  await tab.waitFor({ state: 'attached', timeout: 8000 }).catch(() => {});
+  if (!(await tab.count())) {
+    const seen = await page.getByRole('tab').allTextContents();
+    throw new Error(`no tab for ${loc}; tabs present: ${seen.length ? seen.join(', ') : '(none)'}`);
+  }
   /*
    * VERIFY against the SCENE, not the click. A locked tab, or a click that
    * lands on a scrim, fails silently and the next screenshot is just the
@@ -143,10 +226,25 @@ if (unknown.length) {
 }
 const BANDS = wanted.length ? ALL_BANDS.filter(([b]) => wanted.includes(b)) : ALL_BANDS;
 
+/*
+ * `--locations town` narrows the other axis. A full run is 16 frames and takes
+ * the best part of an hour, most of which is four onboarding + save-load
+ * sequences; iterating on ONE scene should not cost that. Same typo rule as
+ * --bands: an unknown name exits rather than quietly capturing nothing.
+ */
+const wantedLocs = arg('--locations', '').split(',').map((l) => l.trim()).filter(Boolean);
+const unknownLocs = wantedLocs.filter((l) => !LOCATIONS.includes(l));
+if (unknownLocs.length) {
+  console.error(`unknown --locations value(s): ${unknownLocs.join(', ')}`);
+  console.error(`known locations: ${LOCATIONS.join(', ')}`);
+  process.exit(2);
+}
+const PLACES = wantedLocs.length ? LOCATIONS.filter((l) => wantedLocs.includes(l)) : LOCATIONS;
+
 const shots = [];
 for (const [label, hour] of BANDS) {
   const { ctx, page } = await newPage(hour);
-  for (const loc of LOCATIONS) {
+  for (const loc of PLACES) {
     await goTo(page, loc);
     const file = `${outDir}/frames/${loc}-${label}.png`;
     await page.screenshot({ path: file });

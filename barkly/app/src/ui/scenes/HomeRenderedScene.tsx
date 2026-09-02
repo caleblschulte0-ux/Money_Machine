@@ -5,7 +5,7 @@ import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { radius } from '../theme';
 import { BRASS, DIORAMA, ITEM } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
-import { WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
+import { RadialGlow, WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
 import { BiographyProp } from '../../world/biography';
 
 const CHAIR = require('../../../assets/world/home/props/chair.png');
@@ -89,10 +89,6 @@ function RenderedWindow({
       {upgraded && <View style={[styles.windowUpgradeSpark, { width: width * 0.46 }]} />}
     </View>
   );
-}
-
-function PictureMedallion({ top: _top, night: _night }: { top: number; night: boolean }) {
-  return null;
 }
 
 /**
@@ -300,8 +296,13 @@ function HomeBiography({
  * Home at night rendered a grey lampshade in a blue room -- the same defect
  * Town had with its unlit street lamps, and the reason "night" read as the day
  * scene dimmed rather than as evening. A lamp is a light SOURCE: a warm shade,
- * a halo, and a pool of it on the floor underneath. Concentric rounded views
- * rather than a radial gradient, which react-native-web does not have.
+ * a halo, and a pool of it on the floor underneath.
+ *
+ * The halo is a real radial falloff (shared `RadialGlow`). It used to be a
+ * VERTICAL linear gradient inside a circular box, which is a band of light
+ * with two straight edges wearing a round mask -- readable as a glow only
+ * because it was faint. The shade band and the floor pool stay linear: both
+ * are wide, flat ellipses where the falloff genuinely is one-dimensional.
  */
 function HomeLampGlow({ left, top, width, height, floorTop }: { left: number; top: number; width: number; height: number; floorTop: number }) {
   // Centred on the shade, which sits in the top sixth of the lamp sprite.
@@ -310,17 +311,7 @@ function HomeLampGlow({ left, top, width, height, floorTop }: { left: number; to
   const r = width * 0.95;
   return (
     <View style={styles.fill} pointerEvents="none">
-      {/*
-        Fades in AND out. Written the obvious way -- strongest stop first --
-        the gradient starts fully on at the top edge of its own box, which
-        draws a bright hard line across the top of the halo. Every soft light
-        in this game has to reach zero at both ends of its box.
-      */}
-      <LinearGradient
-        colors={['rgba(255,206,90,0)', 'rgba(255,214,102,0.26)', 'rgba(255,206,90,0)']}
-        locations={[0, 0.5, 1]}
-        style={[styles.lampHalo, { left: cx - r, top: cy - r, width: r * 2, height: r * 2, borderRadius: r }]}
-      />
+      <RadialGlow cx={cx} cy={cy} r={r} color={DIORAMA.butterDeep} stops={[0.40, 0.20, 0.07]} />
       <LinearGradient
         colors={['rgba(255,242,190,0)', 'rgba(255,240,178,0.72)', 'rgba(255,224,140,0)']}
         locations={[0, 0.5, 1]}
@@ -389,6 +380,8 @@ export function HomeScene({
    * empty wall.
    */
   const wallInset = Math.max(12, width * 0.045);
+  // One value, read by the lamp sprite and by the glow that has to sit on it.
+  const lampLeft = wallInset + chairW * 0.84;
 
   /*
    * FIT THE WALL FURNITURE TO THE WALL.
@@ -468,7 +461,6 @@ export function HomeScene({
 
       <WorldLayer name="landmark">
         <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={wallTop + 10} left={wallInset} scale={windowScale} />
-        <PictureMedallion top={chromeBottom + 94} night={night} />
         {/*
           No ground contact shadow: the shelf is MOUNTED ON THE WALL. Pooling
           one under it put a shadow on the floor beneath something that never
@@ -501,7 +493,17 @@ export function HomeScene({
           window completely. Dropping it reveals the window on every screen and
           reads better anyway: furniture against a wall, not embedded in it.
         */}
-        <WorldObject source={LAMP} left={wallInset * 0.5} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
+        {/*
+          THE LAMP STANDS BESIDE THE COUCH, NOT BEHIND IT.
+          At left:wallInset*0.5 its whole 76px width sat inside the couch's
+          146px span, and the couch is drawn after it -- so every pixel of the
+          pole was occluded and only the shade cleared the couch back. The room
+          shipped with a cream cone hovering in mid-air. Standing it off the
+          couch's right shoulder shows the pole, which is the only thing that
+          says "floor lamp" rather than "sticker", and the shade still reads
+          against the wall rather than against the couch.
+        */}
+        <WorldObject source={LAMP} left={lampLeft} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
         <WorldObject source={CHAIR} left={wallInset} top={floorTop - chairH + 58} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
         <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
@@ -514,7 +516,7 @@ export function HomeScene({
       */}
       {night && (
         <WorldLayer name="fx">
-          <HomeLampGlow left={wallInset * 0.5} top={floorTop - lampH + 11} width={lampW} height={lampH} floorTop={floorTop} />
+          <HomeLampGlow left={lampLeft} top={floorTop - lampH + 11} width={lampW} height={lampH} floorTop={floorTop} />
         </WorldLayer>
       )}
     </WorldScene>

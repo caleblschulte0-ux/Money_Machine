@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import {
   Animated,
   DimensionValue,
@@ -12,6 +12,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { DIORAMA } from './artPalette';
 import type { SkyBand } from './CandyScenesV2';
 import { radius } from '../theme';
@@ -350,6 +351,57 @@ const GRADE: Record<SkyBand, {
     vignette: 'rgba(6,11,40,0.32)',
   },
 } as const;
+
+/**
+ * A LIGHT, WITH A REAL FALLOFF.
+ *
+ * Every glow in this app used to be stacked opaque discs, each smaller and
+ * stronger than the last, on the stated grounds that "react-native-web has no
+ * radial gradient". expo-linear-gradient does not -- but react-native-svg is
+ * already a dependency of every scene in here and has had RadialGradient the
+ * whole time. Three concentric discs have three visible circular edges, which
+ * is why the Town street lamps rendered as ringed targets and read as UI
+ * toggles rather than as lamps.
+ *
+ * One SVG, one true falloff, sized in its own square canvas so callers only
+ * give it a centre and a radius. `stops` is the alpha ramp from the middle
+ * out; the last stop is always forced to zero so a glow can never show an
+ * edge at the boundary of its box.
+ */
+export function RadialGlow({
+  cx,
+  cy,
+  r,
+  color,
+  stops,
+  opacity = 1,
+}: {
+  cx: number;
+  cy: number;
+  r: number;
+  color: string;
+  /** Alpha at 0%, 33%, 66% of the radius. Falls to 0 at the rim. */
+  stops: [number, number, number];
+  opacity?: number;
+}) {
+  // Gradient ids are document-global and several lamps are lit at once.
+  const id = `glow${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  return (
+    <View style={{ position: 'absolute', left: cx - r, top: cy - r, width: r * 2, height: r * 2, opacity }} pointerEvents="none">
+      <Svg width="100%" height="100%" viewBox="0 0 100 100">
+        <Defs>
+          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={color} stopOpacity={stops[0]} />
+            <Stop offset="0.33" stopColor={color} stopOpacity={stops[1]} />
+            <Stop offset="0.66" stopColor={color} stopOpacity={stops[2]} />
+            <Stop offset="1" stopColor={color} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={50} cy={50} r={50} fill={`url(#${id})`} />
+      </Svg>
+    </View>
+  );
+}
 
 /** Shared key/fill/grade pass. It keeps separate assets in one light family. */
 export function WorldLighting({

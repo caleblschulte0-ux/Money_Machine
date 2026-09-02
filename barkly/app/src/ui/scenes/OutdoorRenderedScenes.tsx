@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, ColorValue, Easing, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { DIORAMA } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
 import { elevation, radius } from '../theme';
 import { CHROME_BOTTOM } from '../layout';
 import {
+  RadialGlow,
   WorldLayer,
   WorldLighting,
   WorldMotion,
@@ -31,6 +32,11 @@ const BEACH_LIFEGUARD = require('../../../assets/world/beach/props/lifeguard.png
 const BEACH_DUNE = require('../../../assets/world/beach/props/dune.png');
 const BEACH_CASTLE = require('../../../assets/world/beach/props/castle.png');
 const BEACH_PALM = require('../../../assets/world/beach/props/palm.png');
+
+/** Sun/moon geometry, shared by the body and the box its halo needs. */
+const SUN_R = 25;
+const SUN_INSET = 34;
+const SKY_BODY = SUN_R * 2 * 3.4;
 
 /**
  * Canonical stage blocking. These are deliberate silhouette lanes, not a pile
@@ -71,6 +77,74 @@ function useAmbientLoop(duration: number, delay = 0) {
 }
 
 /*
+ * THE SUN IS A LIGHT, NOT A STICKER.
+ *
+ * It was a 50px `borderRadius: pill` View filled with one flat colour, and on
+ * the contact sheet that is exactly what it read as -- a UI dot parked in the
+ * corner of every outdoor scene. Nothing in the sky acknowledged it, so the
+ * brightest object in the frame had no relationship to the frame.
+ *
+ * A radial bloom fixes that for the cost of one shared `RadialGlow`: the disc
+ * keeps its authored position and size, and a halo 3.4x its radius fades to
+ * nothing well inside the canvas so there is never a hard edge to the glow.
+ */
+/**
+ * A crescent as ONE path: disc O minus disc C, with no mask and nothing
+ * painted in a fake sky colour.
+ *
+ * The two circles meet at P1/P2 (standard circle-circle intersection). The
+ * crescent's boundary is the MAJOR arc of O -- the side away from the cutter,
+ * which is the major arc whenever the cutter's centre is outside the chord,
+ * i.e. `a > 0` -- followed by the MINOR arc of C, the side facing O's centre.
+ * Sweep flags follow from that and hold for any offset satisfying `a > 0`:
+ * clockwise on the outer, anticlockwise on the inner.
+ *
+ * Written out because both alternatives are worse. An SVG `<Mask>` does not
+ * survive react-native-svg's web renderer -- the moon shipped as a full flat
+ * disc with no bite in it -- and painting the bite in `skyNightA`, which is
+ * what this replaced, leaves a visibly lighter round patch wherever the night
+ * gradient is not exactly that colour, which is most of the sky.
+ */
+function crescentPath(cx: number, cy: number, R: number, r: number, dx: number, dy: number): string {
+  const d = Math.hypot(dx, dy);
+  const a = (d * d + R * R - r * r) / (2 * d);
+  const h = Math.sqrt(Math.max(0, R * R - a * a));
+  const ux = dx / d;
+  const uy = dy / d;
+  const nx = -uy;
+  const ny = ux;
+  const x1 = cx + a * ux + h * nx;
+  const y1 = cy + a * uy + h * ny;
+  const x2 = cx + a * ux - h * nx;
+  const y2 = cy + a * uy - h * ny;
+  return `M${x1} ${y1}A${R} ${R} 0 1 1 ${x2} ${y2}A${r} ${r} 0 0 0 ${x1} ${y1}Z`;
+}
+
+function SkyBody({ night, discTop }: { night: boolean; discTop: number }) {
+  const disc = night ? DIORAMA.goldLight : DIORAMA.lemon;
+  const glow = night ? DIORAMA.goldGlow : DIORAMA.butter;
+  const c = SKY_BODY / 2;
+  return (
+    <View style={[styles.skyBody, { top: discTop - (SKY_BODY / 2 - SUN_R) }]} pointerEvents="none">
+      <RadialGlow
+        cx={c}
+        cy={c}
+        r={c}
+        color={glow}
+        stops={night ? [0.34, 0.17, 0.05] : [0.52, 0.26, 0.09]}
+      />
+      <Svg width="100%" height="100%" viewBox={`0 0 ${SKY_BODY} ${SKY_BODY}`}>
+        {night ? (
+          <Path d={crescentPath(c, c, SUN_R, SUN_R * 0.92, 15, -9)} fill={disc} opacity={0.96} />
+        ) : (
+          <Circle cx={c} cy={c} r={SUN_R} fill={disc} />
+        )}
+      </Svg>
+    </View>
+  );
+}
+
+/*
  * `chromeBottom` is where the HUD ends, passed in the way HomeScene already
  * receives it. The sun used to sit at `Math.max(66, horizon - 126)` and got
  * tucked under the location tabs; the first fix raised that floor to a literal
@@ -89,17 +163,7 @@ function SceneSky({ band, horizon, chromeBottom }: { band: SkyBand; horizon: num
   return (
     <View style={styles.fill}>
       <LinearGradient colors={SKY[band]} style={styles.fill} />
-      <View
-        style={[
-          styles.sun,
-          {
-            top: Math.max(chromeBottom + 26, horizon - 96),
-            backgroundColor: night ? DIORAMA.goldLight : DIORAMA.lemon,
-            opacity: night ? 0.82 : 1,
-          },
-        ]}
-      />
-      {night && <View style={[styles.moonCutout, { top: Math.max(chromeBottom + 18, horizon - 104), backgroundColor: DIORAMA.skyNightA }]} />}
+      <SkyBody night={night} discTop={Math.max(chromeBottom + 26, horizon - 96)} />
       {/*
         A CLOUD, not a capsule.
 
@@ -370,36 +434,22 @@ function TownNightLights({
         return (
           <React.Fragment key={`lamp${i}`}>
             {/*
-              Three passes instead of two, each smaller and stronger. A single
-              flat disc at one opacity has a visible circular EDGE, which reads
-              as a decal; stacking them approximates the falloff a radial
-              gradient would give if react-native-web had one.
+              ONE glow with a real falloff, not three stacked discs.
+
+              This was three concentric filled circles, each smaller and
+              stronger, justified by "react-native-web has no radial gradient".
+              react-native-svg does, and it is already in every scene in this
+              file -- so what shipped was three visible circular edges, which
+              is exactly why the street lamps read as ringed UI toggles in the
+              night contact sheet. The pulse now breathes the whole light
+              instead of only its outermost ring.
             */}
             <Animated.View
-              style={[
-                styles.lampHalo,
-                {
-                  left: cx - bulb * 2.4,
-                  top: lampTop - bulb * 1.7,
-                  width: bulb * 4.8,
-                  height: bulb * 4.8,
-                  borderRadius: bulb * 2.4,
-                  opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.10, 0.15] }),
-                },
-              ]}
-            />
-            <View
-              style={[
-                styles.lampHalo,
-                { left: cx - bulb * 1.55, top: lampTop - bulb * 0.95, width: bulb * 3.1, height: bulb * 3.1, borderRadius: bulb * 1.55, opacity: 0.22 },
-              ]}
-            />
-            <View
-              style={[
-                styles.lampHalo,
-                { left: cx - bulb * 1.0, top: lampTop - bulb * 0.35, width: bulb * 2.0, height: bulb * 2.0, borderRadius: bulb, opacity: 0.55 },
-              ]}
-            />
+              style={[styles.fill, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.78, 1] }) }]}
+              pointerEvents="none"
+            >
+              <RadialGlow cx={cx} cy={lampTop + bulb * 0.7} r={bulb * 3.0} color={DIORAMA.butterDeep} stops={[0.62, 0.30, 0.10]} />
+            </Animated.View>
             <View
               style={[
                 styles.lampBulb,
@@ -438,6 +488,8 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const horizon = clamp(ground - 458, 116, 154);
   const sidewalk = Math.max(372, ground - 116);
   const walk = night ? DIORAMA.townSidewalkNight : DIORAMA.townSidewalkDay;
+  const walkFar = night ? DIORAMA.townSidewalkNightFar : DIORAMA.townSidewalkDayFar;
+  const walkNear = night ? DIORAMA.townSidewalkNightNear : DIORAMA.townSidewalkDayNear;
   const walkEdge = night ? DIORAMA.townSidewalkNightEdge : DIORAMA.townSidewalkDayEdge;
   const road = night ? DIORAMA.townRoadNight : DIORAMA.townRoadDay;
   const roadEdge = night ? DIORAMA.townRoadNightEdge : DIORAMA.townRoadDayEdge;
@@ -470,11 +522,52 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
           <Text style={[styles.shopSignText, { fontSize: Math.max(9, 11 * scale) }]}>BARKLY'S</Text>
         </View>
       </WorldLayer>
+      {/*
+        THE PAVEMENT IS PAVED.
+        Measured, Town's single biggest surface was #C0C090 at 19.3% OF THE
+        WHOLE FRAME in one flat colour at 0.30 chroma -- a fifth of the scene
+        painted as one slab, which is the real reason Town read weakest at
+        every hour of the day. It was never the sky: Park's dominant surface is
+        24% of its frame at 0.628, and it reads rich because it is a GRADIENT
+        with tufts on it, spread across several tones rather than one.
+        So the pavement gets what the grass already had -- a far-to-near ramp
+        so the ground recedes, and paving joints that converge with it so the
+        surface has structure to catch the light instead of being a fill.
+      */}
       <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
+        <Defs>
+          <SvgLinearGradient id="townWalk" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={walkFar} />
+            <Stop offset="0.55" stopColor={walk} />
+            <Stop offset="1" stopColor={walkNear} />
+          </SvgLinearGradient>
+        </Defs>
         <Rect x={0} y={sidewalk + 9} width={420} height={canvasHeight - sidewalk} fill={walkEdge} />
-        <Rect x={0} y={sidewalk} width={420} height={canvasHeight - sidewalk - 9} fill={walk} />
+        <Rect x={0} y={sidewalk} width={420} height={canvasHeight - sidewalk - 9} fill="url(#townWalk)" />
         <Path d={`M0 ${sidewalk + 7}H420`} stroke={DIORAMA.white} strokeWidth={7} opacity={night ? 0.05 : 0.22} />
-        <Path d={`M104 ${sidewalk}L142 ${canvasHeight}M310 ${sidewalk}L342 ${canvasHeight}`} stroke={walkEdge} strokeWidth={2} opacity={0.16} />
+        {/*
+          Paving joints. They fan out from the vanishing point the same way the
+          road markings do, so the ground has a direction; the horizontals space
+          out toward the viewer for the same reason.
+        */}
+        {[-150, -40, 66, 176, 290, 400, 512].map((x) => (
+          <Path
+            key={`joint${x}`}
+            d={`M${210 + (x - 210) * 0.62} ${sidewalk + 6}L${x} ${ground + 96}`}
+            stroke={walkEdge}
+            strokeWidth={1.6}
+            opacity={night ? 0.16 : 0.26}
+          />
+        ))}
+        {[16, 40, 72].map((dy, i) => (
+          <Path
+            key={`course${dy}`}
+            d={`M0 ${sidewalk + dy}H420`}
+            stroke={walkEdge}
+            strokeWidth={1.4}
+            opacity={(night ? 0.12 : 0.20) - i * 0.03}
+          />
+        ))}
         <Rect x={0} y={ground + 92} width={420} height={canvasHeight - ground - 92} fill={roadEdge} />
         <Rect x={0} y={ground + 100} width={420} height={canvasHeight - ground - 100} fill={road} />
         <Path d={`M20 ${ground + 128}H112M166 ${ground + 128}H258M312 ${ground + 128}H402`} stroke={DIORAMA.cream} strokeWidth={7} strokeLinecap="round" opacity={night ? 0.10 : 0.38} />
@@ -625,8 +718,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
 
 const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  sun: { position: 'absolute', right: 34, width: 50, height: 50, borderRadius: radius.pill },
-  moonCutout: { position: 'absolute', right: 20, width: 48, height: 48, borderRadius: radius.pill },
+  skyBody: { position: 'absolute', right: SUN_INSET - (SKY_BODY / 2 - SUN_R), width: SKY_BODY, height: SKY_BODY },
   cloud: { position: 'absolute', left: 23, width: 150, height: 48 },
   cloudFar: { position: 'absolute', right: 34, width: 82, height: 28 },
   cloudShade: { position: 'absolute', borderRadius: radius.pill, backgroundColor: DIORAMA.aquaLight },
@@ -637,7 +729,6 @@ const styles = StyleSheet.create({
   butterflyLeft: { position: 'absolute', left: 1, top: 3, width: 10, height: 7, borderRadius: radius.pill, backgroundColor: DIORAMA.lemon, transform: [{ rotate: '-24deg' }] },
   butterflyRight: { position: 'absolute', right: 1, top: 3, width: 10, height: 7, borderRadius: radius.pill, backgroundColor: DIORAMA.coralLight, transform: [{ rotate: '24deg' }] },
   shopSpill: { position: 'absolute', borderRadius: radius.pill },
-  lampHalo: { position: 'absolute', backgroundColor: DIORAMA.butterDeep },
   lampBulb: { position: 'absolute', backgroundColor: DIORAMA.goldLight, opacity: 0.96 },
   lampSpill: { position: 'absolute', transform: [{ scaleX: 1.1 }] },
   townGlint: { position: 'absolute', left: 0, width: 18, height: 190, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
