@@ -176,8 +176,13 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
 
   const treeW = 204 * scale;
   const treeH = 292 * scale;
-  const benchW = 134 * scale;
-  const benchH = 98 * scale;
+  // Pushed back and down a size. The bench sat at the same left anchor and
+  // roughly the same height as the DIG mound, and on a real handset -- where
+  // the stage is shorter than any harness viewport -- the two simply stacked
+  // on top of each other. The bench is background; the mound is a CONTROL, so
+  // the bench is the one that yields.
+  const benchW = 116 * scale;
+  const benchH = 85 * scale;
   const hedgeW = 142 * scale;
   const hedgeH = 72 * scale;
   const wideInset = Math.max(14, (width - 720) / 2);
@@ -232,7 +237,7 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
         <WorldObject source={PARK_TREE} right={treeRight} top={horizon - 80} width={treeW * 0.96} height={treeH * 0.96} night={night} depth={0.52} ambient="sway" motionDelay={900} flip contactShadow />
       </WorldLayer>
       <WorldLayer name="props">
-        <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 145} width={benchW} height={benchH} night={night} depth={0.78} contactShadow />
+        <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 92} width={benchW} height={benchH} night={night} depth={0.78} contactShadow />
       </WorldLayer>
       <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
       <WorldLighting ground={ground} night={night} />

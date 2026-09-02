@@ -90,11 +90,34 @@ describe('hero-first phone composition', () => {
     expect(stageHeight(390, mode)).toBeGreaterThan(280);
   });
 
-  it('gives idle portrait space back to the world', () => {
-    const active = stageHeight(844, 'narrowPortrait', true);
+  /*
+   * This test used to assert the OPPOSITE -- that the idle stage is at least
+   * 45px taller than the speaking stage, "giving idle portrait space back to
+   * the world". That was a deliberate decision and it is being reversed on
+   * real-device evidence, so the reasoning is worth recording rather than
+   * silently flipping.
+   *
+   * Because spriteScale and groundY are both derived from stage height, a
+   * stage that grows at idle means Barkly CHANGES SIZE and the ground moves
+   * under him every time a speech bubble opens and closes. In a screenshot
+   * that is invisible. On an actual phone -- where Safari's bottom bar has
+   * already taken ~90px -- it reads as the entire scene lurching whenever he
+   * talks, which is the single most-reported spacing complaint.
+   *
+   * Reserving the worst case costs a few tens of pixels of world at idle and
+   * buys a composition that never moves. A speech bubble is not a layout
+   * event.
+   */
+  it('never resizes the world when Barkly speaks', () => {
+    const speaking = stageHeight(844, 'narrowPortrait', true);
     const idle = stageHeight(844, 'narrowPortrait', false);
-    expect(idle - active).toBeGreaterThanOrEqual(45);
-    expect(idle).toBeGreaterThan(650);
+    expect(idle).toBe(speaking);
+    expect(idle).toBeGreaterThan(600);
+
+    // ...and therefore he does not change size, and the ground stays put.
+    expect(spriteScale(844, 390, 'narrowPortrait', false)).toBe(
+      spriteScale(844, 390, 'narrowPortrait', true),
+    );
   });
 
   it('uses the care dock as a controlled foreground overlap', () => {

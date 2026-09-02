@@ -79,6 +79,24 @@ export function conversationHeight(dialogueExpanded: boolean, composerExpanded =
   if (composerExpanded) return CONTROLS_HEIGHT;
   return IDLE_CONVERSATION_HEIGHT;
 }
+
+/**
+ * The space the conversation is ALWAYS allowed to occupy.
+ *
+ * The world used to be laid out against the CURRENT conversation height, so
+ * the moment Barkly spoke the stage shrank -- and because spriteScale and
+ * groundY both derive from stage height, he changed size and the ground moved
+ * under him every single time he opened his mouth. On a real handset, with
+ * Safari's bottom bar already eating ~90px, that read as the whole scene
+ * lurching whenever a bubble appeared.
+ *
+ * Reserving the worst case once costs the world a few tens of pixels at idle
+ * and buys a composition that never moves. A speech bubble is not a layout
+ * event.
+ */
+export function conversationReserve(composerExpanded = false): number {
+  return Math.max(DIALOGUE_HEIGHT, conversationHeight(false, composerExpanded));
+}
 export const SPEECH_MAX_LINES = 3;
 
 export function contentFrameWidth(width: number, mode: LayoutMode): number {
@@ -114,7 +132,9 @@ export function stageHeight(
   if (isLandscapeMode(mode)) return Math.max(230, screenHeight - STATUS_HEIGHT - 18);
   return Math.max(
     212,
-    screenHeight - CHROME_BOTTOM - conversationHeight(dialogueExpanded, composerExpanded) - DIALOGUE_GAP * 2 - 10,
+    // conversationReserve, not conversationHeight: the stage is sized for the
+    // largest the conversation can get, so it never resizes mid-sentence.
+    screenHeight - CHROME_BOTTOM - conversationReserve(composerExpanded) - DIALOGUE_GAP * 2 - 10,
   );
 }
 

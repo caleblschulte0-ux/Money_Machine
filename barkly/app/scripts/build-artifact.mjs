@@ -122,6 +122,33 @@ try {
   for (const [url, data] of assets) html = html.split(url).join(data);
   html = html.replace(/<link[^>]+rel="(icon|shortcut icon)"[^>]*>/g, '');
 
+  /*
+   * MAKE IT OPEN LIKE AN APP.
+   *
+   * Added on real-device evidence: on an iPhone this ran as a Safari tab, so
+   * the browser's bottom URL bar ate roughly 90px of the height the layout
+   * had already committed to, and the whole composition was squeezed. These
+   * tags let "Add to Home Screen" launch it standalone -- no address bar, no
+   * toolbar, full height.
+   *
+   * `viewport-fit=cover` is the load-bearing one. Without it the CSS
+   * env(safe-area-inset-*) values are ZERO, which means useSafeAreaInsets --
+   * which drives groundY, the chrome padding and the bottom gap -- has been
+   * getting nothing to work with, and the layout was reserving space for a
+   * notch it could not measure.
+   */
+  const APP_HEAD = [
+    '<meta name="mobile-web-app-capable" content="yes" />',
+    '<meta name="apple-mobile-web-app-capable" content="yes" />',
+    '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />',
+    '<meta name="apple-mobile-web-app-title" content="Barkly" />',
+    '<meta name="theme-color" content="#F6D96B" />',
+  ].join('\n    ');
+  html = html.replace(
+    /<meta name="viewport"[^>]*>/,
+    `<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, shrink-to-fit=no" />\n    ${APP_HEAD}`,
+  );
+
   // --out may name a directory that does not exist yet: the Pages deploy writes
   // dist/index.html and dist/playtest/index.html, and only one of those has a
   // parent already.
