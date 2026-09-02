@@ -48,31 +48,49 @@ VOICE = "../vo/voices/en_US-ryan-high.onnx"
 # Still no date, no measurement, no attribution, no traction, no raise,
 # no partnership, no deployment claim and no call to action.
 LINES = [
-    # --- ACT 1: the problem. Establish the place in the first sentence;
-    # a viewer told where they are 28 seconds in has spent 28 seconds lost.
-    ("sign", 0.8, "This is Falls Park, in Sioux Falls."),
-    # r101 was right that the first version of this line -- "Everything
-    # that happened here is on a sign like this one" -- was too absolute
-    # to be true of any interpretive sign, and that it undercut a film
-    # otherwise careful about claims. This is the operator's own phrasing
-    # from the cut he approved, and it is accurate: the signs carry some
-    # of it, not all of it.
-    ("sign", 3.4, "But today, the story lives on plaques and little signs."),
-    ("past", 0.6, "And most people walk right past."),
-    ("rail", 0.3, "The story is right there. You just can't see it."),
-    # --- ACT 2: what it is, and the act of using it.
-    ("prod", 0.4, "Open Range Interactive is building AR glasses made for travel."),
-    ("on",   0.6, "You put them on, and the place starts talking."),
-    ("lock", 0.4, "They know where you're standing, and what you're looking at."),
-    # --- ACT 3: the demo. The era lines are unchanged from v15 except the
-    # first, which no longer has to introduce the location -- act one did
-    # that -- so it can just be the instruction that starts the scrub.
-    ("open", 1.4, "So take the falls, and run them backwards."),
-    # `reach`, v18. No rail, no menu -- he walks, and the past is where he
-    # stops. This is the one sentence in the whole script that states the
-    # operator's own line from the concept document in different words:
-    # "walk to chapter 2," not "tap chapter 2."
-    ("reach", 0.6, "He walks. And the place answers where he stops."),
+    # --- v19: OFFSETS RECOMPUTED FROM MEASURED PIPER DURATIONS, not
+    # estimated. Operator, on v18: "way too much b roll on the front end
+    # ... we don't breakdown what makes our product special." Fixing the
+    # PICTURE (shorter beats, see spec_one.py) is only half of it -- the
+    # ORIGINAL v18 sentences, spoken at their natural length, would have
+    # run the narration further and further behind the faster cuts and
+    # eventually decoupled the words from what they describe. Every line
+    # below was synthesized once to measure its real duration, then
+    # placed so line N+1 starts only after line N's audio actually ends
+    # (0.05-0.1s margin) -- not after N's BEAT ends, which is a different
+    # number now that beats are this short. Two lines were cut outright
+    # (`rail`'s, and the "plaques and little signs" second sentence on
+    # `sign`) rather than compressed into something that no longer scans;
+    # the picture still shows the plaque, so the point survives on screen
+    # even though the VO no longer spells it out.
+    #
+    # ACT 3 onward (dak/more/ice/mam/now/off/walk) is UNCHANGED from v18
+    # -- same text, same relative offsets -- because `reach`'s line
+    # (below) still finishes with margin before dak's existing 1.9s
+    # offset lands, verified by measurement, not assumption.
+    ("sign", 0.10, "This is Falls Park, in Sioux Falls."),
+    ("past", 0.10, "And most people walk right past."),
+    # --- ACT 2: what it is, and the act of using it. `rail` and its line
+    # are GONE (v19) -- see spec_one.py's note; the plaque is still on
+    # screen during `sign`, so the "unseen story" point is not lost, only
+    # unspoken a third time.
+    ("prod", 0.10, "Open Range Interactive is building AR glasses made for travel."),
+    ("on",   1.13, "You put them on, and the place starts talking."),
+    ("lock", 0.95, "They know where you're standing, and what you're looking at."),
+    # --- THE BREAKDOWN. Was "So take the falls, and run them
+    # backwards." -- a transition, not a claim. Replaced with the
+    # operator's OWN vetted capability line from the originally approved
+    # 34s cut (ori_promo/README.md), reused verbatim rather than
+    # invented: paired with `lock`'s line above, this is two consecutive,
+    # concrete statements of what the device does, immediately before the
+    # film proves both by demonstration.
+    ("open", 0.90, "The history, pinned to the exact spot where it happened."),
+    # `reach`, v18, retimed for v19. No rail, no menu -- he walks, and the
+    # past is where he stops. This is the one sentence in the whole
+    # script that states the operator's own line from the concept
+    # document in different words: "walk to chapter 2," not "tap chapter
+    # 2."
+    ("reach", 0.73, "He walks. And the place answers where he stops."),
     ("dak",  1.9, "Before the mill, people lived along this water."),
     # the rail does not move for this one -- he turned his head, he did
     # not change the year, and the line has to say so or the beat reads as

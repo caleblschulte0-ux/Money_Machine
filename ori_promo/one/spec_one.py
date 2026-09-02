@@ -39,63 +39,77 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 75.0
+TOTAL = 58.5
 
 # beat, clip, in-point, start, dur, what the beat does
+#
+# ---- v19: THE FRONT END WAS TOO LONG. Operator, on v18: "way too much
+# b roll on the front end, we don't even see an ai overlay until the
+# last half of the video, and we don't breakdown what makes our product
+# special." All three are correct and measurable: v18 ran 36.0 of 75.0
+# seconds (48%) before the first generated overlay. The operator's own
+# ORIGINALLY APPROVED 34s cut (ori_promo/README.md) reached its first AI
+# overlay at 14.5 of 34s (43%) and ran THREE distinct capability beats
+# back to back. v18 had drifted past that pace across six versions of
+# additions nobody re-checked against the total.
+#
+# THE FIX IS COMPRESSION, NOT A REWRITE. Same clips, same in-points where
+# a beat carries generated imagery (changing those would mean re-gating
+# figure placement), shorter durations everywhere else, and `rail` CUT
+# entirely -- it was a third establishing beat making the same point
+# `sign` and `past` already make (the story is here and unseen), and
+# every second spent there is a second not spent on the product. Every
+# shortened window was re-gated (shotqc.py, unmodified): all PASS, no
+# flags, same as the durations they replace.
+#
+# THE MISSING BREAKDOWN: `open`'s line changes from "So take the falls,
+# and run them backwards" -- a transition, not a claim -- to the
+# operator's OWN approved capability language from that original cut:
+# "the history, pinned to the exact spot where it happened." Paired with
+# `lock`'s unchanged "They know where you're standing, and what you're
+# looking at," that is two consecutive, concrete statements of what the
+# device does, immediately before the film proves both of them. Nothing
+# invented -- this is the operator's own vetted line, reused, not new
+# copy written on his behalf.
 BEATS = [
- # ---- ACT 1: THE PROBLEM. Added v16 on the operator's ruling that the
- # film "has a third of what I needed" and must play to someone with no
- # idea what this is. The era demo was the whole picture; it answered
- # WHAT IT DOES and never WHAT IT IS, WHO WEARS IT, or WHY.
- # None of these beats carry generated imagery. They are the operator's
- # own footage, unmodified, and they exist to make the demo legible.
- ("sign", "6796", 29.0,  0.0, 6.5, "how the story is told today: a man reading a plaque"),
- # in-point 22.0, not 3.5. r101: "a large cropped person/body entering at
- # the far right/top edge... looks accidental". It did -- a headless torso
- # walking out of frame. 22.0 is the same locked-off plate (0.0% drift)
- # with the walkers small and whole in the middle distance, which is what
- # the line over it is actually about.
- # 28.8 looked better still -- two people walking right through the
- # foreground, literally the narration -- and the gate refused it at 75.8%
- # drift with a JOLT. The camera moves there. Recorded so nobody re-picks
- # it off a thumbnail.
- ("past", "6808", 22.0,  6.5, 4.0, "and the park going by around it, nobody stopping"),
- ("rail", "6790", 24.0, 10.5, 4.0, "the interpretive panel on the railing, the view right behind it"),
- # ---- ACT 2: THE PRODUCT. What it is, on a face, and the act of using it.
- # in-point 7.0, not 9.0. IMG_6799 is only 12.4s long and 9.0+5.0 runs
- # off the end of it; ffmpeg would have handed back a short beat and the
- # renderer pads, so this would have shipped as a freeze nobody flagged.
- ("prod", "6799",  7.0, 14.5, 5.0, "the wearer, the glasses on him, the whole park in front"),
- # ---- ONE CONTINUOUS SHOT, CUT INTO THREE BEATS. `on`, `lock` and `open`
- # are consecutive windows of IMG_6806 with no gap: 8.4-12.4, 12.4-16.4,
- # 16.4-21.4, all under 0.6% drift. So the whole causal chain -- he
- # reaches up to the temple, the glasses name what he is looking at, the
- # era rail arrives -- plays without a single cut, on one man in one
- # place.
- # The first attempt put the activation on IMG_6794@26.5 and it was
- # simply the wrong take: he turns and gestures at the camera with both
- # arms, which reads as "hey, look at this", not as operating a device.
- # 6806@8.8-10.0 is an unambiguous reach to the side of the head. Buying
- # that gesture is what moved `open` off its old 6.0 in-point -- same
- # clip, same locked-off framing, 10 seconds later in the take, so the
- # shot the operator approved is the shot that still plays.
- ("on",   "6806",  8.4, 19.5, 4.0, "he raises a hand to the temple — he is switching it on"),
- ("lock", "6806", 12.4, 23.5, 4.0, "the glasses recognise the falls and name them"),
- # ---- ACT 3: THE DEMO. LOCKED. Operator, on v15: "all the AI parts look
- # good enough to pass. Now don't mess with those anymore... don't lose
- # the AI scenes that you did AI overlays on because those are all... I
- # like those." These six beats are unchanged from v15 except that their
- # START TIMES shift by +27.5 to sit behind the new first act. Every
- # in-point, duration, figure, scale, grade and label is identical.
- ("open", "6806", 16.4, 27.5, 5.0, "the falls as they are, recognised — no rail, no menu"),
- # ---- `reach`: walking is the trigger now, not a drawn control. v18.
- # IMG_6797@40.0, gated clean (see the era-rail note above): mid 1.76
- # tail 1.35 ratio 0.77 drift 11.1% peak 4.0, no flags, never used
- # elsewhere in this film. UI stays off -- he has not switched anything
- # back on, he is simply walking -- and the past resolves on his arrival
- # in `dak`, not on a marker settling.
- ("reach", "6797", 40.0, 32.5, 3.5, "he walks, and the past is where he arrives"),
- ("dak",  "6804", 10.0, 36.0, 6.5, "before the mill, the family answers where he has stopped"),
+ # ---- ACT 1: THE PROBLEM. Fast. Two beats, not three.
+ ("sign", "6796", 29.0,  0.0, 3.5, "how the story is told today: a man reading a plaque"),
+ # in-point 22.0, not 3.5 (r101: a headless torso walked out of frame at
+ # 3.5). Same note as v16/v17/v18 -- kept here so nobody re-picks the bad
+ # in-point off a thumbnail. 28.8 gates DRIFT+JOLT; still refused.
+ ("past", "6808", 22.0,  3.5, 2.5, "and the park going by around it, nobody stopping"),
+ # `rail` IS GONE. v19. It was a third shot making the point `sign` and
+ # `past` already make. Its VO line is gone with it, not folded into
+ # another beat -- the film does not need to say "the story is right
+ # there, you just can't see it" a third way when it has already said it
+ # twice and is one beat from showing the product that fixes it.
+ # ---- ACT 2: THE PRODUCT. What it is, on a face, and the act of using
+ # it -- compressed, but the SAME footage: in-point 7.0 on IMG_6799,
+ # same reason as always (the clip is only 12.4s long).
+ ("prod", "6799",  7.0,  6.0, 3.0, "the wearer, the glasses on him, the whole park in front"),
+ # ---- ONE CONTINUOUS SHOT, STILL CUT INTO THREE BEATS, JUST SHORTER.
+ # `on`, `lock` and `open` are consecutive windows of IMG_6806 with NO
+ # GAP -- 8.4-10.7, 10.7-13.2, 13.2-16.4 -- so the in-points are DERIVED
+ # from each other's end, not reused from v18's longer windows; reusing
+ # the old fixed in-points here would have jump-cut within one take. The
+ # temple-reach gesture itself is a fixed point in the SOURCE footage
+ # (8.6-9.0 on IMG_6806's own clock) and both new durations still cover
+ # it, so the causal chain -- reach, recognise, reveal -- is intact, just
+ # faster.
+ ("on",   "6806",  8.4,  9.0, 2.3, "he raises a hand to the temple — he is switching it on"),
+ ("lock", "6806", 10.7, 11.3, 2.5, "the glasses recognise the falls and name them"),
+ ("open", "6806", 13.2, 13.8, 3.2, "the history, pinned to the exact spot — the capability, stated"),
+ # ---- `reach`: walking is the trigger, not a drawn control. v18, timing
+ # only compressed in v19. IMG_6797@40.0, gated clean at every duration
+ # tried (see rounds/r106): mid 1.87 tail 1.76 ratio 0.94 drift 7.8% peak
+ # 4.0 at 2.5s, no flags.
+ ("reach", "6797", 40.0, 17.0, 2.5, "he walks, and the past is where he arrives"),
+ # ---- ACT 3: THE DEMO. LOCKED, and untouched again in v19. Operator, on
+ # v15: "all the AI parts look good enough to pass. Now don't mess with
+ # those anymore." Every in-point, duration, figure, scale, grade and
+ # label below is byte-identical to v18 -- only the START TIME moves,
+ # because Act 1/2 got shorter in front of it.
+ ("dak",  "6804", 10.0, 19.5, 6.5, "before the mill, the family answers where he has stopped"),
  # SAME ERA, DIFFERENT PLACE. The operator asked for "one more that has
  # Indians and shit", and the useful way to add it is not a second
  # unrelated tableau -- it is to LOOK AROUND inside the era already
@@ -116,10 +130,10 @@ BEATS = [
  # the falls, the shelf, the valley -- were all shot as PANS. The only
  # static plates with ground at figure scale are the hero shelf (6804)
  # and this lawn below the mill ruin (6805, 0.2% drift).
- ("more", "6805", 70.3, 42.5, 4.5, "same era, a second group up by the mill ruin"),
- ("ice",  "6791", 14.0, 47.0, 4.0, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 51.0, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 57.0, 5.0, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
+ ("more", "6805", 70.3, 26.0, 4.5, "same era, a second group up by the mill ruin"),
+ ("ice",  "6791", 14.0, 30.5, 4.0, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 34.5, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 40.5, 5.0, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
@@ -129,9 +143,9 @@ BEATS = [
  # of that plate. 6803 is the overlook: him at the rail, the whole park
  # and the falls in front of him, no signage, no gesture -- a man simply
  # looking at a place, which is the entire closing claim.
- ("off",  "6803",  2.5, 62.0, 4.5, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 66.5, 4.5, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 71.0, 4.0, "held from walk's last frame — which is PRESENT DAY"),
+ ("off",  "6803",  2.5, 45.5, 4.5, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 50.0, 4.5, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 54.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -152,7 +166,7 @@ WEARER_BEATS = {"mam", "now"}
 # them. The last act is the same in reverse: he has looked, the film is
 # over, and a HUD on the closing frames would claim the device is still
 # running when the point is that you just look.
-UI_OFF = {"sign", "past", "rail", "prod", "reach", "off", "walk"}
+UI_OFF = {"sign", "past", "prod", "reach", "off", "walk"}
 
 # beat: (title, subtitle, appear_t[, scale]) — the film's own voice, drawn
 # bottom-left with a scrim, no reticle and no leader line.
