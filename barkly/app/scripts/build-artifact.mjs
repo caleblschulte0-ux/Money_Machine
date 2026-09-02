@@ -140,7 +140,17 @@ try {
   const APP_HEAD = [
     '<meta name="mobile-web-app-capable" content="yes" />',
     '<meta name="apple-mobile-web-app-capable" content="yes" />',
-    '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />',
+    /*
+     * NOT black-translucent. That runs the app UNDER the iOS status bar and
+     * relies on safe-area insets to push the chrome clear -- and on web those
+     * insets come back ZERO, so contentTop falls through to its 12px default
+     * and the clock, signal and battery print straight on top of the coin
+     * pill and the Pack button. Confirmed on device.
+     *
+     * `default` makes iOS reserve the status bar itself and start the web view
+     * below it, which needs no env() support to be correct.
+     */
+    '<meta name="apple-mobile-web-app-status-bar-style" content="default" />',
     '<meta name="apple-mobile-web-app-title" content="Barkly" />',
     '<meta name="theme-color" content="#F6D96B" />',
   ].join('\n    ');
