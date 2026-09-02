@@ -39,7 +39,7 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 58.5
+TOTAL = 47.5
 
 # beat, clip, in-point, start, dur, what the beat does
 #
@@ -98,42 +98,38 @@ BEATS = [
  # faster.
  ("on",   "6806",  8.4,  9.0, 2.3, "he raises a hand to the temple — he is switching it on"),
  ("lock", "6806", 10.7, 11.3, 2.5, "the glasses recognise the falls and name them"),
- ("open", "6806", 13.2, 13.8, 3.2, "the history, pinned to the exact spot — the capability, stated"),
+ ("open", "6806", 13.2, 13.8, 3.2, "anchored to the real place — the capability, stated correctly"),
  # ---- `reach`: walking is the trigger, not a drawn control. v18, timing
  # only compressed in v19. IMG_6797@40.0, gated clean at every duration
  # tried (see rounds/r106): mid 1.87 tail 1.76 ratio 0.94 drift 7.8% peak
  # 4.0 at 2.5s, no flags.
  ("reach", "6797", 40.0, 17.0, 2.5, "he walks, and the past is where he arrives"),
- # ---- ACT 3: THE DEMO. LOCKED, and untouched again in v19. Operator, on
- # v15: "all the AI parts look good enough to pass. Now don't mess with
- # those anymore." Every in-point, duration, figure, scale, grade and
- # label below is byte-identical to v18 -- only the START TIME moves,
- # because Act 1/2 got shorter in front of it.
- ("dak",  "6804", 10.0, 19.5, 6.5, "before the mill, the family answers where he has stopped"),
- # SAME ERA, DIFFERENT PLACE. The operator asked for "one more that has
- # Indians and shit", and the useful way to add it is not a second
- # unrelated tableau -- it is to LOOK AROUND inside the era already
- # selected. The rail does not move on this beat, which is the point: the
- # wearer has not changed time, he has turned his head, and the past is
- # still there when he does. That is a product claim the film had not yet
- # made.
- # PLATE CHANGED, and the reason is a rule now enforced in code.
- # OPERATOR on v11: "The Indian one looks like shit ... don't use a
- # panning shot for the ai overlays." IMG_6687@24 drifts 16.7% over this
- # beat. I picked it on composition and never looked at the drift I had
- # already measured. A tracked figure on a panning plate slides against
- # ground that is itself moving, and no amount of anchoring hides it.
- # render_one now REFUSES to render a beat that places a figure on a
- # plate over FIGURE_MAX_DRIFT.
- # Sweeping all 34 clips for genuinely static windows turned up an
- # uncomfortable fact worth recording: the good-looking park vistas --
- # the falls, the shelf, the valley -- were all shot as PANS. The only
- # static plates with ground at figure scale are the hero shelf (6804)
- # and this lawn below the mill ruin (6805, 0.2% drift).
- ("more", "6805", 70.3, 26.0, 4.5, "same era, a second group up by the mill ruin"),
- ("ice",  "6791", 14.0, 30.5, 4.0, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 34.5, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 40.5, 5.0, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
+ # ---- ACT 3: THE DEMO. `dak` AND `more` ARE GONE. v20, on direct
+ # operator instruction, and this is a REMOVAL, not a taste note.
+ # Operator, asked directly whether there is a Dakota cultural advisor or
+ # tribal contact attached to this project: "There is not currently a
+ # Dakota cultural advisor or tribal partner attached to the project that
+ # I can point to as having reviewed and approved the reconstruction...
+ # I would remove any detailed or authoritative-looking Dakota
+ # reconstruction from the core demo for now... pull the specific Dakota
+ # reconstruction. Once we have cultural involvement, put it back
+ # correctly and make it stronger." A VISUALISATION disclaimer does not
+ # answer that; he said so himself, and he is right -- a disclosure tag
+ # is a label on the frame, not a review of what the frame depicts. Both
+ # generated Dakota figures (dak_s17.jpg, dak_s3.jpg) and both beats that
+ # carried them are removed from this cut. No substitute reconstruction
+ # was invented in their place -- see FIGURES and LABELS below, and the
+ # (unchanged) mam41f.jpg mammoth is the only composited figure left in
+ # the film, because it depicts an animal, not a culture.
+ # This SHRINKS the demo section right after v19 lengthened it in
+ # response to "we don't breakdown what makes our product special" --
+ # that tension is real and is not resolved by pretending otherwise. The
+ # breakdown v19 added (the two capability lines on `lock`/`open`) stays
+ # and does the explaining; the remaining ice/mammoth beat is the one
+ # demonstration this cut can make honestly today.
+ ("ice",  "6791", 14.0, 19.5, 4.0, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 23.5, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 29.5, 5.0, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
@@ -143,9 +139,9 @@ BEATS = [
  # of that plate. 6803 is the overlook: him at the rail, the whole park
  # and the falls in front of him, no signage, no gesture -- a man simply
  # looking at a place, which is the entire closing claim.
- ("off",  "6803",  2.5, 45.5, 4.5, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 50.0, 4.5, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 54.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
+ ("off",  "6803",  2.5, 34.5, 4.5, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 39.0, 4.5, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 43.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -184,85 +180,28 @@ TITLES = {
 # is smaller because it stands on the FAR ledge across the water, and at
 # that distance an animal reads by silhouette.
 FIGURES = {
- "dak":  [("ai/era/dak_s17.jpg", (1150, 745), 385, 1.4, 1.4, 0.30, 0.55)],
- # dak_s3, not a reuse of s17 and not dak_s41 -- s41's headwear reads as
- # ceremonial and r78 was explicit that this depiction stays ordinary and
- # non-spectacle. s3 is the same register as s17: mixed ages, plain
- # garments, everyone's feet on the rock.
- # beside the quartzite outcrop rather than adrift on mown grass -- the
- # settlers failed on this same plate partly by standing in open lawn
- # with nothing to be near.
- # x=1600, clear of the era rail. At (1320, 930) the rail's scrim -- it
- # covers y 832-928 across x 470-1450 -- cut straight through the group's
- # legs and hid their feet, which is the one part of a composite that has
- # to be visible. The HUD sits at the bottom of a 2.39 frame and figures
- # standing on near ground sit there too; they have to be kept out of
- # each other's way by placement, since the HUD is drawn over everything.
- # y=930, not 955. Moving this group clear of the rail's scrim pushed
- # its FEET INTO THE BOTTOM LETTERBOX BAR -- the active picture ends at
- # 942. I fixed one collision and created another, and r92 caught it:
- # "their feet are scope-clipped". render_one now asserts every figure
- # fits inside the scope frame.
- # THE PALE AREA AROUND THIS GROUP IS THE MILL RUIN. IT IS NOT AN
- # ARTIFACT, AND IT IS NOT MINE TO REMOVE.
- # r94 read it as "a rectangular local plate or erased region extending
- # toward the right edge" and asked for it to be cleaned up. It is the
- # quartzite foundation of the mill and the ring of sun-bleached dead
- # grass around it, photographed. Three measurements settle it, and they
- # are recorded here so nobody spends another round on it:
- #   1. Differencing the composited frame against the same graded plate
- #      shows changed pixels ONLY inside the figures' silhouette and their
- #      cast shadow. Nothing outside is touched.
- #   2. Sampling rings outward from the alpha, the composite makes every
- #      ring DARKER (-6.2, -7.9, -13.4, -6.8, -0.9 luma at 0-6, 6-16,
- #      16-30, 30-60, 60-110 px). It never lightens anything.
- #   3. The plate's own luminance in those same rings is 180, 175, 167,
- #      142, 116. The pale region is in the photograph and falls off with
- #      distance from the group -- because the group is standing on it.
- # So the honest description is a PLACEMENT fact, not a defect: they are
- # standing on the brightest ground in that corner, and the eye reads
- # figure-plus-bright-surround as one pasted object. Moving them onto
- # continuous lawn is the fix, and it is BLOCKED, for two stated reasons:
- # at this depth the only ground clear of the era rail's scrim IS the ruin
- # apron (see the x=1600 note above), and standing them further back needs
- # a ground-plane scale this plate cannot supply -- the only human in the
- # shot is on the elevated walkway above the retaining wall, not on the
- # lawn, so there is no same-plane reference to solve the horizon from.
- # Guessing a height here is the mistake that produced "the mammoth size
- # is shit". It needs a locked-off plate, or the operator's call.
- # It is also, for what it is worth, the right place for them to be
- # standing in a beat captioned BEFORE THE MILL.
- # 529px at y=830, not 300px at y=930. OPERATOR, on v14: "This is bad
- # sizing on the ai image they are the size of a dog." He was right and it
- # is measurable, and the measurement is the thing I said in r95 this
- # plate could not give me. I was wrong: I looked only at the FRAME the
- # beat cuts from, where the only human stands on the elevated walkway.
- # The CLIP is 93 seconds long and barely moves (0.2% drift), so the whole
- # of it is the same camera. Background-differencing against an empty
- # frame finds real people walking the near lawn and path:
- #     14s  464px tall, feet at y=773
- #     44s  544px tall, feet at y=848
- #     50s  273px tall, feet at y=670
- # Least squares through those three gives a horizon at y=488 and a scale
- # of 1.547px per row, so an adult standing at y=930 is 684px. The group
- # was 300px -- 44% of human size, which is very close to half, which is
- # why it read as animals rather than people.
- # THE FEET GO TO 830, NOT 930, and that is the rail's doing, not taste.
- # At the correct 684px the group is 438px wide, so clearing the scrim
- # (which covers y 832-928 across x 470-1450) needs x>=1669, and that puts
- # its right edge 32px off the frame -- jammed into the corner r94 already
- # called "visually fragile". Standing them one row band further back is
- # the same geometry honestly applied: 830 is the last row whose figure
- # ends ABOVE the scrim, and 1.547*(830-488) = 529.
- # Verify the plane before changing this: scripts are not needed, just
- # diff any frame of IMG_6805 against t=80s and measure who is walking.
- "more": [("ai/era/dak_s3.jpg",  (1600, 830), 529, 1.0, 1.2, 0.30, 0.45)],
+ # "dak" and "more" (dak_s17.jpg, dak_s3.jpg) REMOVED, v20. Operator,
+ # asked directly whether a Dakota cultural advisor or tribal contact is
+ # attached to this project: "There is not currently a Dakota cultural
+ # advisor or tribal partner attached to the project that I can point to
+ # as having reviewed and approved the reconstruction... I would remove
+ # any detailed or authoritative-looking Dakota reconstruction from the
+ # core demo for now... Once we have cultural involvement, put it back
+ # correctly and make it stronger." Removed, not disabled -- everything
+ # this block used to say about their placement (the mill-ruin ground
+ # plane, the 529px/44%-of-human-size measurement, the era-rail scrim
+ # collision) is now dead weight and has been deleted with the entries.
+ # If those assets return, they return with a cultural review attached,
+ # not by uncommenting this.
  # 560px, not 320. OPERATOR: "the mammoth size is shit" -- and it was,
- # measurably. The Dakota family on THIS PLATE is 385px at y=745 and he
- # approved that as human scale, so the ground plane is known: at y=690 a
- # person is ~308px, and a mammoth stands about twice a person, so ~600px.
- # 320 was half the size of the animal it claimed to be, which is why it
- # read as a large dog on a rock shelf.
+ # measurably. The scale is a HISTORICAL record now, not a live
+ # dependency: the calibration figure (the Dakota family that used to
+ # stand on this same plate at 385px/y=745, operator-approved as human
+ # scale) is gone, per the removal note above, but the arithmetic it
+ # produced does not need it anymore -- at y=690 a person is ~308px, and
+ # a mammoth stands about twice a person, so ~600px. 320 was half the
+ # size of the animal it claimed to be, which is why it read as a large
+ # dog on a rock shelf.
  # The 9th field is SHADOW STRENGTH, and it is here because scale broke
  # it: the cast shadow is projected from the figure's own alpha, so at
  # 560px it grew into a 240px black slick lying across white ice. 0.34
@@ -293,13 +232,13 @@ FIGURES = {
 }
 
 LABELS = {
- "dak":  ((1032, 752), "BEFORE THE MILL", "VISUALISATION", 2.9, (-40, -410)),
- # anchor follows the group up the bank -- it pointed at y=962, which is
- # now empty ground below a figure that starts at 830.
- "more": ((1430, 846), "SAME DAY",        "VISUALISATION", 2.4, (-70, -300)),
+ # "dak" and "more" LABELS REMOVED with their figures, v20 -- see the
+ # removal note in FIGURES above. "THE LAST ICE" stays: it names the ice
+ # AGE, not a reconstructed culture, and mam41f.jpg is an animal, not a
+ # person.
  "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
- # RECOGNITION, and it is a different KIND of label from the three above.
- # Those name a generated era and are subtitled VISUALISATION because
+ # RECOGNITION, and it is a different KIND of label from the one above.
+ # That one names a generated era and is subtitled VISUALISATION because
  # something drawn is on screen. This one names a real waterfall in an
  # unmodified frame: it is the device identifying what the wearer is
  # actually looking at, which is the step the film was missing. A viewer
@@ -382,9 +321,20 @@ SCORE = {
  # that had three other acts in front of it. The roles are looked up, so
  # this one edit re-times the entire arc.
  "start":  "sign",
- "arrive": "dak",
- "lift":   "dak",
- "hold":   "more",
+ # v20: "arrive"/"lift"/"hold" pointed at "dak"/"dak"/"more", both gone
+ # (see FIGURES). `reach` is now where the swell happens -- he arrives,
+ # the score lifts, in the same beat, matching the score's own v7 note
+ # that arrive and lift were once the same beat by design. The swell
+ # completes inside `reach`'s own short runtime (ramp() clips past its
+ # target, so a beat shorter than the ramp's 2.0s just means the plateau
+ # is reached a little early, not that anything breaks), and "hold" is
+ # `ice` itself: since ice_st == the hold beat's own start, the plateau
+ # segment is zero-width by construction and the swell hands off directly
+ # into the cold descent with no gap and no double-write. Checked by
+ # running score_one.py and reading the printed arc, not by inspection.
+ "arrive": "reach",
+ "lift":   "reach",
+ "hold":   "ice",
  "cold":   "ice",
  "warm":   "now",
 }

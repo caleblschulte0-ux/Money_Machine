@@ -64,10 +64,10 @@ LINES = [
     # the picture still shows the plaque, so the point survives on screen
     # even though the VO no longer spells it out.
     #
-    # ACT 3 onward (dak/more/ice/mam/now/off/walk) is UNCHANGED from v18
-    # -- same text, same relative offsets -- because `reach`'s line
-    # (below) still finishes with margin before dak's existing 1.9s
-    # offset lands, verified by measurement, not assumption.
+    # mam/now/off/walk KEEP their v18 text and relative offsets unchanged
+    # -- `ice` was rewritten (below) so its own line still clears with
+    # margin before mam's existing 1.6s offset lands, verified by
+    # measurement, not assumption.
     ("sign", 0.10, "This is Falls Park, in Sioux Falls."),
     ("past", 0.10, "And most people walk right past."),
     # --- ACT 2: what it is, and the act of using it. `rail` and its line
@@ -77,26 +77,32 @@ LINES = [
     ("prod", 0.10, "Open Range Interactive is building AR glasses made for travel."),
     ("on",   1.13, "You put them on, and the place starts talking."),
     ("lock", 0.95, "They know where you're standing, and what you're looking at."),
-    # --- THE BREAKDOWN. Was "So take the falls, and run them
-    # backwards." -- a transition, not a claim. Replaced with the
-    # operator's OWN vetted capability line from the originally approved
-    # 34s cut (ori_promo/README.md), reused verbatim rather than
-    # invented: paired with `lock`'s line above, this is two consecutive,
-    # concrete statements of what the device does, immediately before the
-    # film proves both by demonstration.
-    ("open", 0.90, "The history, pinned to the exact spot where it happened."),
-    # `reach`, v18, retimed for v19. No rail, no menu -- he walks, and the
-    # past is where he stops. This is the one sentence in the whole
+    # --- THE BREAKDOWN, CORRECTED v20. v19 used "The history, pinned to
+    # the exact spot where it happened" -- the operator's own line from
+    # the originally approved cut, but asked directly how recognition
+    # actually works, he corrected the CLAIM behind it: "I would avoid
+    # saying 'GPS pins it to the exact spot.' GPS alone is not precise
+    # enough for that." GPS gets the wearer into the right zone; compass/
+    # IMU/head-tracking and AR spatial tracking (SLAM) hold the overlay
+    # steady against the real environment; only some experiences layer
+    # computer-vision alignment on top. "Pinned to the exact spot" claims
+    # more precision than that chain delivers. His own replacement
+    # language, shortened to fit the beat: "anchors what you see to the
+    # real place around you" -- paired with `lock`'s unchanged line, this
+    # is still two consecutive capability statements (recognises you,
+    # then anchors to the real world), just accurate ones now.
+    ("open", 0.90, "And anchors what you see to the real place around you."),
+    # `reach`, v18, retimed for v19/v20. No rail, no menu -- he walks, and
+    # the past is where he stops. This is the one sentence in the whole
     # script that states the operator's own line from the concept
     # document in different words: "walk to chapter 2," not "tap chapter
     # 2."
-    ("reach", 0.73, "He walks. And the place answers where he stops."),
-    ("dak",  1.9, "Before the mill, people lived along this water."),
-    # the rail does not move for this one -- he turned his head, he did
-    # not change the year, and the line has to say so or the beat reads as
-    # a second unrelated tableau
-    ("more", 1.6, "Same day. Further up the bank."),
-    ("ice",  0.9, "Further back."),
+    ("reach", 0.22, "He walks. And the place answers where he stops."),
+    # `dak` and `more` LINES REMOVED, v20, with their beats -- see
+    # spec_one.py's FIGURES note. `ice` now follows `reach` DIRECTLY, so
+    # its line can no longer lean on "Same day, further up the bank" for
+    # its own "further" to mean anything; rewritten to be self-contained.
+    ("ice",  0.21, "Go back further, and the whole valley freezes."),
     ("mam",  1.6, "The whole valley under ice, and the animals that crossed it."),
     ("now",  2.1, "Then back. One place. Every time."),
     # --- ACT 4: the close.

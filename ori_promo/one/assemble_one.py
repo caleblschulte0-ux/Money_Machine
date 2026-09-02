@@ -66,17 +66,22 @@ def end_card(d_sec):
         if a > 0:
             track(d, (W//2, 520), "OPEN RANGE INTERACTIVE", inter(64), INK+(a,), 11.0, "ms")
             track(d, (W//2, 596), "FALLS PARK, SIOUX FALLS", mono(34), INK+(int(a*0.92),), 6.0, "ms")
-        # BETA FRAMING LINE. v18, operator-authorized. Falls Park is the
-        # pilot site, not the product's ceiling -- ChatGPT's r105
-        # recommended wording, adopted as-is because it is the one line on
-        # this project that has been vetted against the no-invented-claims
-        # rule (it names one deployed site and one honest capability
-        # statement, nothing about scale, revenue or a raise). It sits
-        # BELOW the disclosure, in a quieter weight, because it is a
-        # positioning statement, not the thing being disclosed.
+        # BETA FRAMING LINE. v18 wording corrected in v20. Operator, asked
+        # directly about the product's current state: "Right now, Open
+        # Range should be treated as a product concept and demonstration,
+        # not a finished working hardware beta... 'Falls Park beta' = the
+        # PROPOSED first real-world pilot... Neither should be presented
+        # as something already deployed today." "IS THE FIRST BETA" read
+        # as present-tense fact; PROPOSED makes it a stated intention,
+        # matching what is actually true right now. Second line "CAN"
+        # softened to "COULD" for the same reason -- a capability claimed
+        # for a platform that has not shipped anywhere yet is a plan, not
+        # a fact. It sits BELOW the disclosure, in a quieter weight,
+        # because it is a positioning statement, not the thing being
+        # disclosed.
         a1b = int(240*min(1.0, max(0.0, (t-0.65)/0.4)))
         if a1b > 0:
-            s1b = "FALLS PARK IS THE FIRST BETA."
+            s1b = "FALLS PARK IS THE PROPOSED FIRST BETA."
             f1b = mono(26)
             w1b = sum(d.textlength(c, font=f1b) for c in s1b) + 4.0*(len(s1b)-1)
             track(d, (W//2, 632), s1b, f1b, DIM+(a1b,), 4.0, "ms")
@@ -89,7 +94,7 @@ def end_card(d_sec):
             track(d, (W//2, 686), s2, f2, CYAN+(a2,), 6.0, "ms")
         a2b = int(220*min(1.0, max(0.0, (t-1.5)/0.5)))
         if a2b > 0:
-            s2b = "THE SAME PLATFORM CAN BRING REAL PLACES TO LIFE ANYWHERE."
+            s2b = "THE SAME PLATFORM COULD BRING REAL PLACES TO LIFE ANYWHERE."
             f2b = mono(22)
             w2b = sum(d.textlength(c, font=f2b) for c in s2b) + 3.0*(len(s2b)-1)
             track(d, (W//2, 730), s2b, f2b, DIM+(a2b,), 3.0, "ms")
