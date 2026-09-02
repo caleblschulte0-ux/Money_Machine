@@ -253,8 +253,15 @@ def park_hedge():
 def storefront(accent_name, body_hex, edge_hex, awning_hex):
     body = material(f"{accent_name} stucco", body_hex, roughness=0.62, coat=0.03)
     edge = material(f"{accent_name} edge", edge_hex, roughness=0.58, coat=0.03)
-    cream = material("Store cream", "#FFF9E7", roughness=0.58, coat=0.04)
-    glass = material("Store glass", "#8EDAE7", roughness=0.18, metallic=0.04, coat=0.34)
+    # Near-white cream and high-coat glass were the last dead grey in the game.
+    # Town measured 33% of world pixels under 0.18 chroma while every other
+    # scene cleared 12%, and the offenders were the sign, the alternating
+    # awning stripes and the shop windows -- all blowing out to neutral under
+    # the key light. A Clash Mini shopfront has no neutral in it: the cream is
+    # a warm butter and the glass is a saturated teal that reads as colour, not
+    # as reflection. See docs/ART_DIRECTION.md.
+    cream = material("Store cream", "#FFE2A6", roughness=0.62, coat=0.02)
+    glass = material("Store glass", "#3FBBD8", roughness=0.30, metallic=0.02, coat=0.12)
     glass_dark = material("Store glass depth", "#2F7387", roughness=0.26, metallic=0.08, coat=0.20)
     awning = material(f"{accent_name} awning", awning_hex, roughness=0.54, coat=0.05)
     wood = material("Display wood", "#954D1F", roughness=0.62)

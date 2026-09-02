@@ -218,10 +218,18 @@ export const DIORAMA = {
   townCoralNight: '#774871',
   townBlueNight: '#406193',
   townVioletNight: '#6A4F8C',
-  townRoadDay: '#BFB09F',
-  townRoadDayEdge: '#8E7965',
-  townRoadNight: '#4B3E36',
-  townRoadNightEdge: '#2F2621',
+  /*
+   * The road is the single biggest surface in Town and it was a desaturated
+   * warm grey (#BFB09F), which is why Town alone stayed at 34% dead-grey
+   * pixels after every other scene cleared the target -- the storefronts were
+   * already candy-coloured, but they sit on top of a large neutral slab. A
+   * Clash Mini board has no true greys in it: even the paving reads as a warm
+   * tinted material. See docs/ART_DIRECTION.md.
+   */
+  townRoadDay: '#D9B57E',
+  townRoadDayEdge: '#A6773F',
+  townRoadNight: '#4E3B45',
+  townRoadNightEdge: '#2E2130',
   townSidewalkDay: '#F8E0A8',
   townSidewalkDayLight: '#FFF8E3',
   townSidewalkDayEdge: '#CBA157',

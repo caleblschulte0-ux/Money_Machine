@@ -101,7 +101,24 @@ async function newPage(hour) {
 
 async function goTo(page, loc) {
   const tab = page.getByRole('tab', { name: new RegExp(`^${loc}$`, 'i') }).first();
-  if (await tab.count()) { await tab.click({ force: true }); await page.waitForTimeout(3000); }
+  if (!(await tab.count())) throw new Error(`no tab for ${loc}`);
+  /*
+   * VERIFY against the SCENE, not the click. A locked tab, or a click that
+   * lands on a scrim, fails silently and the next screenshot is just the
+   * previous location again -- which is how two "different" scenes ended up
+   * with byte-identical palette stats and sent me chasing a Town problem I
+   * was never actually measuring. Every scene renders its own testID, so ask
+   * the world what it is rather than trusting the button.
+   */
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await tab.click({ force: true });
+    await page.waitForTimeout(1400);
+    if (await page.locator(`[data-testid="world-scene-${loc}"]`).count()) {
+      await page.waitForTimeout(2000);
+      return;
+    }
+  }
+  throw new Error(`could not switch to ${loc} — it is probably locked in this save`);
 }
 
 const shots = [];
