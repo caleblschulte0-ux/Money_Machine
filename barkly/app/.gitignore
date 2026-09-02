@@ -44,3 +44,12 @@ yarn-error.*
 .env
 .env.*
 !.env.example
+
+# Review-harness output. overlap-check, the art lab and the world-art snapshot
+# all rewrite these on every run, and they are regenerable from any build in
+# one command. Three of them were tracked and the rest were not, so every
+# session ended with a dirty tree and ~5MB of binary churn in the diff. They
+# are evidence, not source: regenerate them, do not commit them.
+overlap-*.png
+art-lab/
+world-art/
