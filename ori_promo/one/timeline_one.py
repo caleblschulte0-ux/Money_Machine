@@ -13,7 +13,7 @@ sys.path.insert(0, "..")
 
 import shotqc
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, figures,
-                      SCRUB_STOPS, SCRUB_KEYS, W, H, FPS, TOTAL)
+                      W, H, FPS, TOTAL)
 
 RAW = "../raw"
 
@@ -107,19 +107,16 @@ def main():
                      f"{_starts[b]+o0:.1f}–{_starts[b]+o1:.1f}s, so the cut off "
                      f"this beat lands between two present-day frames")
     L.append("")
-    # THE ERA RAIL. It is the mechanism the film now turns on, and a
-    # reviewer checking the cut against this document would not have known
-    # it existed. A generated timeline that omits the load-bearing element
-    # is the same failure as one that describes a rule the code dropped.
+    # THE ERA RAIL IS GONE (v18). No scrub control is drawn on any beat.
+    # Walking is the visible trigger now: see the `reach` beat below, and
+    # spec_one.py's note at the old SCRUB block for the operator ruling
+    # this implements and why only one walk beat was added rather than
+    # four (no footage exists of him walking BETWEEN two era locations).
     L.append("")
-    L.append("THE ERA RAIL — the scrub the wearer drives. The marker moves")
-    L.append("FIRST; the world answers behind it. That ordering is the whole")
-    L.append("point, so it is stated here as times you can check.")
-    L.append("")
-    L.append("  stops: " + "  ".join(f"{lab} @{p:.2f}" for lab, p in SCRUB_STOPS))
-    for t, p in SCRUB_KEYS:
-        lab = next((l for l, q in SCRUB_STOPS if abs(q - p) < 1e-6), f"{p:.2f}")
-        L.append(f"  {t:5.1f}s  marker at {lab}")
+    L.append("THE ERA RAIL IS REMOVED. No on-screen scrub/menu control.")
+    L.append("Walking is the trigger: see the `reach` beat, and the per-era")
+    L.append("captions (LABELS), which carry the same information a museum")
+    L.append("placard would -- not an operable widget.")
     L.append("")
 
     # NARRATION. Read out of vo_one.py, not retyped -- an earlier round

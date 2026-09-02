@@ -68,6 +68,11 @@ LINES = [
     # first, which no longer has to introduce the location -- act one did
     # that -- so it can just be the instruction that starts the scrub.
     ("open", 1.4, "So take the falls, and run them backwards."),
+    # `reach`, v18. No rail, no menu -- he walks, and the past is where he
+    # stops. This is the one sentence in the whole script that states the
+    # operator's own line from the concept document in different words:
+    # "walk to chapter 2," not "tap chapter 2."
+    ("reach", 0.6, "He walks. And the place answers where he stops."),
     ("dak",  1.9, "Before the mill, people lived along this water."),
     # the rail does not move for this one -- he turned his head, he did
     # not change the year, and the line has to say so or the beat reads as

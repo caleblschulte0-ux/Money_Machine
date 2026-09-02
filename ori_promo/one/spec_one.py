@@ -39,7 +39,7 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 71.5
+TOTAL = 75.0
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
@@ -87,8 +87,15 @@ BEATS = [
  # like those." These six beats are unchanged from v15 except that their
  # START TIMES shift by +27.5 to sit behind the new first act. Every
  # in-point, duration, figure, scale, grade and label is identical.
- ("open", "6806", 16.4, 27.5, 5.0, "the falls as they are. the system comes up, the era rail appears"),
- ("dak",  "6804", 10.0, 32.5, 6.5, "the scrub reaches BEFORE THE MILL and the family answers"),
+ ("open", "6806", 16.4, 27.5, 5.0, "the falls as they are, recognised — no rail, no menu"),
+ # ---- `reach`: walking is the trigger now, not a drawn control. v18.
+ # IMG_6797@40.0, gated clean (see the era-rail note above): mid 1.76
+ # tail 1.35 ratio 0.77 drift 11.1% peak 4.0, no flags, never used
+ # elsewhere in this film. UI stays off -- he has not switched anything
+ # back on, he is simply walking -- and the past resolves on his arrival
+ # in `dak`, not on a marker settling.
+ ("reach", "6797", 40.0, 32.5, 3.5, "he walks, and the past is where he arrives"),
+ ("dak",  "6804", 10.0, 36.0, 6.5, "before the mill, the family answers where he has stopped"),
  # SAME ERA, DIFFERENT PLACE. The operator asked for "one more that has
  # Indians and shit", and the useful way to add it is not a second
  # unrelated tableau -- it is to LOOK AROUND inside the era already
@@ -109,10 +116,10 @@ BEATS = [
  # the falls, the shelf, the valley -- were all shot as PANS. The only
  # static plates with ground at figure scale are the hero shelf (6804)
  # and this lawn below the mill ruin (6805, 0.2% drift).
- ("more", "6805", 70.3, 39.0, 4.5, "same era, a second group up by the mill ruin"),
- ("ice",  "6791", 14.0, 43.5, 4.0, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 47.5, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 53.5, 5.0, "the scrub returns to NOW, the thaw, the closing line"),
+ ("more", "6805", 70.3, 42.5, 4.5, "same era, a second group up by the mill ruin"),
+ ("ice",  "6791", 14.0, 47.0, 4.0, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 51.0, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 57.0, 5.0, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
@@ -122,9 +129,9 @@ BEATS = [
  # of that plate. 6803 is the overlook: him at the rail, the whole park
  # and the falls in front of him, no signage, no gesture -- a man simply
  # looking at a place, which is the entire closing claim.
- ("off",  "6803",  2.5, 58.5, 4.5, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 63.0, 4.5, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 67.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
+ ("off",  "6803",  2.5, 62.0, 4.5, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 66.5, 4.5, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 71.0, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -145,7 +152,7 @@ WEARER_BEATS = {"mam", "now"}
 # them. The last act is the same in reverse: he has looked, the film is
 # over, and a HUD on the closing frames would claim the device is still
 # running when the point is that you just look.
-UI_OFF = {"sign", "past", "rail", "prod", "off", "walk"}
+UI_OFF = {"sign", "past", "rail", "prod", "reach", "off", "walk"}
 
 # beat: (title, subtitle, appear_t[, scale]) — the film's own voice, drawn
 # bottom-left with a scrim, no reticle and no leader line.
@@ -311,67 +318,48 @@ ICE = {
  "now": (-1.0, 0.0, 0.8, 2.4),
 }
 
-# ---- THE ERA RAIL: the thing that was missing.
-# r88, and it is the best note this film has had: "The overlays arrive as
-# DEMONSTRATIONS INSTEAD OF CONSEQUENCES OF AN ACTION. The missing feeling
-# is agency, anticipation, and payoff: notice the rock, choose or scrub an
-# era, watch the place answer, then return changed to the present."
-# The structure was present / image / ice / animal / present. Nothing on
-# screen ever DID anything -- eras simply appeared because the edit said
-# so. A drawn scrub rail fixes that with no new assets: the marker MOVES
-# FIRST and the world answers behind it, so every era is caused rather
-# than delivered, and the return to now is an action the viewer watches
-# rather than a cut they are handed.
-# stops: label and x position along the rail, 0..1 from NOW to deep time.
-SCRUB_STOPS = [("NOW", 0.0), ("BEFORE THE MILL", 0.5), ("THE LAST ICE", 1.0)]
-
-# (film_time, position). Linear between keys; the marker always arrives
-# BEFORE the beat it causes.
-# EVERY ARRIVAL GETS 0.5s OF UNCONTESTED LEAD. r90: "the documented
-# 0.1-0.2 second marker lead is only 3-6 frames at 30 fps. That is too
-# brief for a first viewer to register 'the wearer selected a time, then
-# the world responded'." Correct, and one of the three was worse than
-# brief -- it was BACKWARDS. The thaw began at 22.2 while the marker was
-# still travelling and did not reach NOW until 23.4, so the world changed
-# and then the control caught up with it. The order the viewer must see is
-# marker moves -> marker SETTLES -> world changes, and it now reads:
-#     arrives 5.9  settles 6.05  family resolves 6.4   (0.50s lead)
-#     arrives 12.0 settles 12.15 valley freezes 12.5   (0.50s lead)
-#     arrives 22.3 settles 22.45 thaw begins 22.8      (0.50s lead)
-# The time comes out of the holds, not out of the running time.
-# v16: every key shifted +27.5 so the identical scrub sits behind the new
-# first act. The LEADS ARE UNCHANGED — 0.50s at all three arrivals — which
-# is the whole reason to shift rather than re-time.
-SCRUB_KEYS = [
- (27.5, 0.0), (32.9, 0.0),
- (33.4, 0.5),                      # family resolves 33.9 (0.50s lead)
- (43.0, 0.5),                      # ...and does NOT move across `more`
- (43.5, 1.0),                      # valley freezes 44.0  (0.50s lead)
- (53.1, 1.0),
- (53.8, 0.0),                      # thaw begins 54.3     (0.50s lead)
-]
-# (appear, fade-in, start of fade-out, fade-out length). r90: "keep the
-# rail through the NOW settle and the first beat of thaw, then fade it."
-# v16: appears at 24.2, inside `lock`, so the rail arrives WITH the
-# recognition pin rather than materialising at the first era beat. Fades
-# out at 55.1, the same beat of the thaw as before the shift.
-# APPEARS AT 20.6, WHICH IS THE GESTURE, NOT THE NEXT BEAT.
-# r101: at 21.0 "the wearer has both hands on his head... can read as
-# fixing hair rather than deliberately operating a temple control." True,
-# and I checked the whole take frame by frame at 0.2s: there is no
-# single-hand moment anywhere in it, and none in 6790, 6793, 6794 or 6807
-# either. The footage does not contain a cleaner gesture, so pretending
-# otherwise by hunting harder was not an option.
-# r101's own fallback is the fix: "add only a restrained activation
-# response after contact; do not introduce device UI before the gesture."
-# His hands reach the temples at 19.7-20.1 film time and the rail now
-# begins at 20.6 -- half a second after contact, nothing before it. A
-# two-handed settle followed immediately by the device waking reads as
-# operating it; the same gesture followed four seconds later by an
-# unrelated beat reads as fixing your hair. The ambiguity was in the
-# CAUSALITY, not in the arm.
-SCRUB_FADE = (20.6, 1.0, 55.1, 0.9)
-SCRUB_SETTLE = 0.15                # marker pulses this long on arrival
+# ---- THE ERA RAIL IS GONE. v18, on the operator's ruling.
+# The rail (SCRUB_STOPS/SCRUB_KEYS/SCRUB_FADE, draw_rail() in
+# render_one.py) drew a scrubbable timeline -- three labelled stops and a
+# marker the wearer appeared to operate. It answered r88's real note ("the
+# overlays arrive as demonstrations instead of consequences of an
+# action") but it answered it with a WIDGET, and the operator's own
+# concept document says the opposite of a widget:
+#   SS5  "Instead of: Tap 'Chapter 2.' It's more like: Walk to Chapter 2."
+#   SS14 "ORI is not a floating museum touchscreen. Don't fill the
+#        person's vision with cards, menus, buttons and dashboards."
+# draw_rail's own docstring already said the quiet part: "Anything more
+# decorative would read as a video-editor timeline pasted over a park."
+# It was a timeline pasted over a park. Removed entirely -- no rail is
+# drawn on any beat now.
+#
+# The causal fix r88 was actually asking for -- action BEFORE consequence
+# -- is now WALKING, not a control widget, because that is what the
+# operator's own footage can show without inventing anything. See `reach`
+# below.
+#
+# The per-era captions (LABELS: "BEFORE THE MILL", "SAME DAY", "THE LAST
+# ICE") are UNCHANGED and stay. Those are placards naming what is on
+# screen, the same kind of information a museum wall card carries; the
+# thing removed is the OPERABLE part, not the informational part.
+#
+# ---- THE WALK, NOT THE RAIL: `reach`.
+# One new beat, inserted between `open` and `dak`, on THREE static plates
+# gated the same way every other cut in this film is gated (shotqc.py,
+# unmodified; see rounds/r106__claude__walk_footage_gate.txt for the full
+# table). IMG_6797@40.0 is a clean 4.0s window (mid 1.76 tail 1.35 ratio
+# 0.77 drift 11.1% peak 4.0, no flags) of him walking, never used
+# elsewhere in this film. UI is off across it, same rule as the rest of
+# act 1/2 -- he has not switched anything on again, he is simply walking,
+# and the past resolves on his arrival rather than on a marker settling.
+# This is ONE walk beat, not a rebuild of every era-to-era jump: the four
+# internal jumps (dak->more->ice->mam->now) stay dissolve-only, carried by
+# VO and the per-era captions, which is an honest, smaller claim than
+# restaging "walk to chapter 2" four more times on footage that does not
+# exist for it (no plate shows him walking BETWEEN two distinct era
+# locations -- these are all separate short takes, not one continuous
+# walk-and-arrive traverse). Overstating this beyond the one clean cut
+# would be exactly the kind of invented capability rule zero forbids.
 
 SCORE = {
  # v16: "start" is the FIRST FRAME OF THE FILM, not the first frame of the

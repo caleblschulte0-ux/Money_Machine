@@ -34,7 +34,6 @@ import filmlook as FL
 from ai import place as PL
 import depthtools as DT
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
-                      SCRUB_STOPS, SCRUB_KEYS, SCRUB_FADE, SCRUB_SETTLE,
                       figures, W, H, FPS, TOTAL)
 
 RAW = "../raw"
@@ -338,98 +337,16 @@ DISSOLVE = 0.5          # seconds of cross-dissolve into each beat
 FIGURE_MAX_DRIFT = 0.03  # a plate carrying a figure must be this static
 
 
-# ---- the era rail -------------------------------------------------------
-# The HUD lives inside the 2.39 frame now. Anything at the old y-positions
-# would be drawn into the black bars and simply vanish.
 SAFE_T, SAFE_B = FL.safe_area(H, W)
-RAIL_X0, RAIL_X1, RAIL_Y = 620, 1300, SAFE_B - 66
 
-_ARRIVALS = [t for (pt, pp), (t, p) in zip(SCRUB_KEYS, SCRUB_KEYS[1:]) if p != pp]
-
-
-def _settle(tf):
-    """1.0 for SCRUB_SETTLE seconds after the marker lands, else 0."""
-    for t in _ARRIVALS:
-        if 0.0 <= tf - t <= SCRUB_SETTLE:
-            return 1.0 - (tf - t) / SCRUB_SETTLE
-    return 0.0
-
-
-def _scrub_pos(tf):
-    """Marker position 0..1 at film time tf, linear between keyframes."""
-    ks = SCRUB_KEYS
-    if tf <= ks[0][0]:
-        return ks[0][1]
-    for (t0, p0), (t1, p1) in zip(ks, ks[1:]):
-        if tf <= t1:
-            u = (tf - t0) / max(1e-6, t1 - t0)
-            return p0 + (p1 - p0) * AR.ease(u)
-    return ks[-1][1]
-
-
-def draw_rail(d, tf):
-    """The scrub the wearer is driving. Drawn UI only — no new assets.
-
-    This is the answer to r88's "the overlays arrive as demonstrations
-    instead of consequences of an action". The marker moves FIRST and the
-    world answers behind it, which is the whole difference between a demo
-    reel and something that feels operated.
-
-    It is deliberately plain: a rail, three stops, a marker. Anything more
-    decorative would read as a video-editor timeline pasted over a park,
-    and the point is that a person wearing these is scrubbing TIME.
-    """
-    t0, fade, out_t, out_len = SCRUB_FADE
-    k = AR.ease(min(1.0, max(0.0, (tf - t0) / fade)))
-    k *= min(1.0, max(0.0, 1.0 - (tf - out_t) / out_len))
-    if k <= 0.004:
-        return
-    a = int(210 * k)
-    # A SCRIM, for the same reason the location title needed one. Measured
-    # on a finished render: on the wide-valley plate the rail runs across
-    # sunlit quartzite that is the same luminance as the type, and it
-    # effectively disappeared -- on the one beat where the marker is
-    # travelling to deep time, which is the single moment the whole device
-    # exists to show. Legibility cannot depend on what the camera happened
-    # to be pointed at.
-    band_t, band_b = RAIL_Y - 44, min(RAIL_Y + 52, SAFE_B - 2)
-    for yy in range(band_t, band_b):
-        u = (yy - band_t) / float(max(1, band_b - band_t))
-        aa = int(195 * k * (1.0 - abs(u - 0.42) * 1.7))
-        if aa > 0:
-            d.line([(RAIL_X0 - 150, yy), (RAIL_X1 + 150, yy)], fill=(5, 8, 11, aa))
-    # a dark keyline under the rule and every label. r90: the "pale
-    # inactive labels and fine rule sit against sunlit quartzite" and the
-    # centre label "visually tangles with the textured background".
-    d.line([(RAIL_X0, RAIL_Y + 1), (RAIL_X1, RAIL_Y + 1)], fill=(5, 8, 11, int(150 * k)), width=3)
-    d.line([(RAIL_X0, RAIL_Y), (RAIL_X1, RAIL_Y)], fill=INK + (int(150 * k),), width=2)
-    fn = mono(21)
-    pos = _scrub_pos(tf)
-    for label, p in SCRUB_STOPS:
-        x = int(RAIL_X0 + (RAIL_X1 - RAIL_X0) * p)
-        near = 1.0 - min(1.0, abs(pos - p) * 3.6)
-        d.line([(x, RAIL_Y - 9), (x, RAIL_Y + 9)],
-               fill=INK + (int((95 + 160 * near) * k),), width=2)
-        tw = d.textlength(label, font=fn)
-        col = CYAN if near > 0.55 else INK
-        la = int((78 + 175 * near) * k)
-        d.text((x - tw / 2 + 1, RAIL_Y + 21), label, font=fn, fill=(5, 8, 11, int(la * 0.85)))
-        d.text((x - tw / 2, RAIL_Y + 20), label, font=fn, fill=col + (la,))
-    mx = int(RAIL_X0 + (RAIL_X1 - RAIL_X0) * pos)
-    # THE SETTLE. r90 asked for the marker to hold or pulse at its
-    # destination inside the lead, so the viewer sees three separate
-    # events -- marker moves, marker SETTLES, world changes.
-    st = _settle(tf)
-    if st > 0:
-        r = int(9 + 16 * (1.0 - st))
-        d.ellipse([mx - r, RAIL_Y - r, mx + r, RAIL_Y + r],
-                  outline=CYAN + (int(a * st * 0.85),), width=2)
-    d.ellipse([mx - 7, RAIL_Y - 7, mx + 7, RAIL_Y + 7], outline=CYAN + (a,), width=2)
-    d.ellipse([mx - 2, RAIL_Y - 2, mx + 2, RAIL_Y + 2], fill=CYAN + (a,))
+# ---- the era rail is GONE. v18. draw_rail(), SCRUB_STOPS/SCRUB_KEYS/
+# SCRUB_FADE/SCRUB_SETTLE and the marker/settle math that drove it are
+# deleted, not disabled -- see spec_one.py's note at the old SCRUB block
+# for why. No beat draws a scrub control. UI_OFF and the per-era LABELS
+# captions are unchanged.
 
 
 def compose(beat, dur, frames, prev_last=None, global_i=0):
-    beat_start = {b[0]: b[3] for b in BEATS}[beat]
     gray = [cv2.cvtColor(f, cv2.COLOR_BGR2GRAY) for f in frames]
     figs = figures(beat)
     lab = LABELS.get(beat)
@@ -593,8 +510,7 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                        anchor="lm")
 
         if beat not in UI_OFF:
-            frame_cue(d, t, dur)
-            draw_rail(d, beat_start + t)
+            frame_cue(d, t, dur)  # no-op, kept only as a documented deletion
         if ttl:
             draw_title(d, t, dur, ttl[0], ttl[1], ttl[2],
                        scale=(ttl[3] if len(ttl) > 3 else 1.0))
