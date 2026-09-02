@@ -92,6 +92,10 @@ LINES = [
     # is still two consecutive capability statements (recognises you,
     # then anchors to the real world), just accurate ones now.
     ("open", 0.90, "And anchors what you see to the real place around you."),
+    # `map`, v21. Operator's own legend concept (visual / audio / ambient /
+    # lookout zones), stated in plain terms -- no zone count, no distance,
+    # no claim this exact map is deployed today.
+    ("map", 0.35, "Some places show you something. Some just talk. Some just ask you to look."),
     # `reach`, v18, retimed for v19/v20. No rail, no menu -- he walks, and
     # the past is where he stops. This is the one sentence in the whole
     # script that states the operator's own line from the concept

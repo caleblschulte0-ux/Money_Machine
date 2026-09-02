@@ -39,7 +39,7 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 47.5
+TOTAL = 50.5
 
 # beat, clip, in-point, start, dur, what the beat does
 #
@@ -99,11 +99,33 @@ BEATS = [
  ("on",   "6806",  8.4,  9.0, 2.3, "he raises a hand to the temple — he is switching it on"),
  ("lock", "6806", 10.7, 11.3, 2.5, "the glasses recognise the falls and name them"),
  ("open", "6806", 13.2, 13.8, 3.2, "anchored to the real place — the capability, stated correctly"),
+ # ---- `map`: THE SITE MAP, v21. Operator: "it needs that sky view map
+ # that kinda shows what points in the falls we would be doing what, which
+ # I made and gave you... if you don't like the way it looks, fine, but
+ # then you need to generate something that looks very similar and just
+ # better. In that minimalist map you tried to do at one point -- not
+ # that. That didn't work, I didn't like it." His original file could not
+ # be re-sent into this session, so this is built from HIS CONCEPT (a
+ # colour-coded legend: blue=visual scenes, purple=audio narration,
+ # orange=ambient noise, green=lookout points) on a REAL aerial-style
+ # photo of the actual park, not the darkened/minimalist treatment he
+ # rejected and not a stock or generated satellite image. The photo is
+ # ORI'S OWN footage: the clean upper portion of IMG_6803 (the same clip
+ # `off` uses two beats later), the one moment in that clip before the
+ # wearer leans onto the rail where the whole park -- mill ruin, falls,
+ # paths, green fields, city skyline -- is unobstructed. See
+ # one/map_overlay.py for the pin placement and ai/map/park_map_plate.png
+ # for the built plate. This is a STATIC card, held for the whole beat
+ # (like `end`), not a panned or zoomed plate -- a photo card does not
+ # need to move to read, and holding it keeps every pin anchor a fixed
+ # pixel rather than a tracked one.
+ ("map",  "MAP1",  0.0, 17.0, 4.5, "the site map — his own legend, on the real park"),
  # ---- `reach`: walking is the trigger, not a drawn control. v18, timing
  # only compressed in v19. IMG_6797@40.0, gated clean at every duration
  # tried (see rounds/r106): mid 1.87 tail 1.76 ratio 0.94 drift 7.8% peak
- # 4.0 at 2.5s, no flags.
- ("reach", "6797", 40.0, 17.0, 2.5, "he walks, and the past is where he arrives"),
+ # 4.0 at 2.5s, no flags. Start moved 17.0 -> 21.5, v21, to make room for
+ # `map`.
+ ("reach", "6797", 40.0, 21.5, 2.5, "he walks, and the past is where he arrives"),
  # ---- ACT 3: THE DEMO. `dak` AND `more` ARE GONE. v20, on direct
  # operator instruction, and this is a REMOVAL, not a taste note.
  # Operator, asked directly whether there is a Dakota cultural advisor or
@@ -127,9 +149,9 @@ BEATS = [
  # breakdown v19 added (the two capability lines on `lock`/`open`) stays
  # and does the explaining; the remaining ice/mammoth beat is the one
  # demonstration this cut can make honestly today.
- ("ice",  "6791", 14.0, 19.5, 4.0, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 23.5, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 29.5, 5.0, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
+ ("ice",  "6791", 14.0, 24.0, 4.0, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 28.0, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 34.0, 5.0, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
@@ -139,9 +161,21 @@ BEATS = [
  # of that plate. 6803 is the overlook: him at the rail, the whole park
  # and the falls in front of him, no signage, no gesture -- a man simply
  # looking at a place, which is the entire closing claim.
- ("off",  "6803",  2.5, 34.5, 4.5, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 39.0, 4.5, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 43.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
+ # DURATION 4.5 -> 3.0, v21. Operator: "cut it a little sooner because it
+ # starts to wobble." IMG_6803 is only 7.1s long and this beat's old
+ # window (2.5-7.0) ran to within 0.1s of the clip's own end -- exactly
+ # where a handheld shot drifts as the recording stops. Confirmed both
+ # ways: shotqc's tail motion at 4.5s is 0.58 (ratio 3.89, accelerating
+ # hard); frame-by-frame from 6.2-7.0s shows the framing visibly sliding
+ # right. At 3.0s (in-point unchanged) tail drops to 0.11, ratio 0.76 --
+ # stops before the drift starts. Checked every other beat's tail the
+ # same way (measurement + frames, not just the flag): none of the rest
+ # show it. `reach` and `ice` have real absolute tail motion too (1.76,
+ # 1.01) but it is the WALKING SUBJECT and a legitimate pan respectively,
+ # confirmed by looking at the frames -- not a settle-down artifact.
+ ("off",  "6803",  2.5, 39.0, 3.0, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 42.0, 4.5, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 46.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice

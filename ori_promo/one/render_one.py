@@ -33,6 +33,7 @@ import shotnorm
 import filmlook as FL
 from ai import place as PL
 import depthtools as DT
+import map_overlay
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
                       figures, W, H, FPS, TOTAL)
 
@@ -463,6 +464,9 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                             reveal=(toff is None and k < 1.0), match=mtch,
                             shadow_strength=shw, contact=ct)
 
+        if beat == "map":
+            map_overlay.draw_map(d, t, dur)
+
         if lab and lpath:
             # 6th field is an optional label SCALE; absent means 1.0, so
             # the three era labels are untouched.
@@ -584,6 +588,21 @@ def main(only=None):
     and dropped before the next one is touched. Peak is one beat.
     """
     os.makedirs(OUT, exist_ok=True)
+
+    # `map` reads raw/IMG_MAP1.MOV like any other plate, but that file is a
+    # BUILT asset (a real photo, held static), not raw footage -- it is not
+    # committed, the same discipline as every other generated plate in this
+    # project. Build it here if a fresh checkout does not have it yet.
+    map_clip = os.path.join(RAW, "IMG_MAP1.MOV")
+    if not os.path.exists(map_clip):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "build_map_plate", asset("ai/map/build_map_plate.py"))
+        bmp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bmp)
+        bmp.build()
+        bmp.ensure_clip(map_clip)
+
     rows = [(b, c, t, d) for b, c, t, d, _n in
             [(x[0], x[1], x[2], x[4], x[5]) for x in BEATS] if c]
 
