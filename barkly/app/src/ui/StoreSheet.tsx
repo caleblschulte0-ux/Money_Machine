@@ -32,6 +32,9 @@ interface Props {
   devMode?: boolean;
 }
 
+/** One number, read by the sheet's own width and by the card grid inside it. */
+const STORE_MAX_WIDTH = 700;
+
 const SLOT_ORDER: ItemSlot[] = ['collar', 'treat', 'toy', 'home'];
 const SLOT_LABEL: Record<ItemSlot, string> = {
   collar: 'Collars',
@@ -97,7 +100,7 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
    * exact instead of drifting a pixel per card on every different phone.
    */
   const cols = width >= 900 ? 4 : width >= 600 ? 3 : 2;
-  const contentW = Math.min(width, 700) - space.xl * 2;
+  const contentW = Math.min(width, STORE_MAX_WIDTH) - space.xl * 2;
   const cardW = Math.floor((contentW - space.sm * (cols - 1)) / cols);
   // Big enough to be the thing you are looking at. At 0.46 the drawing sat in
   // the middle of its window like a bullet point with room around it.
@@ -251,6 +254,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     maxHeight: '92%',
+    /*
+     * The sheet is capped and centred because the GRID is capped: card widths
+     * are computed from `Math.min(width, 700)`, and without the same cap here
+     * the sheet stretched edge to edge on a tablet while its cards stayed 656
+     * wide -- everything shoved into the left two thirds with a quarter of the
+     * sheet empty beside it. Two places knowing the same number is the bug;
+     * this is the other end of it.
+     */
+    width: '100%',
+    maxWidth: STORE_MAX_WIDTH,
+    alignSelf: 'center',
     overflow: 'hidden',
     ...elevation.sheet,
   },
@@ -327,7 +341,14 @@ const styles = StyleSheet.create({
   ownedTag: { ...type.micro, color: color.inkMid },
   note: { marginTop: space.lg, ...type.caption, color: color.inkSoft },
 
-  pill: { flex: 1, minWidth: 124, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, borderRadius: radius.pill, overflow: 'visible', ...elevation.toy },
+  /*
+   * `flex: 1` with no ceiling. In the HUD that is fine -- the wallet wrapper
+   * caps it at 250 -- but the shop header has no such wrapper, so on a wide
+   * sheet the pill stretched to ~450px and the level bar inside it became a
+   * thin rule running most of the header. A control should not change species
+   * with the viewport.
+   */
+  pill: { flex: 1, minWidth: 124, maxWidth: 260, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, borderRadius: radius.pill, overflow: 'visible', ...elevation.toy },
   pillFill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: radius.pill },
   pillGloss: { position: 'absolute', left: space.sm, right: space.sm, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
   // The moulded lower lip sits INSIDE the pill. At bottom:-4 it hung below the

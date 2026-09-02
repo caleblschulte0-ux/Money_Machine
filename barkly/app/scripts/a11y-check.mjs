@@ -92,22 +92,41 @@ function auditInPage(where) {
   });
   const css = (c) => `rgb(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)})`;
 
+  /*
+   * One paintable layer, with its EFFECTIVE alpha.
+   *
+   * `background-color: rgba(...)` is only half the story: this codebase leans
+   * on view-level `opacity` for its decorative plates (a gloss at 0.34, tape
+   * at 0.84, a skirting board at 0.66), and CSS multiplies that through. A
+   * layer read at its own alpha only is a layer reported as far more opaque
+   * than it paints, which is the same class of mistake as measuring against
+   * the wrong element -- the number comes out confident and wrong.
+   *
+   * `visibility: hidden` and `opacity: 0` still have a box and a background
+   * colour, so they have to be rejected explicitly; `display: none` collapses
+   * the rect and is caught by the caller's `covers` test.
+   */
   const bgLayerOf = (node) => {
     const cs = getComputedStyle(node);
+    if (cs.visibility === 'hidden') return null;
+    const alpha = parseFloat(cs.opacity);
+    const scale = Number.isFinite(alpha) ? alpha : 1;
+    if (scale <= 0) return null;
+    const withScale = (c) => (c.a * scale > 0 ? { ...c, a: c.a * scale } : null);
     const img = cs.backgroundImage || '';
     if (/gradient\(/.test(img)) {
       const stops = (img.match(/rgba?\([^)]*\)/g) || []).map(parse).filter(Boolean);
       if (stops.length) {
-        return {
+        return withScale({
           r: stops.reduce((t, c) => t + c.r, 0) / stops.length,
           g: stops.reduce((t, c) => t + c.g, 0) / stops.length,
           b: stops.reduce((t, c) => t + c.b, 0) / stops.length,
           a: stops.reduce((t, c) => t + c.a, 0) / stops.length,
-        };
+        });
       }
     }
     const solid = parse(cs.backgroundColor || '');
-    return solid && solid.a > 0 ? solid : null;
+    return solid && solid.a > 0 ? withScale(solid) : null;
   };
 
   /*
@@ -160,11 +179,21 @@ function auditInPage(where) {
       for (let i = (at < 0 ? kids.length : at) - 1; i >= 0; i -= 1) {
         const sib = kids[i];
         if (sib === el || sib.contains(el) || !covers(sib)) continue;
-        if (push(bgLayerOf(sib))) break;
-        // A wrapper whose own fill is the gradient one level down.
-        for (const inner of sib.children) {
-          if (covers(inner) && push(bgLayerOf(inner))) break;
+        /*
+         * A sibling's own CHILDREN paint on top of its background, so they are
+         * nearer the text and must be pushed first -- and among themselves the
+         * later one paints over the earlier, so they go in reverse DOM order.
+         * Pushing the wrapper first (as this did) puts the layers in the wrong
+         * sequence, which is invisible while everything is opaque and quietly
+         * wrong the moment one of them is a translucent plate -- which is
+         * exactly the case this branch exists to handle.
+         */
+        const inners = [...sib.children].filter(covers);
+        let sealed = false;
+        for (let j = inners.length - 1; j >= 0; j -= 1) {
+          if (push(bgLayerOf(inners[j]))) { sealed = true; break; }
         }
+        if (sealed || push(bgLayerOf(sib))) break;
       }
       if (layers.length && layers[layers.length - 1].a >= 0.999) break;
       if (push(bgLayerOf(node))) break;
@@ -198,7 +227,16 @@ function auditInPage(where) {
       const bold = parseInt(cs.fontWeight, 10) >= 700;
       const large = size >= 24 || (size >= 18.66 && bold);
       const need = large ? 3 : 4.5;
-      const got = ratio(cs.color, backgroundOf(el));
+      /*
+       * Composite the TEXT over its background before comparing. Half-opaque
+       * ink is not ink -- reading `color` alone rates it as though it painted
+       * at full strength, which flatters exactly the text most likely to be
+       * too faint to read.
+       */
+      const bg = backgroundOf(el);
+      const fg = parse(cs.color);
+      const inked = fg && fg.a < 0.999 ? css(over(fg, parse(bg))) : cs.color;
+      const got = ratio(inked, bg);
       if (got < need) {
         out.lowContrast.push({ text: el.innerText.slice(0, 34), size, ratio: +got.toFixed(2), need });
       }
@@ -274,6 +312,58 @@ const shoot = async (name) => {
   if (shotDir) await page.screenshot({ path: `${shotDir}/${name}.png` });
 };
 
+/*
+ * DOES THE CHECKER STILL BITE?
+ *
+ * A contrast harness that has just been made more accurate has to prove it did
+ * not simply get quieter, and "I checked once by hand on a Tuesday" is not a
+ * property of the tool. This plants two probes built exactly like the real
+ * surfaces that used to defeat it -- an absolutely-positioned gradient sibling
+ * with `pointer-events: none`, which is why `elementsFromPoint` cannot see it
+ * -- one that must be caught and one that must not, and fails the run if
+ * either verdict is wrong. If a future change to `backgroundOf` starts
+ * resolving the wrong layer again, this trips before anybody trusts a
+ * "clean" report.
+ */
+const selfTest = await page.evaluate((auditSrc) => {
+  const audit = new Function(`return (${auditSrc})`)();
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;left:0;top:0;width:300px;height:80px;z-index:99999';
+  /*
+   * The gradient is DARK on purpose, and that is the whole trick.
+   *
+   * The first version of this probe used a light yellow gradient, which proved
+   * nothing: when the resolver failed to see the gradient it fell through to
+   * the cream page background, and pale-on-cream and dark-on-cream give the
+   * SAME two verdicts as pale-on-yellow and dark-on-yellow. The test passed
+   * with the bug deliberately reintroduced. A probe has to be built so that
+   * resolving the wrong layer FLIPS both answers -- light text over a dark
+   * plate reads as legible only if the dark plate was actually found, and as
+   * illegible the moment the checker falls back to the page.
+   */
+  probe.innerHTML =
+    '<div style="position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;'
+    + 'background-image:linear-gradient(rgb(20,30,70),rgb(30,40,90))"></div>'
+    + '<span id="probe-illegible" style="position:relative;font-size:13px;color:rgb(105,105,105)">probe illegible</span>'
+    + '<span id="probe-legible" style="position:relative;font-size:13px;color:rgb(255,255,255)">probe legible</span>';
+  document.body.appendChild(probe);
+  const found = audit('selftest').lowContrast.map((c) => c.text);
+  probe.remove();
+  return {
+    caughtIllegible: found.some((t) => t.includes('probe illegible')),
+    flaggedLegible: found.some((t) => t.includes('probe legible')),
+  };
+}, auditInPage.toString());
+
+if (!selfTest.caughtIllegible || selfTest.flaggedLegible) {
+  failures += 1;
+  console.log('\nSELF-TEST FAILED — the contrast check is not measuring what it thinks it is.');
+  if (!selfTest.caughtIllegible) console.log('  grey-on-dark over a gradient sibling was NOT caught');
+  if (selfTest.flaggedLegible) console.log('  white-on-dark over a gradient sibling WAS wrongly flagged (the gradient was not found)');
+} else {
+  console.log('\nself-test — the contrast check still bites');
+}
+
 report(await page.evaluate(auditInPage, 'room'));
 await shoot('room');
 
@@ -283,7 +373,7 @@ await shoot('room');
  * This walked Shop, Pack Book and Settings. FOOD -- which is the sheet a
  * player opens more often than any of those, because it is how you feed him --
  * had never been contrast-checked, tap-target-checked or looked at. Neither
- * had the privacy sheet a parent is meant to read. A harness that covers the
+ * had Barkly's plan. A harness that covers the
  * three surfaces somebody happened to think of on the day is how the defects
  * on the other five survive review.
  *
@@ -291,6 +381,15 @@ await shoot('room');
  * chip to be there), so a missing opener is a skip, not a failure -- but a
  * missing opener for a sheet that should ALWAYS be reachable still fails.
  */
+/** A string only that sheet puts on screen, used to confirm it really opened. */
+const sheetMarker = {
+  shop: 'STUFF',
+  pack: 'THE PACK BOOK',
+  food: 'Barkly',
+  settings: 'Settings',
+  plan: "BARKLY'S NOTE",
+};
+
 const SHEETS = [
   { name: 'shop', open: '[aria-label^="Shop."]' },
   { name: 'pack', open: '[aria-label^="Pack Book"]' },
@@ -311,8 +410,29 @@ for (const { name, open: selector, optional } of SHEETS) {
   }
   await opener.click({ force: true });
   await page.waitForTimeout(900);
-  report(await page.evaluate(auditInPage, name));
-  await shoot(name);
+  /*
+   * PROVE THE SHEET IS ACTUALLY OPEN before believing anything measured on it.
+   *
+   * Both clicks here are `force: true`, which switches off Playwright's
+   * actionability check, and the close locator takes the FIRST matching glyph
+   * on the page. If a close misses, the next iteration clicks through a sheet
+   * that is still up, the audit measures the PREVIOUS surface under the new
+   * name, the screenshot saves the wrong screen, and the run reports it clean.
+   * Silently auditing the wrong thing is the same failure mode as measuring
+   * text against the wrong background: confident and wrong. `marker` is
+   * something only that sheet renders.
+   */
+  const marker = await page.evaluate((want) => {
+    const text = document.body.innerText || '';
+    return text.includes(want);
+  }, sheetMarker[name]);
+  if (!marker) {
+    failures += 1;
+    console.log(`\n${name} — OPENED THE WRONG SCREEN (expected to find "${sheetMarker[name]}")`);
+  } else {
+    report(await page.evaluate(auditInPage, name));
+    await shoot(name);
+  }
   const close = page.getByText('✕', { exact: true }).first();
   if (await close.count()) await close.click({ force: true });
   await page.waitForTimeout(600);

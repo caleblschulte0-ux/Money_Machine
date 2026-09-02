@@ -132,6 +132,15 @@ async function goTo(page, loc) {
  */
 const ALL_BANDS = [['morning', 8], ['day', 14], ['evening', 19], ['night', 22]];
 const wanted = arg('--bands', '').split(',').map((b) => b.trim()).filter(Boolean);
+// A typo must not silently capture nothing. `--bands nigth` used to leave
+// BANDS empty, render zero frames, and exit 0 -- a run that looks like it
+// worked and measured a directory that is still yesterday's.
+const unknown = wanted.filter((b) => !ALL_BANDS.some(([name]) => name === b));
+if (unknown.length) {
+  console.error(`unknown --bands value(s): ${unknown.join(', ')}`);
+  console.error(`known bands: ${ALL_BANDS.map(([n]) => n).join(', ')}`);
+  process.exit(2);
+}
 const BANDS = wanted.length ? ALL_BANDS.filter(([b]) => wanted.includes(b)) : ALL_BANDS;
 
 const shots = [];

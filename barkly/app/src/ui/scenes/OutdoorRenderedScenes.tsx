@@ -5,6 +5,7 @@ import Svg, { Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from
 import { DIORAMA } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
 import { elevation, radius } from '../theme';
+import { CHROME_BOTTOM } from '../layout';
 import {
   WorldLayer,
   WorldLighting,
@@ -69,7 +70,20 @@ function useAmbientLoop(duration: number, delay = 0) {
   return value;
 }
 
-function SceneSky({ band, horizon }: { band: SkyBand; horizon: number }) {
+/*
+ * `chromeBottom` is where the HUD ends, passed in the way HomeScene already
+ * receives it. The sun used to sit at `Math.max(66, horizon - 126)` and got
+ * tucked under the location tabs; the first fix raised that floor to a literal
+ * 132, which was worse in a quieter way -- every scene clamps its horizon
+ * (Park <= 184, Town <= 184, Beach <= 210), so `horizon - 96` is at most 114
+ * and the second branch became UNREACHABLE. The disc stopped tracking the
+ * horizon at all and became a constant that happened to look right on the one
+ * device it was eyeballed on. The comment justifying it also cited 106 for
+ * CHROME_BOTTOM, which is 98. A floor derived from the real chrome height
+ * still clears the HUD on a notched phone, where `chromeBottom` grows with the
+ * top inset and a hard-coded 132 would not.
+ */
+function SceneSky({ band, horizon, chromeBottom }: { band: SkyBand; horizon: number; chromeBottom: number }) {
   const night = band === 'night';
   const drift = useAmbientLoop(15000);
   return (
@@ -79,18 +93,13 @@ function SceneSky({ band, horizon }: { band: SkyBand; horizon: number }) {
         style={[
           styles.sun,
           {
-            // Clear of the HUD. The floor used to be 66, which on Town put
-            // the sun at y=58 -- behind the location tabs -- and on Beach
-            // tucked the moon under their lower edge. The chrome band is
-            // CHROME_BOTTOM (106) plus the top inset, so 132 keeps the disc
-            // fully in the sky on every scene.
-            top: Math.max(132, horizon - 96),
+            top: Math.max(chromeBottom + 26, horizon - 96),
             backgroundColor: night ? DIORAMA.goldLight : DIORAMA.lemon,
             opacity: night ? 0.82 : 1,
           },
         ]}
       />
-      {night && <View style={[styles.moonCutout, { top: Math.max(124, horizon - 104), backgroundColor: DIORAMA.skyNightA }]} />}
+      {night && <View style={[styles.moonCutout, { top: Math.max(chromeBottom + 18, horizon - 104), backgroundColor: DIORAMA.skyNightA }]} />}
       {/*
         A CLOUD, not a capsule.
 
@@ -194,7 +203,7 @@ function ParkMotion({ night, horizon }: { night: boolean; horizon: number }) {
 }
 
 /** Park keeps terrain live in code and composes independent rendered landmarks over it. */
-export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; motion?: WorldMotion }) {
+export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
   const { width, height } = useWindowDimensions();
   const scale = worldScale(width, height);
   const band = skyBand(hour);
@@ -226,7 +235,7 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
 
   return (
     <WorldScene motion={motion} testID="world-scene-park">
-      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} /></WorldLayer>
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Defs>
           <SvgLinearGradient id="parkGroundV3" x1="0" y1="0" x2="0" y2="1">
@@ -419,7 +428,7 @@ function TownNightLights({
 }
 
 /** Town buildings are separate rendered modules; sidewalk, road, and weather stay live. */
-export function TownScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; motion?: WorldMotion }) {
+export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
   const { width, height } = useWindowDimensions();
   const scale = worldScale(width, height);
   const band = skyBand(hour);
@@ -452,7 +461,7 @@ export function TownScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
 
   return (
     <WorldScene motion={motion} testID="world-scene-town">
-      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon + 30} /></WorldLayer>
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon + 30} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="distant">
         <WorldObject source={TOWN_STORE_CORAL} left={sideStoreInset} top={horizon + 34} width={shopW * 0.90} height={shopH * 0.90} night={night} depth={0.32} />
         <WorldObject source={TOWN_STORE_AQUA} left={centerStoreLeft} top={horizon + 8} width={shopW * 0.96} height={shopH * 0.96} night={night} depth={0.38} />
@@ -541,7 +550,7 @@ function BeachMotion({ night, tide }: { night: boolean; tide: number }) {
 }
 
 /** Beach landmarks are modular props over code-owned ocean, tide, and sand. */
-export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; motion?: WorldMotion }) {
+export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
   const { width, height } = useWindowDimensions();
   const scale = worldScale(width, height);
   const band = skyBand(hour);
@@ -578,7 +587,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }:
 
   return (
     <WorldScene motion={motion} testID="world-scene-beach">
-      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} /></WorldLayer>
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="distant">
         <LinearGradient colors={[oceanA, oceanB]} style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: tide - horizon + 28 }} />
         <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>

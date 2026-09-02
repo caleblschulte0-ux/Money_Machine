@@ -33,17 +33,27 @@ def stats(im, skip_top_frac=0.14, skip_bottom_frac=0.22):
     for r, g, b in box.convert("RGB").getdata():
         hh, ss, vv = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
         sats.append(ss); vals.append(vv); hues.append(hh)
-    sats.sort(); vals.sort()
-    n = len(sats)
     # Mean hue as a unit vector, so red at 0.98 and red at 0.02 average to red
     # instead of to cyan. This is the cohesion number: four locations that read
     # as four different games have four different hue centroids. Weighting each
     # sample by its own saturation is what stops a big pale sky from dragging
     # the centroid toward whatever noise its near-grey pixels happen to carry.
+    #
+    # PAIR EACH HUE WITH ITS OWN PIXEL'S SATURATION. `sats.sort()` below is
+    # in-place, and this used to run AFTER it -- so `zip(hues, sats)` married
+    # every hue to the i-th SMALLEST saturation in the frame instead of to its
+    # own. The weighting was by raster position, not by chroma. Measured on a
+    # synthetic saturated-sky-over-pale-sand frame the centroid came out at
+    # 38.6 degrees against a true 224.2: not noise, the opposite side of the
+    # wheel. Every hue figure this tool printed before this fix was wrong, and
+    # they were quoted as the evidence for the master grade.
     hx = sum(math.cos(2 * math.pi * h) * s for h, s in zip(hues, sats))
     hy = sum(math.sin(2 * math.pi * h) * s for h, s in zip(hues, sats))
     hue = (math.atan2(hy, hx) / (2 * math.pi)) % 1.0
     strength = math.hypot(hx, hy) / max(1e-6, sum(sats))
+
+    sats.sort(); vals.sort()
+    n = len(sats)
     return {
         "mean_sat": sum(sats) / n,
         "p90_sat": sats[int(n * 0.90)],
@@ -53,6 +63,39 @@ def stats(im, skip_top_frac=0.14, skip_bottom_frac=0.22):
         "hue": hue,
         "hue_focus": strength,
     }
+
+def _self_check():
+    """
+    Prove the hue metric pairs each pixel with its OWN saturation.
+
+    This shipped for a whole session weighting every hue by the i-th SMALLEST
+    saturation in the frame -- `sats.sort()` is in place and ran before the
+    zip -- so the weighting was by raster position rather than by chroma. On a
+    saturated-sky-over-pale-sand frame it reported 39 degrees against a true
+    224: the opposite side of the wheel. Nothing caught it because the numbers
+    still moved in a believable direction, and they were quoted as the evidence
+    for a whole art pass.
+
+    A synthetic frame with a known answer costs about a millisecond, so it runs
+    on every invocation rather than living in a test nobody executes.
+    """
+    from PIL import Image as _Image
+    sky, sand = (40, 90, 220), (240, 228, 205)
+    im = _Image.new("RGB", (48, 48))
+    im.putdata([sky] * (48 * 24) + [sand] * (48 * 24))
+    # stats() crops the chrome/dialogue bands, so give it the whole frame.
+    got = stats(im, skip_top_frac=0.0, skip_bottom_frac=0.0)["hue"] * 360
+    # Saturated blue dominates a weighted mean over a washed-out warm; the
+    # answer must be in the blues, and MUST NOT be its complement in the golds.
+    if not (190 <= got <= 260):
+        sys.exit(
+            f"art-lab-sheet self-check FAILED: hue centroid {got:.1f} deg for a "
+            "saturated-blue-over-pale-sand frame; expected 190-260. The hue "
+            "weighting is not pairing each pixel with its own saturation."
+        )
+
+
+_self_check()
 
 report = {}
 tiles = []

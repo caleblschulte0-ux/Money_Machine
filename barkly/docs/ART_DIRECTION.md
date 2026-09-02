@@ -52,24 +52,48 @@ could finally say so in a number. `art-lab-sheet.py` now reports a
 saturation-weighted **circular-mean hue** per scene plus a `hue_focus`
 concentration, so "these don't look like the same world" stops being taste:
 
-| | before | after |
-|---|---|---|
-| day hue centroids | 37° / 90° / 71° / 52° | 35° / 90° / 71° / 51° |
-| night hue centroids | 19° / 108° / **358°** / 42° | 275° / 203° / 243° / 268° |
-| night `hue_focus` (town) | 0.139 | 0.561 |
+**The hue figures published in the first version of this section were wrong.**
+`art-lab-sheet.py` sorted `sats` in place for its percentiles BEFORE zipping it
+with `hues`, so every hue was weighted by the i-th smallest saturation in the
+frame rather than by its own pixel's — the weighting was by raster position,
+not by chroma. On a synthetic saturated-sky-over-pale-sand frame it reported
+39° against a true 224°: the opposite side of the wheel. `mean_sat`, `p90_sat`,
+`mean_val`, `val_spread` and `washed_frac` were never affected (a sum and a
+sorted percentile do not care about order), so the chroma evidence below stands
+as published. The hue table does not, and is replaced here with numbers from
+the corrected metric measured against the real pre-grade commit (`bd41e79`),
+rebuilt and re-captured for the purpose rather than restated from memory.
 
-Full before/after, all eight frames (`mean_sat` / `washed_frac`):
+The tool now self-checks on every run against a frame with a known answer, and
+that check has been verified to fail when the mispairing is reintroduced.
+
+**Hue centroids per band, and how far apart the four locations are:**
+
+| band | before | spread | after | spread |
+|---|---|---|---|---|
+| morning | 36 / 91 / 63 / 52 | 54° | 34 / 91 / 56 / 49 | 57° |
+| day | 37 / 98 / 120 / 63 | 82° | 35 / 93 / 73 / 56 | **58°** |
+| evening | 36 / 90 / 47 / 46 | 54° | 31 / 78 / 33 / 39 | **47°** |
+| night | 14 / 109 / 265 / 37 | **157°** | 250 / 205 / 232 / 235 | **45°** |
+
+Night is the headline and it is bigger than the wrong numbers suggested: four
+locations spread 157° apart — most of the colour wheel — now sit inside 45°,
+all of them blue. Day and evening tighten too. Morning is flat (54° → 57°),
+which is honest: it was already the most coherent band and the grade did not
+need to do much there.
+
+Full before/after, all eight day/night frames (`mean_sat` / `washed_frac`):
 
 | scene | before | after |
 |---|---|---|
-| home-day | 0.411 / 3.0% | 0.432 / 1.5% |
-| park-day | 0.517 / 1.1% | 0.511 / 0.6% |
-| town-day | 0.309 / **22.3%** | 0.327 / **7.0%** |
-| beach-day | 0.421 / 9.8% | 0.430 / 4.7% |
-| home-night | 0.396 / 6.5% | 0.390 / 18.3% |
-| park-night | 0.417 / 1.6% | 0.501 / 4.2% |
-| town-night | 0.340 / 19.1% | 0.452 / 10.0% |
-| beach-night | 0.421 / 8.9% | 0.400 / 10.9% |
+| home-day | 0.416 / 3.0% | 0.434 / 1.5% |
+| park-day | 0.529 / 0.8% | 0.513 / 0.6% |
+| town-day | 0.309 / **22.3%** | 0.329 / **7.6%** |
+| beach-day | 0.421 / 9.8% | 0.433 / 4.8% |
+| home-night | 0.396 / 6.5% | 0.384 / 17.5% |
+| park-night | 0.417 / 1.6% | 0.506 / 3.9% |
+| town-night | 0.340 / 19.1% | 0.438 / 11.0% |
+| beach-night | 0.421 / 8.9% | 0.410 / 10.2% |
 
 Home at night is the one number that got worse, and it is a real trade rather
 than an oversight: a room full of warm wood under a blue night has genuine

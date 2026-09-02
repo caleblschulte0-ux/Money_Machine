@@ -867,9 +867,9 @@ export default function BarklyRoom() {
         style={[styles.sceneLayer, { opacity: sceneFade }]}
       >
         {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} biography={barkly.biography} />}
-        {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
-        {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
-        {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
+        {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} />}
+        {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} />}
+        {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} />}
       </Animated.View>
       {asleep && <NightOverlay />}
 
