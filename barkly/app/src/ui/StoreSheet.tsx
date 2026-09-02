@@ -8,7 +8,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import ItemIcon from './ItemIcon';
 import { color, elevation, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
@@ -81,6 +81,27 @@ export function CoinPill({ coins, level, frac }: { coins: number; level: number;
 }
 
 export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, devMode }: Props) {
+  const { width } = useWindowDimensions();
+  /*
+   * A SHOP IS A GRID OF THINGS, not a list of rows.
+   *
+   * This was a stack of full-width cards: 44px icon on the left, name and
+   * blurb in the middle, a price chip on the right. That is the shape of a
+   * settings screen, and it is the single most "this is a web page" surface in
+   * the app -- on the screen where the player is deciding to spend. Every shop
+   * in the reference games puts the OBJECT first: a chunky tile, the art big
+   * in the middle of it, the price on a chip at the bottom.
+   *
+   * The column count comes from the viewport, and the card width is computed
+   * from the real content width rather than a percentage, so the gaps stay
+   * exact instead of drifting a pixel per card on every different phone.
+   */
+  const cols = width >= 900 ? 4 : width >= 600 ? 3 : 2;
+  const contentW = Math.min(width, 700) - space.xl * 2;
+  const cardW = Math.floor((contentW - space.sm * (cols - 1)) / cols);
+  // Big enough to be the thing you are looking at. At 0.46 the drawing sat in
+  // the middle of its window like a bullet point with room around it.
+  const artSize = Math.max(54, Math.min(104, Math.round(cardW * 0.62)));
   const [flash, setFlash] = useState<string | null>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -155,6 +176,7 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                     <Text style={styles.section}>{SLOT_LABEL[slot]}</Text>
                   </View>
 
+                  <View style={styles.grid}>
                   {rows.map(({ item, locked }) => {
                     const owned = wallet.owned.includes(item.id);
                     const held = wallet.pantry[item.id] ?? 0;
@@ -165,8 +187,8 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                       <Pressable
                         key={item.id}
                         style={({ pressed }) => [
-                          styles.item,
-                          { borderColor: worn ? slotEdge(slot) : color.line },
+                          styles.card,
+                          { width: cardW, borderColor: worn ? color.ink : slotEdge(slot) },
                           locked && styles.itemLocked,
                           pressed && styles.itemPressed,
                         ]}
@@ -183,31 +205,32 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                         }
                         accessibilityState={{ disabled: locked }}
                       >
-                        <View style={[styles.itemRail, { backgroundColor: slotColor(slot) }]} pointerEvents="none" />
-                        <View style={[styles.icon, { backgroundColor: slotColor(slot) }]}>
-                          <View style={styles.iconGloss} pointerEvents="none" />
-                          <ItemIcon id={item.id} tint={item.color} />
+                        <View style={[styles.cardEdge, { backgroundColor: slotEdge(slot) }]} pointerEvents="none" />
+                        {/* The art sits in a lit window, the way a toy sits in its box. */}
+                        <View style={[styles.cardWindow, { backgroundColor: slotColor(slot) }]}>
+                          <View style={styles.cardGloss} pointerEvents="none" />
+                          <ItemIcon id={item.id} tint={item.color} size={artSize} />
+                          {held > 0 && (
+                            <View style={styles.heldTag}><Text style={styles.heldText}>×{held}</Text></View>
+                          )}
                         </View>
-                        <View style={styles.itemText}>
-                          <Text style={styles.itemName}>
-                            {item.name}{held > 0 ? `  ×${held}` : ''}
-                          </Text>
-                          <Text style={styles.itemBlurb}>{item.blurb}</Text>
-                        </View>
+                        <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.cardBlurb} numberOfLines={2}>{item.blurb}</Text>
                         {locked ? (
-                          <View style={styles.stateQuiet}><Text style={styles.lockTag}>LV {item.level}</Text></View>
+                          <View style={styles.cardChipQuiet}><Text style={styles.lockTag}>LV {item.level}</Text></View>
                         ) : worn ? (
-                          <View style={[styles.stateLoud, { backgroundColor: slotColor(slot) }]}><Text style={styles.stateLoudText}>{SLOT_VERBS[item.slot].onState.toUpperCase()}</Text></View>
+                          <View style={styles.cardChipOn}><Text style={styles.stateLoudText}>{SLOT_VERBS[item.slot].onState.toUpperCase()}</Text></View>
                         ) : owned && !item.consumable ? (
-                          <View style={styles.stateQuiet}><Text style={styles.ownedTag}>{SLOT_VERBS[item.slot].offState.toUpperCase()}</Text></View>
+                          <View style={styles.cardChipQuiet}><Text style={styles.ownedTag}>{SLOT_VERBS[item.slot].offState.toUpperCase()}</Text></View>
                         ) : (
-                          <View style={[styles.pricePod, !afford && !devMode && styles.pricePodShort]}>
+                          <View style={[styles.cardChipPrice, !afford && !devMode && styles.pricePodShort]}>
                             <Text style={[styles.price, !afford && !devMode && styles.priceShort]}>{devMode ? 'FREE' : `${item.price}c`}</Text>
                           </View>
                         )}
                       </Pressable>
                     );
                   })}
+                  </View>
                 </View>
               );
             })}
@@ -245,24 +268,63 @@ const styles = StyleSheet.create({
   sectionWrap: { marginTop: space.lg },
   sectionTab: { alignSelf: 'flex-start', paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.pill, marginBottom: space.sm, ...elevation.low },
   section: { ...type.caption, fontWeight: '900', letterSpacing: 1.1, color: color.ink, textTransform: 'uppercase' },
-  item: { flexDirection: 'row', alignItems: 'center', gap: space.md, backgroundColor: color.card, borderRadius: radius.md, padding: space.md, marginBottom: space.sm, borderWidth: 2, overflow: 'hidden', ...elevation.low },
-  itemPressed: { transform: [{ scale: 0.985 }] },
-  itemLocked: { opacity: 0.55 },
-  itemRail: { position: 'absolute', left: 0, top: 0, bottom: 0, width: space.xs },
-  icon: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  iconGloss: { position: 'absolute', left: space.xs, right: space.xs, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
-  itemText: { flex: 1 },
-  itemName: { ...type.strong, color: color.ink },
-  itemBlurb: { ...type.small, color: color.inkSoft, marginTop: space.xxs },
-  stateQuiet: { paddingHorizontal: space.sm, paddingVertical: space.xs, borderRadius: radius.pill, backgroundColor: color.fill },
-  stateLoud: { paddingHorizontal: space.sm, paddingVertical: space.xs, borderRadius: radius.pill },
-  stateLoudText: { ...type.micro, color: color.ink },
-  pricePod: { paddingHorizontal: space.sm, paddingVertical: space.xs, borderRadius: radius.pill, backgroundColor: color.lemon },
-  pricePodShort: { backgroundColor: color.fill },
+  itemPressed: { transform: [{ scale: 0.97 }] },
+  itemLocked: { opacity: 0.62 },
+
+  /*
+   * The grid. Cards are chunky physical tiles in their category's colour, with
+   * the same material recipe as every other control in the game: a moulded
+   * lower lip, one gloss highlight, a dark hairline. The art sits in a lit
+   * window rather than on the tile, the way a toy sits in its box.
+   */
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  /*
+   * The CATEGORY COLOUR IS BEHIND THE ART, not behind the words.
+   *
+   * The first cut painted the whole tile in its category colour, which looked
+   * right and failed the contrast harness immediately: 12px body copy on the
+   * coral tile measured 3.7:1 against a 4.5 requirement, and dark ink on the
+   * violet only reaches about 3.9 -- there is no text colour that passes on a
+   * saturated mid-tone at this size. Putting the colour in the window behind
+   * the item keeps it as the largest area on the card (so the category still
+   * reads across the grid) and leaves the copy on cream, where it clears
+   * easily. This is also how the reference shops do it.
+   */
+  card: {
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    backgroundColor: color.card,
+    paddingHorizontal: space.sm,
+    paddingTop: space.sm,
+    paddingBottom: space.md,
+    alignItems: 'center',
+    overflow: 'hidden',
+    ...elevation.card,
+  },
+  cardEdge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 7 },
+  cardGloss: { position: 'absolute', left: space.sm, right: space.sm, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
+  cardWindow: {
+    width: '100%',
+    aspectRatio: 1.16,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: space.sm,
+    overflow: 'hidden',
+  },
+  heldTag: { position: 'absolute', right: space.xs, bottom: space.xs, paddingHorizontal: space.sm, paddingVertical: 1, borderRadius: radius.pill, backgroundColor: color.ink },
+  heldText: { ...type.micro, color: color.paper },
+  cardName: { ...type.strong, color: color.ink, textAlign: 'center' },
+  cardBlurb: { ...type.caption, color: color.inkSoft, textAlign: 'center', marginTop: space.xxs, marginBottom: space.sm, minHeight: 28 },
+  cardChipQuiet: { paddingHorizontal: space.md, paddingVertical: space.xs, borderRadius: radius.pill, backgroundColor: color.fill },
+  cardChipOn: { paddingHorizontal: space.md, paddingVertical: space.xs, borderRadius: radius.pill, backgroundColor: color.ink },
+  cardChipPrice: { paddingHorizontal: space.md, paddingVertical: space.xs, borderRadius: radius.pill, backgroundColor: color.lemon, borderWidth: 1.5, borderColor: color.lemonDeep },
+  stateLoudText: { ...type.micro, color: color.paper },
+  pricePodShort: { backgroundColor: color.fill, borderColor: color.line },
   price: { ...type.strong, color: color.goldInk },
   priceShort: { color: color.inkSoft },
-  lockTag: { ...type.caption, fontWeight: '800', color: color.inkSoft },
-  ownedTag: { ...type.micro, color: color.good },
+  lockTag: { ...type.caption, fontWeight: '900', color: color.inkMid },
+  ownedTag: { ...type.micro, color: color.inkMid },
   note: { marginTop: space.lg, ...type.caption, color: color.inkSoft },
 
   pill: { flex: 1, minWidth: 124, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, borderRadius: radius.pill, overflow: 'visible', ...elevation.toy },

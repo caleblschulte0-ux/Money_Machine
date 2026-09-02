@@ -19,6 +19,7 @@
  */
 
 import React from 'react';
+import { View } from 'react-native';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { BALL, BRASS, ITEM } from './scenes/artPalette';
 
@@ -168,8 +169,19 @@ const BY_ID: Record<string, React.ReactElement> = {
 /**
  * Draw an item. `tint` is only read for collars, which are one shape in four
  * colours rather than four different objects.
+ *
+ * `size` scales the drawing without touching it. Every icon here is authored
+ * at 30x30, and the shop needs them big enough to be the thing you are looking
+ * at rather than a bullet point beside a row of text -- re-authoring nine
+ * SVGs at a second size to get that would be nine chances for the two to
+ * drift.
  */
-export default function ItemIcon({ id, tint }: { id: string; tint?: string }) {
-  if (id.startsWith('collar_')) return <Collar tint={tint ?? ITEM.leather} />;
-  return BY_ID[id] ?? <Rug />;
+export default function ItemIcon({ id, tint, size = 30 }: { id: string; tint?: string; size?: number }) {
+  const art = id.startsWith('collar_') ? <Collar tint={tint ?? ITEM.leather} /> : BY_ID[id] ?? <Rug />;
+  if (size === 30) return art;
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ transform: [{ scale: size / 30 }] }}>{art}</View>
+    </View>
+  );
 }

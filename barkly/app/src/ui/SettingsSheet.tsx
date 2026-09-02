@@ -40,7 +40,6 @@ interface Props {
   memory: MemoryState;
   stats: BarklyStats;
   stash: Treasure[];
-  dialogueProviderName: string;
   brain: { using: 'primary' | 'fallback'; breakerOpen: boolean; lastFailure?: string };
   modelConfigured: boolean;
   voice: { route: 'barkly' | 'device' | 'silent' | null; muted: boolean };
@@ -103,14 +102,33 @@ function Stepper({
   );
 }
 
+/**
+ * A GAUGE, not an HTML progress bar.
+ *
+ * These were a 9px flat track with a flat fill and no material at all -- the
+ * one place in the app that looked like a form control, on the screen a parent
+ * opens to see how the dog is doing. Same recipe as every other physical thing
+ * here: a recessed track, a moulded lower lip on the fill, one gloss highlight,
+ * and a colour that means something (green is fine, amber is getting low, coral
+ * needs attention) so the row reads before it is read.
+ */
 function StatBar({ label, value, invert }: { label: string; value: number; invert?: boolean }) {
-  const shown = invert ? 100 - value : value;
+  const shown = Math.max(0, Math.min(100, invert ? 100 - value : value));
+  const paint =
+    shown >= 66 ? { body: color.mint, edge: color.mintDeep }
+    : shown >= 33 ? { body: color.lemon, edge: color.lemonDeep }
+    : { body: color.coral, edge: color.coralDeep };
   return (
     <View style={styles.statRow}>
       <Text style={styles.statLabel}>{label}</Text>
       <View style={styles.statTrack}>
-        <View style={[styles.statFill, { width: `${Math.max(4, shown)}%` }]} />
+        <View style={styles.statTrackShade} pointerEvents="none" />
+        <View style={[styles.statFill, { width: `${Math.max(6, shown)}%`, backgroundColor: paint.body }]}>
+          <View style={[styles.statFillEdge, { backgroundColor: paint.edge }]} pointerEvents="none" />
+          <View style={styles.statFillGloss} pointerEvents="none" />
+        </View>
       </View>
+      <Text style={styles.statValue}>{Math.round(shown)}</Text>
     </View>
   );
 }
@@ -122,7 +140,6 @@ export default function SettingsSheet(props: Props) {
     memory,
     stats,
     stash,
-    dialogueProviderName,
     brain,
     modelConfigured,
     voice,
@@ -206,7 +223,15 @@ export default function SettingsSheet(props: Props) {
             ))}
 
             <Text style={styles.section}>Providers</Text>
-            <Text style={styles.row}>Dialogue: {dialogueProviderName}</Text>
+            {/*
+              The "Dialogue:" row is gone. It printed `engine.providerName`,
+              which for the resilient provider is an internal diagnostic id
+              built as `${primary}+${fallback}` -- so a parent opening Settings
+              read the literal string "no model configured+scripted-offline".
+              That is a debug field, not a sentence, and everything a person
+              actually needs from it is in the Brain row directly below, in
+              English. The name still exists on the engine for logs.
+            */}
             <Text style={styles.row}>
               Brain:{' '}
               {!modelConfigured
@@ -497,10 +522,17 @@ const styles = StyleSheet.create({
   section: { marginTop: 16, marginBottom: 6, fontSize: 13, fontWeight: '800', color: color.inkSoft, textTransform: 'uppercase' },
   row: { fontSize: 15, color: color.ink, marginBottom: 4 },
   empty: { fontSize: 13, color: color.inkSoft, fontStyle: 'italic' },
-  statRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 },
-  statLabel: { width: 56, fontSize: 13, fontWeight: '700', color: color.inkSoft },
-  statTrack: { flex: 1, height: 9, borderRadius: 8, backgroundColor: color.line, overflow: 'hidden' },
-  statFill: { height: 9, borderRadius: 8, backgroundColor: color.gold },
+  statRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 9 },
+  statLabel: { width: 56, fontSize: 13, fontWeight: '800', color: color.inkMid },
+  statValue: { width: 26, textAlign: 'right', fontSize: 12, fontWeight: '800', color: color.inkSoft },
+  statTrack: {
+    flex: 1, height: 16, borderRadius: 999, backgroundColor: color.fill,
+    borderWidth: 1.5, borderColor: color.line, overflow: 'hidden', justifyContent: 'center',
+  },
+  statTrackShade: { position: 'absolute', left: 0, right: 0, top: 0, height: 5, backgroundColor: 'rgba(43,33,25,0.07)' },
+  statFill: { height: 13, borderRadius: 999, marginLeft: 1, overflow: 'hidden' },
+  statFillEdge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, opacity: 0.85 },
+  statFillGloss: { position: 'absolute', left: 5, right: 5, top: 2, height: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.55)' },
   forget: {
     marginTop: 24,
     backgroundColor: color.brand,

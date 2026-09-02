@@ -29,6 +29,7 @@
  */
 
 import { existsSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 async function loadChromium() {
@@ -175,7 +176,24 @@ const report = (a) => {
   for (const c of a.lowContrast) console.log(`  CONTRAST ${c.ratio}:1 (need ${c.need}) ${c.size}px  "${c.text}"`);
 };
 
+/*
+ * SHOTS.
+ *
+ * This harness already walks every sheet to measure it; it cost one line to
+ * also SAVE what it walked. Until now nothing captured the sheets as images at
+ * all -- the art lab shoots the world, the overlap harness measures boxes, and
+ * the three surfaces a player opens most often had never once been reviewed
+ * side by side. Same lesson as morning and evening: you do not fix what the
+ * harness cannot show you.
+ */
+const shotDir = arg('--shots', '');
+if (shotDir) await mkdir(shotDir, { recursive: true });
+const shoot = async (name) => {
+  if (shotDir) await page.screenshot({ path: `${shotDir}/${name}.png` });
+};
+
 report(await page.evaluate(auditInPage, 'room'));
+await shoot('room');
 
 const SHEETS = [
   ['shop', '[aria-label^="Shop."]'],
@@ -192,6 +210,7 @@ for (const [name, selector] of SHEETS) {
   await opener.click();
   await page.waitForTimeout(900);
   report(await page.evaluate(auditInPage, name));
+  await shoot(name);
   const close = page.getByText('✕', { exact: true }).first();
   if (await close.count()) await close.click();
   await page.waitForTimeout(600);

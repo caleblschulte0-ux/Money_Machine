@@ -1294,7 +1294,6 @@ export default function BarklyRoom() {
         memory={barkly.memorySnapshot()}
         stats={snapshot.stats}
         stash={barkly.stashItems}
-        dialogueProviderName={barkly.dialogueProviderName}
         brain={{
           using: barkly.dialogueStatus().using,
           breakerOpen: barkly.dialogueStatus().breakerOpen,
