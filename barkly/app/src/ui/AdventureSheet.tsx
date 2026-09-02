@@ -112,7 +112,13 @@ const styles = StyleSheet.create({
   title: { ...type.display, color: color.ink, marginTop: space.sm },
   closeButton: { width: TAP_MIN, height: TAP_MIN, borderRadius: radius.pill, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center', ...elevation.low },
   close: { fontSize: glyph.close, lineHeight: TAP_MIN, width: TAP_MIN, height: TAP_MIN, textAlign: 'center', color: color.inkSoft },
-  subtitle: { ...type.small, color: color.inkMid, marginTop: space.sm, fontWeight: '600' },
+  /*
+   * ink, not inkMid. Both of these sit on the lemon note, where inkMid
+   * measures 2.85:1 against a 4.5 requirement for body copy. Nothing had ever
+   * checked this sheet -- the a11y harness only walked three of them until the
+   * pass that added Food and Plan.
+   */
+  subtitle: { ...type.small, color: color.ink, marginTop: space.sm, fontWeight: '600' },
   goals: { gap: space.md, marginTop: space.lg },
   goal: { minHeight: 68, flexDirection: 'row', alignItems: 'center', borderRadius: radius.md, padding: space.md, borderWidth: 1.5, borderColor: color.line, ...elevation.low },
   goalDone: { opacity: 0.82 },
@@ -127,7 +133,7 @@ const styles = StyleSheet.create({
   goalNumberPod: { width: 28, height: 28, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', marginLeft: space.sm },
   goalNumber: { ...type.caption, fontWeight: '900', color: color.ink },
   bottomRow: { gap: space.sm, marginTop: space.lg },
-  progressText: { ...type.caption, color: color.inkMid, fontWeight: '700' },
+  progressText: { ...type.caption, color: color.ink, fontWeight: '800' },
   rewardPod: { alignSelf: 'flex-end', backgroundColor: color.violet, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: space.sm, transform: [{ rotate: '-1deg' }], ...elevation.low },
   rewardScribble: { ...type.caption, color: color.ink, fontWeight: '900' },
   noPressurePod: { marginTop: space.lg, alignSelf: 'center', backgroundColor: color.fill, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: space.sm },

@@ -80,16 +80,98 @@ function auditInPage(where) {
     const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
     return (hi + 0.05) / (lo + 0.05);
   };
-  // The nearest ancestor that actually paints something. A transparent parent
-  // is not the background; the thing behind it is.
-  const backgroundOf = (el) => {
-    let node = el;
-    while (node) {
-      const bg = getComputedStyle(node).backgroundColor;
-      if (bg && !/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) return bg;
-      node = node.parentElement;
+  const parse = (css) => {
+    const p = (css.match(/[\d.]+/g) || []).map(Number);
+    return p.length >= 3 ? { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 } : null;
+  };
+  const over = (fg, bg) => ({
+    r: fg.r * fg.a + bg.r * (1 - fg.a),
+    g: fg.g * fg.a + bg.g * (1 - fg.a),
+    b: fg.b * fg.a + bg.b * (1 - fg.a),
+    a: 1,
+  });
+  const css = (c) => `rgb(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)})`;
+
+  const bgLayerOf = (node) => {
+    const cs = getComputedStyle(node);
+    const img = cs.backgroundImage || '';
+    if (/gradient\(/.test(img)) {
+      const stops = (img.match(/rgba?\([^)]*\)/g) || []).map(parse).filter(Boolean);
+      if (stops.length) {
+        return {
+          r: stops.reduce((t, c) => t + c.r, 0) / stops.length,
+          g: stops.reduce((t, c) => t + c.g, 0) / stops.length,
+          b: stops.reduce((t, c) => t + c.b, 0) / stops.length,
+          a: stops.reduce((t, c) => t + c.a, 0) / stops.length,
+        };
+      }
     }
-    return 'rgb(255, 249, 236)';
+    const solid = parse(cs.backgroundColor || '');
+    return solid && solid.a > 0 ? solid : null;
+  };
+
+  /*
+   * What is ACTUALLY behind this text.
+   *
+   * Three ways to get this wrong, and every one of them makes the checker LIE
+   * rather than merely miss something -- which is worse, because a harness that
+   * cries wolf on a correct screen gets switched off. All three were live:
+   *
+   *   1. A GRADIENT IS NOT A background-color. It is a background-IMAGE, so
+   *      looking only at background-color skips straight past it.
+   *   2. THE PAINTER IS USUALLY A SIBLING. Almost every sheet here paints
+   *      itself with an absolutely-positioned <LinearGradient> INSIDE the
+   *      container, next to the text rather than around it. Walking ancestors
+   *      cannot see that: the Plan sheet's near-black-on-yellow title was
+   *      measured against the dark scrim two levels up and reported at 1.2:1.
+   *   3. TRANSLUCENT LAYERS COMPOSITE. A half-opaque plate over cream is
+   *      neither the plate nor the cream.
+   *
+   * `document.elementsFromPoint` looks like the answer to (2) and is not: it
+   * honours `pointer-events`, and every one of these decorative fills sets
+   * `pointerEvents="none"` precisely so it does not eat taps. It returns the
+   * stack with exactly the layers we need missing. Reading the paint order out
+   * of the DOM instead is deterministic and does not care about hit-testing:
+   * within a container the background paints first, then children in document
+   * order, so what is behind a piece of text is its container's background
+   * plus the earlier siblings that cover it.
+   */
+  const PAGE = { r: 255, g: 249, b: 236, a: 1 };
+  const backgroundOf = (el) => {
+    const box = el.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + box.height / 2;
+    const covers = (n) => {
+      const r = n.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && r.left <= x && r.right >= x && r.top <= y && r.bottom >= y;
+    };
+    // Nearest-to-the-text first; the compositor below walks it back to front.
+    const layers = [];
+    const push = (layer) => {
+      if (!layer) return false;
+      layers.push(layer);
+      return layer.a >= 0.999;
+    };
+    let child = el;
+    for (let node = el.parentElement; node; child = node, node = node.parentElement) {
+      const kids = [...node.children];
+      const at = kids.indexOf(child);
+      // Earlier siblings paint underneath, topmost of them nearest the text.
+      for (let i = (at < 0 ? kids.length : at) - 1; i >= 0; i -= 1) {
+        const sib = kids[i];
+        if (sib === el || sib.contains(el) || !covers(sib)) continue;
+        if (push(bgLayerOf(sib))) break;
+        // A wrapper whose own fill is the gradient one level down.
+        for (const inner of sib.children) {
+          if (covers(inner) && push(bgLayerOf(inner))) break;
+        }
+      }
+      if (layers.length && layers[layers.length - 1].a >= 0.999) break;
+      if (push(bgLayerOf(node))) break;
+    }
+    let acc = PAGE;
+    for (let i = layers.length - 1; i >= 0; i -= 1) acc = over(layers[i], acc);
+    return css(acc);
   };
 
   for (const el of document.querySelectorAll('*')) {
@@ -195,24 +277,44 @@ const shoot = async (name) => {
 report(await page.evaluate(auditInPage, 'room'));
 await shoot('room');
 
+/*
+ * Every sheet a player can reach from a cold start, not three of them.
+ *
+ * This walked Shop, Pack Book and Settings. FOOD -- which is the sheet a
+ * player opens more often than any of those, because it is how you feed him --
+ * had never been contrast-checked, tap-target-checked or looked at. Neither
+ * had the privacy sheet a parent is meant to read. A harness that covers the
+ * three surfaces somebody happened to think of on the day is how the defects
+ * on the other five survive review.
+ *
+ * `optional` sheets depend on game state (a plan has to exist for the plan
+ * chip to be there), so a missing opener is a skip, not a failure -- but a
+ * missing opener for a sheet that should ALWAYS be reachable still fails.
+ */
 const SHEETS = [
-  ['shop', '[aria-label^="Shop."]'],
-  ['pack', '[aria-label^="Pack Book"]'],
-  ['settings', '[aria-label="Settings"]'],
+  { name: 'shop', open: '[aria-label^="Shop."]' },
+  { name: 'pack', open: '[aria-label^="Pack Book"]' },
+  { name: 'food', open: '[data-testid="kit-feed"]' },
+  { name: 'settings', open: '[aria-label="Settings"]' },
+  { name: 'plan', open: '[aria-label^="Barkly\'s plan"]', optional: true },
 ];
-for (const [name, selector] of SHEETS) {
+for (const { name, open: selector, optional } of SHEETS) {
   const opener = page.locator(selector).first();
   if (!(await opener.count())) {
+    if (optional) {
+      console.log(`\n${name} — not reachable in this save (skipped)`);
+      continue;
+    }
     failures += 1;
     console.log(`\n${name} — COULD NOT OPEN (${selector} found nothing)`);
     continue;
   }
-  await opener.click();
+  await opener.click({ force: true });
   await page.waitForTimeout(900);
   report(await page.evaluate(auditInPage, name));
   await shoot(name);
   const close = page.getByText('✕', { exact: true }).first();
-  if (await close.count()) await close.click();
+  if (await close.count()) await close.click({ force: true });
   await page.waitForTimeout(600);
 }
 
