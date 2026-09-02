@@ -145,7 +145,7 @@ def torus(name, loc, major_radius, minor_radius, mat, scale=(1, 1, 1), rotation=
 
 
 def contact_shadow(rx, ry, z=0.045):
-    shadow = material("Contact shadow", "#3B2A24", roughness=1.0, coat=0.0)
+    shadow = material("Contact shadow", "#311E18", roughness=1.0, coat=0.0)
     return sphere("contact_shadow", (0, 0.18, z), (rx, ry, 0.035), shadow)
 
 
@@ -205,11 +205,11 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
 
 
 def park_tree():
-    bark = material("Tree bark", "#6E432B", roughness=0.72)
-    bark_light = material("Tree bark light", "#A66A3D", roughness=0.66)
-    leaf = material("Leaf green", "#3F9A57", roughness=0.76, coat=0.02)
-    leaf_light = material("Leaf light", "#72C76A", roughness=0.72, coat=0.03)
-    leaf_dark = material("Leaf depth", "#246B40", roughness=0.80)
+    bark = material("Tree bark", "#70391A", roughness=0.72)
+    bark_light = material("Tree bark light", "#B96526", roughness=0.66)
+    leaf = material("Leaf green", "#2BA94C", roughness=0.76, coat=0.02)
+    leaf_light = material("Leaf light", "#68DC5D", roughness=0.72, coat=0.03)
+    leaf_dark = material("Leaf depth", "#136D36", roughness=0.80)
 
     contact_shadow(1.50, 0.74)
     cone("trunk", (0, 0.12, 1.45), 0.54, 0.28, 2.9, bark)
@@ -226,9 +226,9 @@ def park_tree():
 
 
 def park_bench():
-    wood = material("Bench honey wood", "#A96635", roughness=0.58, coat=0.05)
-    wood_light = material("Bench sun face", "#D28B4D", roughness=0.52, coat=0.06)
-    metal = material("Bench iron", "#3E4A4F", roughness=0.36, metallic=0.64)
+    wood = material("Bench honey wood", "#BD601C", roughness=0.58, coat=0.05)
+    wood_light = material("Bench sun face", "#EE8C36", roughness=0.52, coat=0.06)
+    metal = material("Bench iron", "#344349", roughness=0.36, metallic=0.64)
 
     contact_shadow(1.65, 0.52)
     for z in (1.15, 1.52, 1.88):
@@ -241,9 +241,9 @@ def park_bench():
 
 
 def park_hedge():
-    leaf = material("Hedge green", "#4B9C52", roughness=0.82)
-    leaf_light = material("Hedge light", "#80C968", roughness=0.78)
-    earth = material("Hedge earth", "#76503A", roughness=0.94)
+    leaf = material("Hedge green", "#39AA43", roughness=0.82)
+    leaf_light = material("Hedge light", "#7BDF5A", roughness=0.78)
+    earth = material("Hedge earth", "#7A482B", roughness=0.94)
     contact_shadow(1.60, 0.48)
     sphere("earth", (0, 0.18, 0.25), (1.50, 0.52, 0.20), earth)
     for i, x in enumerate((-1.18, -0.58, 0, 0.58, 1.18)):
@@ -253,12 +253,12 @@ def park_hedge():
 def storefront(accent_name, body_hex, edge_hex, awning_hex):
     body = material(f"{accent_name} stucco", body_hex, roughness=0.62, coat=0.03)
     edge = material(f"{accent_name} edge", edge_hex, roughness=0.58, coat=0.03)
-    cream = material("Store cream", "#FFF0C7", roughness=0.58, coat=0.04)
-    glass = material("Store glass", "#8FCBD5", roughness=0.18, metallic=0.04, coat=0.34)
-    glass_dark = material("Store glass depth", "#3F7180", roughness=0.26, metallic=0.08, coat=0.20)
+    cream = material("Store cream", "#FFF9E7", roughness=0.58, coat=0.04)
+    glass = material("Store glass", "#8EDAE7", roughness=0.18, metallic=0.04, coat=0.34)
+    glass_dark = material("Store glass depth", "#2F7387", roughness=0.26, metallic=0.08, coat=0.20)
     awning = material(f"{accent_name} awning", awning_hex, roughness=0.54, coat=0.05)
-    wood = material("Display wood", "#8A5533", roughness=0.62)
-    brass = material("Store brass", "#C99539", roughness=0.28, metallic=0.68)
+    wood = material("Display wood", "#954D1F", roughness=0.62)
+    brass = material("Store brass", "#E79E1B", roughness=0.28, metallic=0.68)
 
     contact_shadow(2.05, 0.62)
     cube("store_body", (0, 0.48, 2.25), (1.78, 0.64, 2.22), body, 0.24)
@@ -279,10 +279,10 @@ def storefront(accent_name, body_hex, edge_hex, awning_hex):
 
 
 def town_fountain():
-    stone = material("Fountain stone", "#D1B37D", roughness=0.72)
-    stone_light = material("Fountain stone light", "#F2D99F", roughness=0.68)
-    stone_dark = material("Fountain stone depth", "#92734E", roughness=0.78)
-    water = material("Fountain water", "#52B6CF", roughness=0.18, metallic=0.06, coat=0.30)
+    stone = material("Fountain stone", "#E5BD76", roughness=0.72)
+    stone_light = material("Fountain stone light", "#FFE5A9", roughness=0.68)
+    stone_dark = material("Fountain stone depth", "#9D723E", roughness=0.78)
+    water = material("Fountain water", "#3DC7EA", roughness=0.18, metallic=0.06, coat=0.30)
     contact_shadow(1.46, 0.72)
     torus("lower_basin", (0, 0, 0.55), 0.98, 0.24, stone, scale=(1.25, 0.82, 0.72))
     sphere("lower_water", (0, -0.02, 0.60), (1.13, 0.68, 0.10), water)
@@ -293,9 +293,9 @@ def town_fountain():
 
 
 def town_lamp():
-    iron = material("Lamp iron", "#35414A", roughness=0.34, metallic=0.66)
-    brass = material("Lamp brass", "#B77A31", roughness=0.28, metallic=0.72)
-    glass = material("Lamp glow glass", "#FFD77A", roughness=0.22, coat=0.26)
+    iron = material("Lamp iron", "#2A3843", roughness=0.34, metallic=0.66)
+    brass = material("Lamp brass", "#D07B15", roughness=0.28, metallic=0.72)
+    glass = material("Lamp glow glass", "#FFDD8E", roughness=0.22, coat=0.26)
     contact_shadow(0.56, 0.34)
     cylinder("base", (0, 0, 0.20), 0.42, 0.18, iron)
     cylinder("post", (0, 0, 1.72), 0.10, 3.05, iron)
@@ -306,10 +306,10 @@ def town_lamp():
 
 
 def town_planter():
-    pot = material("Planter terracotta", "#C97451", roughness=0.76)
-    pot_dark = material("Planter depth", "#8A4635", roughness=0.82)
-    leaf = material("Planter leaf", "#3F8D55", roughness=0.78)
-    leaf_light = material("Planter leaf light", "#78BE67", roughness=0.76)
+    pot = material("Planter terracotta", "#E36C3C", roughness=0.76)
+    pot_dark = material("Planter depth", "#953922", roughness=0.82)
+    leaf = material("Planter leaf", "#2D984B", roughness=0.78)
+    leaf_light = material("Planter leaf light", "#71D25A", roughness=0.76)
     contact_shadow(0.84, 0.40)
     cone("pot", (0, 0.05, 0.42), 0.64, 0.48, 0.78, pot)
     cylinder("pot_rim", (0, 0.05, 0.80), 0.66, 0.18, pot_dark)
@@ -318,10 +318,10 @@ def town_planter():
 
 
 def beach_umbrella():
-    wood = material("Umbrella wood", "#8B5534", roughness=0.66)
-    coral = material("Umbrella coral", "#E76553", roughness=0.56, coat=0.05)
-    coral_dark = material("Umbrella coral edge", "#B83E3C", roughness=0.62)
-    yellow = material("Umbrella yellow", "#F5C84C", roughness=0.58, coat=0.05)
+    wood = material("Umbrella wood", "#964D20", roughness=0.66)
+    coral = material("Umbrella coral", "#FF5B44", roughness=0.56, coat=0.05)
+    coral_dark = material("Umbrella coral edge", "#D12522", roughness=0.62)
+    yellow = material("Umbrella yellow", "#FFCF4D", roughness=0.58, coat=0.05)
     contact_shadow(1.22, 0.52)
     cylinder("umbrella_pole", (0, 0.08, 1.62), 0.09, 3.10, wood)
     cone("canopy", (0, 0, 3.44), 1.62, 0.18, 0.74, coral)
@@ -331,11 +331,11 @@ def beach_umbrella():
 
 
 def beach_lifeguard():
-    wood = material("Tower warm wood", "#A8683D", roughness=0.66)
-    coral = material("Tower coral", "#D95F52", roughness=0.62, coat=0.03)
-    cream = material("Tower cream", "#F5DFAE", roughness=0.68)
-    aqua = material("Tower aqua", "#4FAFC0", roughness=0.56, coat=0.06)
-    glass = material("Tower window", "#8DD0D7", roughness=0.20, coat=0.30)
+    wood = material("Tower warm wood", "#BB6226", roughness=0.66)
+    coral = material("Tower coral", "#F64E3C", roughness=0.62, coat=0.03)
+    cream = material("Tower cream", "#FFEBBE", roughness=0.68)
+    aqua = material("Tower aqua", "#39C0D8", roughness=0.56, coat=0.06)
+    glass = material("Tower window", "#8BE0E9", roughness=0.20, coat=0.30)
     contact_shadow(1.45, 0.68)
     for x in (-0.95, 0.95):
         cube(f"stilt_{x}", (x, 0.18, 1.05), (0.13, 0.16, 1.05), wood, 0.07, (0, math.radians(4 if x < 0 else -4), 0))
@@ -354,9 +354,9 @@ def beach_lifeguard():
 
 
 def beach_dune():
-    sand = material("Dune sand", "#D9B86F", roughness=0.92)
-    sand_light = material("Dune light", "#F1D894", roughness=0.90)
-    grass = material("Dune grass", "#668B55", roughness=0.88)
+    sand = material("Dune sand", "#F0C463", roughness=0.92)
+    sand_light = material("Dune light", "#FFE49B", roughness=0.90)
+    grass = material("Dune grass", "#609348", roughness=0.88)
     contact_shadow(1.62, 0.52)
     sphere("dune", (0, 0.16, 0.34), (1.65, 0.66, 0.42), sand)
     sphere("dune_light", (-0.36, -0.30, 0.48), (0.92, 0.22, 0.16), sand_light)
@@ -365,11 +365,11 @@ def beach_dune():
 
 
 def beach_castle():
-    sand = material("Castle sand", "#DDBD76", roughness=0.92)
-    sand_light = material("Castle sun face", "#F2D696", roughness=0.90)
-    sand_dark = material("Castle depth", "#AD8A52", roughness=0.94)
-    flag = material("Castle flag", "#45A9BE", roughness=0.60, coat=0.04)
-    wood = material("Flag pole", "#77503A", roughness=0.72)
+    sand = material("Castle sand", "#F4CA6D", roughness=0.92)
+    sand_light = material("Castle sun face", "#FFE29F", roughness=0.90)
+    sand_dark = material("Castle depth", "#C08E3F", roughness=0.94)
+    flag = material("Castle flag", "#2CBAD8", roughness=0.60, coat=0.04)
+    wood = material("Flag pole", "#7C482A", roughness=0.72)
     contact_shadow(1.32, 0.52)
     cube("castle_base", (0, 0.08, 0.48), (1.10, 0.60, 0.46), sand, 0.16)
     for i, x in enumerate((-0.82, 0, 0.82)):
@@ -383,10 +383,10 @@ def beach_castle():
 
 
 def beach_palm():
-    trunk = material("Palm trunk", "#93603A", roughness=0.78)
-    trunk_light = material("Palm trunk light", "#C2844E", roughness=0.72)
-    leaf = material("Palm leaf", "#3D8C59", roughness=0.80)
-    leaf_light = material("Palm leaf light", "#69B566", roughness=0.76)
+    trunk = material("Palm trunk", "#A05A26", roughness=0.78)
+    trunk_light = material("Palm trunk light", "#DB8438", roughness=0.72)
+    leaf = material("Palm leaf", "#2B9751", roughness=0.80)
+    leaf_light = material("Palm leaf light", "#5DC759", roughness=0.76)
     contact_shadow(1.12, 0.50)
     for i in range(6):
         x = -0.10 + i * 0.08
@@ -399,10 +399,10 @@ def beach_palm():
 
 
 def home_rug():
-    gold = material("Rug gold", "#D9A83E", roughness=0.92)
-    gold_light = material("Rug pile light", "#F2CF70", roughness=0.94)
-    gold_dark = material("Rug bound edge", "#A97428", roughness=0.90)
-    cream = material("Rug inset", "#F6E1AF", roughness=0.96)
+    gold = material("Rug gold", "#FAB521", roughness=0.92)
+    gold_light = material("Rug pile light", "#FFD973", roughness=0.94)
+    gold_dark = material("Rug bound edge", "#BE750D", roughness=0.90)
+    cream = material("Rug inset", "#FFEDC1", roughness=0.96)
     contact_shadow(1.72, 0.72)
     torus("rug_edge", (0, 0, 0.20), 1.10, 0.24, gold_dark, scale=(1.52, 0.72, 0.34))
     sphere("rug_body", (0, -0.02, 0.22), (1.56, 0.72, 0.18), gold)
@@ -414,9 +414,9 @@ BUILDERS = {
     "park/tree": (park_tree, 6.4, (0, 0, 2.15), {"displayWidth": 190, "anchor": "bottom"}),
     "park/bench": (park_bench, 4.7, (0, 0, 1.0), {"displayWidth": 136, "anchor": "bottom"}),
     "park/hedge": (park_hedge, 4.4, (0, 0, 0.72), {"displayWidth": 154, "anchor": "bottom"}),
-    "town/store_coral": (lambda: storefront("Coral", "#C95C58", "#8D3F43", "#E56D59"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
-    "town/store_aqua": (lambda: storefront("Aqua", "#4DA5B7", "#336D7D", "#53BFD0"), 6.6, (0, 0, 2.30), {"displayWidth": 190, "anchor": "bottom"}),
-    "town/store_violet": (lambda: storefront("Violet", "#8675A5", "#5C4D78", "#A18BC1"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
+    "town/store_coral": (lambda: storefront("Coral", "#E14B45", "#982D32", "#FF6349"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
+    "town/store_aqua": (lambda: storefront("Aqua", "#37B4CD", "#216E84", "#3ED3EB"), 6.6, (0, 0, 2.30), {"displayWidth": 190, "anchor": "bottom"}),
+    "town/store_violet": (lambda: storefront("Violet", "#856EB1", "#56417C", "#A688D0"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
     "town/fountain": (town_fountain, 4.4, (0, 0, 1.05), {"displayWidth": 114, "anchor": "bottom"}),
     "town/lamp": (town_lamp, 5.4, (0, 0, 2.05), {"displayWidth": 70, "anchor": "bottom"}),
     "town/planter": (town_planter, 3.8, (0, 0, 0.9), {"displayWidth": 74, "anchor": "bottom"}),

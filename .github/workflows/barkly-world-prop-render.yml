@@ -4,7 +4,13 @@ on:
   push:
     branches:
       - 'chatgpt/barkly-world-2p5d-*'
+      # Claude's integration branch renders too; the pipeline was
+      # unreachable from it, which is why the flat art kept shipping.
+      - 'claude/barkly-*'
+      - 'claude/barkley-*'
       - 'chatgpt/barkly-supercell-home-*'
+      - 'claude/barkly-*'
+      - 'claude/barkley-*'
     paths:
       - 'barkly/app/tools/blender/world_prop_pack.py'
       - '.github/workflows/barkly-world-prop-render.yml'

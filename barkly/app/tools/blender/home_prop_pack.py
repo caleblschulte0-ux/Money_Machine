@@ -102,7 +102,7 @@ def cylinder(name, loc, radius, depth, material, rotation=(0, 0, 0), vertices=48
 def contact_shadow(rx, ry, z=0.055):
     # A deliberately authored soft-looking footprint. Real cast shadows from the
     # key light reinforce it, but this ensures the sprite never floats in-app.
-    shadow = make_material("Contact shadow", "#3A2A22", roughness=1.0)
+    shadow = make_material("Contact shadow", "#2F1E16", roughness=1.0)
     return sphere("contact_shadow", (0, 0.12, z), (rx, ry, 0.045), shadow)
 
 
@@ -164,11 +164,11 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
 
 
 def chair():
-    fabric = make_material("Muted coral upholstery", "#D9655B", roughness=0.72, coat=0.02)
-    fabric_light = make_material("Seat upholstery", "#E98378", roughness=0.78)
-    seam = make_material("Upholstery seam", "#9E413F", roughness=0.84)
-    wood = make_material("Warm chair feet", "#70432A", roughness=0.56, coat=0.03)
-    pillow = make_material("Butter pillow", "#F3C84B", roughness=0.66)
+    fabric = make_material("Muted coral upholstery", "#F45649", roughness=0.72, coat=0.02)
+    fabric_light = make_material("Seat upholstery", "#FF7F72", roughness=0.78)
+    seam = make_material("Upholstery seam", "#AE2D2A", roughness=0.84)
+    wood = make_material("Warm chair feet", "#733919", roughness=0.56, coat=0.03)
+    pillow = make_material("Butter pillow", "#FFD049", roughness=0.66)
 
     contact_shadow(1.38, 0.70)
     # The shared camera supplies the side plane. A second object-level yaw made
@@ -185,10 +185,10 @@ def chair():
 
 
 def lamp():
-    brass = make_material("Lamp brass", "#B37B2C", roughness=0.28, metallic=0.72)
-    wood = make_material("Lamp stem wood", "#68412B", roughness=0.52, coat=0.04)
-    shade = make_material("Warm woven shade", "#E7B85A", roughness=0.68)
-    inner = make_material("Lit shade underside", "#FFD986", roughness=0.62, coat=0.04)
+    brass = make_material("Lamp brass", "#CB7D0F", roughness=0.28, metallic=0.72)
+    wood = make_material("Lamp stem wood", "#69371B", roughness=0.52, coat=0.04)
+    shade = make_material("Warm woven shade", "#FFC44D", roughness=0.68)
+    inner = make_material("Lit shade underside", "#FFE09B", roughness=0.62, coat=0.04)
 
     contact_shadow(0.62, 0.38)
     cylinder("lamp_base", (0, 0, 0.22), 0.48, 0.22, brass)
@@ -204,10 +204,10 @@ def lamp():
 
 
 def bed():
-    rim = make_material("Aqua plush rim", "#3AACC8", roughness=0.86)
-    rim_dark = make_material("Aqua plush cavity", "#247E96", roughness=0.92)
-    cushion = make_material("Cream plush cushion", "#F4DCAC", roughness=0.94)
-    stitch = make_material("Bed stitch", "#C08B56", roughness=0.95)
+    rim = make_material("Aqua plush rim", "#1DBEE6", roughness=0.86)
+    rim_dark = make_material("Aqua plush cavity", "#0B85A5", roughness=0.92)
+    cushion = make_material("Cream plush cushion", "#FFE8BB", roughness=0.94)
+    stitch = make_material("Bed stitch", "#D78D43", roughness=0.95)
 
     contact_shadow(1.48, 0.76)
     # Flattened torus gives the bed real depth and a tactile donut silhouette.
@@ -227,13 +227,13 @@ def bed():
 
 
 def shelf():
-    wood = make_material("Honey painted wood", "#A86837", roughness=0.52, coat=0.04)
-    wood_dark = make_material("Shelf recess", "#4C2E23", roughness=0.70)
-    cream = make_material("Cabinet inset", "#EFCF9A", roughness=0.64)
-    brass = make_material("Shelf brass", "#C69138", roughness=0.30, metallic=0.68)
-    book_red = make_material("Muted red book", "#B9524D", roughness=0.70)
-    book_blue = make_material("Muted blue book", "#4C91A9", roughness=0.70)
-    trophy = make_material("Trophy gold", "#D6A13B", roughness=0.28, metallic=0.72)
+    wood = make_material("Honey painted wood", "#BC631F", roughness=0.52, coat=0.04)
+    wood_dark = make_material("Shelf recess", "#452216", roughness=0.70)
+    cream = make_material("Cabinet inset", "#FFDBA0", roughness=0.64)
+    brass = make_material("Shelf brass", "#E4981A", roughness=0.30, metallic=0.68)
+    book_red = make_material("Muted red book", "#D03E37", roughness=0.70)
+    book_blue = make_material("Muted blue book", "#389ABB", roughness=0.70)
+    trophy = make_material("Trophy gold", "#F7AC1D", roughness=0.28, metallic=0.72)
 
     contact_shadow(1.05, 0.46)
     # One strong cabinet mass with actual depth and just a few story objects.

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'chatgpt/barkly-supercell-home-*'
+      - 'claude/barkly-*'
+      - 'claude/barkley-*'
     paths:
       - 'barkly/app/tools/blender/home_prop_pack.py'
       - 'barkly/app/tools/blender/home_architecture.py'

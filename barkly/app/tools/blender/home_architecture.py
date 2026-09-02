@@ -104,10 +104,10 @@ def setup():
 
 
 def build_window_frame():
-    wood = mat('Honey molded wood', '#A9652E', roughness=0.44, coat=0.09)
-    wood_dark = mat('Recess edge', '#6F3A1E', roughness=0.56, coat=0.04)
-    sill = mat('Warm sill', '#B97535', roughness=0.42, coat=0.10)
-    brass = mat('Upgrade brass', '#D39B38', roughness=0.30, metallic=0.55, coat=0.05)
+    wood = mat('Honey molded wood', '#BE6014', roughness=0.44, coat=0.09)
+    wood_dark = mat('Recess edge', '#722F0C', roughness=0.56, coat=0.04)
+    sill = mat('Warm sill', '#D37319', roughness=0.42, coat=0.10)
+    brass = mat('Upgrade brass', '#F4A519', roughness=0.30, metallic=0.55, coat=0.05)
 
     # Shadow/recess lip sits behind the brighter frame and makes the window feel
     # cut into a wall even though the live sky is composited by React Native.
