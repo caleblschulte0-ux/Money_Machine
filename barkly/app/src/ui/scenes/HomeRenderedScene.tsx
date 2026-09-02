@@ -321,6 +321,12 @@ export function HomeScene({
   const band = skyBand(hour);
   const night = band === 'night' || asleep;
   const has = (id: string) => upgrades.includes(id);
+  // Measured, not guessed: at 360x568 the wall and floor together only get
+  // 264px between the chrome and his feet, and the shelf alone wants 218 --
+  // so on the shortest supported phone the furniture genuinely cannot be
+  // full size. Raising this minimum to buy wall height moves the wall/floor
+  // line UP once groundY-158 stops winning, which pushed the window off the
+  // top entirely. Left where it was; the fit clamp below is what handles it.
   const floorTop = Math.max(chromeBottom + 190, groundY - 158);
 
   const wall: readonly [ColorValue, ColorValue] = night
@@ -344,8 +350,37 @@ export function HomeScene({
    * empty wall.
    */
   const wallInset = Math.max(12, width * 0.045);
-  const shelfW = 138 * propScale;
-  const shelfH = shelfW * (481 / 298);
+
+  /*
+   * FIT THE WALL FURNITURE TO THE WALL.
+   *
+   * The window and the shelf were sized from constants and placed at a fixed
+   * offset from the top, with nothing relating either to floorTop. On a real
+   * installed viewport that put their bottoms 70-100px BELOW the wall/floor
+   * trim -- a window hanging under the floor line -- which is also why the
+   * couch looked like it was colliding with the window rather than standing
+   * in front of it. Nothing was overlapping that should not; the wall pieces
+   * were simply too tall for the wall they hang on.
+   *
+   * The band between the chrome and the floor is the real constraint, so both
+   * pieces are measured against it and shrink to fit when it is short. On a
+   * tall screen nothing changes.
+   */
+  const wallTop = chromeBottom + 52;
+  const wallBand = Math.max(120, floorTop - wallTop - 18);
+
+  const shelfNaturalW = 138 * propScale;
+  const shelfNaturalH = shelfNaturalW * (481 / 298);
+  const shelfFit = shelfNaturalH > wallBand ? wallBand / shelfNaturalH : 1;
+  const shelfW = shelfNaturalW * shelfFit;
+  const shelfH = shelfNaturalH * shelfFit;
+
+  const windowNaturalScale = propScale * 0.86;
+  const windowNaturalW = (has('home_window') ? 224 : 208) * windowNaturalScale;
+  const windowNaturalH = windowNaturalW * (760 / 720);
+  const windowScale =
+    windowNaturalH > wallBand ? windowNaturalScale * (wallBand / windowNaturalH) : windowNaturalScale;
+  const windowW = (has('home_window') ? 224 : 208) * windowScale;
   const bedW = (has('home_bed') ? 144 : 126) * propScale;
   const bedH = bedW * (254 / 512);
 
@@ -389,21 +424,21 @@ export function HomeScene({
       </WorldLayer>
 
       <WorldLayer name="landmark">
-        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 62} left={wallInset} scale={propScale * 0.86} />
+        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={wallTop + 10} left={wallInset} scale={windowScale} />
         <PictureMedallion top={chromeBottom + 94} night={night} />
         {/*
           No ground contact shadow: the shelf is MOUNTED ON THE WALL. Pooling
           one under it put a shadow on the floor beneath something that never
           touches the floor, which is worse than no shadow at all.
         */}
-        <WorldObject source={SHELF} right={wallInset} top={chromeBottom + 52} width={shelfW} height={shelfH} night={night} depth={0.42} />
+        <WorldObject source={SHELF} right={wallInset} top={wallTop} width={shelfW} height={shelfH} night={night} depth={0.42} />
         <HomeBiography
           props={biography}
           chromeBottom={chromeBottom}
           floorTop={floorTop}
           shelfRight={wallInset}
           shelfW={shelfW}
-          stripCenter={wallInset + (width - 2 * wallInset - shelfW - (has('home_window') ? 224 : 208) * propScale * 0.86) / 2 + (has('home_window') ? 224 : 208) * propScale * 0.86}
+          stripCenter={wallInset + windowW + (width - 2 * wallInset - shelfW - windowW) / 2}
           night={night}
           scale={propScale}
         />
@@ -416,8 +451,15 @@ export function HomeScene({
           reading of the same mistake the window made: objects shoved past the
           frame instead of composed inside it.
         */}
+        {/*
+          The couch sits ON the floor rather than climbing it. At -chairH+36 it
+          rose 116px into the wall, in the same column as the window, so on a
+          short phone -- where the whole wall band is 120px -- it covered the
+          window completely. Dropping it reveals the window on every screen and
+          reads better anyway: furniture against a wall, not embedded in it.
+        */}
         <WorldObject source={LAMP} left={wallInset * 0.5} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
-        <WorldObject source={CHAIR} left={wallInset} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
+        <WorldObject source={CHAIR} left={wallInset} top={floorTop - chairH + 58} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
         <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow baseInset={0.16} />
       </WorldLayer>
 
