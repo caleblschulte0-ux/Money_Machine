@@ -121,6 +121,7 @@ export function WorldObject({
   rotate,
   flip = false,
   contactShadow = false,
+  baseInset = 0,
   ambient,
   motionDelay = 0,
   style,
@@ -138,6 +139,12 @@ export function WorldObject({
   rotate?: string;
   flip?: boolean;
   contactShadow?: boolean;
+  /**
+   * Where the object's feet are, as a fraction of box height measured up from
+   * the bottom edge. Rendered art with transparent padding under it needs this
+   * or its shadow lands in mid-air below the art.
+   */
+  baseInset?: number;
   /** Tiny environmental motion; never used for structural architecture. */
   ambient?: 'sway' | 'bob';
   motionDelay?: number;
@@ -173,18 +180,46 @@ export function WorldObject({
   return (
     <View style={[styles.object, position]} pointerEvents="none">
       {contactShadow && (
-        <View
-          style={[
-            styles.contactShadow,
-            {
-              left: width * 0.16,
-              width: width * 0.68,
-              height: Math.max(8, Math.min(20, height * 0.08)),
-              bottom: Math.max(1, height * 0.025),
-              opacity: (night ? 0.26 : 0.21) * (0.7 + safeDepth * 0.3),
-            },
-          ]}
-        />
+        <>
+          {/*
+            A real contact shadow is two things: a wide soft pool that says the
+            object displaces light, and a tight dark core right where it meets
+            the ground that says it is TOUCHING. One faint hard-edged pill --
+            which is what this was -- reads as a sticker lying near a smudge,
+            and it is why the bench, the umbrella and the sandcastle all looked
+            like they were hovering.
+
+            `baseInset` is the gap between the bottom of the layout box and the
+            object's own feet, as a fraction of height. Rendered PNGs carry
+            transparent padding, so without it the shadow lands below the art
+            and detaches -- the exact failure that made lowering the bench do
+            nothing.
+          */}
+          <View
+            style={[
+              styles.contactPool,
+              {
+                left: width * 0.05,
+                width: width * 0.90,
+                height: Math.max(10, Math.min(30, height * 0.13)),
+                bottom: height * baseInset - Math.max(3, height * 0.02),
+                opacity: (night ? 0.20 : 0.17) * (0.65 + safeDepth * 0.35),
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.contactCore,
+              {
+                left: width * 0.19,
+                width: width * 0.62,
+                height: Math.max(5, Math.min(14, height * 0.055)),
+                bottom: height * baseInset + Math.max(1, height * 0.005),
+                opacity: (night ? 0.42 : 0.36) * (0.65 + safeDepth * 0.35),
+              },
+            ]}
+          />
+        </>
       )}
       <Animated.View style={[styles.objectImage, ambientTransform ? { transform: ambientTransform } : undefined]}>
         <Image
@@ -271,8 +306,11 @@ export function worldScale(viewportWidth: number, viewportHeight = 844): number 
   // on a tablet; landscape art is constrained by its height. This keeps the
   // rendered world in the same physical scale family as Barkly while wider
   // screens reveal more environment instead of stretching phone blocking.
+  // Raised to meet Barkly rather than sitting a full step behind him. He used
+  // to render at 1.14 while the world sat at 1.00, which is the mismatch that
+  // made him look pasted on top of the scene instead of standing in it.
   const cameraEdge = viewportWidth > viewportHeight ? viewportHeight / 390 : viewportWidth / 390;
-  return Math.max(0.90, Math.min(1.34, cameraEdge));
+  return Math.max(0.95, Math.min(1.40, cameraEdge * 1.06));
 }
 
 const styles = StyleSheet.create({
@@ -280,11 +318,16 @@ const styles = StyleSheet.create({
   camera: { position: 'absolute', left: -5, right: -5, top: -5, bottom: -5 },
   object: { position: 'absolute' },
   objectImage: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, width: '100%', height: '100%' },
-  contactShadow: {
+  contactPool: {
     position: 'absolute',
     backgroundColor: DIORAMA.shadow,
     borderRadius: radius.pill,
-    transform: [{ scaleX: 1.14 }],
+    transform: [{ scaleX: 1.16 }],
+  },
+  contactCore: {
+    position: 'absolute',
+    backgroundColor: DIORAMA.shadow,
+    borderRadius: radius.pill,
   },
   keyPool: {
     position: 'absolute',

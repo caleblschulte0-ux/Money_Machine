@@ -118,10 +118,17 @@ const NPC_ART: Record<NpcId, ReturnType<typeof require>> = {
  * silhouette slightly at the edges, which is depth, not a collision: they
  * draw behind him.
  */
+/*
+ * The other dogs stand on the same ground Barkly does. Pulling the camera back
+ * raised his feet, and these bottoms did not follow: the dogs ended up 40px
+ * below his ground line, standing in the care dock, with their nameplates
+ * printing over the bowl and the bed. Lifted onto his plane -- close to the
+ * dock but clear of it, which the overlap harness checks on every viewport.
+ */
 const NPC_SPOTS: Partial<Record<NpcId, { left?: number; right?: number; bottom: number; size: number }>> = {
-  biscuit: { left: 10, bottom: 76, size: 80 },
-  duke: { right: 3, bottom: 70, size: 90 },
-  pepper: { right: 8, bottom: 72, size: 86 },
+  biscuit: { left: 10, bottom: 106, size: 80 },
+  duke: { right: 3, bottom: 100, size: 90 },
+  pepper: { right: 8, bottom: 102, size: 86 },
 };
 
 const STATE_LABEL: Partial<Record<BarklyState, string>> = {
@@ -971,6 +978,14 @@ export default function BarklyRoom() {
               </Pressable>
             );
           })}
+          </View>
+          {/*
+            The plan chip lives BESIDE the tab bar, not inside it. Rendered as a
+            sibling of the tabs it drew a saturated circle on top of the white
+            pill -- two overlapping pills, which was the most obviously
+            unfinished thing in the first 200px of the screen. Its own chip with
+            real space around it reads as a control rather than a sticker.
+          */}
           {barkly.adventure && (
             <Pressable
               style={[styles.planChip, planComplete && styles.planChipDone, landscape && styles.planChipLandscape]}
@@ -985,7 +1000,6 @@ export default function BarklyRoom() {
               </Text>
             </Pressable>
           )}
-          </View>
         </View>
 
         <View
@@ -1307,8 +1321,8 @@ const styles = StyleSheet.create({
     height: PLACES_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
+    gap: 8,
+    marginTop: 6,
   },
   placesLandscape: {
     position: 'absolute',

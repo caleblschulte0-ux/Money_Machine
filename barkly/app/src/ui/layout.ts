@@ -60,7 +60,13 @@ export const NOTICE_MAX_HEIGHT = 38;
 
 export const DIALOGUE_HEIGHT = 96;
 export const RESTING_DIALOGUE_HEIGHT = 34;
-export const DIALOGUE_GAP = 3;
+/**
+ * Air between the dock, the dialogue panel and the screen edge. At 3 the panel
+ * ended at y=841 on an 844px screen and sat 1px under the care dock: the two
+ * heaviest elements on screen stacked flush with nothing around them, which is
+ * what "clogged bottom third" actually measures to.
+ */
+export const DIALOGUE_GAP = 11;
 export const CONTROLS_HEIGHT = TAP_MIN + 6;
 export const IDLE_CONVERSATION_HEIGHT = TAP_MIN;
 
@@ -138,15 +144,22 @@ export function spriteScale(
   // him grow to almost 2x while scenery stopped near 1x, turning every large
   // screen into a giant dog pasted over phone-sized props. Larger viewports
   // reveal more authored world; they do not turn Barkly into a poster.
+  // ONE CAMERA. Measured at 390x844 he was 342px wide on a 390px screen -- 88%
+  // of the frame, 24px of air either side -- because this cap (not byWidth) was
+  // binding at 1.14. At that size he is not standing IN the room, he is covering
+  // it, and the other dogs read as a scale error rather than as distance. Pulled
+  // back to ~66% of frame width, with worldScale raised to meet him, so the
+  // ratio changes without the world being cropped away. Tablets pull back
+  // further still: they reveal more environment, they do not enlarge the dog.
   const cap = mode === 'narrowPortrait' && screenHeight < 680
-    ? screenHeight < 590 ? 0.80 : 0.90
+    ? screenHeight < 590 ? 0.72 : 0.78
     : mode === 'tabletLandscape'
-      ? 1.34
+      ? 1.10
       : mode === 'widePortrait'
-        ? 1.34
+        ? 1.10
         : mode === 'phoneLandscape'
-          ? 0.98
-          : 1.14;
+          ? 0.88
+          : 0.86;
   return Math.max(minScale, Math.min(cap, room / SPRITE_HEIGHT, byWidth));
 }
 

@@ -204,7 +204,14 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
         <Path d={`M36 ${ground + 28}q6 -12 12 0M48 ${ground + 28}q6 -14 12 0M166 ${ground + 78}q5 -11 10 0M176 ${ground + 78}q5 -13 10 0M246 ${ground + 36}q5 -10 10 0`} stroke={night ? DIORAMA.parkGrassNightLight : DIORAMA.parkGrassDayLight} strokeWidth={3} fill="none" opacity={0.72} />
         <Path d={`M84 ${ground + 92}l4 -6 4 6 4 -6 4 6M222 ${ground + 116}l4 -6 4 6 4 -6 4 6`} stroke={night ? DIORAMA.gold : DIORAMA.lemon} strokeWidth={2.5} fill="none" opacity={night ? 0.24 : 0.68} />
       </Svg>
-        <Svg width={Math.min(width, 520)} height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.parkPathLayer}>
+        {/*
+          The trail is worn grass, not a paved ribbon. At full strength it ran
+          up the right side straight through the tree it sits behind, reading
+          as a beige band laid over the trunk rather than as ground receding to
+          the horizon. Softened so it stays a path and stops competing with the
+          only vertical in that half of the frame.
+        */}
+        <Svg width={Math.min(width, 520)} height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={[styles.parkPathLayer, { opacity: night ? 0.34 : 0.46 }]}>
           <Defs>
             <SvgLinearGradient id="parkPathV3" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={night ? DIORAMA.parkPathNightLight : DIORAMA.parkPathDayLight} />

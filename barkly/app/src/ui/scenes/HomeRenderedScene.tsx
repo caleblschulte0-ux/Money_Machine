@@ -170,47 +170,62 @@ function BiographyObject({ visual, night }: { visual: BiographyProp['visual']; n
   if (visual === 'polaroid' || visual === 'scribbled-photo') {
     const rival = visual === 'scribbled-photo';
     return (
-      <Svg width={34} height={38} viewBox="0 0 34 38">
-        <Ellipse cx={17} cy={35} rx={13} ry={2.6} fill={DIORAMA.shadow} opacity={0.18} />
-        <Path d="M2 2h30v30H2Z" fill={DIORAMA.shadow} opacity={0.22} />
-        <Path d="M2 1h30v29H2Z" fill={DIORAMA.white} opacity={dim} />
-        <Path d="M5 4h24v18H5Z" fill={rival ? DIORAMA.coral : DIORAMA.aquaLight} opacity={dim} />
-        <Circle cx={17} cy={13} r={5.4} fill={rival ? DIORAMA.coralDeep : DIORAMA.butterDeep} opacity={dim} />
-        <Path d="M12 9q1.6-3 3.4 0M19 9q1.6-3 3.4 0" stroke={ITEM.leather} strokeWidth={1.7} fill="none" strokeLinecap="round" opacity={dim} />
-        {rival && <Path d="M6 20 27 6M6 7 27 20" stroke={ITEM.leather} strokeWidth={1.6} opacity={0.6 * dim} strokeLinecap="round" />}
-        <Path d="M5 4h24v3H5Z" fill={DIORAMA.white} opacity={0.3} />
+      <Svg width={44} height={50} viewBox="0 0 44 50">
+        {/* Hung on a wall: a soft offset drop, never a ground pool. The pool
+            is what made the shelf look like it was floating over the floor. */}
+        <Path d="M6 5h38v38H6Z" fill={DIORAMA.shadow} opacity={0.15} />
+        <Path d="M3 4h38v38H3Z" fill={ITEM.leather} opacity={0.5 * dim} />
+        <Path d="M3 2h38v38H3Z" fill={DIORAMA.paleCream} opacity={dim} />
+        <Path d="M3 2h38v5H3Z" fill={DIORAMA.white} opacity={0.5 * dim} />
+        <Path d="M7 6h30v23H7Z" fill={rival ? DIORAMA.coralDeep : DIORAMA.aquaDeep} opacity={dim} />
+        <Path d="M7 6h30v9H7Z" fill={rival ? DIORAMA.coral : DIORAMA.aqua} opacity={0.7 * dim} />
+        <Circle cx={22} cy={18} r={7} fill={rival ? DIORAMA.coralLight : DIORAMA.butterDeep} opacity={dim} />
+        <Circle cx={19.4} cy={16} r={1.7} fill={ITEM.leather} opacity={dim} />
+        <Circle cx={24.6} cy={16} r={1.7} fill={ITEM.leather} opacity={dim} />
+        <Path d="M13 11q2.4-4 5 0M27 11q2.4-4 5 0" stroke={ITEM.leather} strokeWidth={2} fill="none" strokeLinecap="round" opacity={0.8 * dim} />
+        {rival && <Path d="M8 27 36 8M8 9 36 28" stroke={ITEM.leather} strokeWidth={2.2} opacity={0.62 * dim} strokeLinecap="round" />}
+        <Path d="M6 4 L14 4" stroke={DIORAMA.white} strokeWidth={2.4} opacity={0.8} strokeLinecap="round" />
       </Svg>
     );
   }
   if (visual === 'handmade-award') {
     return (
-      <Svg width={30} height={36} viewBox="0 0 30 36">
-        <Ellipse cx={15} cy={33} rx={11} ry={2.4} fill={DIORAMA.shadow} opacity={0.18} />
-        <Path d="M11 18h8l3 14-7-4-7 4Z" fill={DIORAMA.coralDeep} opacity={dim} />
-        <Circle cx={15} cy={13} r={11} fill={BRASS.edge} opacity={dim} />
-        <Circle cx={15} cy={11.6} r={9.4} fill={BRASS.polished} opacity={dim} />
-        <Circle cx={15} cy={11.6} r={5.6} fill={BRASS.dark} opacity={0.34 * dim} />
-        <Path d="M8 7q6-4 13-1" stroke={DIORAMA.white} strokeWidth={2.4} fill="none" strokeLinecap="round" opacity={0.5 * dim} />
+      <Svg width={38} height={46} viewBox="0 0 38 46">
+        <Ellipse cx={19} cy={43} rx={13} ry={2.8} fill={DIORAMA.shadow} opacity={0.16} />
+        <Ellipse cx={19} cy={42} rx={8} ry={1.6} fill={DIORAMA.shadow} opacity={0.3} />
+        <Path d="M13 22h12l4 19-10-5.5-10 5.5Z" fill={DIORAMA.coralDeep} opacity={dim} />
+        <Path d="M13 22h12l2 10-8-3-8 3Z" fill={DIORAMA.coral} opacity={dim} />
+        <Circle cx={19} cy={17} r={14} fill={BRASS.dark} opacity={dim} />
+        <Circle cx={19} cy={15.4} r={12.4} fill={BRASS.mid} opacity={dim} />
+        <Circle cx={19} cy={14.6} r={9.6} fill={BRASS.polished} opacity={dim} />
+        <Circle cx={19} cy={15} r={5.4} fill={BRASS.dark} opacity={0.3 * dim} />
+        <Path d="M10 8q9-6 18-1.5" stroke={DIORAMA.white} strokeWidth={3} fill="none" strokeLinecap="round" opacity={0.6 * dim} />
+        <Circle cx={13.5} cy={9} r={2.4} fill={DIORAMA.white} opacity={0.5 * dim} />
       </Svg>
     );
   }
   if (visual === 'souvenir-card') {
     return (
-      <Svg width={32} height={34} viewBox="0 0 32 34">
-        <Ellipse cx={16} cy={31} rx={12} ry={2.4} fill={DIORAMA.shadow} opacity={0.18} />
-        <Path d="M3 4h26v26H3Z" fill={DIORAMA.violetDeep} opacity={dim} />
-        <Path d="M3 3h26v25H3Z" fill={DIORAMA.violet} opacity={dim} />
-        <Path d="M16 8l2.6 5.4 5.8.8-4.2 4 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4 5.8-.8Z" fill={DIORAMA.lemon} opacity={dim} />
-        <Path d="M5 5h22v3H5Z" fill={DIORAMA.white} opacity={0.26} />
+      <Svg width={40} height={44} viewBox="0 0 40 44">
+        <Ellipse cx={20} cy={41} rx={14} ry={2.8} fill={DIORAMA.shadow} opacity={0.16} />
+        <Ellipse cx={20} cy={40} rx={9} ry={1.6} fill={DIORAMA.shadow} opacity={0.3} />
+        <Path d="M4 6h32v33H4Z" fill={DIORAMA.violetNight} opacity={dim} />
+        <Path d="M4 4h32v33H4Z" fill={DIORAMA.violetDeep} opacity={dim} />
+        <Path d="M4 4h32v11H4Z" fill={DIORAMA.violet} opacity={dim} />
+        <Path d="M20 10l3.2 6.6 7.2 1-5.2 5 1.2 7.2-6.4-3.4-6.4 3.4 1.2-7.2-5.2-5 7.2-1Z" fill={DIORAMA.lemon} opacity={dim} />
+        <Path d="M20 10l3.2 6.6 7.2 1-5.2 5 1.2 7.2-6.4-3.4Z" fill={DIORAMA.butterDeep} opacity={0.55 * dim} />
+        <Path d="M7 6 L18 6" stroke={DIORAMA.white} strokeWidth={2.6} opacity={0.4} strokeLinecap="round" />
       </Svg>
     );
   }
   return (
-    <Svg width={36} height={30} viewBox="0 0 36 30">
-      <Ellipse cx={18} cy={27} rx={13} ry={2.6} fill={DIORAMA.shadow} opacity={0.2} />
-      <Path d="M5 17q-3-6 2-8 4-1.6 6 2h10q2-3.6 6-2 5 2 2 8-2 5-9 5H14q-7 0-9-5Z" fill={ITEM.stick} opacity={dim} />
-      <Path d="M5 15q-3-6 2-8 4-1.6 6 2h10q2-3.6 6-2 5 2 2 8-2 4.4-9 4.4H14Q7 19.4 5 15Z" fill={ITEM.stickLight} opacity={dim} />
-      <Path d="M10 10q7-2 15 0" stroke={DIORAMA.white} strokeWidth={2.2} fill="none" strokeLinecap="round" opacity={0.34 * dim} />
+    <Svg width={46} height={38} viewBox="0 0 46 38">
+      <Ellipse cx={23} cy={34} rx={16} ry={3} fill={DIORAMA.shadow} opacity={0.16} />
+      <Ellipse cx={23} cy={33} rx={10} ry={1.8} fill={DIORAMA.shadow} opacity={0.3} />
+      <Path d="M7 23q-4-8 2.5-10.5 5-2 7.5 2.5h12q2.5-4.5 7.5-2.5 6.5 2.5 2.5 10.5-2.5 6.5-11.5 6.5H18.5Q9.5 29.5 7 23Z" fill={ITEM.stick} opacity={dim} />
+      <Path d="M7 20.5q-4-8 2.5-10.5 5-2 7.5 2.5h12q2.5-4.5 7.5-2.5 6.5 2.5 2.5 10.5-2.5 5.8-11.5 5.8H18.5Q9.5 26.3 7 20.5Z" fill={ITEM.stickLight} opacity={dim} />
+      <Path d="M13 13.5q10-2.6 20 0" stroke={DIORAMA.white} strokeWidth={2.8} fill="none" strokeLinecap="round" opacity={0.36 * dim} />
+      <Circle cx={12.5} cy={13} r={2.6} fill={DIORAMA.white} opacity={0.34 * dim} />
     </Svg>
   );
 }
@@ -376,7 +391,12 @@ export function HomeScene({
       <WorldLayer name="landmark">
         <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 62} left={wallInset} scale={propScale * 0.86} />
         <PictureMedallion top={chromeBottom + 94} night={night} />
-        <WorldObject source={SHELF} right={wallInset} top={chromeBottom + 52} width={shelfW} height={shelfH} night={night} depth={0.42} contactShadow />
+        {/*
+          No ground contact shadow: the shelf is MOUNTED ON THE WALL. Pooling
+          one under it put a shadow on the floor beneath something that never
+          touches the floor, which is worse than no shadow at all.
+        */}
+        <WorldObject source={SHELF} right={wallInset} top={chromeBottom + 52} width={shelfW} height={shelfH} night={night} depth={0.42} />
         <HomeBiography
           props={biography}
           chromeBottom={chromeBottom}
@@ -398,7 +418,7 @@ export function HomeScene({
         */}
         <WorldObject source={LAMP} left={wallInset * 0.5} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
         <WorldObject source={CHAIR} left={wallInset} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
-        <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
+        <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow baseInset={0.16} />
       </WorldLayer>
 
       <WorldLighting ground={groundY} night={night} warm />
@@ -414,7 +434,12 @@ const styles = StyleSheet.create({
     position: 'absolute', left: '5%', right: '5%', height: 6,
     borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm,
   },
-  baseboard: { position: 'absolute', left: 0, right: 0, height: 28 },
+  /*
+   * Trim, not a slab. At height 28 in solid woodDeep this drew an opaque black
+   * bar edge to edge across the room, and with the ceiling line above it the
+   * scene read as three stacked stripes rather than as a space.
+   */
+  baseboard: { position: 'absolute', left: 0, right: 0, height: 17, opacity: 0.72 },
   baseboardGlint: { position: 'absolute', left: 0, right: 0, height: 5, backgroundColor: DIORAMA.white },
   wainscot: { position: 'absolute', left: 0, right: 0 },
   wainscotRailShadow: {
