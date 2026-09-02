@@ -9,7 +9,7 @@ turn "it looks desaturated" into a target you can drive: the Supercell family
 (Brawl Stars, Clash Mini, Squad Busters) runs high chroma with strong value
 separation and very little mid-grey.
 """
-import json, sys, colorsys
+import json, math, sys, colorsys
 from pathlib import Path
 from PIL import Image, ImageDraw
 
@@ -25,18 +25,29 @@ def stats(im, skip_top_frac=0.14, skip_bottom_frac=0.22):
     w, h = im.size
     box = im.crop((0, int(h * skip_top_frac), w, int(h * (1 - skip_bottom_frac))))
     box = box.resize((box.width // 6, box.height // 6))
-    sats, vals = [], []
+    sats, vals, hues = [], [], []
     for r, g, b in box.convert("RGB").getdata():
         hh, ss, vv = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-        sats.append(ss); vals.append(vv)
+        sats.append(ss); vals.append(vv); hues.append(hh)
     sats.sort(); vals.sort()
     n = len(sats)
+    # Mean hue as a unit vector, so red at 0.98 and red at 0.02 average to red
+    # instead of to cyan. This is the cohesion number: four locations that read
+    # as four different games have four different hue centroids. Weighting each
+    # sample by its own saturation is what stops a big pale sky from dragging
+    # the centroid toward whatever noise its near-grey pixels happen to carry.
+    hx = sum(math.cos(2 * math.pi * h) * s for h, s in zip(hues, sats))
+    hy = sum(math.sin(2 * math.pi * h) * s for h, s in zip(hues, sats))
+    hue = (math.atan2(hy, hx) / (2 * math.pi)) % 1.0
+    strength = math.hypot(hx, hy) / max(1e-6, sum(sats))
     return {
         "mean_sat": sum(sats) / n,
         "p90_sat": sats[int(n * 0.90)],
         "mean_val": sum(vals) / n,
         "val_spread": vals[int(n * 0.95)] - vals[int(n * 0.05)],
         "washed_frac": sum(1 for s in sats if s < 0.18) / n,
+        "hue": hue,
+        "hue_focus": strength,
     }
 
 report = {}
@@ -74,7 +85,7 @@ if motion:
         strip.paste(Image.open(f).convert("RGB").resize((MW, mh)), (6 + i * (MW + 6), 6))
     strip.save(out / "motion-strip.png")
 
-print(f"{'scene':14} {'sat':>6} {'p90sat':>7} {'val':>6} {'spread':>7} {'washed':>7}")
+print(f"{'scene':14} {'sat':>6} {'p90sat':>7} {'val':>6} {'spread':>7} {'washed':>7} {'hue':>6} {'focus':>6}")
 for k, v in report.items():
-    print(f"{k:14} {v['mean_sat']:6.3f} {v['p90_sat']:7.3f} {v['mean_val']:6.3f} {v['val_spread']:7.3f} {v['washed_frac']*100:6.1f}%")
+    print(f"{k:14} {v['mean_sat']:6.3f} {v['p90_sat']:7.3f} {v['mean_val']:6.3f} {v['val_spread']:7.3f} {v['washed_frac']*100:6.1f}% {v['hue']*360:6.0f} {v['hue_focus']:6.3f}")
 (out / "palette.json").write_text(json.dumps(report, indent=2))

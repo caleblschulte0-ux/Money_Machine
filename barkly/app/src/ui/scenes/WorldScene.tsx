@@ -232,7 +232,13 @@ export function WorldObject({
           style={[
             styles.objectImage,
             {
-              opacity: opacity * atmosphericOpacity * (night ? 0.78 : 1),
+              // Night darkening belongs to the MASTER GRADE, which lies over
+              // every layer at once. Dimming each prop on its own as well took
+              // them to ~0.78 against a sky that was not dimmed, so props
+              // dissolved into the background instead of being lit by the same
+              // night. 0.88 keeps the object present; the blue wash above does
+              // the rest, consistently, for the whole frame.
+              opacity: opacity * atmosphericOpacity * (night ? 0.88 : 1),
               transform: transforms.length ? transforms : undefined,
             },
             style,
@@ -243,6 +249,68 @@ export function WorldObject({
   );
 }
 
+/**
+ * THE MASTER GRADE — one light family for every location.
+ *
+ * Before this, each scene lit itself: Park ran cold, Home/Town/Beach ran
+ * "warm", night was a purple wash, and the numbers said so. Measured with
+ * `scripts/art-lab-sheet.py`, the saturation-weighted hue centroid of the four
+ * day scenes sat at 37 / 90 / 71 / 52 degrees and the four night scenes at
+ * 19 / 108 / 358 / 42 — four different games in one app, which is exactly what
+ * it looked like. A Supercell board reads as one world because ONE sun lights
+ * all of it: same key colour, same direction, same cool shadow, same vignette.
+ * Local colour still differs (grass is green, sand is gold) — the LIGHT does
+ * not.
+ *
+ * So the grade is a constant, not a per-scene argument:
+ *
+ *   day    warm key from the upper left, cool violet shadow pooling low
+ *   night  a deep BLUE wash over everything, with warm light pools on the
+ *          ground — night is a colour, not just less brightness
+ *
+ * `warm` no longer chooses a different sun. It only says this place has a
+ * bounce source of its own (a lamp, a shopfront, low sun off sand), which
+ * strengthens the ground pool. That is the only per-scene freedom left.
+ */
+const GRADE = {
+  /*
+   * Day is a LIGHT pass, not a darkening pass. The first cut of this graded
+   * with a 0.16 vignette and a 0.11 cool floor and cost the whole app a step
+   * of brightness for its trouble: home's mean value fell 0.808 -> 0.714 and
+   * Town's dead-pixel share went UP. Warm high, barely-there cool low, and a
+   * vignette you can only see when you look for it.
+   */
+  day: {
+    key: 'rgba(255,203,116,0.17)',
+    keyFade: 'rgba(255,236,196,0)',
+    top: 'rgba(255,208,128,0.15)',
+    mid: 'rgba(255,247,226,0)',
+    bottom: 'rgba(78,52,110,0.07)',
+    pool: DIORAMA.goldGlowSoft,
+    poolOpacity: 0.15,
+    vignette: 'rgba(46,30,58,0.09)',
+  },
+  /*
+   * Night is a COLOUR. The wash has to be strong enough to own the frame --
+   * measured, a deep wash pulled all four night hue centroids from 19/108/358/42
+   * degrees into 262/210/237/247, one blue family -- and the warm has to be a
+   * POOL rather than a haze. Softening the wash and spreading the gold wider
+   * was tried and was worse in both directions: gold over blue mixes toward
+   * neutral, so the dead-pixel share tripled (beach 7% -> 40%) while the hues
+   * scattered again. Strong blue, small bright pools.
+   */
+  night: {
+    key: 'rgba(104,150,236,0.14)',
+    keyFade: 'rgba(104,150,236,0)',
+    top: 'rgba(30,52,128,0.38)',
+    mid: 'rgba(20,38,104,0.42)',
+    bottom: 'rgba(9,17,58,0.50)',
+    pool: DIORAMA.goldGlow,
+    poolOpacity: 0.17,
+    vignette: 'rgba(6,11,40,0.32)',
+  },
+} as const;
+
 /** Shared key/fill/grade pass. It keeps separate assets in one light family. */
 export function WorldLighting({
   night,
@@ -251,20 +319,22 @@ export function WorldLighting({
 }: {
   night: boolean;
   warm?: boolean;
+  /** Where his feet are. The warm pool is cast around it, not at the frame. */
   ground: number;
-}) {
+  }) {
+  /*
+   * ONE wash strength, everywhere. An "interior" escape hatch was tried here
+   * on the theory that a room at night is lit by its own lamp and should take
+   * less of the blue -- Home carries warm wooden props and was measuring 18%
+   * neutral pixels, which brown-under-blue will always do. Weakening the wash
+   * to 58% made BOTH numbers worse: 22.3% neutral, and Home's hue centroid
+   * slid out of the night family entirely (from 275 degrees to 332). Half a
+   * grade is not a grade. The honest fix for a scene that reads muddy is more
+   * light in the pools, never less colour in the wash.
+   */
+  const g = night ? GRADE.night : GRADE.day;
   return (
     <View style={[styles.fill, { zIndex: WORLD_LAYER_Z.fx }]} pointerEvents="none">
-      <View
-        style={[
-          styles.keyPool,
-          {
-            top: ground - 54,
-            backgroundColor: warm ? DIORAMA.goldGlowSoft : DIORAMA.white,
-            opacity: night ? 0.035 : warm ? 0.12 : 0.09,
-          },
-        ]}
-      />
       {/*
         The key light has to reach full transparency INSIDE its own box. It
         used to be clipped to width:'68%' while its diagonal axis still carried
@@ -275,31 +345,87 @@ export function WorldLighting({
         direction with nothing to clip.
       */}
       <LinearGradient
-        colors={[
-          warm ? 'rgba(255,239,191,0.18)' : 'rgba(224,248,239,0.14)',
-          'rgba(255,255,255,0)',
-        ]}
+        colors={[g.key, g.keyFade]}
         locations={[0, 0.62]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0.68 }}
         style={styles.keySweep}
       />
+      {/*
+        Horizon haze, dialled way back. This was PURE WHITE at 0.42, spanning a
+        118px band that lands exactly on Town's shopfronts -- a white veil over
+        the most colourful thing in the scene, and a big part of why Town alone
+        stayed pale after its props were re-rendered. Distance in this art
+        style is carried by scale, overlap and contact shadow, not by fading
+        things toward white; the haze is now a warm hint that the air has depth
+        in it.
+      */}
       <LinearGradient
-        colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0)']}
-        style={[styles.horizonHaze, { top: ground - 178, opacity: night ? 0.03 : 0.42 }]}
+        colors={['rgba(255,244,214,0.16)', 'rgba(255,244,214,0)']}
+        style={[styles.horizonHaze, { top: ground - 178, opacity: night ? 0.05 : 0.15 }]}
       />
+      {/* The grade itself: warm high, neutral mid, cool low. Identical everywhere. */}
       <LinearGradient
-        colors={[
-          warm ? 'rgba(255,226,172,0.08)' : 'rgba(214,239,229,0.06)',
-          'rgba(255,255,255,0)',
-          night ? 'rgba(20,22,34,0.20)' : 'rgba(48,34,24,0.08)',
-        ]}
-        locations={[0, 0.55, 1]}
+        colors={[g.top, g.mid, g.bottom]}
+        locations={[0, 0.52, 1]}
         style={styles.fill}
       />
+      {/*
+        ORDER MATTERS: the pools go ON TOP of the wash.
+        They were under it, so at night the deep blue was composited over the
+        gold and the two mixed toward neutral exactly where the light was
+        supposed to be brightest -- measured, that put Home's dead-pixel share
+        at 18% with a bright lamp in frame. Light is not something the
+        atmosphere is in front of.
+      */}
+      {/*
+        The warm pool. At night this is the whole idea: a deep blue room with
+        gold light lying on the floor where the lamp/window/fire is. It used to
+        run at 0.035 after dark, which is invisible, so night was only ever
+        "the same scene, darker and purple".
+      */}
+      <View
+        style={[
+          styles.keyPool,
+          {
+            top: ground - 54,
+            backgroundColor: g.pool,
+            opacity: warm ? g.poolOpacity : g.poolOpacity * 0.72,
+          },
+        ]}
+      />
+      {night && (
+        <LinearGradient
+          colors={['rgba(255,191,35,0)', 'rgba(255,203,88,0.62)', 'rgba(255,176,20,0)']}
+          locations={[0, 0.5, 1]}
+          style={[styles.keyCore, { top: ground - 34, opacity: warm ? 0.86 : 0.62 }]}
+        />
+      )}
+      {/*
+        A soft vignette on all four edges. This is the cheapest and most
+        reliable cohesion cue in the reference games — it is what makes a flat
+        stack of layers read as one photographed diorama — and it doubles as
+        the frame that keeps the HUD off the art.
+      */}
       <LinearGradient
-        colors={['rgba(20,18,25,0)', night ? 'rgba(16,18,30,0.20)' : 'rgba(38,28,20,0.10)']}
-        style={styles.bottomGrade}
+        colors={[g.vignette, 'rgba(0,0,0,0)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.vignetteSide}
+      />
+      <LinearGradient
+        colors={['rgba(0,0,0,0)', g.vignette]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.vignetteSide}
+      />
+      <LinearGradient
+        colors={[g.vignette, 'rgba(0,0,0,0)']}
+        style={styles.vignetteTop}
+      />
+      <LinearGradient
+        colors={['rgba(0,0,0,0)', g.vignette]}
+        style={styles.vignetteBottom}
       />
     </View>
   );
@@ -341,7 +467,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     transform: [{ scaleX: 1.18 }],
   },
+  keyCore: {
+    position: 'absolute',
+    left: '22%',
+    right: '22%',
+    height: 74,
+    borderRadius: radius.pill,
+    transform: [{ scaleX: 1.1 }],
+  },
   keySweep: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  vignetteSide: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  vignetteTop: { position: 'absolute', left: 0, right: 0, top: 0, height: '13%' },
+  vignetteBottom: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '22%' },
   horizonHaze: { position: 'absolute', left: 0, right: 0, height: 118 },
-  bottomGrade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 140 },
 });

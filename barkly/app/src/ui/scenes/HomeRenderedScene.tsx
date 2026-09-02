@@ -95,27 +95,30 @@ function PictureMedallion({ top: _top, night: _night }: { top: number; night: bo
   return null;
 }
 
+/**
+ * ONE horizontal break on this wall, not three.
+ *
+ * There used to be a chair rail (a 12px wood bar with an 18px shadow under it)
+ * about 140px above the floor, AND a skirting board 27px above the floor, AND
+ * the floor's own near/far band below that. Three dark stripes stacked in the
+ * bottom third of the room: the wall read as a barcode, and at a glance you
+ * could not tell which line was the actual floor — which is how an earlier
+ * session came to believe the furniture was hanging below it.
+ *
+ * A wall meets a floor once. What is left is the skirting, plus a soft
+ * ambient-occlusion falloff down the wall into it. That falloff is a gradient,
+ * not an edge, so it adds depth without adding a line.
+ */
 function WallMillwork({ floorTop, night }: { floorTop: number; night: boolean }) {
-  const rail = night ? DIORAMA.woodNight : DIORAMA.woodMid;
   return (
-    <>
-      <LinearGradient
-        colors={night ? ['rgba(46,38,51,0.42)', 'rgba(35,30,44,0.16)'] : ['rgba(255,241,208,0.18)', 'rgba(197,139,78,0.12)']}
-        style={[styles.wainscot, { top: floorTop - 132, height: 105 }]}
-      />
-      <View style={[styles.wainscotRailShadow, { top: floorTop - 137 }]} />
-      <View style={[styles.wainscotRail, { top: floorTop - 142, backgroundColor: rail }]} />
-      {/*
-        The panel stiles are gone. They were 5px vertical strokes at HARDCODED
-        lefts of 82/205/328 -- so they only landed correctly on a 390pt screen
-        and drifted on every other one -- and at this scale they did not read
-        as wainscot panelling at all. Two of the three sat in open wall and
-        looked like stray lines; the third hid behind the couch. Big simple
-        shapes, no thin strokes competing with the character: the rail and the
-        dado band below it already give the wall its horizontal structure.
-      */}
-      <View style={[styles.panelBaseGlow, { top: floorTop - 34, opacity: night ? 0.04 : 0.18 }]} />
-    </>
+    <LinearGradient
+      colors={
+        night
+          ? ['rgba(24,32,74,0)', 'rgba(16,22,58,0.34)']
+          : ['rgba(197,139,78,0)', 'rgba(140,86,42,0.22)']
+      }
+      style={[styles.wainscot, { top: floorTop - 178, height: 178 }]}
+    />
   );
 }
 
@@ -413,8 +416,12 @@ export function HomeScene({
         />
         <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodSoft, opacity: night ? 0.34 : 0.26 }]} />
         <WallMillwork floorTop={floorTop} night={night} />
-        <View style={[styles.baseboard, { top: floorTop - 27, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
-        <View style={[styles.baseboardGlint, { top: floorTop - 24, opacity: night ? 0.04 : 0.22 }]} />
+        {/*
+          The one line where wall meets floor. The white glint that used to sit
+          3px under it made the skirting read as two thin stripes rather than
+          one solid piece of trim, which is half of the barcode this wall was.
+        */}
+        <View style={[styles.baseboard, { top: floorTop - 21, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
       </WorldLayer>
 
       <WorldLayer name="landmark">
@@ -475,21 +482,8 @@ const styles = StyleSheet.create({
    * bar edge to edge across the room, and with the ceiling line above it the
    * scene read as three stacked stripes rather than as a space.
    */
-  baseboard: { position: 'absolute', left: 0, right: 0, height: 17, opacity: 0.72 },
-  baseboardGlint: { position: 'absolute', left: 0, right: 0, height: 5, backgroundColor: DIORAMA.white },
+  baseboard: { position: 'absolute', left: 0, right: 0, height: 14, opacity: 0.66 },
   wainscot: { position: 'absolute', left: 0, right: 0 },
-  wainscotRailShadow: {
-    position: 'absolute', left: 0, right: 0, height: 18,
-    backgroundColor: DIORAMA.shadow, opacity: 0.11,
-  },
-  wainscotRail: {
-    position: 'absolute', left: 0, right: 0, height: 12,
-    borderRadius: radius.sm,
-  },
-  panelBaseGlow: {
-    position: 'absolute', left: 0, right: 0, height: 6,
-    backgroundColor: DIORAMA.white,
-  },
   windowWrap: { position: 'absolute' },
   windowCastShadow: {
     position: 'absolute',

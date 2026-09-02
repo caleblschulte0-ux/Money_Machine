@@ -53,3 +53,9 @@ yarn-error.*
 overlap-*.png
 art-lab/
 world-art/
+# Blender's raw output. CI (and a local `blender -b --python tools/blender/...`)
+# writes it, then PROMOTES the trimmed PNGs into assets/world/, which is what
+# ships. Keeping both copies doubles ~2MB of binaries in the diff for nothing.
+art-review/world-props/
+art-review/home-props/
+art-review/home-architecture/

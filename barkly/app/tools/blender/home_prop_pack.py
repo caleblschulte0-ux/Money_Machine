@@ -122,13 +122,17 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     scene.world.color = (0.055, 0.065, 0.085)
 
     # Keep contrast consistent across Blender 3.x/4.x.
+    # STANDARD, NOT AgX -- see tools/blender/world_prop_pack.py for the
+    # measurement. AgX rolls saturated highlights toward white by design, which
+    # is what turned every authored candy colour in this pack into pastel.
     try:
-        scene.view_settings.look = "AgX - Medium High Contrast"
-    except Exception:
-        try:
-            scene.view_settings.look = "Medium High Contrast"
-        except Exception:
-            pass
+        scene.view_settings.view_transform = "Standard"
+    except (TypeError, ValueError):
+        pass
+    try:
+        scene.view_settings.look = "None"
+    except (TypeError, ValueError):
+        pass
 
     bpy.ops.object.camera_add(location=CAMERA_LOCATION)
     cam = bpy.context.object
@@ -141,7 +145,7 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     bpy.ops.object.light_add(type="AREA", location=(-4.8, -5.0, 8.4))
     key = bpy.context.object
     key.name = "Barkly key"
-    key.data.energy = 980
+    key.data.energy = 790
     key.data.size = 5.0
     key.data.color = (1.0, 0.77, 0.58)
     look_at(key, target)
@@ -149,7 +153,7 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     bpy.ops.object.light_add(type="AREA", location=(5.0, -2.2, 4.0))
     fill = bpy.context.object
     fill.name = "Barkly cool fill"
-    fill.data.energy = 330
+    fill.data.energy = 270
     fill.data.size = 5.5
     fill.data.color = (0.58, 0.78, 1.0)
     look_at(fill, target)
@@ -157,7 +161,7 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     bpy.ops.object.light_add(type="AREA", location=(1.8, 4.0, 6.8))
     rim = bpy.context.object
     rim.name = "Barkly rim"
-    rim.data.energy = 520
+    rim.data.energy = 420
     rim.data.size = 4.2
     rim.data.color = (1.0, 0.84, 0.63)
     look_at(rim, target)

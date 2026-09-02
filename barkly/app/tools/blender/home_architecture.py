@@ -69,9 +69,16 @@ def setup():
     scene.render.image_settings.file_format = 'PNG'
     scene.render.image_settings.color_mode = 'RGBA'
     scene.render.film_transparent = True
+    # STANDARD, NOT AgX -- see tools/blender/world_prop_pack.py for the
+    # measurement. AgX rolls saturated highlights toward white by design, which
+    # is what turned every authored candy colour in this pack into pastel.
     try:
-        scene.view_settings.look = 'AgX - Medium High Contrast'
-    except Exception:
+        scene.view_settings.view_transform = 'Standard'
+    except (TypeError, ValueError):
+        pass
+    try:
+        scene.view_settings.look = 'None'
+    except (TypeError, ValueError):
         pass
 
     bpy.ops.object.camera_add(location=CAMERA_LOCATION)
@@ -83,21 +90,21 @@ def setup():
 
     bpy.ops.object.light_add(type='AREA', location=(-4.5, -4.8, 8.0))
     key = bpy.context.object
-    key.data.energy = 1050
+    key.data.energy = 845
     key.data.size = 5.0
     key.data.color = (1.0, 0.76, 0.55)
     look_at(key, (0, 0, 1.4))
 
     bpy.ops.object.light_add(type='AREA', location=(4.5, -2.0, 4.0))
     fill = bpy.context.object
-    fill.data.energy = 300
+    fill.data.energy = 245
     fill.data.size = 5.0
     fill.data.color = (0.58, 0.78, 1.0)
     look_at(fill, (0, 0, 1.4))
 
     bpy.ops.object.light_add(type='AREA', location=(0.8, 3.5, 6.4))
     rim = bpy.context.object
-    rim.data.energy = 450
+    rim.data.energy = 365
     rim.data.size = 3.8
     rim.data.color = (1.0, 0.86, 0.66)
     look_at(rim, (0, 0, 1.4))

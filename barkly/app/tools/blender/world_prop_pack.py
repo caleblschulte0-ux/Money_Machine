@@ -164,13 +164,25 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     scene.render.film_transparent = True
     scene.world.color = (0.045, 0.055, 0.075)
 
+    # STANDARD, NOT AgX. Every prop in this pack was coming out of Blender
+    # pastel: measured, the Town storefronts render around #A0A0A0/#C0A0A0
+    # even though their base colours are #E14B45 and #37B4CD, which is what
+    # kept Town at 22% colourless pixels after the palette, the road and the
+    # compositing had all been fixed in the app. The cause is the view
+    # transform. AgX is filmic -- its job is to roll saturated highlights
+    # toward white so photographic renders do not clip -- and under a 1000W
+    # key that is most of a brightly lit toy prop. Correct for photoreal work,
+    # wrong for stylised game art, where the flat saturated colour IS the look.
+    # Standard keeps what was authored; the light energies drop with it so
+    # nothing clips now that the shoulder is gone.
     try:
-        scene.view_settings.look = "AgX - Medium High Contrast"
-    except Exception:
-        try:
-            scene.view_settings.look = "Medium High Contrast"
-        except Exception:
-            pass
+        scene.view_settings.view_transform = "Standard"
+    except (TypeError, ValueError):
+        pass
+    try:
+        scene.view_settings.look = "None"
+    except (TypeError, ValueError):
+        pass
 
     bpy.ops.object.camera_add(location=CAMERA_LOCATION)
     camera = bpy.context.object
@@ -182,7 +194,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(-4.8, -5.0, 8.4))
     key = bpy.context.object
     key.name = "Barkly warm key"
-    key.data.energy = 1020
+    key.data.energy = 820
     key.data.size = 5.0
     key.data.color = (1.0, 0.77, 0.58)
     look_at(key, target)
@@ -190,7 +202,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(5.0, -2.2, 4.0))
     fill = bpy.context.object
     fill.name = "Barkly cool fill"
-    fill.data.energy = 340
+    fill.data.energy = 280
     fill.data.size = 5.5
     fill.data.color = (0.58, 0.78, 1.0)
     look_at(fill, target)
@@ -198,7 +210,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(1.8, 4.0, 6.8))
     rim = bpy.context.object
     rim.name = "Barkly warm rim"
-    rim.data.energy = 500
+    rim.data.energy = 380
     rim.data.size = 4.2
     rim.data.color = (1.0, 0.84, 0.63)
     look_at(rim, target)
@@ -260,7 +272,7 @@ def storefront(accent_name, body_hex, edge_hex, awning_hex):
     # the key light. A Clash Mini shopfront has no neutral in it: the cream is
     # a warm butter and the glass is a saturated teal that reads as colour, not
     # as reflection. See docs/ART_DIRECTION.md.
-    cream = material("Store cream", "#FFE2A6", roughness=0.62, coat=0.02)
+    cream = material("Store cream", "#FFD786", roughness=0.62, coat=0.02)
     glass = material("Store glass", "#3FBBD8", roughness=0.30, metallic=0.02, coat=0.12)
     glass_dark = material("Store glass depth", "#2F7387", roughness=0.26, metallic=0.08, coat=0.20)
     awning = material(f"{accent_name} awning", awning_hex, roughness=0.54, coat=0.05)
@@ -287,7 +299,7 @@ def storefront(accent_name, body_hex, edge_hex, awning_hex):
 
 def town_fountain():
     stone = material("Fountain stone", "#E5BD76", roughness=0.72)
-    stone_light = material("Fountain stone light", "#FFE5A9", roughness=0.68)
+    stone_light = material("Fountain stone light", "#FFD98A", roughness=0.68)
     stone_dark = material("Fountain stone depth", "#9D723E", roughness=0.78)
     water = material("Fountain water", "#3DC7EA", roughness=0.18, metallic=0.06, coat=0.30)
     contact_shadow(1.46, 0.72)
@@ -343,30 +355,40 @@ def beach_umbrella():
 def beach_lifeguard():
     wood = material("Tower warm wood", "#BB6226", roughness=0.66)
     coral = material("Tower coral", "#F64E3C", roughness=0.62, coat=0.03)
-    cream = material("Tower cream", "#FFEBBE", roughness=0.68)
+    cream = material("Tower cream", "#FFDA93", roughness=0.68)
     aqua = material("Tower aqua", "#39C0D8", roughness=0.56, coat=0.06)
     glass = material("Tower window", "#8BE0E9", roughness=0.20, coat=0.30)
     contact_shadow(1.45, 0.68)
     for x in (-0.95, 0.95):
         cube(f"stilt_{x}", (x, 0.18, 1.05), (0.13, 0.16, 1.05), wood, 0.07, (0, math.radians(4 if x < 0 else -4), 0))
     cube("platform", (0, 0.05, 1.92), (1.38, 0.78, 0.16), wood, 0.12)
-    cube("hut", (0, 0.18, 2.90), (1.20, 0.65, 0.86), cream, 0.20)
+    # A LIFEGUARD TOWER IS RED AND WHITE, not cream on cream. The hut is the
+    # biggest mass in this prop and it was the same family as the sand it
+    # stands on, so on the contact sheet the whole tower read as a pale smudge
+    # a few shades off the beach floor. Bold hut, contrasting roof, cream only
+    # as trim.
+    cube("hut", (0, 0.18, 2.90), (1.20, 0.65, 0.86), coral, 0.20)
     cube("window", (0, -0.50, 3.04), (0.62, 0.05, 0.38), glass, 0.10)
-    cube("window_frame_top", (0, -0.58, 3.45), (0.72, 0.05, 0.07), aqua, 0.05)
-    cube("window_frame_bottom", (0, -0.58, 2.63), (0.72, 0.05, 0.07), aqua, 0.05)
-    cube("roof", (0, 0.18, 3.93), (1.46, 0.88, 0.17), coral, 0.15, (0, math.radians(-4), 0))
+    cube("window_frame_top", (0, -0.58, 3.45), (0.72, 0.05, 0.07), cream, 0.05)
+    cube("window_frame_bottom", (0, -0.58, 2.63), (0.72, 0.05, 0.07), cream, 0.05)
+    cube("roof", (0, 0.18, 3.93), (1.46, 0.88, 0.17), aqua, 0.15, (0, math.radians(-4), 0))
     # Ladder remains a separate readable sub-form inside the tower sprite.
     for x in (-0.43, 0.43):
         cube(f"ladder_rail_{x}", (x, -0.50, 0.94), (0.07, 0.08, 0.92), wood, 0.05, (math.radians(-7), 0, 0))
     for z in (0.32, 0.70, 1.08, 1.46):
         cube(f"ladder_step_{z}", (0, -0.62, z), (0.48, 0.07, 0.06), wood, 0.04)
-    cube("rescue_mark", (0.86, -0.58, 2.94), (0.18, 0.04, 0.18), coral, 0.08)
+    cube("rescue_mark", (0.86, -0.58, 2.94), (0.18, 0.04, 0.18), cream, 0.08)
 
 
+# Beach props stand ON sand, so they must not BE sand. The dune and the castle
+# were authored a couple of shades off the beach floor they sit on (#F0C463 and
+# #F4CA6D against a #FFDC93 near-sand), which is why both read as smudges on
+# the contact sheet no matter what the lighting did. Deeper, warmer, wetter
+# sand for the objects; the dry floor stays pale.
 def beach_dune():
-    sand = material("Dune sand", "#F0C463", roughness=0.92)
-    sand_light = material("Dune light", "#FFE49B", roughness=0.90)
-    grass = material("Dune grass", "#609348", roughness=0.88)
+    sand = material("Dune sand", "#E7B247", roughness=0.92)
+    sand_light = material("Dune light", "#FFC95F", roughness=0.90)
+    grass = material("Dune grass", "#57A335", roughness=0.88)
     contact_shadow(1.62, 0.52)
     sphere("dune", (0, 0.16, 0.34), (1.65, 0.66, 0.42), sand)
     sphere("dune_light", (-0.36, -0.30, 0.48), (0.92, 0.22, 0.16), sand_light)
@@ -375,10 +397,10 @@ def beach_dune():
 
 
 def beach_castle():
-    sand = material("Castle sand", "#F4CA6D", roughness=0.92)
-    sand_light = material("Castle sun face", "#FFE29F", roughness=0.90)
-    sand_dark = material("Castle depth", "#C08E3F", roughness=0.94)
-    flag = material("Castle flag", "#2CBAD8", roughness=0.60, coat=0.04)
+    sand = material("Castle sand", "#E3AC46", roughness=0.92)
+    sand_light = material("Castle sun face", "#FFC85F", roughness=0.90)
+    sand_dark = material("Castle depth", "#A06B24", roughness=0.94)
+    flag = material("Castle flag", "#FF4A3D", roughness=0.60, coat=0.04)
     wood = material("Flag pole", "#7C482A", roughness=0.72)
     contact_shadow(1.32, 0.52)
     cube("castle_base", (0, 0.08, 0.48), (1.10, 0.60, 0.46), sand, 0.16)
@@ -426,7 +448,7 @@ BUILDERS = {
     "park/hedge": (park_hedge, 4.4, (0, 0, 0.72), {"displayWidth": 154, "anchor": "bottom"}),
     "town/store_coral": (lambda: storefront("Coral", "#E14B45", "#982D32", "#FF6349"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
     "town/store_aqua": (lambda: storefront("Aqua", "#37B4CD", "#216E84", "#3ED3EB"), 6.6, (0, 0, 2.30), {"displayWidth": 190, "anchor": "bottom"}),
-    "town/store_violet": (lambda: storefront("Violet", "#856EB1", "#56417C", "#A688D0"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
+    "town/store_violet": (lambda: storefront("Violet", "#9560D6", "#5A2F93", "#C089EE"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
     "town/fountain": (town_fountain, 4.4, (0, 0, 1.05), {"displayWidth": 114, "anchor": "bottom"}),
     "town/lamp": (town_lamp, 5.4, (0, 0, 2.05), {"displayWidth": 70, "anchor": "bottom"}),
     "town/planter": (town_planter, 3.8, (0, 0, 0.9), {"displayWidth": 74, "anchor": "bottom"}),

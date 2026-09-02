@@ -77,6 +77,7 @@ import {
   NoticeKind,
   SPEECH_MAX_LINES,
   SPRITE_FOOT,
+  SPRITE_HEIGHT,
   stageHeight,
   stageWidth,
   TAP_MIN,
@@ -167,7 +168,16 @@ function AnimatedBubble({ children, changeKey }: { children: React.ReactNode; ch
   );
 }
 
-function HeartBurst({ burst }: { burst: number }) {
+/**
+ * Hearts come off the TOP OF HIS HEAD, wherever that is.
+ *
+ * This layer was pinned at bottom:190, which is roughly his head only at the
+ * one sprite scale it was eyeballed at. He renders anywhere from 0.72 to 1.10,
+ * so on a small phone the hearts came out of his back and on a tablet they
+ * appeared in the air above him. `headY` is derived from the same numbers that
+ * place him.
+ */
+function HeartBurst({ burst, headY }: { burst: number; headY: number }) {
   const [hearts, setHearts] = useState<{ id: number; x: number; v: Animated.Value }[]>([]);
   const nextId = useRef(0);
   useEffect(() => {
@@ -190,7 +200,7 @@ function HeartBurst({ burst }: { burst: number }) {
   }, [burst]);
 
   return (
-    <View style={styles.heartLayer} pointerEvents="none">
+    <View style={[styles.heartLayer, { bottom: headY }]} pointerEvents="none">
       {hearts.map((h) => (
         <Animated.Text
           key={h.id}
@@ -574,7 +584,8 @@ export default function BarklyRoom() {
    * Interior scenes are built around this line rather than around percentages
    * of a rectangle — see Scenes.HomeScene.
    */
-  const groundY = topPad + chromeBottomPx + stageHeight(screenH, layout, dialogueExpanded, composerExpanded) - SPRITE_FOOT;
+  const stageH = stageHeight(screenH, layout, dialogueExpanded, composerExpanded);
+  const groundY = topPad + chromeBottomPx + stageH - SPRITE_FOOT;
   const stateLabel = STATE_LABEL[snapshot.state];
 
   /**
@@ -1018,7 +1029,7 @@ export default function BarklyRoom() {
         <View
           style={[
             styles.stageArea,
-            { height: stageHeight(screenH, layout, dialogueExpanded, composerExpanded) },
+            { height: stageH },
             landscape
               ? { marginLeft: navW + 8, marginRight: interactionW + 8 }
               : { width: '100%', maxWidth: stageW, alignSelf: 'center' },
@@ -1065,8 +1076,18 @@ export default function BarklyRoom() {
             </Animated.View>
           )}
           {(location === 'park' || location === 'beach') && !asleep && (
+            /*
+              The mound is placed as a FRACTION of the stage, not at bottom:252.
+              A fixed offset only sits in the mid-ground on the phone it was
+              eyeballed on: the stage can be as short as 212pt, where 252 puts
+              the whole control above the top of its own container, and as tall
+              as ~700 on a tablet, where it lands in the middle of the sky. 42%
+              of the way up keeps it in the same band of the field on every
+              device, and the clamp keeps its 68pt of art and label inside the
+              stage at both extremes.
+            */
             <Pressable
-              style={styles.digSpot}
+              style={[styles.digSpot, { bottom: Math.min(stageH - 108, Math.max(96, stageH * 0.42)) }]}
               onPress={runDig}
               disabled={digging || fetching || locked}
               hitSlop={8}
@@ -1083,7 +1104,7 @@ export default function BarklyRoom() {
           )}
           {barkly.serving !== null && <FoodBowl key={barkly.serving} food={barkly.serving} />}
           {snapshot.state === 'playing' && !fetching && routine === 'ball' && <Ball />}
-          <HeartBurst burst={heartBurst} />
+          <HeartBurst burst={heartBurst} headY={CARE_DOCK_CLEARANCE + SPRITE_HEIGHT * spriteScale * 0.66} />
           <BarklyKit
             toyId={barkly.toy?.id ?? null}
             playLabel={playLabel}
@@ -1449,7 +1470,7 @@ const styles = StyleSheet.create({
   // Keep Barkly's feet out of the foreground care dock without throwing away
   // the reclaimed world space below him.
   stageArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: CARE_DOCK_CLEARANCE },
-  heartLayer: { position: 'absolute', bottom: 190, alignSelf: 'center' },
+  heartLayer: { position: 'absolute', alignSelf: 'center' },
   heart: { position: 'absolute', fontSize: 24, color: color.danger },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
@@ -1463,7 +1484,7 @@ const styles = StyleSheet.create({
    * that band entirely. It also puts something in the empty middle of the
    * field, which was the largest dead area in any scene.
    */
-  digSpot: { position: 'absolute', left: 10, bottom: 252, alignItems: 'center', zIndex: 2 },
+  digSpot: { position: 'absolute', left: 10, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: -11, ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodSoft, paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodWarm, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   chip: { position: 'absolute', bottom: CARE_DOCK_HEIGHT + STATE_CHIP_GAP, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },

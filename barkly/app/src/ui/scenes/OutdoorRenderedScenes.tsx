@@ -86,19 +86,48 @@ function SceneSky({ band, horizon }: { band: SkyBand; horizon: number }) {
         ]}
       />
       {night && <View style={[styles.moonCutout, { top: Math.max(58, horizon - 134), backgroundColor: DIORAMA.skyNightA }]} />}
+      {/*
+        A CLOUD, not a capsule.
+
+        This was three white pills at 54% opacity, and 54% white over the day
+        sky is grey -- on the contact sheet it read as an empty grey UI slab
+        parked under the tab bar, which is exactly the "very HTML" note. Two
+        things fix it: it has to be WHITE (a cloud is the brightest thing in a
+        Supercell sky, not a translucent one), and its silhouette has to be
+        lumpy rather than a rounded rectangle. Five puffs of different sizes on
+        two rows give it a real edge, a soft tinted underside sells the volume,
+        and a second smaller cloud further back gives the sky depth.
+      */}
       <Animated.View
         style={[
           styles.cloud,
           {
-            top: Math.max(82, horizon - 96),
-            opacity: night ? 0.10 : 0.54,
+            top: Math.max(94, horizon - 104),
+            opacity: night ? 0.14 : 0.94,
             transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-18, 22] }) }],
           },
         ]}
       >
-        <View style={[styles.cloudPuff, { left: 0, top: 18, width: 72, height: 25 }]} />
-        <View style={[styles.cloudPuff, { left: 42, top: 0, width: 68, height: 43 }]} />
-        <View style={[styles.cloudPuff, { left: 86, top: 16, width: 62, height: 27 }]} />
+        <View style={[styles.cloudShade, { left: 6, top: 26, width: 140, height: 20 }]} />
+        <View style={[styles.cloudPuff, { left: 0, top: 20, width: 58, height: 26 }]} />
+        <View style={[styles.cloudPuff, { left: 30, top: 6, width: 56, height: 40 }]} />
+        <View style={[styles.cloudPuff, { left: 62, top: 0, width: 50, height: 46 }]} />
+        <View style={[styles.cloudPuff, { left: 96, top: 12, width: 44, height: 34 }]} />
+        <View style={[styles.cloudPuff, { left: 22, top: 30, width: 118, height: 18 }]} />
+      </Animated.View>
+      <Animated.View
+        style={[
+          styles.cloudFar,
+          {
+            top: Math.max(78, horizon - 148),
+            opacity: night ? 0.08 : 0.62,
+            transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [14, -12] }) }],
+          },
+        ]}
+      >
+        <View style={[styles.cloudPuff, { left: 0, top: 10, width: 40, height: 17 }]} />
+        <View style={[styles.cloudPuff, { left: 22, top: 2, width: 38, height: 25 }]} />
+        <View style={[styles.cloudPuff, { left: 46, top: 9, width: 34, height: 18 }]} />
       </Animated.View>
     </View>
   );
@@ -306,9 +335,9 @@ export function TownScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
     <WorldScene motion={motion} testID="world-scene-town">
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon + 30} /></WorldLayer>
       <WorldLayer name="distant">
-        <WorldObject source={TOWN_STORE_CORAL} left={sideStoreInset} top={horizon + 34} width={shopW * 0.90} height={shopH * 0.90} night={night} depth={0.32} opacity={0.96} />
+        <WorldObject source={TOWN_STORE_CORAL} left={sideStoreInset} top={horizon + 34} width={shopW * 0.90} height={shopH * 0.90} night={night} depth={0.32} />
         <WorldObject source={TOWN_STORE_AQUA} left={centerStoreLeft} top={horizon + 8} width={shopW * 0.96} height={shopH * 0.96} night={night} depth={0.38} />
-        <WorldObject source={TOWN_STORE_VIOLET} right={sideStoreInset} top={horizon + 28} width={shopW * 0.91} height={shopH * 0.91} night={night} depth={0.34} opacity={0.96} />
+        <WorldObject source={TOWN_STORE_VIOLET} right={sideStoreInset} top={horizon + 28} width={shopW * 0.91} height={shopH * 0.91} night={night} depth={0.34} />
         <View style={[styles.shopSign, { left: centerStoreLeft + shopW * 0.17, top: horizon + 58, width: shopW * 0.62 }]}>
           <Text style={[styles.shopSignText, { fontSize: Math.max(9, 11 * scale) }]}>BARKLY'S</Text>
         </View>
@@ -448,7 +477,9 @@ const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   sun: { position: 'absolute', right: 34, width: 50, height: 50, borderRadius: radius.pill },
   moonCutout: { position: 'absolute', right: 20, width: 48, height: 48, borderRadius: radius.pill },
-  cloud: { position: 'absolute', left: 23, width: 150, height: 46 },
+  cloud: { position: 'absolute', left: 23, width: 150, height: 48 },
+  cloudFar: { position: 'absolute', right: 34, width: 82, height: 28 },
+  cloudShade: { position: 'absolute', borderRadius: radius.pill, backgroundColor: DIORAMA.aquaLight },
   cloudPuff: { position: 'absolute', borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   fallingLeaf: { position: 'absolute', left: 34, width: 17, height: 9, borderTopLeftRadius: radius.md, borderBottomRightRadius: radius.md, backgroundColor: DIORAMA.parkTreeDayLight },
   fallingLeafSmall: { left: 0, width: 12, height: 7, backgroundColor: DIORAMA.parkTreeDay },

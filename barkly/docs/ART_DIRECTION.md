@@ -45,6 +45,91 @@ A palette pass alone can therefore never fix town or beach. The grading is
 applied at both ends now — the code palette and the Blender materials — using
 the same transform, so props and code-drawn scenery stay in one colour family.
 
+## The MASTER GRADE (2026-09-02)
+
+Four locations were reading as four different games, and the contact sheet
+could finally say so in a number. `art-lab-sheet.py` now reports a
+saturation-weighted **circular-mean hue** per scene plus a `hue_focus`
+concentration, so "these don't look like the same world" stops being taste:
+
+| | before | after |
+|---|---|---|
+| day hue centroids | 37° / 90° / 71° / 52° | 35° / 90° / 71° / 51° |
+| night hue centroids | 19° / 108° / **358°** / 42° | 275° / 203° / 243° / 268° |
+| night `hue_focus` (town) | 0.139 | 0.561 |
+
+Full before/after, all eight frames (`mean_sat` / `washed_frac`):
+
+| scene | before | after |
+|---|---|---|
+| home-day | 0.411 / 3.0% | 0.432 / 1.5% |
+| park-day | 0.517 / 1.1% | 0.511 / 0.6% |
+| town-day | 0.309 / **22.3%** | 0.327 / **7.0%** |
+| beach-day | 0.421 / 9.8% | 0.430 / 4.7% |
+| home-night | 0.396 / 6.5% | 0.390 / 18.3% |
+| park-night | 0.417 / 1.6% | 0.501 / 4.2% |
+| town-night | 0.340 / 19.1% | 0.452 / 10.0% |
+| beach-night | 0.421 / 8.9% | 0.400 / 10.9% |
+
+Home at night is the one number that got worse, and it is a real trade rather
+than an oversight: a room full of warm wood under a blue night has genuine
+crossover pixels. See the note below.
+
+Day scenes keep their own local colour — grass is green, sand is gold, and
+forcing a park to be orange would be worse than the problem. What was actually
+broken was the **light**: every scene lit itself, so Park ran cold while Home,
+Town and Beach ran "warm", and night was a purple dimmer switch. Now
+`WorldLighting` applies ONE grade to all four — same key colour, same
+direction, same cool shadow, same vignette — and `warm` no longer picks a
+different sun, it only says a place has a bounce source of its own.
+
+Night is a **colour**, not less brightness: a deep blue wash over the whole
+frame with warm pools of light lying on the ground. Two things had to be true
+for that to work, and both were measured:
+
+1. The blue has to be strong. Softening it and spreading the gold wider was
+   tried and was worse in both directions: gold over blue mixes toward
+   neutral, so the dead-pixel share tripled (beach 7% → 40%) while the hues
+   scattered again.
+2. The pools go **on top of** the wash. They were underneath it, so the blue
+   was composited over the gold exactly where the light was meant to be
+   brightest.
+
+A third thing was tried and **rejected on the numbers**: an `interior` flag
+that took Home down to 58% of the wash, on the reasonable-sounding theory that
+a room after dark is lit by its own lamp. It made both numbers worse — Home's
+neutral share went 18.3% → 22.3% and its hue centroid slid out of the night
+family entirely (275° → 332°). Half a grade is not a grade. Home still carries
+the highest neutral share of the eight frames (~18%) and that is accepted: a
+room full of warm wood under a blue night has genuine crossover pixels, and
+the frame reads correctly. **The fix for a muddy scene is more light in the
+pools, never less colour in the wash.**
+
+## AgX is why every Blender prop was pastel
+
+The biggest finding of this pass. Town's storefronts render around
+`#A0A0A0`/`#C0A0A0` on screen while their authored base colours are `#E14B45`
+and `#37B4CD`. Nothing in the app was doing that. All three Blender rigs set
+
+```python
+scene.view_settings.look = "AgX - Medium High Contrast"
+```
+
+**AgX is a filmic view transform whose job is to roll saturated highlights
+toward white** so photographic renders don't clip — and under a 1000W key that
+is most of a brightly lit toy prop. It is the right transform for photoreal
+work and the wrong one for stylised game art, where the flat saturated colour
+IS the look. Measured on `town/store_violet.png`: 45.2% of its opaque pixels
+were under 0.18 chroma.
+
+`world_prop_pack.py`, `home_prop_pack.py` and `home_architecture.py` now render
+through **Standard**, with the key/fill/rim energies re-balanced (verified
+locally against the shipping PNGs, not guessed).
+
+This is what the note below was circling and could not name: a palette pass
+could never fix Town, because Town's colour was being destroyed at render
+time, not at composite time.
+
 ## Rules
 
 - **Never judge the art from one screenshot.** Cross-scene problems — a washed

@@ -126,10 +126,21 @@ export const DIORAMA = {
   mintDeep: '#25A94D',
   mintLight: '#C5FED1',
 
+  /*
+   * SKY AND HIGHLIGHTS KEEP THEIR CHROMA.
+   *
+   * The pale ends of these ramps were all within a few percent of white
+   * (#F0FBFF sky, #FFF8E5 path, #FFF2D3 sand, #F0FFFF foam). Sky is the single
+   * largest surface in three of the four locations, so a near-white lower stop
+   * put a wide band of colourless pixels in every outdoor frame -- most of what
+   * `art-lab-sheet.py` was reporting as Town's 22% "washed" share. A Clash Mini
+   * sky is saturated all the way down to the horizon; the horizon reads as
+   * lighter because it is lighter in VALUE, not because it is grey.
+   */
   skyMorningA: '#FFDB90',
-  skyMorningB: '#DBF4FF',
+  skyMorningB: '#B9E7FF',
   skyDayA: '#74CFFF',
-  skyDayB: '#F0FBFF',
+  skyDayB: '#B7E9FF',
   skyEveningA: '#FF9C88',
   skyEveningB: '#FFDFBA',
   skyNightA: '#3E409B',
@@ -200,7 +211,7 @@ export const DIORAMA = {
   parkTreeNightLight: '#3E6940',
   parkTreeNightEdge: '#142A15',
   parkPathDay: '#FFE9B3',
-  parkPathDayLight: '#FFF8E5',
+  parkPathDayLight: '#FFEFC4',
   parkPathDayEdge: '#E0A046',
   parkPathNight: '#817149',
   parkPathNightLight: '#AD9D6F',
@@ -231,7 +242,7 @@ export const DIORAMA = {
   townRoadNight: '#4E3B45',
   townRoadNightEdge: '#2E2130',
   townSidewalkDay: '#F8E0A8',
-  townSidewalkDayLight: '#FFF8E3',
+  townSidewalkDayLight: '#FFEEB8',
   townSidewalkDayEdge: '#CBA157',
   townSidewalkNight: '#765E45',
   townSidewalkNightEdge: '#4B3C2C',
@@ -246,13 +257,13 @@ export const DIORAMA = {
   oceanNightEdge: '#102F49',
   sandDayFar: '#EFC56F',
   sandDayNear: '#FFDC93',
-  sandDayLight: '#FFF2D3',
+  sandDayLight: '#FFE6AE',
   sandDayEdge: '#A9723C',
   sandNightFar: '#7F653D',
   sandNightNear: '#5B4A32',
   sandNightLight: '#9E8361',
   sandNightEdge: '#3E3324',
-  foamDay: '#F0FFFF',
+  foamDay: '#D8FAFF',
   foamDayShade: '#CDF7FC',
   foamNight: '#A6C6D9',
   foamNightShade: '#5B88A6',

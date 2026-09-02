@@ -92,6 +92,37 @@ describe('world scenery stays modular', () => {
     expect(worldManifest).toContain('Barkly shared front-weighted orthographic v3');
   });
 
+  /*
+   * These two guard the 2026-09-02 master-grade pass. Both defects were
+   * invisible in code review and only showed up as numbers on the contact
+   * sheet, so they get numbers-free structural tests here instead.
+   */
+  it('lights all four locations from ONE grade, not four', () => {
+    // The grade constant lives in WorldScene and nowhere else. A scene that
+    // starts hand-rolling its own wash is how Park ended up cold while the
+    // other three ran warm.
+    expect(presentation).toContain('const GRADE = {');
+    expect(presentation).toContain('function WorldLighting');
+    for (const scene of [outdoorScenes, homeScene]) {
+      expect(scene).toContain('<WorldLighting');
+      expect(scene).not.toContain('const GRADE');
+    }
+    // Night is a colour with warm pools in it, not a dimmer switch.
+    expect(presentation).toMatch(/night:\s*\{[\s\S]*?pool:/);
+  });
+
+  it('renders every Blender pack through Standard, never AgX', () => {
+    // AgX is a filmic transform that rolls saturated highlights toward white.
+    // It is why every prop shipped pastel -- store_violet measured 45% of its
+    // pixels under 0.18 chroma -- while its authored base colour was candy.
+    for (const factory of [worldFactory, homeFactory, architectureFactory]) {
+      // The rigs are allowed to NAME AgX in a comment explaining why they do
+      // not use it; what must never come back is the assignment.
+      expect(factory).not.toMatch(/view_settings\.look\s*=\s*['"]AgX/);
+      expect(factory).toMatch(/view_transform\s*=\s*['"]Standard['"]/);
+    }
+  });
+
   it('uses composition lanes instead of arbitrary per-prop tilts', () => {
     expect(outdoorScenes).toContain('const COMPOSITION =');
     expect(outdoorScenes).not.toMatch(/<WorldObject[^>]*\srotate=/);
