@@ -121,7 +121,6 @@ export function WorldObject({
   rotate,
   flip = false,
   contactShadow = false,
-  baseInset = 0,
   ambient,
   motionDelay = 0,
   style,
@@ -139,12 +138,6 @@ export function WorldObject({
   rotate?: string;
   flip?: boolean;
   contactShadow?: boolean;
-  /**
-   * Where the object's feet are, as a fraction of box height measured up from
-   * the bottom edge. Rendered art with transparent padding under it needs this
-   * or its shadow lands in mid-air below the art.
-   */
-  baseInset?: number;
   /** Tiny environmental motion; never used for structural architecture. */
   ambient?: 'sway' | 'bob';
   motionDelay?: number;
@@ -198,11 +191,13 @@ export function WorldObject({
             and it is why the bench, the umbrella and the sandcastle all looked
             like they were hovering.
 
-            `baseInset` is the gap between the bottom of the layout box and the
-            object's own feet, as a fraction of height. Rendered PNGs carry
-            transparent padding, so without it the shadow lands below the art
-            and detaches -- the exact failure that made lowering the bench do
-            nothing.
+            The shadow sits at the bottom of the layout box because that is
+            where the art's feet are: the render workflow trims every prop's
+            transparent canvas, so no asset carries padding underneath. This
+            was briefly parameterised with a `baseInset` escape hatch; its only
+            use set the dog bed 16% of its height too high, which tucked the
+            shadow up inside the bed and is why it looked unshadowed. Measured
+            across every prop in assets/world: none has more than 1% padding.
           */}
           <View
             style={[
@@ -211,7 +206,7 @@ export function WorldObject({
                 left: width * 0.05,
                 width: width * 0.90,
                 height: Math.max(10, Math.min(30, height * 0.13)),
-                bottom: height * baseInset - Math.max(3, height * 0.02),
+                bottom: -Math.max(3, height * 0.02),
                 opacity: (night ? 0.20 : 0.17) * (0.65 + safeDepth * 0.35),
               },
             ]}
@@ -223,7 +218,7 @@ export function WorldObject({
                 left: width * 0.19,
                 width: width * 0.62,
                 height: Math.max(5, Math.min(14, height * 0.055)),
-                bottom: height * baseInset + Math.max(1, height * 0.005),
+                bottom: Math.max(1, height * 0.005),
                 opacity: (night ? 0.42 : 0.36) * (0.65 + safeDepth * 0.35),
               },
             ]}

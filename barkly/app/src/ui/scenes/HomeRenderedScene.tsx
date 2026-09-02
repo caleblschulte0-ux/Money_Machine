@@ -460,7 +460,7 @@ export function HomeScene({
         */}
         <WorldObject source={LAMP} left={wallInset * 0.5} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
         <WorldObject source={CHAIR} left={wallInset} top={floorTop - chairH + 58} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
-        <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow baseInset={0.16} />
+        <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
 
       <WorldLighting ground={groundY} night={night} warm />

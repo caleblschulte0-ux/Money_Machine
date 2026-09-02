@@ -171,8 +171,6 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
   const grassFar = night ? DIORAMA.parkGrassNightLight : DIORAMA.parkGrassDayLight;
   const grass = night ? DIORAMA.parkGrassNight : DIORAMA.parkGrassDay;
   const grassNear = night ? DIORAMA.parkGrassNightEdge : DIORAMA.parkGrassDayEdge;
-  const path = night ? DIORAMA.parkPathNight : DIORAMA.parkPathDay;
-  const pathEdge = night ? DIORAMA.parkPathNightEdge : DIORAMA.parkPathDayEdge;
 
   const treeW = 204 * scale;
   const treeH = 292 * scale;
@@ -210,23 +208,17 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
         <Path d={`M84 ${ground + 92}l4 -6 4 6 4 -6 4 6M222 ${ground + 116}l4 -6 4 6 4 -6 4 6`} stroke={night ? DIORAMA.gold : DIORAMA.lemon} strokeWidth={2.5} fill="none" opacity={night ? 0.24 : 0.68} />
       </Svg>
         {/*
-          The trail is worn grass, not a paved ribbon. At full strength it ran
-          up the right side straight through the tree it sits behind, reading
-          as a beige band laid over the trunk rather than as ground receding to
-          the horizon. Softened so it stays a path and stops competing with the
-          only vertical in that half of the frame.
+          The park trail is GONE, not softened a third time.
+
+          It was drawn in a 420-wide viewBox stretched with
+          preserveAspectRatio="none", so instead of a path narrowing toward the
+          horizon it rendered as a roughly constant-width vertical ribbon --
+          from the right tree's canopy, straight through its trunk, and past
+          the far dog to the bottom of the frame. Dropping its opacity twice
+          only turned a strong glitch into a faint one; the SHAPE was wrong.
+          The grass reads better with nothing on it, and the ground already
+          carries its own gradient and tufts.
         */}
-        <Svg width={Math.min(width, 520)} height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={[styles.parkPathLayer, { opacity: night ? 0.34 : 0.46 }]}>
-          <Defs>
-            <SvgLinearGradient id="parkPathV3" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={night ? DIORAMA.parkPathNightLight : DIORAMA.parkPathDayLight} />
-              <Stop offset="1" stopColor={path} />
-            </SvgLinearGradient>
-          </Defs>
-          <Path d={`M310 ${horizon + 70}C336 ${horizon + 116} 350 ${horizon + 164} 332 ${ground - 10}C314 ${ground + 20} 320 ${ground + 56} 360 ${ground + 92}L405 ${ground + 82}C360 ${ground + 48} 354 ${ground + 18} 372 ${ground - 16}C394 ${horizon + 154} 376 ${horizon + 106} 330 ${horizon + 68}Z`} fill={pathEdge} />
-          <Path d={`M318 ${horizon + 72}C342 ${horizon + 118} 354 ${horizon + 160} 340 ${ground - 8}C326 ${ground + 18} 334 ${ground + 48} 370 ${ground + 80}L393 ${ground + 75}C354 ${ground + 43} 348 ${ground + 16} 364 ${ground - 14}C384 ${horizon + 151} 369 ${horizon + 111} 328 ${horizon + 72}Z`} fill="url(#parkPathV3)" />
-          <Path d={`M330 ${horizon + 86}C349 ${horizon + 125} 359 ${horizon + 158} 349 ${ground - 5}C340 ${ground + 16} 345 ${ground + 37} 374 ${ground + 64}`} stroke={DIORAMA.white} strokeWidth={4} fill="none" opacity={night ? 0.04 : 0.16} />
-        </Svg>
       </WorldLayer>
       <WorldLayer name="distant">
         <WorldObject source={PARK_HEDGE} left={hedgeLeft} top={horizon + 43} width={hedgeW * 0.62} height={hedgeH * 0.62} night={night} depth={0.25} opacity={0.70} ambient="sway" />
@@ -454,7 +446,6 @@ export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }:
 
 const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
-  parkPathLayer: { position: 'absolute', right: 0, top: 0, bottom: 0 },
   sun: { position: 'absolute', right: 34, width: 50, height: 50, borderRadius: radius.pill },
   moonCutout: { position: 'absolute', right: 20, width: 48, height: 48, borderRadius: radius.pill },
   cloud: { position: 'absolute', left: 23, width: 150, height: 46 },
