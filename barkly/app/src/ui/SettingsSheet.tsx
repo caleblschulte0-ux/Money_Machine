@@ -530,9 +530,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: color.line, overflow: 'hidden', justifyContent: 'center',
   },
   statTrackShade: { position: 'absolute', left: 0, right: 0, top: 0, height: 5, backgroundColor: 'rgba(43,33,25,0.07)' },
-  statFill: { height: 13, borderRadius: 999, marginLeft: 1, overflow: 'hidden' },
+  /*
+   * No `marginLeft`. A percentage width resolves against the track's CONTENT
+   * box (its width minus the 1.5px border on each side), so a 100% fill was
+   * already exactly as wide as the space it had; the extra 1px margin pushed
+   * its right edge past the padding box, where `overflow: 'hidden'` sheared
+   * the rounded cap flat. A full gauge is the one state a player most wants
+   * to see land cleanly, and it was the only one that could not.
+   */
+  statFill: { height: 13, borderRadius: 999, overflow: 'hidden' },
   statFillEdge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, opacity: 0.85 },
-  statFillGloss: { position: 'absolute', left: 5, right: 5, top: 2, height: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.55)' },
+  statFillGloss: { position: 'absolute', left: 4, right: 4, top: 2, height: 4, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.55)' },
   forget: {
     marginTop: 24,
     backgroundColor: color.brand,

@@ -102,9 +102,23 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
   const cols = width >= 900 ? 4 : width >= 600 ? 3 : 2;
   const contentW = Math.min(width, STORE_MAX_WIDTH) - space.xl * 2;
   const cardW = Math.floor((contentW - space.sm * (cols - 1)) / cols);
-  // Big enough to be the thing you are looking at. At 0.46 the drawing sat in
-  // the middle of its window like a bullet point with room around it.
-  const artSize = Math.max(54, Math.min(104, Math.round(cardW * 0.62)));
+  /*
+   * Big enough to be the thing you are looking at -- at 0.46 the drawing sat
+   * in the middle of its window like a bullet point with room around it.
+   *
+   * The floor is bounded by the WINDOW, not asserted. A bare `Math.max(54, …)`
+   * is a floor that can exceed the box it has to fit in: the window is
+   * `(cardW - padding) / 1.16` tall, so below about a 217dp viewport the art
+   * would be taller than its own frame and `overflow: 'hidden'` would crop the
+   * top and bottom off it. No phone is that narrow today, which is exactly why
+   * it would never have been noticed -- the fix is to let it shrink rather
+   * than to trust that nothing ever gets small.
+   */
+  const windowW = cardW - space.sm * 2;
+  const artSize = Math.max(
+    24,
+    Math.min(104, Math.round(cardW * 0.62), Math.floor(windowW / 1.16) - 6),
+  );
   const [flash, setFlash] = useState<string | null>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
