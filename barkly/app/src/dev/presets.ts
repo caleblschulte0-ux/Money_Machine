@@ -31,6 +31,8 @@ import { freshWallet, Wallet } from '../game/progression';
 import { AdventureState } from '../game/adventure';
 
 import { LocationId } from '../world/locations';
+import { CoauthorState, freshCoauthorState } from '../barkly/coauthor';
+import { IncidentLedger } from '../world/incidents';
 import {
   ADVENTURE_KEY,
   CHARACTER_KEY,
@@ -41,6 +43,8 @@ import {
   ONBOARDING_KEY,
   SNAPSHOT_KEY,
   STASH_KEY,
+  INCIDENT_KEY,
+  COAUTHOR_KEY,
   WALLET_KEY,
 } from '../storage/keys';
 
@@ -200,6 +204,8 @@ function save(now: number, p: {
   character?: CharacterState;
   memory?: MemoryState;
   stash?: string[];
+  incidents?: IncidentLedger;
+  canon?: CoauthorState;
   adventure?: AdventureState;
   name?: string;
 }): Save {
@@ -229,6 +235,14 @@ function save(now: number, p: {
     // would let a previous life leak into a fresh preset.
     [MEMORY_LEGACY_KEY]: '',
     [STASH_KEY]: JSON.stringify(p.stash ?? []),
+    /*
+     * Incidents and canon are EMPTY by default on purpose. A preset that
+     * shipped a pre-fired incident ledger would hide the very thing a tester
+     * loads a slot to see -- the world noticing your history on its own. An
+     * empty ledger means the next eligible incident is free to fire.
+     */
+    [INCIDENT_KEY]: JSON.stringify(p.incidents ?? {}),
+    [COAUTHOR_KEY]: JSON.stringify(p.canon ?? freshCoauthorState()),
   };
 }
 

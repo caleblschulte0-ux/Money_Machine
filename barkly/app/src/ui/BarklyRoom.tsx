@@ -25,7 +25,7 @@ import { useBarkly } from '../hooks/useBarkly';
 import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
 import BarklyPhotoView from './BarklyPhotoView';
-import EncounterSheet from './EncounterSheet';
+import EncounterSheet, { momentFromEncounter, momentFromIncident } from './EncounterSheet';
 import Onboarding from './Onboarding';
 import PackBookSheet from './PackBookSheet';
 import StoreSheet, { CoinPill } from './StoreSheet';
@@ -731,6 +731,14 @@ export default function BarklyRoom() {
   const playtest = playtestAllowed();
   const [playtestOpen, setPlaytestOpen] = useState(false);
 
+  // While any sheet is open the world holds its tongue -- see
+  // useBarkly.setWorldPaused. Sheets are the one time the player is reading,
+  // not watching him.
+  const sheetOpen =
+    settingsOpen || storeOpen || foodOpen || packOpen || planOpen || playtestOpen;
+  const { setWorldPaused } = barkly;
+  useEffect(() => { setWorldPaused(sheetOpen); }, [sheetOpen, setWorldPaused]);
+
   const [beat, setBeat] = useState<{ kind: 'pet' | 'refuse' | 'arrive' | 'delight'; at: number } | null>(null);
   const react = (kind: 'pet' | 'refuse' | 'arrive' | 'delight') => setBeat({ kind, at: Date.now() });
 
@@ -840,7 +848,7 @@ export default function BarklyRoom() {
       <Animated.View
         style={[styles.sceneLayer, { opacity: sceneFade }]}
       >
-        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} />}
+        {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} biography={barkly.biography} />}
         {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
         {location === 'town' && <TownScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
         {location === 'beach' && <BeachScene hour={hour} bandHeight={sceneBand} groundY={groundY} motion={worldMotion} />}
@@ -1215,10 +1223,22 @@ export default function BarklyRoom() {
       <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} />
       <AdventureSheet visible={planOpen} onClose={() => setPlanOpen(false)} adventure={barkly.adventure} />
       <EncounterSheet
-        encounter={barkly.activeEncounter}
+        moment={barkly.activeEncounter ? momentFromEncounter(barkly.activeEncounter) : null}
         busy={busy}
         onClose={barkly.dismissEncounter}
         onChoose={(choiceId) => void barkly.resolveEncounter(choiceId)}
+      />
+      {/*
+        The world starting something of its own gets the same presentation as
+        an NPC encounter, because to a player it is the same beat: something
+        happened and Barkly wants your call. Only the badge changes -- the
+        place, not a dog, is what spoke up.
+      */}
+      <EncounterSheet
+        moment={barkly.activeIncident ? momentFromIncident(barkly.activeIncident) : null}
+        busy={busy}
+        onClose={barkly.dismissIncident}
+        onChoose={(choiceId) => void barkly.resolveIncident(choiceId)}
       />
       <SettingsSheet
         visible={settingsOpen}

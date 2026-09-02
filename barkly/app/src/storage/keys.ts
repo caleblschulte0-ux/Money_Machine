@@ -24,6 +24,10 @@ export const ADVENTURE_KEY = profileKey(DEFAULT_PROFILE, 'adventure-v1');
 export const MEMORY_KEY = profileKey(DEFAULT_PROFILE, 'memory-v2');
 export const MEMORY_LEGACY_KEY = profileKey(DEFAULT_PROFILE, 'memory-v1');
 export const STASH_KEY = profileKey(DEFAULT_PROFILE, 'stash-v1');
+/** Which world incidents have fired, when, and what the player chose. */
+export const INCIDENT_KEY = profileKey(DEFAULT_PROFILE, 'incidents-v1');
+/** Canon Barkly proposed and the player accepted -- names, territory, bits. */
+export const COAUTHOR_KEY = profileKey(DEFAULT_PROFILE, 'coauthor-v1');
 
 /**
  * A whole Barkly, as it sits on disk. Anything not listed here is not part of
@@ -40,6 +44,8 @@ export const ALL_SAVE_KEYS = [
   MEMORY_KEY,
   MEMORY_LEGACY_KEY,
   STASH_KEY,
+  INCIDENT_KEY,
+  COAUTHOR_KEY,
 ] as const;
 
 /**

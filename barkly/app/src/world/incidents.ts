@@ -15,6 +15,7 @@ import { bondFor, CharacterState } from '../barkly/character';
 import { MemoryState } from '../barkly/memory';
 import { sanitize } from '../barkly/facts';
 import { LocationId } from './locations';
+import { NPCS } from './npcs';
 
 export type IncidentKind = 'friend-needs-you' | 'rival-provokes' | 'reputation' | 'treasure-chaos' | 'private-bit-leaks';
 
@@ -59,6 +60,15 @@ interface IncidentContext {
 
 const DAY = 86_400_000;
 const safe = (s: string | undefined, max = 80) => sanitize(s ?? '', max);
+
+/**
+ * Social bonds are keyed by npc id (`biscuit`); this text is spoken to the
+ * player, so it uses the dog's actual name.
+ */
+function displayName(key: string): string {
+  const npc = (NPCS as Record<string, { name: string } | undefined>)[key];
+  return npc?.name ?? key.charAt(0).toUpperCase() + key.slice(1);
+}
 
 function signatureCue(memory: MemoryState): string | undefined {
   return [...memory.trainingRules]
@@ -145,7 +155,7 @@ function candidates(ctx: IncidentContext): WorldIncident[] {
       out.push({
         id: 'private-bit-followup', kind: 'private-bit-leaks', location: 'home',
         title: 'The bit followed you home.',
-        setup: `${safe(publicWitness, 50)} saw “${ritual}” recently. Barkly is now reconsidering whether it belongs to the public.`,
+        setup: `${safe(displayName(publicWitness), 50)} saw “${ritual}” recently. Barkly is now reconsidering whether it belongs to the public.`,
         barklyOpening: `I have been thinking. “${ritual}” used to be OUR thing.`,
         cooldownMs: DAY * 4, priority: 60,
         choices: [

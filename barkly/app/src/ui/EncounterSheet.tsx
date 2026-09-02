@@ -2,12 +2,66 @@ import React from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SocialEncounter } from '../barkly/encounters';
+import { WorldIncident } from '../world/incidents';
+import { LOCATIONS } from '../world/locations';
 import { NPCS } from '../world/npcs';
 import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 
+/**
+ * What this sheet actually needs to draw. An NPC encounter and a world
+ * incident are the same beat to a player -- something happened, Barkly wants
+ * a call from you -- so they share one presentation instead of growing a
+ * second sheet that drifts from this one.
+ */
+export interface ChoiceMoment {
+  badge: string;
+  /** `rival` paints it hot; `friend` paints it cool. */
+  tone: 'rival' | 'friend';
+  eyebrow: string;
+  title: string;
+  prompt: string;
+  footnote?: string;
+  choices: { id: string; label: string; hint: string }[];
+  closeLabel: string;
+}
+
+/** An NPC encounter, as a moment. */
+export function momentFromEncounter(encounter: SocialEncounter): ChoiceMoment {
+  const npc = NPCS[encounter.npcId];
+  return {
+    badge: npc.name.toUpperCase(),
+    tone: npc.relationship === 'rival' ? 'rival' : 'friend',
+    eyebrow: encounter.eyebrow,
+    title: encounter.title,
+    prompt: encounter.prompt,
+    footnote: encounter.ladder ? `${encounter.ladder.stage.label} · ${encounter.ladder.hint}` : undefined,
+    choices: encounter.choices.map((c) => ({ id: c.id, label: c.label, hint: c.hint })),
+    closeLabel: 'Leave this encounter for later',
+  };
+}
+
+/**
+ * A world incident, as a moment. The badge names the PLACE, because that is
+ * what is different about these: nobody tapped anything and no dog walked up
+ * -- the park itself had something to say about the life you two built.
+ */
+export function momentFromIncident(incident: WorldIncident): ChoiceMoment {
+  const hot = incident.kind === 'rival-provokes' || incident.kind === 'treasure-chaos';
+  return {
+    badge: LOCATIONS[incident.location].name.toUpperCase(),
+    tone: hot ? 'rival' : 'friend',
+    eyebrow: incident.actor ? NPCS[incident.actor].name.toUpperCase() : 'OUT OF NOWHERE',
+    title: incident.title,
+    prompt: incident.barklyOpening,
+    footnote: incident.setup,
+    choices: incident.choices.map((c) => ({ id: c.id, label: c.label, hint: c.barklyLine })),
+    closeLabel: 'Leave this for later',
+  };
+}
+
 interface Props {
-  encounter: SocialEncounter | null;
+  moment: ChoiceMoment | null;
   busy: boolean;
   onChoose: (choiceId: string) => void;
   onClose: () => void;
@@ -24,10 +78,9 @@ function choicePaint(index: number): { body: string; edge: string } {
  * are loud physical cards at the bottom, more like toys tossed onto the scene
  * than rows in a settings sheet.
  */
-export default function EncounterSheet({ encounter, busy, onChoose, onClose }: Props) {
-  if (!encounter) return null;
-  const npc = NPCS[encounter.npcId];
-  const rival = npc.relationship === 'rival';
+export default function EncounterSheet({ moment, busy, onChoose, onClose }: Props) {
+  if (!moment) return null;
+  const rival = moment.tone === 'rival';
 
   return (
     <Modal visible animationType="fade" transparent onRequestClose={onClose}>
@@ -36,9 +89,9 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
 
         <View style={styles.scenePrompt} pointerEvents="none">
           <View style={[styles.npcBadge, rival ? styles.npcBadgeRival : styles.npcBadgeFriend]}>
-            <Text style={styles.npc}>{npc.name.toUpperCase()}</Text>
+            <Text style={styles.npc}>{moment.badge}</Text>
           </View>
-          <Text style={styles.prompt}>{encounter.prompt}</Text>
+          <Text style={styles.prompt}>{moment.prompt}</Text>
         </View>
 
         <View style={styles.tray}>
@@ -55,11 +108,11 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
 
           <View style={styles.topline}>
             <View style={styles.headingCopy}>
-              <View style={styles.eyebrowPod}><Text style={styles.eyebrow}>{encounter.eyebrow}</Text></View>
-              <Text style={styles.title}>{encounter.title}</Text>
-              {encounter.ladder && (
-                <Text style={styles.relationshipLine} accessibilityLabel={`${npc.name}: ${encounter.ladder.stage.label}. ${encounter.ladder.hint}`}>
-                  {encounter.ladder.stage.label} · {encounter.ladder.hint}
+              <View style={styles.eyebrowPod}><Text style={styles.eyebrow}>{moment.eyebrow}</Text></View>
+              <Text style={styles.title}>{moment.title}</Text>
+              {moment.footnote && (
+                <Text style={styles.relationshipLine} accessibilityLabel={`${moment.badge}: ${moment.footnote}`}>
+                  {moment.footnote}
                 </Text>
               )}
             </View>
@@ -68,7 +121,7 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
               onPress={onClose}
               disabled={busy}
               accessibilityRole="button"
-              accessibilityLabel="Leave this encounter for later"
+              accessibilityLabel={moment.closeLabel}
             >
               <Text style={styles.close}>✕</Text>
             </Pressable>
@@ -77,7 +130,7 @@ export default function EncounterSheet({ encounter, busy, onChoose, onClose }: P
           <Text style={styles.question}>WHAT DO YOU TELL BARKLY?</Text>
 
           <View style={styles.choices}>
-            {encounter.choices.map((choice, index) => {
+            {moment.choices.map((choice, index) => {
               const paint = choicePaint(index);
               return (
                 <Pressable

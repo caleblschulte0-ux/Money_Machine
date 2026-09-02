@@ -11,6 +11,7 @@
  */
 
 import { CharacterState, describeCharacter } from './character';
+import { deriveBarklyIdentity, describeIdentity } from './identity';
 import { describeFact, Experience, Fact, sanitize } from './facts';
 import { IDENTITY, RULES, TRAITS, VOICE } from './personality';
 import { MemoryState } from './memory';
@@ -128,6 +129,17 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   });
   memoryLines.push('What your relationship has become:');
   for (const line of describeRelationship(relationship)) memoryLines.push(`- ${sanitize(line, 360)}`);
+
+  // Who this particular Barkly turned into. The relationship block above says
+  // how close you two are; this says what he BECAME as a result -- formed
+  // preferences, opinions he will act on, and the receipts behind them. It is
+  // derived from durable history, never assigned, so two players' dogs diverge
+  // without anyone picking a personality.
+  const identity = deriveBarklyIdentity({ memory, stats: snapshot.stats, character: ctx.character });
+  if (identity.preferences.length > 0 || identity.axes.some((axis) => axis.score >= 28)) {
+    memoryLines.push('Who you have become:');
+    for (const line of describeIdentity(identity)) memoryLines.push(`- ${sanitize(line, 360)}`);
+  }
 
   if (facts && facts.length > 0) {
     memoryLines.push('Things you know about your person:');

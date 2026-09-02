@@ -11,6 +11,7 @@ import { CharacterState, friendshipStage, rivalryStage } from '../barkly/charact
 import { MemoryState } from '../barkly/memory';
 import { deriveStoryArc } from '../barkly/story';
 import { sanitize } from '../barkly/facts';
+import { NPCS } from './npcs';
 
 export type BiographyPropKind = 'treasure' | 'photo' | 'rival-dossier' | 'ritual-token' | 'saga-souvenir';
 export type BiographySlot = 'shelf-left' | 'shelf-right' | 'wall-left' | 'wall-right' | 'floor-keepsake';
@@ -33,6 +34,17 @@ interface BiographyInput {
 }
 
 const clean = (s: string, max = 100) => sanitize(s, max);
+
+/**
+ * Social bonds are keyed by npc id (`biscuit`), but this text hangs on a wall
+ * in the player's room. Use the character's real name, and title-case anything
+ * that is not a known dog rather than printing a lowercase id at someone.
+ */
+function displayName(key: string): string {
+  const npc = (NPCS as Record<string, { name: string } | undefined>)[key];
+  if (npc?.name) return npc.name;
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
 
 function topBond(character: CharacterState, kind: 'friend' | 'rival') {
   return Object.entries(character.socialBonds ?? {})
@@ -68,7 +80,7 @@ export function deriveHomeBiography(input: BiographyInput): BiographyProp[] {
     const [who, bond] = friend;
     candidates.push({
       id: `friend-photo-${who.toLowerCase()}`, kind: 'photo', slot: 'wall-left',
-      title: `${clean(who, 50)} + Barkly`,
+      title: `${clean(displayName(who), 50)} + Barkly`,
       caption: `${friendshipStage(bond.encounters).label}. ${bond.encounters} shared run-ins made this wall-worthy.`,
       weight: Math.min(100, 30 + bond.encounters * 6),
       visual: 'polaroid',
@@ -80,7 +92,7 @@ export function deriveHomeBiography(input: BiographyInput): BiographyProp[] {
     const [who, bond] = rival;
     candidates.push({
       id: `rival-file-${who.toLowerCase()}`, kind: 'rival-dossier', slot: 'wall-right',
-      title: `THE ${clean(who, 50)} FILE`,
+      title: `THE ${clean(displayName(who), 50).toUpperCase()} FILE`,
       caption: `${rivalryStage(bond.encounters).label}. Barkly has chosen documentation over forgiveness.`,
       weight: Math.min(100, 28 + bond.encounters * 6),
       visual: 'scribbled-photo',

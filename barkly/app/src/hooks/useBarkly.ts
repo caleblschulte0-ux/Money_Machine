@@ -97,6 +97,7 @@ import { DEFAULT_PROFILE, profileKey } from '../storage/types';
 import {
   ADVENTURE_KEY,
   CHARACTER_KEY,
+  INCIDENT_KEY,
   DEV_KEY,
   LOCATION_KEY,
   MUTE_KEY,
@@ -114,6 +115,15 @@ import { HydrationGate } from '../storage/hydration';
 import { VoiceShape } from '../providers/tts/expoSpeechTts';
 import { pickThought } from '../world/thoughts';
 import { bronx } from '../barkly/dialect';
+import { BarklyIdentity, deriveBarklyIdentity } from '../barkly/identity';
+import {
+  deriveWorldIncident,
+  IncidentLedger,
+  noteIncidentChoice,
+  noteIncidentSeen,
+  WorldIncident,
+} from '../world/incidents';
+import { BiographyProp, deriveHomeBiography } from '../world/biography';
 import { autonomousSpeechAllowed, nextPlayerFloorUntil } from '../barkly/conversationTurn';
 
 // Every persisted key lives in storage/keys.ts — the playtester writes the
@@ -185,6 +195,19 @@ export interface BarklyController {
    * relationship the room refused to show.
    */
   character: CharacterState;
+  /** What this particular Barkly became, derived from real history. */
+  identity: BarklyIdentity;
+  /** The room's physical receipts for that history (max five). */
+  biography: BiographyProp[];
+  /** Something the world started on its own, waiting on the player. */
+  activeIncident: WorldIncident | null;
+  /**
+   * Told by the UI when a sheet is open. The world must not start a subplot
+   * over the top of the player browsing the store.
+   */
+  setWorldPaused: (paused: boolean) => void;
+  resolveIncident: (choiceId: string) => Promise<void>;
+  dismissIncident: () => void;
   /** Three personalized things Barkly wants to do this session/day. */
   adventure: AdventureState | null;
 
@@ -1552,6 +1575,117 @@ export function useBarkly(): BarklyController {
     return Array.from(new Set(merged));
   }, [snapshot.state, replyActions, idleAction]);
 
+  // ------------------------------------------------------------- incidents
+  //
+  // Everything else in this app begins because the player tapped something.
+  // An incident begins because the world noticed the history you two built:
+  // Duke has opinions about your treasure, Biscuit lost the stick that matters,
+  // the bit you invented at home followed you outside. The ledger is durable
+  // and keyed by incident id, so a beat that already fired stays fired across
+  // restarts instead of greeting the player again every launch.
+  const [incidentLedger, setIncidentLedger] = useState<IncidentLedger>({});
+  const incidentLedgerRef = useRef<IncidentLedger>({});
+  const [activeIncident, setActiveIncident] = useState<WorldIncident | null>(null);
+  // Any open sheet pauses the world. An incident that fires while the player
+  // is mid-tap in the store does not read as life -- it reads as the app
+  // stealing the tap, which is exactly what the acceptance walkthrough hit.
+  const [worldPaused, setWorldPaused] = useState(false);
+  // State, not a ref: the derive effect below has to RE-RUN when the ledger
+  // finishes loading. Gating it on a ref meant that if every other dependency
+  // had already settled by the time hydration finished, nothing re-triggered
+  // and the world stayed silent forever.
+  const [incidentHydrated, setIncidentHydrated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let loaded: IncidentLedger = {};
+      try {
+        const raw = await asyncStorageStore.get(INCIDENT_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as IncidentLedger;
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) loaded = parsed;
+        }
+      } catch {
+        loaded = {};
+      }
+      if (cancelled) return;
+      incidentLedgerRef.current = loaded;
+      setIncidentLedger(loaded);
+      setIncidentHydrated(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const writeIncidentLedger = useCallback((next: IncidentLedger) => {
+    incidentLedgerRef.current = next;
+    setIncidentLedger(next);
+    gate.write(INCIDENT_KEY, JSON.stringify(next)).catch(() => {});
+  }, []);
+
+  // The world only speaks up when nothing else is: no sheet, no encounter, no
+  // conversation in progress, and he is not mid-anything. A dog interrupting
+  // your sentence to start a subplot is a bug, not life.
+  useEffect(() => {
+    // `onboarding` is a durable record, not an in-progress flag -- it stays a
+    // truthy object forever once the welcome flow is done. Only step === 'done'
+    // means the player is actually in the world.
+    if (!incidentHydrated || activeIncident || worldPaused || onboarding?.step !== 'done') return;
+    if (conversationHeld || snapshotRef.current.state === 'sleepy') return;
+    const timer = setTimeout(() => {
+      if (conversationHeldRef.current) return;
+      const next = deriveWorldIncident({
+        location: locationRef.current,
+        character: characterRef.current,
+        memory: memory.snapshot(),
+        ledger: incidentLedgerRef.current,
+        now: Date.now(),
+      });
+      if (!next) return;
+      setActiveIncident(next);
+      writeIncidentLedger(noteIncidentSeen(incidentLedgerRef.current, next, Date.now()));
+      // Long enough that arriving somewhere feels like arriving, not like
+      // walking into a cutscene trigger.
+    }, 4200);
+    return () => clearTimeout(timer);
+  }, [activeIncident, conversationHeld, incidentHydrated, location, memoryVersion, onboarding, memory, worldPaused, writeIncidentLedger]);
+
+  const dismissIncident = useCallback(() => setActiveIncident(null), []);
+
+  const resolveIncident = useCallback(
+    async (choiceId: string): Promise<void> => {
+      const incident = activeIncident;
+      if (!incident || busy) return;
+      const choice = incident.choices.find((c) => c.id === choiceId);
+      if (!choice) return;
+      setActiveIncident(null);
+      writeIncidentLedger(noteIncidentChoice(incidentLedgerRef.current, incident.id, choiceId));
+      setBusy(true);
+      try {
+        await speak(choice.barklyLine, {
+          actions: incident.kind === 'rival-provokes' ? ['EAR_PERK', 'EXCITED'] : ['EAR_PERK'],
+        });
+        // The choice becomes history, so identity and the room can read it
+        // back later. This is the whole point: a decision you made once shows
+        // up in who he is afterwards.
+        memory
+          .remember([], [choice.memory], {
+            where: LOCATIONS[incident.location].name,
+            withWhom: incident.actor ? [NPCS[incident.actor].name] : [],
+          })
+          .then(() => setMemoryVersion((v) => v + 1))
+          .catch(() => {});
+        if (choice.bondDelta && incident.actor) {
+          const who = NPCS[incident.actor].name;
+          setCharacter((c) => noteSocialChoice(c, who));
+        }
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeIncident, busy, memory, speak, writeIncidentLedger],
+  );
+
   void memoryVersion;
   const relationship = buildRelationshipProfile({
     memory: memory.snapshot(),
@@ -1560,10 +1694,30 @@ export function useBarkly(): BarklyController {
     character,
   });
 
+  // Who he became, and the physical evidence of it. Both are pure derivations
+  // over history that is already persisted (memory + character), so there is
+  // no new save state to keep in sync and no way for them to disagree with
+  // what actually happened. memoryVersion is the memory store's change
+  // counter -- it is what makes these recompute when a fact or ritual lands.
+  const identity: BarklyIdentity = useMemo(
+    () => deriveBarklyIdentity({ memory: memory.snapshot(), stats: snapshot.stats, character }),
+    [memory, memoryVersion, snapshot.stats, character],
+  );
+  const biography: BiographyProp[] = useMemo(
+    () => deriveHomeBiography({ character, memory: memory.snapshot() }),
+    [character, memory, memoryVersion],
+  );
+
   return {
     snapshot,
     actions,
     character,
+    identity,
+    biography,
+    activeIncident,
+    setWorldPaused,
+    resolveIncident,
+    dismissIncident,
     lastExchange,
     partialTranscript,
     error,

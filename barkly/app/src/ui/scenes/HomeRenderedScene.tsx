@@ -1,11 +1,12 @@
 import React from 'react';
 import { ColorValue, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { radius } from '../theme';
-import { DIORAMA } from './artPalette';
+import { BRASS, DIORAMA, ITEM } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
 import { WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
+import { BiographyProp } from '../../world/biography';
 
 const CHAIR = require('../../../assets/world/home/props/chair.png');
 const LAMP = require('../../../assets/world/home/props/lamp.png');
@@ -149,6 +150,129 @@ function Rug({ groundY, night, scale }: { groundY: number; night: boolean; scale
  * architecture are transparent renders from a shared Blender camera/light rig.
  * Every object remains individually placeable, replaceable and upgradeable.
  */
+/**
+ * The room as a biography.
+ *
+ * `world/biography.ts` decides WHAT earned a place in the room -- a favorite
+ * treasure, a friend's photo, a dossier on the rival, a token for a ritual you
+ * two invented. This decides how those read as objects. Nothing here invents
+ * history: every prop is a receipt for something the player actually did, and
+ * an empty history renders an empty room rather than starter decoration.
+ *
+ * Same material recipe as every other object on this shelf -- contact shadow,
+ * dark lower edge, saturated body, one controlled highlight -- so a keepsake
+ * belongs to the same toy set as the lamp and the couch.
+ */
+function BiographyObject({ visual, night }: { visual: BiographyProp['visual']; night: boolean }) {
+  const dim = night ? 0.72 : 1;
+  if (visual === 'polaroid' || visual === 'scribbled-photo') {
+    const rival = visual === 'scribbled-photo';
+    return (
+      <Svg width={34} height={38} viewBox="0 0 34 38">
+        <Ellipse cx={17} cy={35} rx={13} ry={2.6} fill={DIORAMA.shadow} opacity={0.18} />
+        <Path d="M2 2h30v30H2Z" fill={DIORAMA.shadow} opacity={0.22} />
+        <Path d="M2 1h30v29H2Z" fill={DIORAMA.white} opacity={dim} />
+        <Path d="M5 4h24v18H5Z" fill={rival ? DIORAMA.coral : DIORAMA.aquaLight} opacity={dim} />
+        <Circle cx={17} cy={13} r={5.4} fill={rival ? DIORAMA.coralDeep : DIORAMA.butterDeep} opacity={dim} />
+        <Path d="M12 9q1.6-3 3.4 0M19 9q1.6-3 3.4 0" stroke={ITEM.leather} strokeWidth={1.7} fill="none" strokeLinecap="round" opacity={dim} />
+        {rival && <Path d="M6 20 27 6M6 7 27 20" stroke={ITEM.leather} strokeWidth={1.6} opacity={0.6 * dim} strokeLinecap="round" />}
+        <Path d="M5 4h24v3H5Z" fill={DIORAMA.white} opacity={0.3} />
+      </Svg>
+    );
+  }
+  if (visual === 'handmade-award') {
+    return (
+      <Svg width={30} height={36} viewBox="0 0 30 36">
+        <Ellipse cx={15} cy={33} rx={11} ry={2.4} fill={DIORAMA.shadow} opacity={0.18} />
+        <Path d="M11 18h8l3 14-7-4-7 4Z" fill={DIORAMA.coralDeep} opacity={dim} />
+        <Circle cx={15} cy={13} r={11} fill={BRASS.edge} opacity={dim} />
+        <Circle cx={15} cy={11.6} r={9.4} fill={BRASS.polished} opacity={dim} />
+        <Circle cx={15} cy={11.6} r={5.6} fill={BRASS.dark} opacity={0.34 * dim} />
+        <Path d="M8 7q6-4 13-1" stroke={DIORAMA.white} strokeWidth={2.4} fill="none" strokeLinecap="round" opacity={0.5 * dim} />
+      </Svg>
+    );
+  }
+  if (visual === 'souvenir-card') {
+    return (
+      <Svg width={32} height={34} viewBox="0 0 32 34">
+        <Ellipse cx={16} cy={31} rx={12} ry={2.4} fill={DIORAMA.shadow} opacity={0.18} />
+        <Path d="M3 4h26v26H3Z" fill={DIORAMA.violetDeep} opacity={dim} />
+        <Path d="M3 3h26v25H3Z" fill={DIORAMA.violet} opacity={dim} />
+        <Path d="M16 8l2.6 5.4 5.8.8-4.2 4 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4 5.8-.8Z" fill={DIORAMA.lemon} opacity={dim} />
+        <Path d="M5 5h22v3H5Z" fill={DIORAMA.white} opacity={0.26} />
+      </Svg>
+    );
+  }
+  return (
+    <Svg width={36} height={30} viewBox="0 0 36 30">
+      <Ellipse cx={18} cy={27} rx={13} ry={2.6} fill={DIORAMA.shadow} opacity={0.2} />
+      <Path d="M5 17q-3-6 2-8 4-1.6 6 2h10q2-3.6 6-2 5 2 2 8-2 5-9 5H14q-7 0-9-5Z" fill={ITEM.stick} opacity={dim} />
+      <Path d="M5 15q-3-6 2-8 4-1.6 6 2h10q2-3.6 6-2 5 2 2 8-2 4.4-9 4.4H14Q7 19.4 5 15Z" fill={ITEM.stickLight} opacity={dim} />
+      <Path d="M10 10q7-2 15 0" stroke={DIORAMA.white} strokeWidth={2.2} fill="none" strokeLinecap="round" opacity={0.34 * dim} />
+    </Svg>
+  );
+}
+
+/**
+ * Slots are semantic, not pixel positions, so the same history composes on any
+ * screen: shelf keepsakes ride the shelf, photos hang on the wall beside it,
+ * and the floor keepsake sits by the bed.
+ */
+function HomeBiography({
+  props: bioProps,
+  chromeBottom,
+  floorTop,
+  shelfW,
+  night,
+  scale,
+}: {
+  props: BiographyProp[];
+  chromeBottom: number;
+  floorTop: number;
+  shelfW: number;
+  night: boolean;
+  scale: number;
+}) {
+  if (bioProps.length === 0) return null;
+  // Objects sit ON things. The shelf art has two visible boards; these ride
+  // them instead of hovering over the front of the unit, the wall pieces hang
+  // on wall rather than floating in the middle of it, and the floor keepsake
+  // rests on the floor line. All offsets are fractions of the shelf's own
+  // width, so the arrangement survives every screen size.
+  const shelfRight = 7;
+  const slotStyle = (slot: BiographyProp['slot']) => {
+    switch (slot) {
+      case 'shelf-left':
+        return { right: shelfRight + shelfW * 0.58, top: chromeBottom + 100 };
+      case 'shelf-right':
+        return { right: shelfRight + shelfW * 0.16, top: chromeBottom + 100 };
+      case 'wall-left':
+        return { right: shelfRight + shelfW * 1.16, top: chromeBottom + 70 };
+      case 'wall-right':
+        return { right: shelfRight + shelfW * 1.16, top: chromeBottom + 152 };
+      default:
+        return { right: shelfRight + 6, top: floorTop - 4 };
+    }
+  };
+  return (
+    <>
+      {bioProps.map((prop) => (
+        <View
+          key={prop.id}
+          style={[styles.bioProp, slotStyle(prop.slot), { transform: [{ scale }] }]}
+          pointerEvents="none"
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={`${prop.title}. ${prop.caption}`}
+          testID={`biography-${prop.id}`}
+        >
+          <BiographyObject visual={prop.visual} night={night} />
+        </View>
+      ))}
+    </>
+  );
+}
+
 export function HomeScene({
   hour,
   upgrades = [],
@@ -156,6 +280,7 @@ export function HomeScene({
   groundY,
   chromeBottom,
   motion = 'idle',
+  biography = [],
 }: {
   hour: number;
   upgrades?: string[];
@@ -163,6 +288,8 @@ export function HomeScene({
   groundY: number;
   chromeBottom: number;
   motion?: WorldMotion;
+  /** Physical receipts for the life this player actually built. */
+  biography?: BiographyProp[];
 }) {
   const { width, height } = useWindowDimensions();
   // More screen reveals more room; the authored objects do not inflate forever.
@@ -231,6 +358,7 @@ export function HomeScene({
         <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 54} scale={propScale * 0.90} />
         <PictureMedallion top={chromeBottom + 94} night={night} />
         <WorldObject source={SHELF} right={7} top={chromeBottom + 56} width={shelfW} height={shelfH} night={night} depth={0.42} contactShadow />
+        <HomeBiography props={biography} chromeBottom={chromeBottom} floorTop={floorTop} shelfW={shelfW} night={night} scale={propScale} />
       </WorldLayer>
 
       <WorldLayer name="props">
@@ -246,6 +374,7 @@ export function HomeScene({
 
 const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  bioProp: { position: 'absolute' },
   lightPool: { position: 'absolute', left: 0, width: '74%' },
   ceilingTrim: {
     position: 'absolute', left: '5%', right: '5%', height: 6,
