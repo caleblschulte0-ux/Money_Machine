@@ -268,7 +268,12 @@ const styles = StyleSheet.create({
   pill: { flex: 1, minWidth: 124, minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, borderRadius: radius.pill, overflow: 'visible', ...elevation.toy },
   pillFill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, borderRadius: radius.pill },
   pillGloss: { position: 'absolute', left: space.sm, right: space.sm, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
-  pillEdge: { position: 'absolute', left: space.sm, right: space.sm, bottom: -4, height: space.sm, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg, backgroundColor: color.lemonDeep },
+  // The moulded lower lip sits INSIDE the pill. At bottom:-4 it hung below the
+  // body, and in the header the tab bar sliced straight through it -- a thick
+  // yellow band with a cut edge, which read as a rendering fault rather than
+  // as depth. Flush with the bottom it matches the same lip on the Pack and
+  // Settings buttons, so the whole chrome row is one material.
+  pillEdge: { position: 'absolute', left: space.sm, right: space.sm, bottom: 0, height: 5, borderRadius: radius.pill, backgroundColor: color.lemonDeep },
   coin: { width: 26, height: 26, borderRadius: radius.pill, backgroundColor: color.gold, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: color.goldInk },
   coinMark: { ...type.caption, fontWeight: '900', color: color.ink },
   coinCount: { ...type.strong, fontWeight: '900', color: color.ink, flexShrink: 0 },

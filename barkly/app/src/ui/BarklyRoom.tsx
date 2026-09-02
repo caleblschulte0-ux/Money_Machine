@@ -888,6 +888,15 @@ export default function BarklyRoom() {
             <CoinPill coins={barkly.wallet.coins} level={barkly.level} frac={levelProgress(barkly.wallet.xp).frac} />
           </Pressable>
           <View style={styles.headerButtons}>
+            {/*
+              One material for the whole chrome row. The coin pill, the Pack
+              button and Settings used three different radii and three
+              different weights -- a pill, a dark rounded square and a flat
+              white circle -- so the top of the screen read as three unrelated
+              controls rather than one set. They now share a shape, an edge and
+              a highlight, and differ only in colour, which is how the
+              reference games do it.
+            */}
             <Pressable
               style={styles.packButton}
               hitSlop={8}
@@ -895,10 +904,14 @@ export default function BarklyRoom() {
               accessibilityRole="button"
               accessibilityLabel={`Pack Book. ${barkly.relationship.archetype}. ${barkly.relationship.stage.label}.`}
             >
+              <View style={styles.chromeEdge} pointerEvents="none" />
+              <View style={styles.chromeGloss} pointerEvents="none" />
               <Text style={styles.packLabel}>PACK</Text>
               <Text style={styles.packLevel}>{barkly.relationship.stage.level}</Text>
             </Pressable>
             <Pressable style={styles.gear} hitSlop={10} onPress={() => openOnly(setSettingsOpen)} accessibilityRole="button" accessibilityLabel="Settings">
+              <View style={styles.chromeEdge} pointerEvents="none" />
+              <View style={styles.chromeGloss} pointerEvents="none" />
               <View style={styles.gearDot} />
               <View style={styles.gearDot} />
               <View style={styles.gearDot} />
@@ -1355,6 +1368,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 3,
+    overflow: 'hidden',
     ...elevation.card,
   },
   gearDot: { width: 4, height: 4, borderRadius: 8, backgroundColor: color.inkSoft },
@@ -1363,14 +1377,27 @@ const styles = StyleSheet.create({
   packButton: {
     minWidth: 46,
     height: TAP_MIN,
-    borderRadius: 12,
-    paddingHorizontal: 7,
-    backgroundColor: color.ink,
+    borderRadius: radius.pill,
+    paddingHorizontal: 9,
+    // violetDeep, not violet: white on the lighter violet measured 1.99:1
+    // against a 4.5 requirement, which the a11y harness caught immediately.
+    backgroundColor: color.violetDeep,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     ...elevation.card,
   },
-  packLabel: { fontSize: 10, lineHeight: 8, fontWeight: '900', letterSpacing: 1.1, color: color.goldSoft },
+  /** The moulded lower lip every candy control in the game already has. */
+  chromeEdge: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, height: 5,
+    backgroundColor: 'rgba(0,0,0,0.16)',
+  },
+  chromeGloss: {
+    position: 'absolute', top: 3, left: 8, right: 8, height: 9,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.34)',
+  },
+  packLabel: { fontSize: 10, lineHeight: 8, fontWeight: '900', letterSpacing: 1.1, color: color.paper },
   packLevel: { marginTop: 1, fontSize: 15, lineHeight: 16, fontWeight: '900', color: color.paper },
   tabLocked: { opacity: 0.5 },
   noticeLayer: {

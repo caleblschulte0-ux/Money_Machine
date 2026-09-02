@@ -105,21 +105,15 @@ function WallMillwork({ floorTop, night }: { floorTop: number; night: boolean })
       />
       <View style={[styles.wainscotRailShadow, { top: floorTop - 137 }]} />
       <View style={[styles.wainscotRail, { top: floorTop - 142, backgroundColor: rail }]} />
-      {[82, 205, 328].map((left) => (
-        <View
-          key={left}
-          style={[
-            styles.panelStile,
-            {
-              left,
-              top: floorTop - 129,
-              height: 94,
-              backgroundColor: rail,
-              opacity: night ? 0.32 : 0.26,
-            },
-          ]}
-        />
-      ))}
+      {/*
+        The panel stiles are gone. They were 5px vertical strokes at HARDCODED
+        lefts of 82/205/328 -- so they only landed correctly on a 390pt screen
+        and drifted on every other one -- and at this scale they did not read
+        as wainscot panelling at all. Two of the three sat in open wall and
+        looked like stray lines; the third hid behind the couch. Big simple
+        shapes, no thin strokes competing with the character: the rail and the
+        dado band below it already give the wall its horizontal structure.
+      */}
       <View style={[styles.panelBaseGlow, { top: floorTop - 34, opacity: night ? 0.04 : 0.18 }]} />
     </>
   );
@@ -491,10 +485,6 @@ const styles = StyleSheet.create({
   wainscotRail: {
     position: 'absolute', left: 0, right: 0, height: 12,
     borderRadius: radius.sm,
-  },
-  panelStile: {
-    position: 'absolute', width: 5,
-    borderRadius: radius.xs,
   },
   panelBaseGlow: {
     position: 'absolute', left: 0, right: 0, height: 6,
