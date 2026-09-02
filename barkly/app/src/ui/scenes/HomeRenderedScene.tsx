@@ -294,6 +294,48 @@ function HomeBiography({
   );
 }
 
+/**
+ * The lamp is ON after dark.
+ *
+ * Home at night rendered a grey lampshade in a blue room -- the same defect
+ * Town had with its unlit street lamps, and the reason "night" read as the day
+ * scene dimmed rather than as evening. A lamp is a light SOURCE: a warm shade,
+ * a halo, and a pool of it on the floor underneath. Concentric rounded views
+ * rather than a radial gradient, which react-native-web does not have.
+ */
+function HomeLampGlow({ left, top, width, height, floorTop }: { left: number; top: number; width: number; height: number; floorTop: number }) {
+  // Centred on the shade, which sits in the top sixth of the lamp sprite.
+  const cx = left + width / 2;
+  const cy = top + height * 0.16;
+  const r = width * 0.95;
+  return (
+    <View style={styles.fill} pointerEvents="none">
+      {/*
+        Fades in AND out. Written the obvious way -- strongest stop first --
+        the gradient starts fully on at the top edge of its own box, which
+        draws a bright hard line across the top of the halo. Every soft light
+        in this game has to reach zero at both ends of its box.
+      */}
+      <LinearGradient
+        colors={['rgba(255,206,90,0)', 'rgba(255,214,102,0.26)', 'rgba(255,206,90,0)']}
+        locations={[0, 0.5, 1]}
+        style={[styles.lampHalo, { left: cx - r, top: cy - r, width: r * 2, height: r * 2, borderRadius: r }]}
+      />
+      <LinearGradient
+        colors={['rgba(255,242,190,0)', 'rgba(255,240,178,0.72)', 'rgba(255,224,140,0)']}
+        locations={[0, 0.5, 1]}
+        style={[styles.lampHalo, { left: cx - width * 0.42, top: cy - height * 0.11, width: width * 0.84, height: height * 0.22, borderRadius: width * 0.3 }]}
+      />
+      {/* The light lands on the floor. Without this the lamp glows at nothing. */}
+      <LinearGradient
+        colors={['rgba(255,214,102,0)', 'rgba(255,214,102,0.30)', 'rgba(255,214,102,0)']}
+        locations={[0, 0.5, 1]}
+        style={[styles.lampFloorPool, { left: cx - width * 1.7, top: floorTop - width * 0.42, width: width * 3.4, height: width * 1.0, borderRadius: width * 1.7 }]}
+      />
+    </View>
+  );
+}
+
 export function HomeScene({
   hour,
   upgrades = [],
@@ -464,7 +506,17 @@ export function HomeScene({
         <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
 
-      <WorldLighting ground={groundY} night={night} warm />
+      <WorldLighting ground={groundY} night={night} band={band} warm />
+      {/*
+        AFTER the grade. Under it, the blue night wash composited over the warm
+        shade and the lamp read as a grey disc -- the same mistake the warm
+        pools inside WorldLighting were making before they moved on top of it.
+      */}
+      {night && (
+        <WorldLayer name="fx">
+          <HomeLampGlow left={wallInset * 0.5} top={floorTop - lampH + 11} width={lampW} height={lampH} floorTop={floorTop} />
+        </WorldLayer>
+      )}
     </WorldScene>
   );
 }
@@ -484,6 +536,14 @@ const styles = StyleSheet.create({
    */
   baseboard: { position: 'absolute', left: 0, right: 0, height: 14, opacity: 0.66 },
   wainscot: { position: 'absolute', left: 0, right: 0 },
+  /*
+   * Gradients, not filled shapes. The first cut of the lamp glow used solid
+   * views behind a border radius, and at these sizes a solid view has a
+   * plainly visible EDGE -- the shade highlight read as a pale square sitting
+   * next to the lamp rather than as the lamp being lit.
+   */
+  lampHalo: { position: 'absolute' },
+  lampFloorPool: { position: 'absolute' },
   windowWrap: { position: 'absolute' },
   windowCastShadow: {
     position: 'absolute',

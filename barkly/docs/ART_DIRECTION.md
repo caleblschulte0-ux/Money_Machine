@@ -105,6 +105,65 @@ room full of warm wood under a blue night has genuine crossover pixels, and
 the frame reads correctly. **The fix for a muddy scene is more light in the
 pools, never less colour in the wash.**
 
+## Four light bands, and lights that are actually ON
+
+Two follow-ons from the grade, both found by looking at what the harness was
+NOT capturing.
+
+**Morning and evening were never reviewed.** `art-lab.mjs` captured day (14:00)
+and night (22:00) only, so the eight hours a day that `skyBand()` calls
+`morning` (06–10) and `evening` (17–21) had never once appeared on a contact
+sheet. They were rendering a sunrise or sunset SKY under flat noon LIGHT — the
+scene disagreeing with its own sky for a third of every day. The grade now has
+four entries sharing one recipe (warm key upper-left, cool shadow low, one
+vignette); what changes between them is the colour and strength of that key,
+which is what changing light actually does. Evening is the one band allowed to
+be loud: a low orange key and a long cool shadow, the hour the reference games
+use for their key art. The lab captures all four, and `--bands day,night`
+narrows it when you want a quick check.
+
+**A town at night had its lights off.** Every street lamp rendered as a dark
+post and every shop window as a dark hole, which is most of why night read as
+"the day scene, dimmed". Town now has lit bulbs with a bloom and a pool of
+light on the pavement, its shopfronts glow from inside, and Home's floor lamp
+is on. All of it renders AFTER `WorldLighting`, which is the same rule the warm
+pools inside it had to learn: put a light under the atmospheric wash and the
+blue composites straight over the gold. Measured — the first version was
+rendered as a foreground layer, i.e. under the grade:
+
+| town-night | unlit | lit, under the wash | lit, over the wash |
+|---|---|---|---|
+| `mean_sat` | 0.452 | 0.401 | 0.439 |
+| `washed_frac` | 10.0% | 17.3% | **7.5%** |
+
+The middle column is what a lamp looks like when the night is painted on top
+of it: a flat pale-blue disc that reads as a UI artifact.
+
+**A lit window is the light on the pavement, not a panel on the glass.** Two
+versions of a lit shop window were built and both were thrown away for the
+same reason — an overlay rectangle over a rendered shopfront reads as a
+rectangle. Small and opaque it was a sticky note; large and soft it was a
+translucent panel laid over the signage, and it measured worse as well
+(town-night 7.5% → 14.6% neutral, because gold spread over that much blue
+mixes toward grey). What ships is warm spill pooling on the pavement in front
+of each door: it says the same thing, cannot be mistaken for geometry, and
+only touches pixels that are already lit.
+
+### The first four-band contact sheet
+
+| scene | morning | day | evening | night |
+|---|---|---|---|---|
+| home | 0.415 / 2.7% | 0.434 / 1.5% | 0.453 / 1.2% | 0.401 / 15.7% |
+| park | 0.500 / 0.7% | 0.501 / 0.9% | 0.500 / 0.7% | 0.506 / 4.0% |
+| town | 0.311 / 11.3% | 0.329 / 7.1% | 0.329 / 13.7% | see below |
+| beach | 0.425 / 4.7% | 0.434 / 4.8% | 0.446 / 3.4% | 0.403 / 9.5% |
+
+(`mean_sat` / `washed_frac`.) Evening is the tightest hue cluster of any band —
+32° / 78° / 45° / 42°, a 46° spread against day's 55° — which is the grade
+working: one strong low key pulls four different local palettes into one light.
+Town stays the weakest scene at every hour; it is the one with the most sky and
+the palest ground, and that is the next thing to work on.
+
 ## AgX is why every Blender prop was pastel
 
 The biggest finding of this pass. Town's storefronts render around

@@ -101,7 +101,7 @@ describe('world scenery stays modular', () => {
     // The grade constant lives in WorldScene and nowhere else. A scene that
     // starts hand-rolling its own wash is how Park ended up cold while the
     // other three ran warm.
-    expect(presentation).toContain('const GRADE = {');
+    expect(presentation).toMatch(/const GRADE(?::[^=]+)?\s*=\s*\{/);
     expect(presentation).toContain('function WorldLighting');
     for (const scene of [outdoorScenes, homeScene]) {
       expect(scene).toContain('<WorldLighting');

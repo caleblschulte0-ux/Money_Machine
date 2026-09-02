@@ -121,8 +121,21 @@ async function goTo(page, loc) {
   throw new Error(`could not switch to ${loc} — it is probably locked in this save`);
 }
 
+/*
+ * ALL FOUR LIGHT BANDS, not two.
+ *
+ * This captured only day and night, so morning (06:00-10:00) and evening
+ * (17:00-21:00) -- a third of every real day -- were never once reviewed. They
+ * were shipping a sunrise or sunset SKY under flat noon LIGHT, and nothing in
+ * the harness could see it. `--bands day,night` narrows the run when you only
+ * want a quick check.
+ */
+const ALL_BANDS = [['morning', 8], ['day', 14], ['evening', 19], ['night', 22]];
+const wanted = arg('--bands', '').split(',').map((b) => b.trim()).filter(Boolean);
+const BANDS = wanted.length ? ALL_BANDS.filter(([b]) => wanted.includes(b)) : ALL_BANDS;
+
 const shots = [];
-for (const [label, hour] of [['day', 14], ['night', 22]]) {
+for (const [label, hour] of BANDS) {
   const { ctx, page } = await newPage(hour);
   for (const loc of LOCATIONS) {
     await goTo(page, loc);

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DIORAMA } from './artPalette';
+import type { SkyBand } from './CandyScenesV2';
 import { radius } from '../theme';
 
 /**
@@ -272,7 +273,30 @@ export function WorldObject({
  * bounce source of its own (a lamp, a shopfront, low sun off sand), which
  * strengthens the ground pool. That is the only per-scene freedom left.
  */
-const GRADE = {
+const GRADE: Record<SkyBand, {
+  key: string; keyFade: string; top: string; mid: string; bottom: string;
+  pool: string; poolOpacity: number; vignette: string;
+}> = {
+  /*
+   * FOUR BANDS, ONE FAMILY.
+   *
+   * This started as day-or-night, which left the eight hours of morning and
+   * evening rendering a sunset or sunrise SKY under flat noon LIGHT -- the
+   * scene and its own sky disagreeing about the time of day for a third of
+   * every day. The bands share one recipe (warm key from the upper left, cool
+   * shadow low, one vignette); what changes across them is the colour and
+   * strength of that key, which is what changing light actually does.
+   */
+  morning: {
+    key: 'rgba(255,216,170,0.16)',
+    keyFade: 'rgba(255,236,208,0)',
+    top: 'rgba(255,210,168,0.14)',
+    mid: 'rgba(255,247,236,0)',
+    bottom: 'rgba(78,66,118,0.08)',
+    pool: DIORAMA.goldGlowSoft,
+    poolOpacity: 0.13,
+    vignette: 'rgba(46,34,64,0.09)',
+  },
   /*
    * Day is a LIGHT pass, not a darkening pass. The first cut of this graded
    * with a 0.16 vignette and a 0.11 cool floor and cost the whole app a step
@@ -289,6 +313,22 @@ const GRADE = {
     pool: DIORAMA.goldGlowSoft,
     poolOpacity: 0.15,
     vignette: 'rgba(46,30,58,0.09)',
+  },
+  /*
+   * Golden hour. The one band allowed to be loud: a low orange key, a long
+   * cool shadow underneath it, and a stronger ground pool. This is the hour
+   * the reference games use for their key art, and Barkly rendered it as
+   * ordinary daylight with an orange gradient pasted behind.
+   */
+  evening: {
+    key: 'rgba(255,156,88,0.22)',
+    keyFade: 'rgba(255,196,140,0)',
+    top: 'rgba(255,150,84,0.19)',
+    mid: 'rgba(255,214,170,0)',
+    bottom: 'rgba(76,42,98,0.13)',
+    pool: DIORAMA.gold,
+    poolOpacity: 0.20,
+    vignette: 'rgba(52,28,52,0.13)',
   },
   /*
    * Night is a COLOUR. The wash has to be strong enough to own the frame --
@@ -313,10 +353,14 @@ const GRADE = {
 
 /** Shared key/fill/grade pass. It keeps separate assets in one light family. */
 export function WorldLighting({
+  band = 'day',
   night,
   warm = false,
   ground,
 }: {
+  /** Which of the four light situations this frame is in. */
+  band?: SkyBand;
+  /** Night behaviour (warm pools, prop dimming) — also true when he's asleep. */
   night: boolean;
   warm?: boolean;
   /** Where his feet are. The warm pool is cast around it, not at the frame. */
@@ -332,7 +376,7 @@ export function WorldLighting({
    * grade is not a grade. The honest fix for a scene that reads muddy is more
    * light in the pools, never less colour in the wash.
    */
-  const g = night ? GRADE.night : GRADE.day;
+  const g = night ? GRADE.night : GRADE[band];
   return (
     <View style={[styles.fill, { zIndex: WORLD_LAYER_Z.fx }]} pointerEvents="none">
       {/*
@@ -383,15 +427,19 @@ export function WorldLighting({
         gold light lying on the floor where the lamp/window/fire is. It used to
         run at 0.035 after dark, which is invisible, so night was only ever
         "the same scene, darker and purple".
+
+        It is a GRADIENT, not a filled pill. As a solid colour behind a pill
+        radius its edge was plainly visible against dark sand and dark floor --
+        a lens-shaped decal lying on the ground rather than light falling on
+        it. Fading to nothing at both ends of its own box is what makes it
+        read as illumination.
       */}
-      <View
+      <LinearGradient
+        colors={['rgba(255,246,208,0)', g.pool, 'rgba(255,246,208,0)']}
+        locations={[0, 0.5, 1]}
         style={[
           styles.keyPool,
-          {
-            top: ground - 54,
-            backgroundColor: g.pool,
-            opacity: warm ? g.poolOpacity : g.poolOpacity * 0.72,
-          },
+          { top: ground - 54, opacity: warm ? g.poolOpacity : g.poolOpacity * 0.72 },
         ]}
       />
       {night && (

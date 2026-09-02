@@ -79,13 +79,18 @@ function SceneSky({ band, horizon }: { band: SkyBand; horizon: number }) {
         style={[
           styles.sun,
           {
-            top: Math.max(66, horizon - 126),
+            // Clear of the HUD. The floor used to be 66, which on Town put
+            // the sun at y=58 -- behind the location tabs -- and on Beach
+            // tucked the moon under their lower edge. The chrome band is
+            // CHROME_BOTTOM (106) plus the top inset, so 132 keeps the disc
+            // fully in the sky on every scene.
+            top: Math.max(132, horizon - 96),
             backgroundColor: night ? DIORAMA.goldLight : DIORAMA.lemon,
             opacity: night ? 0.82 : 1,
           },
         ]}
       />
-      {night && <View style={[styles.moonCutout, { top: Math.max(58, horizon - 134), backgroundColor: DIORAMA.skyNightA }]} />}
+      {night && <View style={[styles.moonCutout, { top: Math.max(124, horizon - 104), backgroundColor: DIORAMA.skyNightA }]} />}
       {/*
         A CLOUD, not a capsule.
 
@@ -261,7 +266,7 @@ export function ParkScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
         <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 92} width={benchW} height={benchH} night={night} depth={0.78} contactShadow />
       </WorldLayer>
       <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
-      <WorldLighting ground={ground} night={night} />
+      <WorldLighting ground={ground} night={night} band={band} />
     </WorldScene>
   );
 }
@@ -295,6 +300,120 @@ function TownGlint({ night, top, fountainLeft }: { night: boolean; top: number; 
           },
         ]}
       />
+    </View>
+  );
+}
+
+/**
+ * A town at night has its lights ON.
+ *
+ * Every street lamp in this scene rendered as a dark blue post and every shop
+ * window as a dark hole, so night Town read as "the day scene with the
+ * brightness turned down" -- which was the whole complaint about night. Light
+ * SOURCES are what make a night exterior legible: a warm bulb, a halo around
+ * it, a pool of it on the pavement, and warm rectangles where the shopfronts
+ * are. This layer only exists after dark; nothing about the day scene changes.
+ *
+ * The glow is built from concentric rounded views rather than a radial
+ * gradient because react-native-web has no radial primitive. Three rings with
+ * falling size and rising opacity read as a soft light at these radii.
+ */
+function TownNightLights({
+  lampCenters,
+  lampTop,
+  lampW,
+  sidewalk,
+  spills,
+}: {
+  lampCenters: number[];
+  lampTop: number;
+  lampW: number;
+  sidewalk: number;
+  /** Warm light lying on the pavement in front of each lit shopfront. */
+  spills: { left: number; top: number; width: number; height: number }[];
+}) {
+  const pulse = useAmbientLoop(3400);
+  return (
+    <View style={styles.fill} pointerEvents="none">
+      {/*
+        "The shops are open" is said by the light ON THE PAVEMENT, not by a
+        panel stuck on the glass.
+
+        Two versions of a lit window were tried and both failed for the same
+        reason: an overlay rectangle over a rendered shopfront reads as a
+        rectangle. Small and opaque it looked like a sticky note; large and
+        soft it looked like a translucent panel laid over the signage, and it
+        measured worse too (town-night 7.5% -> 14.6% neutral pixels, because
+        gold spread over that much blue mixes toward grey). Warm spill pooling
+        on the ground in front of each door says the same thing, cannot be
+        mistaken for geometry, and only touches pixels that are already lit.
+      */}
+      {spills.map((sp, i) => (
+        <LinearGradient
+          key={`spill${i}`}
+          colors={['rgba(255,214,102,0)', 'rgba(255,214,102,0.34)', 'rgba(255,214,102,0)']}
+          locations={[0, 0.5, 1]}
+          style={[styles.shopSpill, sp]}
+        />
+      ))}
+      {lampCenters.map((cx, i) => {
+        const bulb = lampW * 0.34;
+        return (
+          <React.Fragment key={`lamp${i}`}>
+            {/*
+              Three passes instead of two, each smaller and stronger. A single
+              flat disc at one opacity has a visible circular EDGE, which reads
+              as a decal; stacking them approximates the falloff a radial
+              gradient would give if react-native-web had one.
+            */}
+            <Animated.View
+              style={[
+                styles.lampHalo,
+                {
+                  left: cx - bulb * 2.4,
+                  top: lampTop - bulb * 1.7,
+                  width: bulb * 4.8,
+                  height: bulb * 4.8,
+                  borderRadius: bulb * 2.4,
+                  opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.10, 0.15] }),
+                },
+              ]}
+            />
+            <View
+              style={[
+                styles.lampHalo,
+                { left: cx - bulb * 1.55, top: lampTop - bulb * 0.95, width: bulb * 3.1, height: bulb * 3.1, borderRadius: bulb * 1.55, opacity: 0.22 },
+              ]}
+            />
+            <View
+              style={[
+                styles.lampHalo,
+                { left: cx - bulb * 1.0, top: lampTop - bulb * 0.35, width: bulb * 2.0, height: bulb * 2.0, borderRadius: bulb, opacity: 0.55 },
+              ]}
+            />
+            <View
+              style={[
+                styles.lampBulb,
+                { left: cx - bulb / 2, top: lampTop + bulb * 0.15, width: bulb, height: bulb * 1.15, borderRadius: bulb * 0.4 },
+              ]}
+            />
+            {/*
+              The light lands somewhere -- without this the lamps float. A
+              gradient, like every other pool in the game: a filled view behind
+              a pill radius shows its own edge and reads as a decal on the
+              pavement rather than as light on it.
+            */}
+            <LinearGradient
+              colors={['rgba(255,214,102,0)', 'rgba(255,214,102,0.30)', 'rgba(255,214,102,0)']}
+              locations={[0, 0.5, 1]}
+              style={[
+                styles.lampSpill,
+                { left: cx - lampW * 1.5, top: sidewalk - lampW * 0.34, width: lampW * 3, height: lampW * 0.72, borderRadius: lampW * 1.5 },
+              ]}
+            />
+          </React.Fragment>
+        );
+      })}
     </View>
   );
 }
@@ -359,7 +478,29 @@ export function TownScene({ hour, bandHeight = 620, groundY, motion = 'idle' }: 
         <WorldObject source={TOWN_FOUNTAIN} left={fountainLeft} top={sidewalk - fountainH + 30} width={fountainW} height={fountainH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
       <WorldLayer name="fx"><TownGlint night={night} top={horizon + 132} fountainLeft={fountainLeft + fountainW * 0.48} /></WorldLayer>
-      <WorldLighting ground={ground} night={night} warm />
+      <WorldLighting ground={ground} night={night} band={band} warm />
+      {/*
+        AFTER the grade, deliberately. Rendered before it (as a foreground
+        layer) the deep blue wash composited straight over the gold and every
+        lamp came out a flat pale-blue disc that read as a UI artifact rather
+        than as a light. Same rule as the warm pools inside WorldLighting
+        itself: light is not something the atmosphere sits in front of.
+      */}
+      {night && (
+        <WorldLayer name="fx">
+          <TownNightLights
+            lampCenters={[plazaInset + lampW / 2, width - plazaInset - lampW / 2]}
+            lampTop={sidewalk - lampH + 16 + lampH * 0.06}
+            lampW={lampW}
+            sidewalk={sidewalk}
+            spills={[
+              { left: sideStoreInset, top: sidewalk - shopW * 0.10, width: shopW * 0.90, height: shopW * 0.26 },
+              { left: centerStoreLeft, top: sidewalk - shopW * 0.12, width: shopW * 0.96, height: shopW * 0.30 },
+              { left: width - sideStoreInset - shopW * 0.91, top: sidewalk - shopW * 0.10, width: shopW * 0.91, height: shopW * 0.26 },
+            ]}
+          />
+        </WorldLayer>
+      )}
     </WorldScene>
   );
 }
@@ -468,7 +609,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY, motion = 'idle' }:
         <WorldObject source={BEACH_CASTLE} right={castleRight} top={sandTop + 124} width={castleW} height={castleH * 1.50} night={night} depth={0.92} contactShadow />
       </WorldLayer>
       <WorldLayer name="fx"><BeachMotion night={night} tide={tide} /></WorldLayer>
-      <WorldLighting ground={ground} night={night} warm />
+      <WorldLighting ground={ground} night={night} band={band} warm />
     </WorldScene>
   );
 }
@@ -486,6 +627,10 @@ const styles = StyleSheet.create({
   butterfly: { position: 'absolute', left: 0, width: 22, height: 14 },
   butterflyLeft: { position: 'absolute', left: 1, top: 3, width: 10, height: 7, borderRadius: radius.pill, backgroundColor: DIORAMA.lemon, transform: [{ rotate: '-24deg' }] },
   butterflyRight: { position: 'absolute', right: 1, top: 3, width: 10, height: 7, borderRadius: radius.pill, backgroundColor: DIORAMA.coralLight, transform: [{ rotate: '24deg' }] },
+  shopSpill: { position: 'absolute', borderRadius: radius.pill },
+  lampHalo: { position: 'absolute', backgroundColor: DIORAMA.butterDeep },
+  lampBulb: { position: 'absolute', backgroundColor: DIORAMA.goldLight, opacity: 0.96 },
+  lampSpill: { position: 'absolute', transform: [{ scaleX: 1.1 }] },
   townGlint: { position: 'absolute', left: 0, width: 18, height: 190, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   fountainSpark: { position: 'absolute', width: 9, height: 9, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   shopSign: { position: 'absolute', height: 24, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: DIORAMA.butter, borderWidth: 2, borderColor: DIORAMA.townBlueEdge, ...elevation.low },

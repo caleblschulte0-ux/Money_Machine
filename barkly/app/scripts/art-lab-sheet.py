@@ -17,7 +17,11 @@ frames = Path(sys.argv[1])
 out = Path(sys.argv[2])
 
 LOCS = ["home", "park", "town", "beach"]
-BANDS = ["day", "night"]
+# All four light bands. Morning and evening were never measured, which is how
+# they came to render a sunrise/sunset sky under flat noon light for a third of
+# every day. Frames that were not captured are skipped, so a --bands day,night
+# run still works.
+BANDS = ["morning", "day", "evening", "night"]
 
 def stats(im, skip_top_frac=0.14, skip_bottom_frac=0.22):
     """Palette stats over the WORLD only -- chrome and the dialogue panel are
