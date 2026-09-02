@@ -33,11 +33,13 @@ function RenderedWindow({
   band,
   upgraded,
   top,
+  left,
   scale,
 }: {
   band: SkyBand;
   upgraded: boolean;
   top: number;
+  left: number;
   scale: number;
 }) {
   const night = band === 'night';
@@ -45,7 +47,7 @@ function RenderedWindow({
   const height = width * (760 / 720);
 
   return (
-    <View style={[styles.windowWrap, { top, width, height }]}>
+    <View style={[styles.windowWrap, { top, left, width, height }]}>
       <View
         style={[
           styles.windowCastShadow,
@@ -222,14 +224,19 @@ function HomeBiography({
   props: bioProps,
   chromeBottom,
   floorTop,
+  shelfRight,
   shelfW,
+  stripCenter,
   night,
   scale,
 }: {
   props: BiographyProp[];
   chromeBottom: number;
   floorTop: number;
+  shelfRight: number;
   shelfW: number;
+  /** x of the open wall between the window and the shelf: the picture wall. */
+  stripCenter: number;
   night: boolean;
   scale: number;
 }) {
@@ -239,17 +246,19 @@ function HomeBiography({
   // on wall rather than floating in the middle of it, and the floor keepsake
   // rests on the floor line. All offsets are fractions of the shelf's own
   // width, so the arrangement survives every screen size.
-  const shelfRight = 7;
   const slotStyle = (slot: BiographyProp['slot']) => {
     switch (slot) {
       case 'shelf-left':
         return { right: shelfRight + shelfW * 0.58, top: chromeBottom + 100 };
       case 'shelf-right':
         return { right: shelfRight + shelfW * 0.16, top: chromeBottom + 100 };
+      // Pictures hang on the open wall BETWEEN the window and the shelf,
+      // stacked, rather than being anchored off the shelf -- which is how the
+      // photo ended up on top of the window when the wall was recomposed.
       case 'wall-left':
-        return { right: shelfRight + shelfW * 1.16, top: chromeBottom + 70 };
+        return { left: stripCenter - 17 * scale, top: chromeBottom + 74 };
       case 'wall-right':
-        return { right: shelfRight + shelfW * 1.16, top: chromeBottom + 152 };
+        return { left: stripCenter - 17 * scale, top: chromeBottom + 150 };
       default:
         return { right: shelfRight + 6, top: floorTop - 4 };
     }
@@ -310,7 +319,17 @@ export function HomeScene({
   const chairH = chairW * (398 / 374);
   const lampW = 76 * propScale;
   const lampH = lampW * 2;
-  const shelfW = 136 * propScale;
+  /*
+   * The wall is COMPOSED, not edge-pinned. The window used to hang 5px off the
+   * left of the screen and the shelf sat 7px from the right, which read as two
+   * clipped objects with a hole between them -- the single biggest reason the
+   * room looked like a layout instead of a place. Both now keep a real margin
+   * and grow to close the gap, and the margin is a fraction of the screen so a
+   * tablet gets a wider room rather than the same phone furniture marooned in
+   * empty wall.
+   */
+  const wallInset = Math.max(12, width * 0.045);
+  const shelfW = 138 * propScale;
   const shelfH = shelfW * (481 / 298);
   const bedW = (has('home_bed') ? 144 : 126) * propScale;
   const bedH = bedW * (254 / 512);
@@ -355,16 +374,31 @@ export function HomeScene({
       </WorldLayer>
 
       <WorldLayer name="landmark">
-        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 54} scale={propScale * 0.90} />
+        <RenderedWindow band={night ? 'night' : band} upgraded={has('home_window')} top={chromeBottom + 62} left={wallInset} scale={propScale * 0.86} />
         <PictureMedallion top={chromeBottom + 94} night={night} />
-        <WorldObject source={SHELF} right={7} top={chromeBottom + 56} width={shelfW} height={shelfH} night={night} depth={0.42} contactShadow />
-        <HomeBiography props={biography} chromeBottom={chromeBottom} floorTop={floorTop} shelfW={shelfW} night={night} scale={propScale} />
+        <WorldObject source={SHELF} right={wallInset} top={chromeBottom + 52} width={shelfW} height={shelfH} night={night} depth={0.42} contactShadow />
+        <HomeBiography
+          props={biography}
+          chromeBottom={chromeBottom}
+          floorTop={floorTop}
+          shelfRight={wallInset}
+          shelfW={shelfW}
+          stripCenter={wallInset + (width - 2 * wallInset - shelfW - (has('home_window') ? 224 : 208) * propScale * 0.86) / 2 + (has('home_window') ? 224 : 208) * propScale * 0.86}
+          night={night}
+          scale={propScale}
+        />
       </WorldLayer>
 
       <WorldLayer name="props">
-        <WorldObject source={LAMP} left={-3} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
-        <WorldObject source={CHAIR} left={12} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
-        <WorldObject source={BED} right={14} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
+        {/*
+          Furniture keeps the same margin as the wall above it. The lamp used
+          to sit at left:-3 -- sliced by the screen edge -- which is the floor
+          reading of the same mistake the window made: objects shoved past the
+          frame instead of composed inside it.
+        */}
+        <WorldObject source={LAMP} left={wallInset * 0.5} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
+        <WorldObject source={CHAIR} left={wallInset} top={floorTop - chairH + 36} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
+        <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
 
       <WorldLighting ground={groundY} night={night} warm />
@@ -399,7 +433,7 @@ const styles = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, height: 6,
     backgroundColor: DIORAMA.white,
   },
-  windowWrap: { position: 'absolute', left: -5 },
+  windowWrap: { position: 'absolute' },
   windowCastShadow: {
     position: 'absolute',
     backgroundColor: DIORAMA.shadow,

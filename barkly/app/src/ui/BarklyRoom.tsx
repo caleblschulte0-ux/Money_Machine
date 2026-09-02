@@ -1412,7 +1412,17 @@ const styles = StyleSheet.create({
   heart: { position: 'absolute', fontSize: 24, color: color.danger },
   fetchBall: { position: 'absolute', bottom: 40, alignSelf: 'center', zIndex: 7 },
   npc: { position: 'absolute', alignItems: 'center', zIndex: 3 },
-  digSpot: { position: 'absolute', left: -42, bottom: 67, alignItems: 'center', zIndex: 2 },
+  // The dig mound is a CONTROL, not scenery: at left:-42 most of its tap
+  // target sat off the screen. It still tucks behind the near dog, but it now
+  // begins on screen.
+  /*
+   * On the mid-ground, clear of the near dog. At bottom:67 the mound and the
+   * nearest NPC shared the bottom-left corner and DIG printed underneath
+   * BISCUIT; the friend slot spans bottom 116-228, so the mound sits above
+   * that band entirely. It also puts something in the empty middle of the
+   * field, which was the largest dead area in any scene.
+   */
+  digSpot: { position: 'absolute', left: 10, bottom: 252, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: -11, ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodSoft, paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodWarm, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   chip: { position: 'absolute', bottom: CARE_DOCK_HEIGHT + STATE_CHIP_GAP, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
