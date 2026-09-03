@@ -39,7 +39,7 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 62.5
+TOTAL = 65.0
 
 # beat, clip, in-point, start, dur, what the beat does
 #
@@ -98,6 +98,30 @@ BEATS = [
  # 3.0s, the duration that was actually gated clean before this beat's
  # timing was touched for an unrelated reason.
  ("prod", "6799",  7.0, 6.0, 3.0, "the wearer, the glasses on him, the whole park in front"),
+ # ---- `hero`: THE PRODUCT ITSELF, v28. Operator, repeatedly: "I did not
+ # see any three d renderings of the glasses or any cool glasses hero
+ # shots" -- then, directly, "Yes get it do stop asking questions." The
+ # film never once showed the object; every beat is either real park
+ # footage or a historical era. This is the one still of the glasses,
+ # placed right after `prod`'s line ("we build what runs on them") so the
+ # line has something to land on -- `prod`'s own VO regularly overruns its
+ # beat by ~1.2s (see vo_one.py), so it actually finishes SPEAKING over
+ # this shot rather than over `on`'s unrelated wearer footage, which reads
+ # as intentional, not sloppy.
+ # NINE PRIOR ATTEMPTS FAILED the same way (ai/gen_glasses.py): the free
+ # generator kept returning a portrait of a person wearing glasses despite
+ # an explicit no-person/no-face prompt -- it appears to key hard off the
+ # word "glasses" toward its portrait training data regardless of
+ # qualifiers. The fix was not a better negative prompt, it was a
+ # different CAMERA ANGLE: a flat-lay/top-down product shot has nowhere
+ # for a face to fit. ai/hero/glasses_hero_s12.png is the result. The
+ # frame reads as ordinary eyewear, not a sci-fi visor -- deliberate, since
+ # ORI licenses software onto glasses it does not design (see `prod`'s own
+ # line); a distinctive hardware look would have invented a product this
+ # company does not have. Carries the same VISUALISATION tag as every
+ # other generated image here (see LABELS below) and, like `map`/`ice`, a
+ # slow push-in rather than a locked-still frame (ai/hero/build_hero_plate.py).
+ ("hero", "HERO1", 0.0, 9.0, 2.5, "the product itself — the one shot that is not the wearer"),
  # ---- ONE CONTINUOUS SHOT, STILL CUT INTO THREE BEATS, JUST SHORTER.
  # `on`, `lock` and `open` are consecutive windows of IMG_6806 with NO
  # GAP -- 8.4-10.7, 10.7-13.2, 13.2-16.4 -- so the in-points are DERIVED
@@ -107,9 +131,9 @@ BEATS = [
  # (8.6-9.0 on IMG_6806's own clock) and both new durations still cover
  # it, so the causal chain -- reach, recognise, reveal -- is intact, just
  # faster.
- ("on",   "6806",  8.4, 9.0, 2.3, "he raises a hand to the temple — he is switching it on"),
- ("lock", "6806", 10.7, 11.3, 2.5, "the glasses recognise the falls and name them"),
- ("open", "6806", 13.2, 13.8, 3.2, "anchored to the real place — the capability, stated correctly"),
+ ("on",   "6806",  8.4, 11.5, 2.3, "he raises a hand to the temple — he is switching it on"),
+ ("lock", "6806", 10.7, 13.8, 2.5, "the glasses recognise the falls and name them"),
+ ("open", "6806", 13.2, 16.3, 3.2, "anchored to the real place — the capability, stated correctly"),
  # ---- `map`: THE SITE MAP, v21. Operator: "it needs that sky view map
  # that kinda shows what points in the falls we would be doing what, which
  # I made and gave you... if you don't like the way it looks, fine, but
@@ -130,7 +154,7 @@ BEATS = [
  # (like `end`), not a panned or zoomed plate -- a photo card does not
  # need to move to read, and holding it keeps every pin anchor a fixed
  # pixel rather than a tracked one.
- ("map",  "MAP1",  0.0, 17.0, 5.0, "the site map — his own legend, on the real park"),
+ ("map",  "MAP1",  0.0, 19.5, 5.0, "the site map — his own legend, on the real park"),
  # ---- `sync`: GROUP SYNC AND NO BLEED. v22. Operator: "you never talk
  # about the cool, like, features I mentioned earlier, how we are going to
  # make it so if you're in a group, your stuff will sync. If you're not in
@@ -144,13 +168,13 @@ BEATS = [
  # one/sync_overlay.py. Same real aerial plate as `map`, pushed in on the
  # middle of the park, so the two beats read as one information section
  # over the same ground.
- ("sync", "MAP2",  0.0, 22.0, 5.7, "group sync, and the boundary another group's audio does not cross"),
+ ("sync", "MAP2",  0.0, 24.5, 5.7, "group sync, and the boundary another group's audio does not cross"),
  # ---- `reach`: walking is the trigger, not a drawn control. v18, timing
  # only compressed in v19. IMG_6797@40.0, gated clean at every duration
  # tried (see rounds/r106): mid 1.87 tail 1.76 ratio 0.94 drift 7.8% peak
  # 4.0 at 2.5s, no flags. Start moved 17.0 -> 21.5, v21, to make room for
  # `map`.
- ("reach", "6797", 40.0, 27.7, 2.5, "he walks, and the past is where he arrives"),
+ ("reach", "6797", 40.0, 30.2, 2.5, "he walks, and the past is where he arrives"),
  # ---- THE ERAS ARE BACK. v22, on direct operator instruction: "we took
  # out the AI cuts of the settlers and the natives, which is bad because
  # those were supposed to stay in."
@@ -170,8 +194,8 @@ BEATS = [
  # children nearly the mother's height). fam3_s17.jpg has visible feet on
  # three of four figures and correct adult/child proportion, which is the
  # defect fixed rather than re-shipped.
- ("dak",  "6804", 10.0, 30.2, 4.0, "before the mill, the family answers where he has stopped"),
- ("settle", "6805", 70.3, 34.2, 3.8, "the settlement era, further up the same bank"),
+ ("dak",  "6804", 10.0, 32.7, 4.0, "before the mill, the family answers where he has stopped"),
+ ("settle", "6805", 70.3, 36.7, 3.8, "the settlement era, further up the same bank"),
  # ---- ACT 3: THE DEMO. `dak` AND `more` ARE GONE. v20, on direct
  # operator instruction, and this is a REMOVAL, not a taste note.
  # Operator, asked directly whether there is a Dakota cultural advisor or
@@ -204,9 +228,9 @@ BEATS = [
  # `mam` and `now` DELIBERATELY KEEP THE REAL PLATE -- the moment the
  # wearer is on screen, the ground under him is the actual ground, which
  # is the one claim this whole film rests on.
- ("ice",  "ICE1",  0.0, 38.0, 4.5, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 42.5, 5.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 47.5, 4.5, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
+ ("ice",  "ICE1",  0.0, 40.5, 4.5, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 45.0, 5.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 50.0, 4.5, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
@@ -228,9 +252,9 @@ BEATS = [
  # show it. `reach` and `ice` have real absolute tail motion too (1.76,
  # 1.01) but it is the WALKING SUBJECT and a legitimate pan respectively,
  # confirmed by looking at the frames -- not a settle-down artifact.
- ("off",  "6803",  2.5, 52.0, 3.0, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 55.0, 4.0, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 59.0, 3.5, "held from walk's last frame — which is PRESENT DAY"),
+ ("off",  "6803",  2.5, 54.5, 3.0, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 57.5, 4.0, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 61.5, 3.5, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -251,7 +275,7 @@ WEARER_BEATS = {"mam", "now"}
 # them. The last act is the same in reverse: he has looked, the film is
 # over, and a HUD on the closing frames would claim the device is still
 # running when the point is that you just look.
-UI_OFF = {"sign", "past", "prod", "reach", "off", "walk"}
+UI_OFF = {"sign", "past", "prod", "hero", "reach", "off", "walk"}
 
 # beat: (title, subtitle, appear_t[, scale]) — the film's own voice, drawn
 # bottom-left with a scrim, no reticle and no leader line.
@@ -339,6 +363,11 @@ FIGURES = {
 }
 
 LABELS = {
+ # `hero`, v28: labelled the same way as the era figures below -- a
+ # generated image, subtitled VISUALISATION, no leader line and no anchor
+ # ring (labelkit.recon_block, not the tracked-AR block() -- nothing
+ # recognised this, it is a still of the product, not a live detection).
+ "hero": ((150, 900), "THE HARDWARE", "VISUALISATION", 0.35, (0, 0)),
  # RESTORED v22 with their figures. Both are subtitled VISUALISATION for
  # the same reason the ice label is: something drawn is on screen. No
  # date, no attribution, no claim about who specifically stood here.

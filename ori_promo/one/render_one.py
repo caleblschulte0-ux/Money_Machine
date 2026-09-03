@@ -637,6 +637,18 @@ def main(only=None):
         bmp.build()
         bmp.ensure_clip(map_clip)
 
+    # `hero` reads raw/IMG_HERO1.MOV the same way -- a BUILT plate (a
+    # generated still, held with a slow push-in), not committed, same
+    # discipline as map/ice. Build it here if a fresh checkout is missing it.
+    hero_clip = os.path.join(RAW, "IMG_HERO1.MOV")
+    if not os.path.exists(hero_clip):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "build_hero_plate", asset("ai/hero/build_hero_plate.py"))
+        bhp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bhp)
+        bhp.build()
+
     rows = [(b, c, t, d) for b, c, t, d, _n in
             [(x[0], x[1], x[2], x[4], x[5]) for x in BEATS] if c]
 
