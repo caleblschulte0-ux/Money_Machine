@@ -435,8 +435,26 @@ for (const { name, open: selector, optional } of SHEETS) {
     report(await page.evaluate(auditInPage, name));
     await shoot(name);
   }
+  /*
+   * A sheet you cannot close is an accessibility failure, not a crash.
+   *
+   * This was a bare `await close.click({ force: true })`, and when Barkly's
+   * Plan grew taller than a 360x568 screen its own X ended up above y=0 --
+   * Playwright threw "Element is outside of the viewport", the harness died
+   * with a stack trace, and the run reported nothing at all. Now it is a
+   * counted failure with the sheet's name on it, and the sweep carries on to
+   * the sheets after it.
+   */
   const close = page.getByText('✕', { exact: true }).first();
-  if (await close.count()) await close.click({ force: true });
+  if (await close.count()) {
+    try {
+      await close.click({ force: true, timeout: 4000 });
+    } catch {
+      failures += 1;
+      console.log(`\n${name} — CANNOT BE CLOSED at ${width}x${height}: the X is outside the viewport`);
+      await page.keyboard.press('Escape').catch(() => {});
+    }
+  }
   await page.waitForTimeout(600);
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AdventureState, adventureProgress, PLAN_REWARD } from '../game/adventure';
 import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
@@ -45,6 +45,19 @@ export default function AdventureSheet({ visible, onClose, adventure }: Props) {
               </Pressable>
             </View>
 
+            {/*
+              EVERYTHING BELOW THE HEADER SCROLLS.
+
+              The sheet had no maxHeight and no scroll view, so on a short phone
+              it simply grew past the top of the screen: at 360x568 the plan
+              opened with its own title and close button ABOVE y=0 and there was
+              no way to shut it. The a11y harness reproduces it -- but only when
+              driven with `--size 360x568`, and it had only ever been run at its
+              default 390x844, which is why a sheet you cannot close survived
+              every green run. The header stays pinned so the X is always
+              reachable no matter how many goals the plan has.
+            */}
+            <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
             <Text style={styles.subtitle}>{adventure.subtitle}</Text>
 
             <View style={styles.goals}>
@@ -79,6 +92,7 @@ export default function AdventureSheet({ visible, onClose, adventure }: Props) {
             <View style={styles.noPressurePod}>
               <Text style={styles.noPressure}>No streak. No guilt. Getting distracted is extremely on brand.</Text>
             </View>
+            </ScrollView>
           </View>
         </Pressable>
       </Pressable>
@@ -88,7 +102,8 @@ export default function AdventureSheet({ visible, onClose, adventure }: Props) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' },
-  sheet: { paddingHorizontal: space.lg, paddingBottom: space.xl },
+  sheet: { maxHeight: '92%', paddingHorizontal: space.lg, paddingBottom: space.xl },
+  scrollBody: { paddingBottom: space.xs },
   handle: { alignSelf: 'center', width: 54, height: 5, borderRadius: radius.pill, backgroundColor: color.inkOn, opacity: 0.75, marginBottom: space.md },
   note: {
     borderRadius: radius.xl,
