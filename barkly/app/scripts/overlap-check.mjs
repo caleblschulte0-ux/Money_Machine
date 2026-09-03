@@ -74,6 +74,12 @@ const TARGETS = [
   ['kit-sleep', '[data-testid="kit-sleep"]'],
 ];
 
+const COMPOSER_TARGETS = [
+  ['composer-input', '[aria-label="Say something to Barkly"]'],
+  ['composer-close', '[aria-label="Close typing"]'],
+  ['composer-send', '[aria-label="Send to Barkly"]'],
+];
+
 const NEVER_OVER_THE_DOG = ['dialogue', 'notice'];
 const BELOW_HIS_MIDLINE = ['kit-feed', 'kit-play', 'kit-sleep'];
 const KIT_NAMES = ['kit-feed', 'kit-play', 'kit-sleep'];
@@ -195,6 +201,55 @@ for (const size of sizes) {
       failures++;
       console.log(`  DOCK EDGE CROWDING: care controls must keep ${MIN_EDGE_GUTTER}px side gutters`);
     }
+  }
+
+  /*
+   * NOTHING RUNS OFF THE FRAME.
+   *
+   * The side-gutter rule existed but applied only to the care dock, so every
+   * other control could hang over the edge unchallenged -- and one did: the
+   * typing composer's send button sat flush against the right edge of a 390px
+   * screen with no margin at all. A control that touches the frame reads as
+   * clipped whether or not a pixel is actually lost, and on a rounded display
+   * some of it genuinely is. The rule is the same one, applied to everything
+   * this harness already measures.
+   */
+  for (const b of boxes) {
+    const overRight = Math.round(b.x + b.width - size.width);
+    if (b.x < 0 || overRight > 0) {
+      failures++;
+      console.log(`  OFF THE FRAME: ${b.name} ${b.x < 0 ? `${Math.round(-b.x)}px past the left` : `${overRight}px past the right`}`);
+    } else if (b.x < MIN_EDGE_GUTTER || size.width - (b.x + b.width) < MIN_EDGE_GUTTER) {
+      failures++;
+      console.log(`  EDGE CROWDING: ${b.name} keeps only ${Math.round(Math.min(b.x, size.width - b.x - b.width))}px of side gutter; need ${MIN_EDGE_GUTTER}px`);
+    }
+  }
+
+  /*
+   * The composer is measured with it OPEN, because that is the only state it
+   * has geometry in -- and it is where a child types the thing the whole app
+   * is about. It was never measured at all until it turned out its send button
+   * was flush to the screen edge.
+   */
+  const typeBtn = page.locator('[aria-label="Type to Barkly"]').first();
+  if (await typeBtn.count()) {
+    await typeBtn.click({ force: true }).catch(() => {});
+    await page.waitForTimeout(700);
+    for (const [name, sel] of COMPOSER_TARGETS) {
+      const el = page.locator(sel).first();
+      const box = (await el.count()) ? await el.boundingBox() : null;
+      if (!box) continue;
+      const overRight = Math.round(box.x + box.width - size.width);
+      if (box.x < 0 || overRight > 0) {
+        failures++;
+        console.log(`  OFF THE FRAME: ${name} ${box.x < 0 ? `${Math.round(-box.x)}px past the left` : `${overRight}px past the right`}`);
+      } else if (box.x < MIN_EDGE_GUTTER || size.width - (box.x + box.width) < MIN_EDGE_GUTTER) {
+        failures++;
+        console.log(`  EDGE CROWDING: ${name} keeps only ${Math.round(Math.min(box.x, size.width - box.x - box.width))}px of side gutter; need ${MIN_EDGE_GUTTER}px`);
+      }
+    }
+    await page.locator('[aria-label="Close typing"]').first().click({ force: true }).catch(() => {});
+    await page.waitForTimeout(400);
   }
 
   if (dog) {

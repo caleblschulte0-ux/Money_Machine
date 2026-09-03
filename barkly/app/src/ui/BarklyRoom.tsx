@@ -1409,14 +1409,39 @@ const styles = StyleSheet.create({
   swap: {
     width: TAP_MIN,
     minHeight: TAP_MIN,
+    flexShrink: 0,
     borderRadius: radius.pill,
     backgroundColor: color.card,
     alignItems: 'center',
     justifyContent: 'center',
     ...elevation.low,
   },
-  input: { flex: 1, minHeight: TAP_MIN, backgroundColor: color.card, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 13, fontSize: 15, color: color.ink, ...elevation.low },
-  send: { minHeight: TAP_MIN, backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', overflow: 'hidden', ...elevation.card },
+  /*
+   * `minWidth: 0` is the whole bug fix. A `flex: 1` child of a row will not
+   * shrink below its own content width without it, so the input held itself
+   * open at the width of its placeholder and shoved the send button 54px past
+   * the right edge of a 360px screen -- measured, not eyeballed. The same
+   * missing rule that made the destination tray refuse to fill its row.
+   *
+   * The border is the other half: every other control in this app is a moulded
+   * object with an edge, and this was the one floating white web pill left. A
+   * recessed slot on `paper` with a real lip reads as something you speak into.
+   */
+  input: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: TAP_MIN,
+    backgroundColor: color.paper,
+    borderWidth: 2,
+    borderColor: color.line,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    fontSize: 15,
+    color: color.ink,
+    ...elevation.low,
+  },
+  send: { minHeight: TAP_MIN, flexShrink: 0, backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', overflow: 'hidden', ...elevation.card },
   sendText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
   sendIdle: { backgroundColor: color.fill, ...elevation.flat },
   sendTextIdle: { color: color.inkSoft },

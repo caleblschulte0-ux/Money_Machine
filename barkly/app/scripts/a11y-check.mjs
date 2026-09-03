@@ -397,6 +397,8 @@ const sheetMarker = {
   food: 'Barkly',
   settings: 'Settings',
   plan: "BARKLY'S NOTE",
+  // The composer's own send button: it only exists while typing is open.
+  composer: 'send',
 };
 
 const SHEETS = [
@@ -405,8 +407,15 @@ const SHEETS = [
   { name: 'food', open: '[data-testid="kit-feed"]' },
   { name: 'settings', open: '[aria-label="Settings"]' },
   { name: 'plan', open: '[aria-label^="Barkly\'s plan"]', optional: true },
+  /*
+   * The composer is a surface too. It is where a child types the thing the
+   * whole app is about, and it had never been audited or photographed --
+   * because the sweep only ever visited things that look like sheets. It closes
+   * with a x rather than the sheets' cross, so it names its own closer.
+   */
+  { name: 'composer', open: '[aria-label="Type to Barkly"]', close: '[aria-label="Close typing"]' },
 ];
-for (const { name, open: selector, optional } of SHEETS) {
+for (const { name, open: selector, optional, close: closeSelector } of SHEETS) {
   const opener = page.locator(selector).first();
   if (!(await opener.count())) {
     if (optional) {
@@ -452,7 +461,9 @@ for (const { name, open: selector, optional } of SHEETS) {
    * counted failure with the sheet's name on it, and the sweep carries on to
    * the sheets after it.
    */
-  const close = page.getByText('✕', { exact: true }).first();
+  const close = closeSelector
+    ? page.locator(closeSelector).first()
+    : page.getByText('✕', { exact: true }).first();
   if (await close.count()) {
     try {
       await close.click({ force: true, timeout: 4000 });
