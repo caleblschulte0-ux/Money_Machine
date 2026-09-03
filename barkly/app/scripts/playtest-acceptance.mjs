@@ -19,6 +19,7 @@
 
 import { existsSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { walkOnboarding } from './onboard.mjs';
 
 const url = process.argv[2];
 if (!url) {
@@ -72,19 +73,7 @@ const byId = (id) => page.locator(`[data-testid="${id}"]`).first();
 const button = (re) => page.getByRole('button').filter({ hasText: re }).first();
 
 async function onboard() {
-  for (let i = 0; i < 10; i += 1) {
-    const input = page.locator('input:visible').first();
-    if (await input.count()) {
-      const ph = (await input.getAttribute('placeholder')) || '';
-      if (/name|call/i.test(ph)) await input.fill('Tester');
-    }
-    const next = button(/^(hi|tell him|next|okay|skip)$/i);
-    if ((await next.count()) && (await next.isEnabled())) {
-      await next.click();
-      await settle(600);
-    } else break;
-  }
-  await settle(1200);
+  await walkOnboarding(page, { name: 'Tester', settle: 650 });
 }
 
 /**

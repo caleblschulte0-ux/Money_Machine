@@ -61,6 +61,7 @@ import {
   unlockedAt,
   Wallet,
 } from '../game/progression';
+import { parseLocalTrainingInstruction } from '../barkly/training';
 import {
   advance as advanceOnboarding,
   freshOnboarding,
@@ -959,7 +960,16 @@ export function useBarkly(): BarklyController {
         ) {
           thoughtSeed.current += 1;
           // His inner voice has the same accent as his outer one.
-          setThought(bronx(pickThought(locationRef.current, new Date().getHours(), thoughtSeed.current)));
+          setThought(
+            bronx(
+              pickThought(
+                locationRef.current,
+                new Date().getHours(),
+                thoughtSeed.current,
+                memory.snapshot().trainingRules.map((r) => r.cue),
+              ),
+            ),
+          );
           setTimeout(() => alive && setThought(null), 5200);
         }
         firstThought = false;
@@ -1511,6 +1521,27 @@ export function useBarkly(): BarklyController {
           .remember([`name = ${result.learnedName}`], ['We met. I asked their name.'])
           .then(() => setMemoryVersion((v) => v + 1))
           .catch(() => {});
+      }
+      /*
+       * The onboarding cue becomes a REAL training rule, built by the same
+       * parser a mid-conversation "when I say X, Y" goes through -- not a
+       * hand-rolled rule that happens to look similar. Two constructors for
+       * the same object is how the onboarding trick ends up subtly different
+       * from every other trick (different fields, different matching), and
+       * the whole promise is that this one is not special: it is the first
+       * of many, stored in the same place, and it is still there tomorrow.
+       */
+      if (result.learnedCue) {
+        const rule = parseLocalTrainingInstruction(`when I say ${result.learnedCue}, play dead`);
+        if (rule) {
+          memory
+            .learnTraining([rule])
+            .then(() =>
+              memory.remember([], [`They taught me “${rule.cue}” the day we met.`]),
+            )
+            .then(() => setMemoryVersion((v) => v + 1))
+            .catch(() => {});
+        }
       }
       if (result.askMicrophone) {
         providers.stt

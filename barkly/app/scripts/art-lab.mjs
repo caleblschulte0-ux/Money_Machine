@@ -17,6 +17,7 @@ import { existsSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
+import { walkOnboarding } from './onboard.mjs';
 
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 const htmlPath = resolve(arg('--html', 'dist/playtest/index.html'));
@@ -56,17 +57,7 @@ async function newPage(hour) {
   const page = await ctx.newPage();
   await page.goto(url);
   await page.waitForTimeout(3200);
-  for (let i = 0; i < 10; i += 1) {
-    const input = page.locator('input:visible').first();
-    if (await input.count()) {
-      const ph = (await input.getAttribute('placeholder')) || '';
-      if (/name|call/i.test(ph)) await input.fill('Caleb');
-    }
-    const btn = page.getByRole('button').filter({ hasText: /^(hi|tell him|next|okay|skip)$/i }).first();
-    if ((await btn.count()) && (await btn.isEnabled())) { await btn.click(); await page.waitForTimeout(520); }
-    else break;
-  }
-  await page.waitForTimeout(1400);
+  await walkOnboarding(page, { settle: 620 });
   /*
    * LOADING THE SAVE IS REQUIRED, AND IT IS VERIFIED.
    *

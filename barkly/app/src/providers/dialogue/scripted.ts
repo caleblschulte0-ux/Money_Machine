@@ -24,6 +24,7 @@
  */
 
 import { DialogueContext, DialogueProvider, DialogueRequest } from '../types';
+import { normalizeKey, personalFactFrom } from '../../barkly/facts';
 import { compose } from '../../barkly/compose';
 import { understand } from '../../barkly/understand';
 
@@ -57,6 +58,36 @@ function answerQuestion(text: string, c: DialogueContext | undefined, you: strin
   if (/\b(what|who)('?s| is)? (your|ur) name\b|\bwhat are you called\b/.test(t)) {
     return { speech: "Barkly. It's on the tag. Keep up.", actions: ['HEAD_TILT'] };
   }
+  /*
+   * "what is my favorite food" has a right answer whenever they have told
+   * him one, and answering it is the single clearest proof of the whole
+   * premise. Without this the question fell through to the composer, which
+   * gave a verdict ON THE QUESTION -- "I know exactly what Favorite is. I'm
+   * choosin' not to say." He was claiming knowledge he did not have, which
+   * reads worse to a stranger than simply not knowing.
+   */
+  const asked = t.match(/\bwhat(?:'?s| is| are)?\s+my\s+(favou?rite\s+[a-z ]{2,24}|[a-z ]{2,24}?)\s*\??$/);
+  if (asked && !/\bname\b/.test(asked[1])) {
+    // Compare NORMALISED keys. Facts are stored through `normalizeKey`, so
+    // "favorite food" is on file as `favorite_food` -- matching on the raw
+    // spoken words found nothing, and he told a player who had just answered
+    // this exact question that they had never told him.
+    const key = normalizeKey(asked[1]);
+    const hit = c?.facts?.find((f: string) => normalizeKey(f.slice(0, f.indexOf('='))) === key);
+    if (hit) {
+      const raw = hit.slice(hit.indexOf('=') + 1).trim();
+      // It opens the sentence, so it gets a capital -- "pizza. You told me."
+      // reads like a fragment he half-remembered.
+      const value = raw.charAt(0).toUpperCase() + raw.slice(1);
+      return { speech: `${value}. You told me. I keep things.`, reaction: 'happy', actions: ['TAIL_WAG'] };
+    }
+    return {
+      speech: "You've never told me that. Tell me and I'll keep it forever, obviously.",
+      reaction: 'annoyed',
+      actions: ['HEAD_TILT'],
+    };
+  }
+
   if (/\b(what|who)('?s| is)? my name\b|\bdo you (know|remember) my name\b/.test(t)) {
     return c?.personName
       ? { speech: `${c.personName}. Obviously. I remember things.`, reaction: 'happy', actions: ['TAIL_WAG'] }
@@ -209,6 +240,12 @@ export function createScriptedDialogue(): DialogueProvider {
         facts.push(`name = ${named[1]}`);
         prefix = `${named[1]}, huh. Good name. Mine's better, but good. `;
       }
+
+      // Anything else personal they just told him. Offline he used to keep
+      // ONLY the name, so "my favorite food is pizza" was heard, answered,
+      // and forgotten -- see facts.personalFactFrom.
+      const personal = personalFactFrom(text);
+      if (personal) facts.push(personal);
 
       // A question he can honestly answer from real state beats anything
       // generated — "what's my name" has a right answer and he should give it.

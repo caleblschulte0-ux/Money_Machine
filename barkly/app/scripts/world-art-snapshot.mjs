@@ -17,6 +17,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { walkOnboarding } from './onboard.mjs';
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(name);
@@ -65,18 +66,7 @@ const page = await ctx.newPage();
 const settle = (ms = 900) => page.waitForTimeout(ms);
 
 async function onboard() {
-  for (let i = 0; i < 10; i += 1) {
-    const input = page.locator('input:visible').first();
-    if (await input.count()) {
-      const ph = (await input.getAttribute('placeholder')) || '';
-      if (/name|call/i.test(ph)) await input.fill('Art Review');
-    }
-    const next = page.getByRole('button').filter({ hasText: /^(hi|tell him|next|okay|skip)$/i }).first();
-    if ((await next.count()) && (await next.isEnabled())) {
-      await next.click();
-      await settle(550);
-    } else break;
-  }
+  await walkOnboarding(page, { name: 'Art Review', settle: 620 });
   await page.waitForSelector('[data-testid="dialogue-panel"]', { timeout: 20_000 });
   await settle(1000);
 }

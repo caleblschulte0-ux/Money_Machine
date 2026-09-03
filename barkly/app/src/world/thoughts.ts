@@ -47,8 +47,30 @@ const NIGHT = [
   'night smells different. better? different.',
 ];
 
+/**
+ * Things he thinks about a cue YOU taught him.
+ *
+ * This is where the taught trick earns its keep between uses: he brings it up
+ * himself, unprompted, which is the difference between a pet that has a
+ * feature and a pet with something on his mind. It lives in the THOUGHT pool
+ * rather than in anything he says aloud because thoughts are display-only --
+ * a spoken line would have to exist in the recorded voice bank, and a cue is
+ * whatever word the player invented.
+ */
+const ABOUT_A_CUE = [
+  (cue: string) => `i still know what “${cue}” means. just sayin'.`,
+  (cue: string) => `been practisin' “${cue}”. in my head. lookin' the same.`,
+  (cue: string) => `say “${cue}”. no reason.`,
+];
+
 /** Pick a thought; `seed` keeps tests deterministic. */
-export function pickThought(location: LocationId, hour: number, seed: number): string {
+export function pickThought(location: LocationId, hour: number, seed: number, cues: string[] = []): string {
   const pool = [...UNIVERSAL, ...BY_LOCATION[location], ...(hour >= 21 || hour < 6 ? NIGHT : [])];
+  // A taught cue is rarer than the ambient pool on purpose: every third idle
+  // thought being "say IRS" is nagging, not character.
+  if (cues.length > 0 && Math.abs(seed) % 4 === 0) {
+    const cue = cues[Math.abs(seed) % cues.length];
+    return ABOUT_A_CUE[Math.abs(seed) % ABOUT_A_CUE.length](cue);
+  }
   return pool[Math.abs(seed) % pool.length];
 }

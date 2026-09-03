@@ -51,6 +51,16 @@ export interface DialogueContext {
   /** Cues you taught him, so an offline Barkly can still perform one. */
   cues?: string[];
   /**
+   * What he knows about YOU, as `key = value` strings.
+   *
+   * Same reasoning as `cues` and `bonds`: the model reads the facts as prose
+   * in the system prompt, but the offline brain cannot see the prompt at all,
+   * so without this it could answer "what's my name" (a special case wired
+   * straight to `personName`) and nothing else -- every other thing you had
+   * ever told him came back as a shrug.
+   */
+  facts?: string[];
+  /**
    * WHO HE HAS BECOME — the character record, flattened. Same reasoning as
    * the rest of this interface: the model reads it as prose in the prompt,
    * but the offline brain cannot, and without these fields it greeted a

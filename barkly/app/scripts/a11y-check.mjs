@@ -39,6 +39,7 @@ import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
+import { walkOnboarding } from './onboard.mjs';
 
 async function loadChromium() {
   for (const m of ['playwright', 'playwright-core', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
@@ -263,19 +264,7 @@ await page.goto('file://' + html);
 await page.waitForTimeout(2600);
 
 // Through onboarding, or every screen below is the welcome flow.
-for (let i = 0; i < 8; i += 1) {
-  const input = page.locator('input:visible').first();
-  if (await input.count()) {
-    const ph = (await input.getAttribute('placeholder')) || '';
-    if (/name|call/i.test(ph)) await input.fill('Caleb');
-  }
-  const next = page.getByRole('button').filter({ hasText: /^(hi|tell him|next|okay|skip)$/i }).first();
-  if ((await next.count()) && (await next.isEnabled())) {
-    await next.click();
-    await page.waitForTimeout(700);
-  } else break;
-}
-await page.waitForTimeout(1200);
+await walkOnboarding(page);
 
 /**
  * Confirm we are actually IN the app.

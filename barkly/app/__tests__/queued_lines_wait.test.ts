@@ -68,7 +68,12 @@ describe('a queued line waits its turn', () => {
     // 'idle' while an encounter sheet is open — so idle thoughts popped over
     // story scenes. It must consult the shared lock, and via the ref, since
     // the timer outlives renders.
-    const at = hook.indexOf('setThought(bronx(pickThought');
+    // Matched on the CALL, not on its formatting. This assertion used to be
+    // `indexOf('setThought(bronx(pickThought')` and broke the day the call
+    // was wrapped across lines to take another argument -- the contract
+    // (thoughts are behind the shared lock) had not changed at all. A test
+    // that fails on a line break is testing the formatter.
+    const at = hook.search(/setThought\(\s*\n?\s*bronx\(\s*\n?\s*pickThought/);
     expect(at).toBeGreaterThan(-1);
     const guard = hook.slice(hook.lastIndexOf('if (', at), at);
     expect(guard).toMatch(/conversationHeldRef.current/);

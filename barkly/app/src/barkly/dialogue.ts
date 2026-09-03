@@ -169,6 +169,7 @@ export class DialogueEngine {
       personName: this.memory.getFact('name')?.value,
       treasures: world?.stashItems,
       cues: memState.trainingRules.map((r) => r.cue),
+      facts: memState.facts.map((f) => `${f.key} = ${f.value}`),
       hour: new Date().getHours(),
       toy: world?.toy,
       bonds,

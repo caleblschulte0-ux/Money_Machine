@@ -31,6 +31,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
+import { walkOnboarding } from './onboard.mjs';
 
 const APP = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (name, fallback) => {
@@ -58,19 +59,7 @@ const page = await ctx.newPage();
 await page.goto(`file://${html}`);
 await page.waitForTimeout(2600);
 
-for (let i = 0; i < 8; i += 1) {
-  const input = page.locator('input:visible').first();
-  if (await input.count()) {
-    const ph = (await input.getAttribute('placeholder')) || '';
-    if (/name|call/i.test(ph)) await input.fill('Caleb');
-  }
-  const next = page.getByRole('button').filter({ hasText: /^(hi|tell him|next|okay|skip)$/i }).first();
-  if ((await next.count()) && (await next.isEnabled())) {
-    await next.click();
-    await page.waitForTimeout(700);
-  } else break;
-}
-await page.waitForTimeout(1200);
+await walkOnboarding(page);
 
 if (!(await page.locator('[data-testid="dialogue-panel"]').first().count())) {
   console.error('never reached the room — onboarding did not complete, so this check proved nothing.');

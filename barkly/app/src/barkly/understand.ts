@@ -127,8 +127,38 @@ function subjectFrom(text: string): string | undefined {
   // branch entirely, so he gave a verdict on the adjective.
   const named = words.find((w) => looksLikePerson(w, text) && /^[A-Z][a-z]+$/.test(cased(w, text) ?? ''));
   const person = words.find((w) => looksLikePerson(w, text));
-  const best = named ?? person ?? words[0];
+  const best = named ?? person ?? complementOf(text, words) ?? words[0];
   return cased(best, text) ?? best;
+}
+
+/**
+ * "my favorite food is PIZZA" is about pizza.
+ *
+ * `keywords` sorts longest-first, so a sentence introducing something the
+ * player cares about got a verdict on whichever qualifier happened to be
+ * longest: telling him "my favorite food is pizza" produced "Hm. Favorite.
+ * Favorite is fine... do we need to do somethin' about favorite?" -- the exact
+ * moment a stranger decides he is not really listening. Found by playing the
+ * shipped first session as a new player would, 2026-09-03.
+ *
+ * In a copula sentence the point is the COMPLEMENT, so take the first content
+ * word after the verb. This sits BELOW the person rules on purpose: "my
+ * sister is annoying" is still about the sister, not about being annoying.
+ */
+function complementOf(text: string, words: string[]): string | undefined {
+  const m = text.match(/\b(?:my|our|his|her|their|the)\b[^.?!]*?\b(?:is|are|was|were)\b\s+(.+)$/i);
+  if (!m) return undefined;
+  const tail = keywords(m[1]);
+  if (tail.length === 0) return undefined;
+  // Whichever complement word survives the stoplist, in SENTENCE order rather
+  // than longest-first -- "is a really good stick" is about the stick.
+  const ordered = m[1]
+    .toLowerCase()
+    .replace(/[^a-z0-9'\s-]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => tail.includes(w));
+  const pick = ordered[ordered.length - 1] ?? tail[0];
+  return words.includes(pick) ? pick : undefined;
 }
 
 /** The word as the speaker typed it, so his echo matches their sentence. */

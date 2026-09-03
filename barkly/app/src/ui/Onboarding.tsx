@@ -51,6 +51,12 @@ function actionsFor(state: OnboardingState): BodyAction[] {
       return ['EAR_PERK', 'MOUTH_MOVE'];
     case 'delight':
       return ['TAIL_WAG', 'EXCITED'];
+    case 'teach':
+      return ['EAR_PERK', 'HEAD_TILT'];
+    // The payoff beat. He is mid-performance, not waiting politely -- this is
+    // the one beat of onboarding the player is supposed to remember.
+    case 'trick':
+      return ['TAIL_WAG', 'EXCITED', 'MOUTH_MOVE'];
     case 'listening':
       return ['EAR_PERK', 'HEAD_TILT'];
     default:
@@ -82,9 +88,36 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
   const canContinue = !wantsInput || typed.trim().length > 0;
   const groundY = Math.max(250, stageHeight - 18);
 
+  /*
+   * THE PAYOFF HAS TO BE SEEN.
+   *
+   * Pressing the cue on the `trick` beat used to advance straight to the
+   * microphone ask, so the player taught him a word and never watched it
+   * work -- the one beat the whole meeting is built around, skipped by the
+   * button that was supposed to trigger it. He now performs for a moment
+   * first. The timing lives here rather than in the state machine because
+   * that module is pure and the room's own speaking lifecycle is likewise
+   * owned by the hook, not by the beat list.
+   */
+  const [performing, setPerforming] = useState(false);
+  const performTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (performTimer.current) clearTimeout(performTimer.current); }, []);
+
   const go = (skip = false) => {
     onAdvance(advance(state, { input: typed, skip, micAvailable }));
     setTyped('');
+  };
+
+  const press = () => {
+    if (step === 'trick' && state.cue && !performing) {
+      setPerforming(true);
+      performTimer.current = setTimeout(() => {
+        setPerforming(false);
+        go();
+      }, 2400);
+      return;
+    }
+    go();
   };
 
   return (
@@ -109,12 +142,17 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
             style={[styles.bubble, { opacity: fade, transform: [{ translateY: rise }] }]}
             accessibilityLiveRegion="polite"
           >
-            <Text style={styles.line}>{lineFor(state)}</Text>
+            <Text style={styles.line}>
+              {performing ? 'I have tragically passed away.' : lineFor(state)}
+            </Text>
             <View style={styles.tail} />
           </Animated.View>
 
           <View style={styles.dog}>
-            <Renderer state="idle" actions={actionsFor(state)} />
+            <Renderer
+              state={performing ? 'sleepy' : 'idle'}
+              actions={performing ? ['SLEEP'] : actionsFor(state)}
+            />
           </View>
         </View>
 
@@ -124,14 +162,18 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
               style={styles.input}
               value={typed}
               onChangeText={setTyped}
-              placeholder="your name"
+              placeholder={step === 'teach' ? 'a secret word' : 'your name'}
               placeholderTextColor={color.inkSoft}
-              autoCapitalize="words"
+              autoCapitalize={step === 'teach' ? 'characters' : 'words'}
               autoCorrect={false}
-              maxLength={24}
+              maxLength={step === 'teach' ? 28 : 24}
               returnKeyType="done"
-              onSubmitEditing={() => canContinue && go()}
-              accessibilityLabel="Type your name for Barkly"
+              onSubmitEditing={() => canContinue && press()}
+              accessibilityLabel={
+                step === 'teach'
+                  ? 'Type a secret word to teach Barkly'
+                  : 'Type your name for Barkly'
+              }
             />
           )}
 
@@ -141,18 +183,25 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
               pressed && canContinue && styles.primaryPressed,
               !canContinue && styles.primaryOff,
             ]}
-            disabled={!canContinue}
-            onPress={() => go()}
+            disabled={!canContinue || performing}
+            onPress={press}
             accessibilityRole="button"
             accessibilityLabel={actionFor(step)}
           >
             {canContinue && <View style={styles.gloss} pointerEvents="none" />}
-            <Text style={styles.primaryText}>{actionFor(step)}</Text>
+            {/*
+              On the payoff beat the button is the CUE ITSELF, in their own
+              word -- pressing "IRS" and watching him drop is the whole point,
+              and a button that said "next" would have thrown that away.
+            */}
+            <Text style={styles.primaryText}>
+              {step === 'trick' && state.cue ? state.cue : actionFor(step)}
+            </Text>
           </Pressable>
 
           {/* Always available, never shouty. A child who will not type is
               not a child who should be stuck. */}
-          {step !== 'greeting' && step !== 'delight' && (
+          {step !== 'greeting' && step !== 'delight' && step !== 'trick' && (
             <Pressable style={styles.skip} onPress={() => go(true)} accessibilityRole="button">
               <Text style={styles.skipText}>
                 {step === 'listening' ? 'not right now' : 'skip'}
@@ -161,7 +210,7 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
           )}
 
           <View style={styles.dots} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            {(['greeting', 'name', 'delight', 'listening'] as const).map((s) => (
+            {(['greeting', 'name', 'delight', 'teach', 'trick', 'listening'] as const).map((s) => (
               <View key={s} style={[styles.dot, s === step && styles.dotOn]} />
             ))}
           </View>

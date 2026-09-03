@@ -235,6 +235,62 @@ export function parseFactStatement(raw: string, now: number): Fact | null {
   );
 }
 
+/**
+ * A personal statement the OFFLINE brain should keep.
+ *
+ * `parseFactStatement` has always been able to turn "my favorite food is
+ * pizza" into a fact -- but nothing offline ever handed it one. The scripted
+ * provider only ever learned a NAME, so with no model configured (which is
+ * every web playtest a stranger will ever open) Barkly forgot everything
+ * personal the moment it was said: tell him your favourite food, ask him
+ * thirty seconds later, and he had nothing. That is the product's core
+ * promise failing in the exact build used to validate the product.
+ *
+ * Deliberately narrow. It answers "did they just tell me something about
+ * themselves", and it must say no to:
+ *   - questions ("what is my favorite food") -- storing those as facts is how
+ *     he ends up "remembering" that your favourite food is a question mark;
+ *   - anything about Barkly rather than the speaker ("your name is silly");
+ *   - values long enough to be a paragraph of instructions wearing a fact's
+ *     clothing. `makeFact` sanitises, but the shorter gate is here.
+ *
+ * Returns a `key = value` string in the same shape every other caller uses,
+ * so it flows through the identical merge/rank path as a model-extracted one.
+ */
+export function personalFactFrom(raw: string): string | null {
+  const s = sanitize(raw, 200).trim();
+  if (!s || /\?/.test(s)) return null;
+  // A wh-word anywhere in a short sentence means they are asking, not telling.
+  if (/\b(what|which|who|where|when|why|how|do|does|did|is|are|can|could)\b/i.test(s.split(/\s+/)[0] ?? '')) {
+    return null;
+  }
+
+  const possessive = s.match(
+    /^my\s+(favou?rite\s+[a-z ]{2,24}|[a-z]{2,20}(?:'s)?\s?[a-z]{0,20})\s+(?:is|are|was)\s+(.{2,60}?)[.!]?$/i,
+  );
+  if (possessive) {
+    // `normalizeKey`, not the raw words: `parseFactStatement`'s key pattern is
+    // `[a-zA-Z][\w.]*`, which has no room for a space, so "favorite food =
+    // pizza" fell past the structured branch and was filed as an unstructured
+    // note ("note denodj"). It was genuinely stored and completely unfindable
+    // -- caught only by reading the Settings memory list in a real browser
+    // after the unit tests were already green.
+    const key = normalizeKey(possessive[1]);
+    const value = possessive[2].trim();
+    if (!key || !value) return null;
+    return `${key} = ${value}`;
+  }
+
+  const loves = s.match(/^i\s+(love|like|hate|really like|can'?t stand)\s+(.{2,60}?)[.!]?$/i);
+  if (loves) {
+    const verb = loves[1].toLowerCase();
+    const key = /hate|stand/.test(verb) ? 'dislikes' : 'likes';
+    return `${key} = ${loves[2].trim()}`;
+  }
+
+  return null;
+}
+
 // ---------------------------------------------------------------- merging
 
 export interface MergeResult {
