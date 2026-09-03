@@ -295,7 +295,17 @@ export default function SettingsSheet(props: Props) {
                 style={[styles.voiceRow, !voiceShape.voiceId && styles.voiceRowOn]}
                 onPress={() => onSetVoiceShape({ voiceId: undefined })}
                 accessibilityRole="radio"
-                accessibilityState={{ selected: !voiceShape.voiceId }}
+                /*
+                 * `role="radio"` wants `checked`, not `selected` -- ARIA has
+                 * no `aria-selected` on a radio at all, so a screen reader
+                 * heard every option in this list as equally unchecked no
+                 * matter which voice was picked. `accessibilityState.selected`
+                 * also never reached the DOM on web regardless (RN Web reads
+                 * a flat `aria-*` prop, not the nested state object -- see
+                 * ToyHud's destination tabs), so both halves needed fixing.
+                 */
+                accessibilityState={{ checked: !voiceShape.voiceId }}
+                aria-checked={!voiceShape.voiceId}
                 accessibilityLabel="Voice: best available, chosen automatically"
               >
                 <Text style={styles.voiceName}>Best available</Text>
@@ -307,7 +317,8 @@ export default function SettingsSheet(props: Props) {
                   style={[styles.voiceRow, voiceShape.voiceId === v.id && styles.voiceRowOn]}
                   onPress={() => onSetVoiceShape({ voiceId: v.id })}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected: voiceShape.voiceId === v.id }}
+                  accessibilityState={{ checked: voiceShape.voiceId === v.id }}
+                  aria-checked={voiceShape.voiceId === v.id}
                   accessibilityLabel={`Voice: ${v.name}`}
                 >
                   <Text style={styles.voiceName} numberOfLines={1}>{v.name}</Text>

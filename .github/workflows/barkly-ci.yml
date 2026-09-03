@@ -106,6 +106,15 @@ jobs:
       - name: His own voice
         run: node scripts/voice-check.mjs
 
+      # Every tab agrees with the world, at every step of a full location
+      # loop, both visually AND on the accessibility tree -- not just "did
+      # the screen change when clicked". Needs the playtest bundle: Beach is
+      # level-gated on a fresh save, so the default artifact never reaches it.
+      - name: Navigation state
+        run: node scripts/build-artifact.mjs --out dist/index.html
+          && EXPO_PUBLIC_BARKLY_PLAYTEST=always node scripts/build-artifact.mjs --out dist/playtest/index.html
+          && node scripts/nav-state-check.mjs --artifact dist/playtest/index.html
+
       - name: Upload measured screenshots on failure
         if: failure()
         uses: actions/upload-artifact@v4

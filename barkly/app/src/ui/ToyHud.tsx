@@ -218,6 +218,19 @@ export function DestinationTray({ location, locked, isUnlocked, onLocation, vert
             accessibilityRole="tab"
             accessibilityState={{ selected }}
             /*
+             * `accessibilityState.selected` alone does not reach the DOM: RN
+             * Web's prop translator (createDOMProps) reads a flat
+             * `aria-selected` prop, not `accessibilityState.selected` -- so
+             * every tab shipped with no `aria-selected` attribute at all, on
+             * every viewport, in every state. A screen reader had no way to
+             * tell which location was current even though the colour was
+             * always right. `aria-selected` is a real cross-platform RN prop
+             * (native maps it back into accessibilityState), so this line
+             * costs nothing on native and is the only line that reaches the
+             * DOM on web.
+             */
+            aria-selected={selected}
+            /*
              * The unlocked name is BARE -- "Park", not "Park, open" -- because
              * the art lab drives the whole contact sheet with
              * getByRole('tab', { name: /^park$/i }). Decorating it here silently
