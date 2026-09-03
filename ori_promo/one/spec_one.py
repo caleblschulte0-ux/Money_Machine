@@ -39,7 +39,7 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 67.1
+TOTAL = 62.5
 
 # beat, clip, in-point, start, dur, what the beat does
 #
@@ -130,7 +130,7 @@ BEATS = [
  # (like `end`), not a panned or zoomed plate -- a photo card does not
  # need to move to read, and holding it keeps every pin anchor a fixed
  # pixel rather than a tracked one.
- ("map",  "MAP1",  0.0, 17.0, 6.8, "the site map — his own legend, on the real park"),
+ ("map",  "MAP1",  0.0, 17.0, 5.0, "the site map — his own legend, on the real park"),
  # ---- `sync`: GROUP SYNC AND NO BLEED. v22. Operator: "you never talk
  # about the cool, like, features I mentioned earlier, how we are going to
  # make it so if you're in a group, your stuff will sync. If you're not in
@@ -144,13 +144,13 @@ BEATS = [
  # one/sync_overlay.py. Same real aerial plate as `map`, pushed in on the
  # middle of the park, so the two beats read as one information section
  # over the same ground.
- ("sync", "MAP2",  0.0, 23.8, 6.8, "group sync, and the boundary another group's audio does not cross"),
+ ("sync", "MAP2",  0.0, 22.0, 5.7, "group sync, and the boundary another group's audio does not cross"),
  # ---- `reach`: walking is the trigger, not a drawn control. v18, timing
  # only compressed in v19. IMG_6797@40.0, gated clean at every duration
  # tried (see rounds/r106): mid 1.87 tail 1.76 ratio 0.94 drift 7.8% peak
  # 4.0 at 2.5s, no flags. Start moved 17.0 -> 21.5, v21, to make room for
  # `map`.
- ("reach", "6797", 40.0, 30.6, 2.5, "he walks, and the past is where he arrives"),
+ ("reach", "6797", 40.0, 27.7, 2.5, "he walks, and the past is where he arrives"),
  # ---- THE ERAS ARE BACK. v22, on direct operator instruction: "we took
  # out the AI cuts of the settlers and the natives, which is bad because
  # those were supposed to stay in."
@@ -170,8 +170,8 @@ BEATS = [
  # children nearly the mother's height). fam3_s17.jpg has visible feet on
  # three of four figures and correct adult/child proportion, which is the
  # defect fixed rather than re-shipped.
- ("dak",  "6804", 10.0, 33.1, 5.0, "before the mill, the family answers where he has stopped"),
- ("settle", "6805", 70.3, 38.1, 4.5, "the settlement era, further up the same bank"),
+ ("dak",  "6804", 10.0, 30.2, 4.0, "before the mill, the family answers where he has stopped"),
+ ("settle", "6805", 70.3, 34.2, 3.8, "the settlement era, further up the same bank"),
  # ---- ACT 3: THE DEMO. `dak` AND `more` ARE GONE. v20, on direct
  # operator instruction, and this is a REMOVAL, not a taste note.
  # Operator, asked directly whether there is a Dakota cultural advisor or
@@ -204,9 +204,9 @@ BEATS = [
  # `mam` and `now` DELIBERATELY KEEP THE REAL PLATE -- the moment the
  # wearer is on screen, the ground under him is the actual ground, which
  # is the one claim this whole film rests on.
- ("ice",  "ICE1",  0.0, 42.6, 4.5, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 47.1, 5.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 52.1, 4.5, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
+ ("ice",  "ICE1",  0.0, 38.0, 4.5, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 42.5, 5.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 47.5, 4.5, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
@@ -228,9 +228,9 @@ BEATS = [
  # show it. `reach` and `ice` have real absolute tail motion too (1.76,
  # 1.01) but it is the WALKING SUBJECT and a legitimate pan respectively,
  # confirmed by looking at the frames -- not a settle-down artifact.
- ("off",  "6803",  2.5, 56.6, 3.0, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 59.6, 4.0, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 63.599999999999994, 3.5, "held from walk's last frame — which is PRESENT DAY"),
+ ("off",  "6803",  2.5, 52.0, 3.0, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 55.0, 4.0, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 59.0, 3.5, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -276,7 +276,7 @@ FIGURES = {
  # `dak` is a straight restore of the v15 placement: foot (1150, 745) at
  # 385px on IMG_6804@10.0, which is the scale he approved after the
  # mammoth was rebuilt. Nothing re-tuned, so nothing re-broken.
- "dak": [("ai/era/dak_s17.jpg", (1150, 745), 385, 1.5, 1.4, 0.30, 0.55)],
+ "dak": [("ai/era/dak_s17.jpg", (1150, 745), 385, 1.0, 1.1, 0.30, 0.55)],
  # `settle` is NEW, not the v8 settlers beat brought back. That asset
  # failed on measurements, not taste: floor-length dresses gave it no
  # feet to stand on, and its two children were nearly the mother's
@@ -286,7 +286,7 @@ FIGURES = {
  # 470px at foot y=830: the same ground-plane arithmetic as the second
  # Dakota group that used to stand here, which measured 529px at that
  # depth for a group standing slightly nearer than this one.
- "settle": [("ai/era/fam3_s17.jpg", (1560, 830), 470, 1.2, 1.2, 0.30, 0.45)],
+ "settle": [("ai/era/fam3_s17.jpg", (1560, 830), 470, 1.0, 1.0, 0.30, 0.45)],
  # "dak" and "more" (dak_s17.jpg, dak_s3.jpg) were REMOVED at v20. Operator,
  # asked directly whether a Dakota cultural advisor or tribal contact is
  # attached to this project: "There is not currently a Dakota cultural
@@ -342,8 +342,8 @@ LABELS = {
  # RESTORED v22 with their figures. Both are subtitled VISUALISATION for
  # the same reason the ice label is: something drawn is on screen. No
  # date, no attribution, no claim about who specifically stood here.
- "dak": ((1150, 700), "BEFORE THE MILL", "VISUALISATION", 1.9, (-560, -250)),
- "settle": ((1560, 780), "THE SETTLEMENT", "VISUALISATION", 1.6, (-980, -260)),
+ "dak": ((1150, 700), "BEFORE THE MILL", "VISUALISATION", 1.3, (-560, -250)),
+ "settle": ((1560, 780), "THE SETTLEMENT", "VISUALISATION", 1.3, (-980, -260)),
  "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
  # RECOGNITION, and it is a different KIND of label from the one above.
  # That one names a generated era and is subtitled VISUALISATION because

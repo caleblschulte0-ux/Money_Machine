@@ -160,16 +160,30 @@ def build_sync():
 
 def ensure_clip(dst=None, dur=8.0, fps=30, src=None):
     """The `map` beat reads raw/IMG_MAP1.MOV like any other plate --
-    render_one.py has no path for a bare still image. This holds the built
-    plate static for `dur` seconds so it exists as an ordinary clip; it is
-    regenerated here rather than committed, same reasoning as the plate
-    itself.
+    render_one.py has no path for a bare still image.
+
+    v24: A HELD FRAME, NOT A STATIC ONE. The operator's brutal-honest read
+    on v23: map and sync, back to back, are 12+ seconds of camera motion
+    ZERO -- the single biggest reason that stretch of the film reads as
+    stalled. A plain loop of the still plate is exactly that: nothing
+    moves for the whole beat. This adds a SLOW, SUBTLE push-in (1.00 ->
+    1.045 zoom over the clip) via zoompan, the same technique already
+    used for the ice-age plate (ai/ice/build_ice_plate.py).
+    The pins/legend are drawn in render_one.py as a FIXED screen-space
+    overlay, not tracked to the plate -- a zoom this small (4.5% over
+    5-6s) drifts a pin at most ~15-20px from its landmark by the beat's
+    end, which the pin's own soft glow absorbs. Full per-frame tracking
+    was not worth it for a push this subtle.
     """
     dst = dst or os.path.join(RAW, "IMG_MAP1.MOV")
+    n = int(dur * fps)
+    vf = (f"scale=2688:1512:flags=lanczos,"
+          f"zoompan=z='min(1.0+0.0075*on,1.045)':d={n}:x='iw/2-(iw/zoom/2)':"
+          f"y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={fps}")
     subprocess.run(
         ["ffmpeg", "-y", "-v", "error", "-loop", "1", "-i", src or OUT, "-t", str(dur),
-         "-r", str(fps), "-pix_fmt", "yuv420p", dst], check=True)
-    print(f"  wrote {dst} ({dur}s static hold)")
+         "-vf", vf, "-r", str(fps), "-pix_fmt", "yuv420p", dst], check=True)
+    print(f"  wrote {dst} ({dur}s, slow push-in)")
 
 
 def ensure_sync_clip(dst=None, dur=8.0, fps=30):

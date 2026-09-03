@@ -112,8 +112,16 @@ LINES = [
     # get them AT the destination, and here is what the destination has in
     # it. "Where you're going" rather than "at Falls Park" keeps it a
     # statement about the model rather than a deployment claim.
+    # SECOND LINE CUT, v24. "Some places show you something..." said in
+    # words exactly what the on-screen legend already says in text --
+    # VISUAL SCENES / AUDIO NARRATION / AMBIENT SOUND / LOOKOUT POINTS is
+    # right there on screen the whole beat. Cutting the redundant line
+    # also does real work on the operator's brutal read of v23 ("it
+    # stinks"): map+sync back to back were the single longest stretch of
+    # the film with no camera motion and no new information arriving, and
+    # every second of narration that just re-reads on-screen text is a
+    # second that stretch didn't need.
     ("map", 0.30, "You don't buy a pair. You pick them up where you're going."),
-    ("map", 2.90, "Some places show you something. Some just talk. Some just ask you to look."),
     # --- GROUP SYNC AND NO BLEED, v22. Operator: "you never talk about the
     # cool, like, features I mentioned earlier, how we are going to make it
     # so if you're in a group, your stuff will sync. If you're not in a
@@ -121,8 +129,11 @@ LINES = [
     # and it won't sound weird." Both halves, in his own terms, over the
     # diagram that shows them (one/sync_overlay.py). No user count, no
     # range, no latency figure -- only the behaviour he described.
-    ("sync", 0.35, "In a group, everyone hears the same thing at the same time."),
-    ("sync", 3.50, "And walk past another group, and theirs stays theirs."),
+    # SHORTENED v24 ("everyone hears" -> "you hear"; dropped the leading
+    # "And") to fit the tightened beat with real margin, not a squeeze --
+    # measured via piper, not estimated.
+    ("sync", 0.30, "In a group, you hear the same thing at the same time."),
+    ("sync", 2.95, "Walk past another group, and theirs stays theirs."),
     # `reach`, v18, retimed for v19/v20. No rail, no menu -- he walks, and
     # the past is where he stops. This is the one sentence in the whole
     # script that states the operator's own line from the concept
@@ -136,8 +147,12 @@ LINES = [
     # settlers beat never had one, because it was cut before the film had
     # narration at all. Same standard as everything else here: no date, no
     # measurement, no attribution, no named people.
-    ("dak", 1.40, "Before the mill, people lived along this water."),
-    ("settle", 1.20, "Then the mill came, and the town grew around it."),
+    # Offsets moved earlier, v24 -- both beats shortened (5.0->4.0, 4.5->3.8)
+    # to help kill the "dead middle" stretch; earlier offsets keep both
+    # lines finishing well inside their own beat instead of bleeding
+    # further into the next one.
+    ("dak", 0.90, "Before the mill, people lived along this water."),
+    ("settle", 0.70, "Then the mill came, and the town grew around it."),
     # `dak` and `more` LINES REMOVED, v20, with their beats -- see
     # spec_one.py's FIGURES note. `ice` now follows `reach` DIRECTLY, so
     # its line can no longer lean on "Same day, further up the bank" for
