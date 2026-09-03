@@ -74,7 +74,20 @@ LINES = [
     # are GONE (v19) -- see spec_one.py's note; the plaque is still on
     # screen during `sign`, so the "unseen story" point is not lost, only
     # unspoken a third time.
-    ("prod", 0.10, "Open Range Interactive is building AR glasses made for travel."),
+    # --- THE PRODUCT CLAIM WAS WRONG. Corrected v22, and this is the most
+    # important line in the film to get right. It read "Open Range
+    # Interactive is building AR glasses made for travel," which came from
+    # the operator's own originally-approved 34s cut and had survived six
+    # versions on that authority. He corrected it directly: "We're not
+    # building AR glasses. We are going to get AR glasses from somebody and
+    # implement our own software onto them and rent them out."
+    # So the company is a SOFTWARE company with a rental distribution
+    # model, and the film had been describing it as a hardware startup --
+    # which is not a nuance, it is the wrong business. Two lines now: what
+    # the company actually makes, and how a visitor actually gets it.
+    # Neither states that this is running anywhere today; the end card's
+    # PROPOSED FIRST BETA and VISUAL INTENTION ONLY still govern.
+    ("prod", 0.15, "Open Range Interactive doesn't build the glasses. We build what runs on them."),
     ("on",   1.13, "You put them on, and the place starts talking."),
     ("lock", 0.95, "They know where you're standing, and what you're looking at."),
     # --- THE BREAKDOWN, CORRECTED v20. v19 used "The history, pinned to
@@ -95,23 +108,46 @@ LINES = [
     # `map`, v21. Operator's own legend concept (visual / audio / ambient /
     # lookout zones), stated in plain terms -- no zone count, no distance,
     # no claim this exact map is deployed today.
-    ("map", 0.35, "Some places show you something. Some just talk. Some just ask you to look."),
+    # The rental half of the model, placed at the top of the map beat: you
+    # get them AT the destination, and here is what the destination has in
+    # it. "Where you're going" rather than "at Falls Park" keeps it a
+    # statement about the model rather than a deployment claim.
+    ("map", 0.30, "You don't buy a pair. You pick them up where you're going."),
+    ("map", 2.90, "Some places show you something. Some just talk. Some just ask you to look."),
+    # --- GROUP SYNC AND NO BLEED, v22. Operator: "you never talk about the
+    # cool, like, features I mentioned earlier, how we are going to make it
+    # so if you're in a group, your stuff will sync. If you're not in a
+    # group, when you walk past another group, your stuff will not overlap
+    # and it won't sound weird." Both halves, in his own terms, over the
+    # diagram that shows them (one/sync_overlay.py). No user count, no
+    # range, no latency figure -- only the behaviour he described.
+    ("sync", 0.35, "In a group, everyone hears the same thing at the same time."),
+    ("sync", 3.50, "And walk past another group, and theirs stays theirs."),
     # `reach`, v18, retimed for v19/v20. No rail, no menu -- he walks, and
     # the past is where he stops. This is the one sentence in the whole
     # script that states the operator's own line from the concept
     # document in different words: "walk to chapter 2," not "tap chapter
     # 2."
     ("reach", 0.22, "He walks. And the place answers where he stops."),
+    # --- THE ERAS ARE BACK, v22, on the operator's reversal ("we took out
+    # the AI cuts of the settlers and the natives, which is bad because
+    # those were supposed to stay in"). `dak`'s line is the v19 wording
+    # restored verbatim. `settle` is a NEW line for a NEW beat -- the v8
+    # settlers beat never had one, because it was cut before the film had
+    # narration at all. Same standard as everything else here: no date, no
+    # measurement, no attribution, no named people.
+    ("dak", 1.40, "Before the mill, people lived along this water."),
+    ("settle", 1.20, "Then the mill came, and the town grew around it."),
     # `dak` and `more` LINES REMOVED, v20, with their beats -- see
     # spec_one.py's FIGURES note. `ice` now follows `reach` DIRECTLY, so
     # its line can no longer lean on "Same day, further up the bank" for
     # its own "further" to mean anything; rewritten to be self-contained.
-    ("ice",  0.21, "Go back further, and the whole valley freezes."),
-    ("mam",  1.6, "The whole valley under ice, and the animals that crossed it."),
-    ("now",  2.1, "Then back. One place. Every time."),
+    ("ice",  0.30, "Go back further, and the whole valley freezes."),
+    ("mam",  1.50, "The whole valley under ice, and the animals that crossed it."),
+    ("now",  1.80, "Then back. One place. Every time."),
     # --- ACT 4: the close.
-    ("off",  0.6, "No tour group. No phone in your face. You just look."),
-    ("walk", 0.7, "Open Range Interactive. See the story where you stand."),
+    ("off",  0.30, "No tour group. No phone in your face. You just look."),
+    ("walk", 0.60, "Open Range Interactive. See the story where you stand."),
 ]
 
 

@@ -34,8 +34,9 @@ import filmlook as FL
 from ai import place as PL
 import depthtools as DT
 import map_overlay
+import sync_overlay
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
-                      figures, W, H, FPS, TOTAL)
+                      GEN_ICE, figures, W, H, FPS, TOTAL)
 
 RAW = "../raw"
 OUT = "out1"
@@ -423,6 +424,17 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                                 near=(wearer_mask(dpi, gi, lo=0.25, hi=0.40,
                                                   grow=6) if has_wearer else None))
 
+        # A GENERATED ICE PLATE IS ALREADY AN ICE AGE. It must not be run
+        # through ice_grade -- that function's whole job is to turn a
+        # SUMMER plate cold, and pointing it at an already-frozen valley
+        # just crushes the contrast out of one. But the plate is a still,
+        # and a still with nothing moving in it reads as a stall, so it
+        # still gets the snowfall pass, at a constant strength since there
+        # is no freeze envelope to follow. No wearer mask: nobody is
+        # within thirty metres of this camera.
+        if beat in GEN_ICE:
+            base = snowfall(base, t, 1.0)
+
         img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
         showing = False       # is any generated figure on screen right now?
@@ -466,6 +478,8 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
 
         if beat == "map":
             map_overlay.draw_map(d, t, dur)
+        if beat == "sync":
+            sync_overlay.draw_sync(d, t, dur)
 
         if lab and lpath:
             # 6th field is an optional label SCALE; absent means 1.0, so

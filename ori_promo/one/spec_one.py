@@ -39,7 +39,7 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 50.5
+TOTAL = 69.1
 
 # beat, clip, in-point, start, dur, what the beat does
 #
@@ -73,11 +73,11 @@ TOTAL = 50.5
 # copy written on his behalf.
 BEATS = [
  # ---- ACT 1: THE PROBLEM. Fast. Two beats, not three.
- ("sign", "6796", 29.0,  0.0, 3.5, "how the story is told today: a man reading a plaque"),
+ ("sign", "6796", 29.0, 0.0, 3.5, "how the story is told today: a man reading a plaque"),
  # in-point 22.0, not 3.5 (r101: a headless torso walked out of frame at
  # 3.5). Same note as v16/v17/v18 -- kept here so nobody re-picks the bad
  # in-point off a thumbnail. 28.8 gates DRIFT+JOLT; still refused.
- ("past", "6808", 22.0,  3.5, 2.5, "and the park going by around it, nobody stopping"),
+ ("past", "6808", 22.0, 3.5, 2.5, "and the park going by around it, nobody stopping"),
  # `rail` IS GONE. v19. It was a third shot making the point `sign` and
  # `past` already make. Its VO line is gone with it, not folded into
  # another beat -- the film does not need to say "the story is right
@@ -86,7 +86,7 @@ BEATS = [
  # ---- ACT 2: THE PRODUCT. What it is, on a face, and the act of using
  # it -- compressed, but the SAME footage: in-point 7.0 on IMG_6799,
  # same reason as always (the clip is only 12.4s long).
- ("prod", "6799",  7.0,  6.0, 3.0, "the wearer, the glasses on him, the whole park in front"),
+ ("prod", "6799",  7.0, 6.0, 5.0, "the wearer, the glasses on him, the whole park in front"),
  # ---- ONE CONTINUOUS SHOT, STILL CUT INTO THREE BEATS, JUST SHORTER.
  # `on`, `lock` and `open` are consecutive windows of IMG_6806 with NO
  # GAP -- 8.4-10.7, 10.7-13.2, 13.2-16.4 -- so the in-points are DERIVED
@@ -96,9 +96,9 @@ BEATS = [
  # (8.6-9.0 on IMG_6806's own clock) and both new durations still cover
  # it, so the causal chain -- reach, recognise, reveal -- is intact, just
  # faster.
- ("on",   "6806",  8.4,  9.0, 2.3, "he raises a hand to the temple — he is switching it on"),
- ("lock", "6806", 10.7, 11.3, 2.5, "the glasses recognise the falls and name them"),
- ("open", "6806", 13.2, 13.8, 3.2, "anchored to the real place — the capability, stated correctly"),
+ ("on",   "6806",  8.4, 11.0, 2.3, "he raises a hand to the temple — he is switching it on"),
+ ("lock", "6806", 10.7, 13.3, 2.5, "the glasses recognise the falls and name them"),
+ ("open", "6806", 13.2, 15.8, 3.2, "anchored to the real place — the capability, stated correctly"),
  # ---- `map`: THE SITE MAP, v21. Operator: "it needs that sky view map
  # that kinda shows what points in the falls we would be doing what, which
  # I made and gave you... if you don't like the way it looks, fine, but
@@ -119,13 +119,48 @@ BEATS = [
  # (like `end`), not a panned or zoomed plate -- a photo card does not
  # need to move to read, and holding it keeps every pin anchor a fixed
  # pixel rather than a tracked one.
- ("map",  "MAP1",  0.0, 17.0, 4.5, "the site map — his own legend, on the real park"),
+ ("map",  "MAP1",  0.0, 19.0, 6.8, "the site map — his own legend, on the real park"),
+ # ---- `sync`: GROUP SYNC AND NO BLEED. v22. Operator: "you never talk
+ # about the cool, like, features I mentioned earlier, how we are going to
+ # make it so if you're in a group, your stuff will sync. If you're not in
+ # a group, when you walk past another group, your stuff will not overlap
+ # and it won't sound weird."
+ # He is right that the film never says this, and my previous answer --
+ # that no clip in the 34 shows two wearers, so the beat could not be
+ # built -- was the wrong answer to the right complaint. The feature is a
+ # statement about what the SOFTWARE does with two groups in one park. It
+ # does not need a photograph of two people; it needs a diagram, which is
+ # one/sync_overlay.py. Same real aerial plate as `map`, pushed in on the
+ # middle of the park, so the two beats read as one information section
+ # over the same ground.
+ ("sync", "MAP2",  0.0, 25.8, 6.8, "group sync, and the boundary another group's audio does not cross"),
  # ---- `reach`: walking is the trigger, not a drawn control. v18, timing
  # only compressed in v19. IMG_6797@40.0, gated clean at every duration
  # tried (see rounds/r106): mid 1.87 tail 1.76 ratio 0.94 drift 7.8% peak
  # 4.0 at 2.5s, no flags. Start moved 17.0 -> 21.5, v21, to make room for
  # `map`.
- ("reach", "6797", 40.0, 21.5, 2.5, "he walks, and the past is where he arrives"),
+ ("reach", "6797", 40.0, 32.6, 2.5, "he walks, and the past is where he arrives"),
+ # ---- THE ERAS ARE BACK. v22, on direct operator instruction: "we took
+ # out the AI cuts of the settlers and the natives, which is bad because
+ # those were supposed to stay in."
+ # THE DAKOTA REMOVAL WAS HIS OWN RULING (v20) and he has now reversed it.
+ # For the record, because a reversal should be recorded rather than
+ # quietly executed: the reason it came out was that there is no Dakota
+ # cultural advisor or tribal contact attached to this project who has
+ # reviewed the reconstruction, and NOTHING ABOUT THAT HAS CHANGED between
+ # v20 and v22. It is his company and his call; the film is his. The
+ # standing note stays in the round record so the gap is not lost.
+ # WHAT IS DIFFERENT FROM THE ASSETS THAT CAME OUT. `dak` returns with
+ # its v15 placement intact (dak_s17.jpg, foot 1150/745, 385px -- the
+ # scale the operator himself signed off after "the mammoth size is
+ # shit"), so this is a restore, not a re-tune. `settle` is NEW rather
+ # than the v8 settlers beat: that asset failed for measurable reasons
+ # (floor-length dresses, so no feet to land on the ground, and the two
+ # children nearly the mother's height). fam3_s17.jpg has visible feet on
+ # three of four figures and correct adult/child proportion, which is the
+ # defect fixed rather than re-shipped.
+ ("dak",  "6804", 10.0, 35.1, 5.0, "before the mill, the family answers where he has stopped"),
+ ("settle", "6805", 70.3, 40.1, 4.5, "the settlement era, further up the same bank"),
  # ---- ACT 3: THE DEMO. `dak` AND `more` ARE GONE. v20, on direct
  # operator instruction, and this is a REMOVAL, not a taste note.
  # Operator, asked directly whether there is a Dakota cultural advisor or
@@ -149,9 +184,18 @@ BEATS = [
  # breakdown v19 added (the two capability lines on `lock`/`open`) stays
  # and does the explaining; the remaining ice/mammoth beat is the one
  # demonstration this cut can make honestly today.
- ("ice",  "6791", 14.0, 24.0, 4.0, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 28.0, 6.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 34.0, 5.0, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
+ # ---- `ice` IS A GENERATED PLATE NOW. v22. Operator: "you did not fix
+ # the ice age at all. It still looks like shit." The cause was
+ # structural, not tuning: every prior version was the SUMMER plate under
+ # a procedural cold grade, and a grade cannot turn a mown lawn, a car
+ # park and full deciduous canopy into an ice age. IMG_ICE1 is generated
+ # (ai/ice/build_ice_plate.py) and carries the VISUALISATION tag.
+ # `mam` and `now` DELIBERATELY KEEP THE REAL PLATE -- the moment the
+ # wearer is on screen, the ground under him is the actual ground, which
+ # is the one claim this whole film rests on.
+ ("ice",  "ICE1",  0.0, 44.6, 4.5, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 49.1, 5.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 54.1, 4.5, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
@@ -173,9 +217,9 @@ BEATS = [
  # show it. `reach` and `ice` have real absolute tail motion too (1.76,
  # 1.01) but it is the WALKING SUBJECT and a legitimate pan respectively,
  # confirmed by looking at the frames -- not a settle-down artifact.
- ("off",  "6803",  2.5, 39.0, 3.0, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 42.0, 4.5, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 46.5, 4.0, "held from walk's last frame — which is PRESENT DAY"),
+ ("off",  "6803",  2.5, 58.6, 3.0, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 61.6, 4.0, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 65.6, 3.5, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
@@ -214,7 +258,25 @@ TITLES = {
 # is smaller because it stands on the FAR ledge across the water, and at
 # that distance an animal reads by silhouette.
 FIGURES = {
- # "dak" and "more" (dak_s17.jpg, dak_s3.jpg) REMOVED, v20. Operator,
+ # ---- RESTORED v22, on the operator's reversal. See the BEATS note on
+ # `dak`/`settle` for the full record, including the fact that the
+ # cultural-review gap that caused the v20 removal is UNCHANGED and that
+ # this is his call, made knowingly.
+ # `dak` is a straight restore of the v15 placement: foot (1150, 745) at
+ # 385px on IMG_6804@10.0, which is the scale he approved after the
+ # mammoth was rebuilt. Nothing re-tuned, so nothing re-broken.
+ "dak": [("ai/era/dak_s17.jpg", (1150, 745), 385, 1.5, 1.4, 0.30, 0.55)],
+ # `settle` is NEW, not the v8 settlers beat brought back. That asset
+ # failed on measurements, not taste: floor-length dresses gave it no
+ # feet to stand on, and its two children were nearly the mother's
+ # height. fam3_s17.jpg has visible feet and correct adult/child
+ # proportion. IMG_6805@70.3 is the static plate the old `more` beat
+ # used (drift 0.2%), so it clears the figure-plate gate.
+ # 470px at foot y=830: the same ground-plane arithmetic as the second
+ # Dakota group that used to stand here, which measured 529px at that
+ # depth for a group standing slightly nearer than this one.
+ "settle": [("ai/era/fam3_s17.jpg", (1560, 830), 470, 1.2, 1.2, 0.30, 0.45)],
+ # "dak" and "more" (dak_s17.jpg, dak_s3.jpg) were REMOVED at v20. Operator,
  # asked directly whether a Dakota cultural advisor or tribal contact is
  # attached to this project: "There is not currently a Dakota cultural
  # advisor or tribal partner attached to the project that I can point to
@@ -266,10 +328,11 @@ FIGURES = {
 }
 
 LABELS = {
- # "dak" and "more" LABELS REMOVED with their figures, v20 -- see the
- # removal note in FIGURES above. "THE LAST ICE" stays: it names the ice
- # AGE, not a reconstructed culture, and mam41f.jpg is an animal, not a
- # person.
+ # RESTORED v22 with their figures. Both are subtitled VISUALISATION for
+ # the same reason the ice label is: something drawn is on screen. No
+ # date, no attribution, no claim about who specifically stood here.
+ "dak": ((1150, 700), "BEFORE THE MILL", "VISUALISATION", 1.9, (-560, -250)),
+ "settle": ((1560, 780), "THE SETTLEMENT", "VISUALISATION", 1.6, (-980, -260)),
  "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
  # RECOGNITION, and it is a different KIND of label from the one above.
  # That one names a generated era and is subtitled VISUALISATION because
@@ -300,10 +363,21 @@ ICE = {
  # 4s for the transformation, 6s for the payoff.
  # The freeze also STARTS LATE (0.5s in) so the scrub marker reaches THE
  # LAST ICE before the world answers, not after.
- "ice": (0.5, 2.3, None, None),
+ # `ice` NO LONGER TAKES THE PROCEDURAL GRADE. v22: its plate is already
+ # an ice age (IMG_ICE1, generated), so running ice_grade over it would
+ # be grading a frozen valley to look frozen -- double-processing that
+ # only crushes it. It gets SNOWFALL instead, via GEN_ICE in
+ # render_one.py, so the still plate still has weather moving in it.
+ # `mam` and `now` are unchanged: they are the REAL plate and they need
+ # the grade to be in the same era as the beat before them.
  "mam": (-1.0, 0.0, None, None),
  "now": (-1.0, 0.0, 0.8, 2.4),
 }
+
+# Beats whose plate is ALREADY an ice age and must not be graded into one
+# again, but which still want falling snow so a generated still has
+# weather in it. See ai/ice/build_ice_plate.py.
+GEN_ICE = {"ice"}
 
 # ---- THE ERA RAIL IS GONE. v18, on the operator's ruling.
 # The rail (SCRUB_STOPS/SCRUB_KEYS/SCRUB_FADE, draw_rail() in
@@ -366,9 +440,14 @@ SCORE = {
  # segment is zero-width by construction and the swell hands off directly
  # into the cold descent with no gap and no double-write. Checked by
  # running score_one.py and reading the printed arc, not by inspection.
+ # v22: the eras are back, so the arc has room to work the way it did
+ # before v20 flattened it -- arrive on the walk, lift into the first
+ # era, hold across the settlement, cold on the ice, warm on the return.
+ # Chronological and non-overlapping, which is what score_one's envelope
+ # requires (arr <= e1 <= e2 <= ice_st <= ret_st).
  "arrive": "reach",
- "lift":   "reach",
- "hold":   "ice",
+ "lift":   "dak",
+ "hold":   "settle",
  "cold":   "ice",
  "warm":   "now",
 }
