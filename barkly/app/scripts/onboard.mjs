@@ -56,10 +56,20 @@ export async function walkOnboarding(page, opts = {}) {
      * beats" made every harness stop dead in the middle of the meeting and
      * report that onboarding never finished. Wait it out instead.
      */
-    let ready = await next.isEnabled();
+    /*
+     * Every check is bounded and swallows its own failure. A beat button is
+     * detached the instant its beat advances, and a bare `isEnabled()` on a
+     * detached locator waits the full default timeout -- 30 seconds, then a
+     * thrown error, in a helper eight harnesses depend on. Ask with a short
+     * deadline and treat "gone" as "not ready", which is what it means.
+     */
+    const enabled = () => next.isEnabled({ timeout: 1000 }).catch(() => false);
+    let ready = await enabled();
     for (let waited = 0; !ready && waited < 4000; waited += 400) {
       await page.waitForTimeout(400);
-      ready = (await next.count()) ? await next.isEnabled() : false;
+      // The beat may have moved on under us; re-resolving is the point.
+      if (await page.locator('[aria-label^="Pack Book"]').count()) return true;
+      ready = await enabled();
     }
     if (!ready) break;
 

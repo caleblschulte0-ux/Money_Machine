@@ -1,5 +1,5 @@
-import React from 'react';
-import { ColorValue, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, ColorValue, Easing, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { radius } from '../theme';
@@ -324,6 +324,124 @@ function HomeBiography({
 }
 
 /**
+ * DUST IN THE WINDOW LIGHT — the only thing moving in this room.
+ *
+ * Measured 2026-09-03: over four seconds, Park changed 3.8-5.8% of its
+ * pixels, Town 2.6-5.5%, Beach 2.2-6.4% — trees, planters, palms and the
+ * umbrella all sway. Home changed 0.00%, with a peak per-pixel delta of 2,
+ * which is noise. It was a photograph. And Home is where onboarding happens
+ * and where a player spends most of their time, so the one room that had to
+ * feel lived-in was the one room that was completely still.
+ *
+ * Dust rather than more furniture, deliberately: the visual doctrine says add
+ * ambient BEHAVIOUR, not more props. Motes drift up through the light from
+ * the window on long staggered loops, so the air in the room moves without
+ * anything in it changing. They need light to be visible at all, so they thin
+ * out after dark rather than pretending to glow in the dark.
+ */
+/**
+ * The light in the room BREATHES.
+ *
+ * Dust alone moved 0.02% of the room's pixels -- real, but 150x less than the
+ * trees at the park, because six specks are simply not many pixels. Cloud
+ * shadow is the opposite trade: one very slow change across a large area,
+ * which is what actually reads across a room as "outside is doing something".
+ * Long and shallow on purpose; a fast or deep pulse reads as a screen fault.
+ */
+function useSlowBreath(period: number): Animated.Value {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(v, { toValue: 1, duration: period, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration: period, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [v, period]);
+  return v;
+}
+
+function DustMotes({ left, top, width, height, night }: {
+  left: number; top: number; width: number; height: number; night: boolean;
+}) {
+  // Fixed, not random: a room that re-shuffles its dust on every re-render is
+  // a room that flickers.
+  const MOTES = [
+    { x: 0.10, y: 0.86, r: 2.6, dur: 11000, delay: 0, drift: 9 },
+    { x: 0.27, y: 0.97, r: 2.0, dur: 13500, delay: 1800, drift: -7 },
+    { x: 0.44, y: 0.80, r: 3.0, dur: 9800, delay: 3200, drift: 11 },
+    { x: 0.60, y: 0.99, r: 2.1, dur: 12600, delay: 900, drift: -5 },
+    { x: 0.76, y: 0.88, r: 2.5, dur: 10600, delay: 4300, drift: 8 },
+    { x: 0.91, y: 0.76, r: 1.8, dur: 14200, delay: 2600, drift: -9 },
+  ];
+  return (
+    <>
+      {MOTES.map((m) => (
+        <Mote
+          key={`${m.x}-${m.y}`}
+          left={left + width * m.x}
+          top={top + height * m.y}
+          radius={m.r}
+          rise={height * 0.62}
+          drift={m.drift}
+          duration={m.dur}
+          delay={m.delay}
+          night={night}
+        />
+      ))}
+    </>
+  );
+}
+
+function Mote({ left, top, radius, rise, drift, duration, delay, night }: {
+  left: number; top: number; radius: number; rise: number; drift: number;
+  duration: number; delay: number; night: boolean;
+}) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(t, { toValue: 1, duration, easing: Easing.linear, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [t, duration, delay]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width: radius * 2,
+        height: radius * 2,
+        borderRadius: radius,
+        backgroundColor: DIORAMA.white,
+        /*
+         * Tuned by MEASUREMENT, not by taste. The first pass used 0.30 alpha
+         * on 1.2-2.2px dots, which rendered a peak per-pixel delta of 18
+         * against ~500 for the swaying trees outdoors: present in the DOM,
+         * invisible to a person, and still scoring 0.00% on the motion check.
+         * Subtle is the goal; below the threshold of sight is a bug.
+         */
+        opacity: t.interpolate({
+          inputRange: [0, 0.15, 0.5, 0.85, 1],
+          outputRange: [0, night ? 0.20 : 0.62, night ? 0.26 : 0.78, night ? 0.16 : 0.50, 0],
+        }),
+        transform: [
+          { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [0, -rise] }) },
+          { translateX: t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, drift, 0] }) },
+        ],
+      }}
+    />
+  );
+}
+
+/**
  * The lamp is ON after dark.
  *
  * Home at night rendered a grey lampshade in a blue room -- the same defect
@@ -396,6 +514,14 @@ export function HomeScene({
   const { width, height } = useWindowDimensions();
   // More screen reveals more room; the authored objects do not inflate forever.
   const propScale = worldScale(width, height);
+  /*
+   * 4.2s each way. The first pass used 9s, which is genuinely cloud speed and
+   * genuinely invisible: over any four-second glance at the room the light had
+   * barely moved, and the motion check could not tell it from a still image.
+   * This is the same order as the 3.6s sway on the trees outdoors, so the room
+   * now changes on the timescale a person actually looks at it for.
+   */
+  const daylight = useSlowBreath(4200);
   const band = skyBand(hour);
   const night = band === 'night' || asleep;
   const has = (id: string) => upgrades.includes(id);
@@ -514,12 +640,34 @@ export function HomeScene({
       </WorldLayer>
 
       <WorldLayer name="distant">
-        <LinearGradient
-          colors={night ? ['rgba(16,18,35,0.18)', 'rgba(16,18,35,0)'] : ['rgba(255,218,132,0.30)', 'rgba(255,218,132,0)']}
-          start={{ x: 0, y: 0.18 }}
-          end={{ x: 0.74, y: 0.76 }}
-          style={[styles.lightPool, { top: chromeBottom + 18, height: Math.max(270, groundY - chromeBottom + 28) }]}
-        />
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.lightPool,
+            {
+              top: chromeBottom + 18,
+              height: Math.max(270, groundY - chromeBottom + 28),
+              // Daylight only. After dark the light source is the lamp, and a
+              // pulsing night wash would read as the screen flickering.
+              opacity: night ? 1 : daylight.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }),
+              // The pool SLIDES as well as dims. Opacity alone changed each
+              // pixel by about 6/765 -- real, and below the threshold of
+              // sight. Moving the gradient's soft edge a few pixels changes a
+              // long boundary instead of a flat field, which is what the eye
+              // actually picks up as light shifting in a room.
+              transform: night
+                ? []
+                : [{ translateX: daylight.interpolate({ inputRange: [0, 1], outputRange: [-10, 8] }) }],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={night ? ['rgba(16,18,35,0.18)', 'rgba(16,18,35,0)'] : ['rgba(255,218,132,0.30)', 'rgba(255,218,132,0)']}
+            start={{ x: 0, y: 0.18 }}
+            end={{ x: 0.74, y: 0.76 }}
+            style={styles.fill}
+          />
+        </Animated.View>
         <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodSoft, opacity: night ? 0.34 : 0.26 }]} />
         <WallMillwork floorTop={floorTop} night={night} />
         {/*
@@ -577,6 +725,22 @@ export function HomeScene({
         <WorldObject source={LAMP} left={lampLeft} top={floorTop - lampH + 11} width={lampW} height={lampH} night={night} depth={0.66} contactShadow />
         <WorldObject source={CHAIR} left={wallInset} top={floorTop - chairH + 58} width={chairW} height={chairH} night={night} depth={0.74} contactShadow />
         <WorldObject source={BED} right={wallInset} top={floorTop + 12} width={bedW} height={bedH} night={night} depth={0.76} contactShadow />
+      </WorldLayer>
+
+      {/*
+        AFTER the furniture. The first attempt put the dust in the `distant`
+        layer, where the couch and the lamp stand in front of it: of six motes
+        exactly one was ever visible, and it was tucked under the window. Air
+        is in front of the furniture, not behind it.
+      */}
+      <WorldLayer name="foreground">
+        <DustMotes
+          left={wallInset}
+          top={wallTop}
+          width={Math.max(120, width - wallInset * 2)}
+          height={Math.max(150, floorTop - wallTop)}
+          night={night}
+        />
       </WorldLayer>
 
       <WorldLighting ground={groundY} night={night} band={band} warm />
