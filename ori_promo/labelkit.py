@@ -124,6 +124,61 @@ def block(d, anchor, box_xy, title, sub, k, col, W, H,
     return x0, wid
 
 
+def recon_block(d, box_xy, title, sub, k, col, W, H, scale=1.0):
+    """A caption for a GENERATED RECONSTRUCTION -- same type and scrim as
+    block(), but with NO leader line and NO anchor ring.
+
+    Found on the operator's "it's giving middle school production" pass on
+    v24 (dak/settle close-up review): every era label (BEFORE THE MILL,
+    THE SETTLEMENT, THE LAST ICE) was drawn with block(), which is the
+    module documented as "AR overlay elements that are ANCHORED TO THE
+    REAL SCENE and tracked" -- arlabel.py's own words, and reticle()'s own
+    docstring is blunter still: "the convergence IS the recognition
+    happening". block()'s leader line is the same claim: "'attached' is
+    the whole claim." None of that is true here. dak/settle/ice are drawn
+    reconstructions; nothing recognised them, nothing is tracking them,
+    there is no device in this story doing either. A thin dashed line
+    dragged across open grass to a floating ring is exactly the "amateur
+    hi-tech overlay" render_one.py's own draw_title() already refuses for
+    the plain documentary montage -- it had just never been checked
+    against the era labels, which reused block() instead because on/lock/
+    open established the pattern first and dak/settle/ice copied it
+    without asking whether the claim still held.
+    The type, scrim and VISUALISATION subtitle carry the same weight as
+    before; only the tracked-object furniture (leader + ring) is gone.
+    Proximity to the figure is the reference now, the way a real title
+    card sits near what it names without pretending to have found it.
+    """
+    bx, by = box_xy
+    a = k
+    al = int(250 * a)
+    sh = int(165 * a)
+    tpx, spx = (max(8, int(round(v * scale))) for v in (TITLE_PX, SUB_PX))
+    f1, f2 = inter(tpx), mono(spx)
+    tw = d.textlength(title, font=f1)
+    sw = sum(d.textlength(c, font=f2) for c in sub) + 4.0 * max(0, len(sub) - 1)
+    x0 = min(max(bx, 92.0), W - 92.0 - max(tw, sw))
+    by = min(max(by, 176.0), H - 196.0)
+
+    wid = max(tw, sw)
+    pad = max(10, int(round(26 * scale)))
+    box = [x0 - pad, by - tpx - 12 * scale, x0 + wid + pad, by + spx + 24 * scale]
+    d.rounded_rectangle(box, radius=14, fill=SCRIM + (int(150 * a),))
+    d.rounded_rectangle(box, radius=14, outline=col + (int(72 * a),), width=2)
+
+    d.rectangle([x0 - 24 * scale, by - tpx + 4, x0 - 18 * scale, by + 30 * scale], fill=SHADOW + (sh,))
+    d.rectangle([x0 - 26 * scale, by - tpx + 2, x0 - 20 * scale, by + 28 * scale], fill=col + (al,))
+    d.text((x0 + 3, by + 3), title, font=f1, fill=SHADOW + (sh,), anchor="ls")
+    d.text((x0, by), title, font=f1, fill=INK + (al,), anchor="ls")
+
+    x = x0
+    for ch in sub:
+        d.text((x + 2, by + spx + 12 * scale), ch, font=f2, fill=SHADOW + (int(200 * a),), anchor="ls")
+        d.text((x, by + spx + 10 * scale), ch, font=f2, fill=col + (int(250 * a),), anchor="ls")
+        x += d.textlength(ch, font=f2) + 4.0
+    return x0, wid
+
+
 # How long the derived outline holds at FULL strength before it eases off.
 # The review: "Let the derived outline/lock state hold visibly for another
 # 0.3-0.5 seconds at full strength. The outline is the evidence that the

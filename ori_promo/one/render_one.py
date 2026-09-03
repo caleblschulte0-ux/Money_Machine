@@ -282,8 +282,23 @@ def snowfall(frame, t, k, near=None):
     return np.clip(frame + lay[..., None] * (58.0 * k), 0, 255)
 
 
-def draw_label(d, anchor, box, title, sub, k, col=CYAN, scale=1.0):
-    LK.block(d, anchor, box, title, sub, k, col, W, H, scale=scale)
+# `lock` is the ONE label in LABELS that names something real and
+# unmodified in frame (a real waterfall, a real river) -- the device
+# actually locking onto what the wearer is looking at, which is the claim
+# block()'s leader-and-ring grammar makes. Every other key in LABELS
+# (dak/settle/ice) names a GENERATED reconstruction: nothing recognised
+# it, nothing is tracking it, so it gets labelkit.recon_block instead --
+# same type, same scrim, no tracked-object furniture it has no claim to.
+# See labelkit.recon_block's docstring for the "middle school" finding
+# that produced this split.
+RECOGNITION_LABELS = {"lock"}
+
+
+def draw_label(d, anchor, box, title, sub, k, beat, col=CYAN, scale=1.0):
+    if beat in RECOGNITION_LABELS:
+        LK.block(d, anchor, box, title, sub, k, col, W, H, scale=scale)
+    else:
+        LK.recon_block(d, box, title, sub, k, col, W, H, scale=scale)
 
 
 def draw_title(d, t, dur, title, sub, t0, scale=1.0):
@@ -443,13 +458,18 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                 figs, fpaths, cuts):
             foot = path[min(i, len(path) - 1)]
             lt = t - t0
-            if lt < -0.55:
-                continue
             if lt < 0:
-                showing = True
-                AR.reticle(d, (foot[0], foot[1] - hpx * 0.5), t - (t0 - 0.55),
-                           dur=0.55, col=CYAN, a=235)
                 continue
+            # NO RECOGNITION RETICLE ON A RECONSTRUCTION. This used to draw
+            # AR.reticle() for 0.55s before every era figure arrived --
+            # arlabel.py's own words, "the convergence IS the recognition
+            # happening". Every figure that reaches this loop (dak/settle/
+            # mam) is generated; nothing recognised it, so a converging
+            # scan ring in front of it was staging a detection that never
+            # happened. Found on the same "middle school production" pass
+            # that produced labelkit.recon_block -- the figure now simply
+            # arrives on its resolve line, which is the honest version of
+            # this beat's claim.
             k = min(1.0, lt / build)
             # THE FIGURE MAY LEAVE. On the closer each era is scrubbed
             # through rather than assembled, so it fades back out over
@@ -492,7 +512,7 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                 k *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
                 if k > 0:
                     draw_label(d, (cx, cy), (cx + off[0], cy + off[1]), title, sub, k,
-                               scale=lscale)
+                               beat, scale=lscale)
 
         # THE HONESTY TAG FOLLOWS THE FIGURES, NOT THE BEAT.
         # It used to be drawn whenever the BEAT contained figures, which on
