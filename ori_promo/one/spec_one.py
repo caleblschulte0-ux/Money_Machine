@@ -39,7 +39,7 @@
 # footage was never shot for sound. Score, confirmation ticks and
 # narration only. See one/vo_one.py.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 69.1
+TOTAL = 67.1
 
 # beat, clip, in-point, start, dur, what the beat does
 #
@@ -86,7 +86,18 @@ BEATS = [
  # ---- ACT 2: THE PRODUCT. What it is, on a face, and the act of using
  # it -- compressed, but the SAME footage: in-point 7.0 on IMG_6799,
  # same reason as always (the clip is only 12.4s long).
- ("prod", "6799",  7.0, 6.0, 5.0, "the wearer, the glasses on him, the whole park in front"),
+ # DURATION 5.0 -> 3.0, v23. A bulk re-time (v22, adding `map`/`sync`)
+ # silently widened this from its original 3.0s to 5.0s with no reason
+ # tied to the footage -- IMG_6799 is only 12.37s long and this window ran
+ # to 12.0s, 0.37s from the clip's own end. Operator: "you're seeing my
+ # hands start to shake at the end." Confirmed both ways: shotqc tail
+ # rises from 0.50 (ratio 0.18) at 3.0s to 0.71 (ratio 1.00) at 5.0s --
+ # neither crosses the automated flag thresholds, same blind spot as the
+ # `off` beat earlier -- and frame-by-frame from 9.6-12.2s shows the
+ # framing visibly sliding as the shot approaches its own end. Back to
+ # 3.0s, the duration that was actually gated clean before this beat's
+ # timing was touched for an unrelated reason.
+ ("prod", "6799",  7.0, 6.0, 3.0, "the wearer, the glasses on him, the whole park in front"),
  # ---- ONE CONTINUOUS SHOT, STILL CUT INTO THREE BEATS, JUST SHORTER.
  # `on`, `lock` and `open` are consecutive windows of IMG_6806 with NO
  # GAP -- 8.4-10.7, 10.7-13.2, 13.2-16.4 -- so the in-points are DERIVED
@@ -96,9 +107,9 @@ BEATS = [
  # (8.6-9.0 on IMG_6806's own clock) and both new durations still cover
  # it, so the causal chain -- reach, recognise, reveal -- is intact, just
  # faster.
- ("on",   "6806",  8.4, 11.0, 2.3, "he raises a hand to the temple — he is switching it on"),
- ("lock", "6806", 10.7, 13.3, 2.5, "the glasses recognise the falls and name them"),
- ("open", "6806", 13.2, 15.8, 3.2, "anchored to the real place — the capability, stated correctly"),
+ ("on",   "6806",  8.4, 9.0, 2.3, "he raises a hand to the temple — he is switching it on"),
+ ("lock", "6806", 10.7, 11.3, 2.5, "the glasses recognise the falls and name them"),
+ ("open", "6806", 13.2, 13.8, 3.2, "anchored to the real place — the capability, stated correctly"),
  # ---- `map`: THE SITE MAP, v21. Operator: "it needs that sky view map
  # that kinda shows what points in the falls we would be doing what, which
  # I made and gave you... if you don't like the way it looks, fine, but
@@ -119,7 +130,7 @@ BEATS = [
  # (like `end`), not a panned or zoomed plate -- a photo card does not
  # need to move to read, and holding it keeps every pin anchor a fixed
  # pixel rather than a tracked one.
- ("map",  "MAP1",  0.0, 19.0, 6.8, "the site map — his own legend, on the real park"),
+ ("map",  "MAP1",  0.0, 17.0, 6.8, "the site map — his own legend, on the real park"),
  # ---- `sync`: GROUP SYNC AND NO BLEED. v22. Operator: "you never talk
  # about the cool, like, features I mentioned earlier, how we are going to
  # make it so if you're in a group, your stuff will sync. If you're not in
@@ -133,13 +144,13 @@ BEATS = [
  # one/sync_overlay.py. Same real aerial plate as `map`, pushed in on the
  # middle of the park, so the two beats read as one information section
  # over the same ground.
- ("sync", "MAP2",  0.0, 25.8, 6.8, "group sync, and the boundary another group's audio does not cross"),
+ ("sync", "MAP2",  0.0, 23.8, 6.8, "group sync, and the boundary another group's audio does not cross"),
  # ---- `reach`: walking is the trigger, not a drawn control. v18, timing
  # only compressed in v19. IMG_6797@40.0, gated clean at every duration
  # tried (see rounds/r106): mid 1.87 tail 1.76 ratio 0.94 drift 7.8% peak
  # 4.0 at 2.5s, no flags. Start moved 17.0 -> 21.5, v21, to make room for
  # `map`.
- ("reach", "6797", 40.0, 32.6, 2.5, "he walks, and the past is where he arrives"),
+ ("reach", "6797", 40.0, 30.6, 2.5, "he walks, and the past is where he arrives"),
  # ---- THE ERAS ARE BACK. v22, on direct operator instruction: "we took
  # out the AI cuts of the settlers and the natives, which is bad because
  # those were supposed to stay in."
@@ -159,8 +170,8 @@ BEATS = [
  # children nearly the mother's height). fam3_s17.jpg has visible feet on
  # three of four figures and correct adult/child proportion, which is the
  # defect fixed rather than re-shipped.
- ("dak",  "6804", 10.0, 35.1, 5.0, "before the mill, the family answers where he has stopped"),
- ("settle", "6805", 70.3, 40.1, 4.5, "the settlement era, further up the same bank"),
+ ("dak",  "6804", 10.0, 33.1, 5.0, "before the mill, the family answers where he has stopped"),
+ ("settle", "6805", 70.3, 38.1, 4.5, "the settlement era, further up the same bank"),
  # ---- ACT 3: THE DEMO. `dak` AND `more` ARE GONE. v20, on direct
  # operator instruction, and this is a REMOVAL, not a taste note.
  # Operator, asked directly whether there is a Dakota cultural advisor or
@@ -193,9 +204,9 @@ BEATS = [
  # `mam` and `now` DELIBERATELY KEEP THE REAL PLATE -- the moment the
  # wearer is on screen, the ground under him is the actual ground, which
  # is the one claim this whole film rests on.
- ("ice",  "ICE1",  0.0, 44.6, 4.5, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 49.1, 5.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 54.1, 4.5, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
+ ("ice",  "ICE1",  0.0, 42.6, 4.5, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 47.1, 5.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ ("now",  "6804", 34.0, 52.1, 4.5, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
  # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
  # again, which is the only honest way to end a film about a device that
  # is not on your face right now.
@@ -217,9 +228,9 @@ BEATS = [
  # show it. `reach` and `ice` have real absolute tail motion too (1.76,
  # 1.01) but it is the WALKING SUBJECT and a legitimate pan respectively,
  # confirmed by looking at the frames -- not a settle-down artifact.
- ("off",  "6803",  2.5, 58.6, 3.0, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 61.6, 4.0, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 65.6, 3.5, "held from walk's last frame — which is PRESENT DAY"),
+ ("off",  "6803",  2.5, 56.6, 3.0, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 59.6, 4.0, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 63.599999999999994, 3.5, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice

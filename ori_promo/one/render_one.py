@@ -477,9 +477,9 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                             shadow_strength=shw, contact=ct)
 
         if beat == "map":
-            map_overlay.draw_map(d, t, dur)
+            map_overlay.draw_map(img, t, dur)
         if beat == "sync":
-            sync_overlay.draw_sync(d, t, dur)
+            sync_overlay.draw_sync(img, t, dur)
 
         if lab and lpath:
             # 6th field is an optional label SCALE; absent means 1.0, so

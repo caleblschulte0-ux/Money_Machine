@@ -43,7 +43,27 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "park_map_plate.p
 W, H = 1920, 1080
 SRC_CLIP = "6803"
 SRC_T = 1.0
-PHOTO_H = 365          # crop above this row is clear of the wearer at SRC_T
+CROP_H = 365           # crop above this row is clear of the wearer at SRC_T
+PHOTO_H = 720          # the BUILT plate's photo band height -- see v23 note
+
+# v23: THE MAP LOOKED LIKE A THUMBNAIL, NOT A MAP. Operator: "the map looks
+# like shit." v21/v22 held the real crop at its native 365px and let it sit
+# as a thin strip across the top third of the frame, with the bottom two
+# thirds empty dark card waiting for a legend -- next to nothing to look
+# at. The photo itself was never the complaint (it is real, un-degraded
+# footage); the PRESENTATION was a small picture floating in a mostly
+# empty frame, which reads as unfinished, not as a map.
+# Fix: the crop is stretched vertically (2x, 365 -> 720) to fill nearly
+# the whole 2.39 visible window (138-942) instead of a third of it. This
+# is an ANAMORPHIC stretch, not a crop -- cropping to fill height would
+# have thrown away either the mill (left edge) or the rapids (right edge),
+# since between them the four landmarks already span the crop's full
+# width. A stretch keeps all four in frame at the cost of slightly taller
+# proportions on the buildings, which a moving-grain, vignetted, graded
+# frame does not make obvious. The legend moves from a separate dark
+# section below the photo to a compact inset card OVER the photo's own
+# calm grass area (see one/map_overlay.py) -- a floating key, the way a
+# real map's legend sits on the map, not a second slide underneath it.
 
 
 def _grab_frame():
@@ -59,7 +79,9 @@ def _grab_frame():
 
 def build():
     frame = _grab_frame()
-    photo = frame[0:PHOTO_H, 0:W].astype(np.float32)
+    crop = frame[0:CROP_H, 0:W]
+    crop = cv2.bilateralFilter(crop, 7, 40, 40)
+    photo = cv2.resize(crop.astype(np.float32), (W, PHOTO_H), interpolation=cv2.INTER_CUBIC)
 
     canvas = np.zeros((H, W, 3), np.float32)
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
@@ -71,18 +93,22 @@ def build():
     y0 = 138          # lands the photo just inside the 2.39 scope bar
     canvas[y0:y0 + PHOTO_H, 0:W] = photo
 
-    # soft defocused echo of the photo's own bottom rows, fading to 0
-    src = photo[-120:]
-    fade_h = 170
-    stretched = cv2.resize(src, (W, fade_h), interpolation=cv2.INTER_LINEAR)
-    stretched = cv2.GaussianBlur(stretched, (0, 0), 14)
-    for i in range(fade_h):
-        a = (1.0 - i / fade_h) ** 1.6
-        canvas[y0 + PHOTO_H + i, 0:W] = (
-            canvas[y0 + PHOTO_H + i, 0:W] * (1 - a) + stretched[i] * a)
+    # a short soft fade into the dark below, so the photo's bottom edge
+    # does not end on a hard line -- much shorter now that the photo
+    # itself fills almost the whole visible window
+    fade_h = min(60, H - (y0 + PHOTO_H))
+    if fade_h > 0:
+        src = photo[-40:]
+        stretched = cv2.GaussianBlur(
+            cv2.resize(src, (W, fade_h), interpolation=cv2.INTER_LINEAR), (0, 0), 10)
+        for i in range(fade_h):
+            a = (1.0 - i / fade_h) ** 1.6
+            canvas[y0 + PHOTO_H + i, 0:W] = (
+                canvas[y0 + PHOTO_H + i, 0:W] * (1 - a) + stretched[i] * a)
 
     cv2.imwrite(OUT, canvas.astype(np.uint8))
-    print(f"  wrote {OUT} ({W}x{H}, photo band y={y0}-{y0+PHOTO_H})")
+    print(f"  wrote {OUT} ({W}x{H}, photo band y={y0}-{y0+PHOTO_H}, "
+          f"stretched from {CROP_H}px)")
 
 
 SYNC_OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -101,11 +127,12 @@ def build_sync():
     legible, instead of over the busy rock shelf.
     """
     frame = _grab_frame()
-    # centre of the park layout, then scaled back up to full width
-    crop = frame[40:PHOTO_H, 430:1500]
-    band = cv2.resize(crop, (W, int(round(crop.shape[0] * W / crop.shape[1]))),
-                      interpolation=cv2.INTER_CUBIC).astype(np.float32)
-    bh = band.shape[0]
+    # centre of the park layout, then filled to nearly the whole visible
+    # window -- same v23 fix as build(), same reasoning: fill the frame,
+    # don't leave two thirds of it empty waiting for a legend.
+    crop = frame[40:CROP_H, 430:1500]
+    crop = cv2.bilateralFilter(crop, 7, 40, 40)
+    band = cv2.resize(crop.astype(np.float32), (W, PHOTO_H), interpolation=cv2.INTER_CUBIC)
 
     canvas = np.zeros((H, W, 3), np.float32)
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
@@ -115,21 +142,20 @@ def build_sync():
     canvas[..., 2] = v * 1.10
 
     y0 = 138
-    keep = min(bh, 942 - y0)
-    canvas[y0:y0 + keep, 0:W] = band[:keep]
+    canvas[y0:y0 + PHOTO_H, 0:W] = band
 
-    src = band[max(0, keep - 120):keep]
-    fade_h = min(170, H - (y0 + keep))
-    if fade_h > 0 and src.shape[0] > 0:
+    fade_h = min(60, H - (y0 + PHOTO_H))
+    if fade_h > 0:
+        src = band[-40:]
         stretched = cv2.GaussianBlur(
-            cv2.resize(src, (W, fade_h), interpolation=cv2.INTER_LINEAR), (0, 0), 14)
+            cv2.resize(src, (W, fade_h), interpolation=cv2.INTER_LINEAR), (0, 0), 10)
         for i in range(fade_h):
             a = (1.0 - i / fade_h) ** 1.6
-            canvas[y0 + keep + i, 0:W] = (
-                canvas[y0 + keep + i, 0:W] * (1 - a) + stretched[i] * a)
+            canvas[y0 + PHOTO_H + i, 0:W] = (
+                canvas[y0 + PHOTO_H + i, 0:W] * (1 - a) + stretched[i] * a)
 
     cv2.imwrite(SYNC_OUT, canvas.astype(np.uint8))
-    print(f"  wrote {SYNC_OUT} ({W}x{H}, photo band y={y0}-{y0+keep})")
+    print(f"  wrote {SYNC_OUT} ({W}x{H}, photo band y={y0}-{y0+PHOTO_H})")
 
 
 def ensure_clip(dst=None, dur=8.0, fps=30, src=None):

@@ -18,13 +18,22 @@ THE PHOTO IS REAL, ORI'S OWN FOOTAGE. It is the clean upper portion of
 IMG_6803 (the same clip `off` uses) -- shot from the observation tower,
 before the wearer leans onto the rail, at the one moment the frame is
 completely clear of him. No stock image, no generated satellite plate.
-Built in ai/map/park_map_plate.png: the real 1920x365 crop, laid into a
-1920x1080 card with a soft defocused fade below it (not a hard crop, not a
-darkening filter) down to the film's own dark palette, where the legend key
-sits. That plate is a STATIC hold for the whole beat -- deliberately, so
-every pin below can use a fixed pixel anchor instead of needing per-frame
-tracking, which a photo card does not need and a moving plate would have
-forced.
+
+v23 REBUILD. Operator, on the v21/v22 version: "the map looks like shit."
+Two separate problems, both fixed:
+  1. THE PHOTO WAS A THUMBNAIL. It held its native crop height (365px) and
+     let it float as a thin strip across the top third of the frame, with
+     two thirds of the frame empty dark card below it. ai/map/
+     build_map_plate.py now stretches that same real crop to fill nearly
+     the whole visible window (720px) -- see that file's v23 note for why
+     a stretch, not a re-crop.
+  2. THE PINS AND LEGEND WERE THIN WIREFRAME. Outlined rings, a thin
+     leader line, a plain dark rectangle for the legend. v23 gives each
+     pin a soft glow (the same blurred-aura technique as the sync beat
+     right after it, for visual consistency between the two) and moves
+     the legend from a big separate panel to a compact floating card, the
+     way a real map's legend sits ON the map rather than in a second
+     panel underneath it.
 
 Four pins, placed on real, identifiable features of THIS photo -- not
 invented locations:
@@ -41,6 +50,8 @@ standing rule as the rest of the film.
 import os
 import sys
 
+from PIL import Image, ImageDraw, ImageFilter
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import labelkit as LK
 
@@ -48,20 +59,21 @@ INK = (250, 250, 248)
 DIM = (198, 201, 203)
 
 BLUE = (120, 176, 236)
-PURPLE = (186, 156, 224)
-ORANGE = (238, 168, 108)
+PURPLE = (196, 162, 230)
+ORANGE = (240, 168, 104)
 GREEN = (150, 208, 158)
 
-# (x, y) in the FULL 1920x1080 plate (photo already offset to y=138..503),
-# colour, short on-frame tag, legend label, stagger t0 (seconds into beat)
+# (x, y) read directly off ai/map/park_map_plate.png (the v23, frame-filling
+# plate -- NOT the old 365px-tall crop's coordinates), colour, on-frame tag,
+# legend label, stagger t0 (seconds into beat)
 PINS = [
-    (1295, 368, BLUE,   "THE FALLS",        "VISUAL SCENES",   0.35),
-    (150,  318, PURPLE, "THE MILL",         "AUDIO NARRATION", 0.65),
-    (1680, 380, ORANGE, "THE RAPIDS",       "AMBIENT SOUND",   0.95),
-    (470,  278, GREEN,  "THE OVERLOOK",     "LOOKOUT POINTS",  1.25),
+    (1230, 650, BLUE,   "THE FALLS",     "VISUAL SCENES",   0.35),
+    (140,  560, PURPLE, "THE MILL",      "AUDIO NARRATION", 0.65),
+    (1620, 500, ORANGE, "THE RAPIDS",    "AMBIENT SOUND",   0.95),
+    (390,  385, GREEN,  "THE OVERLOOK",  "LOOKOUT POINTS",  1.25),
 ]
 
-LEGEND_XY = (96, 760)
+LEGEND_XY = (90, 700)
 
 
 def _ease(k):
@@ -69,17 +81,31 @@ def _ease(k):
     return k * k * (3 - 2 * k)
 
 
+def _glow(x, y, col, k, r=46):
+    if k <= 0.002:
+        return None
+    pad = int(r * 2.2)
+    size = pad * 2
+    layer = Image.new("L", (size, size), 0)
+    d = ImageDraw.Draw(layer)
+    d.ellipse((size / 2 - r, size / 2 - r, size / 2 + r, size / 2 + r),
+              fill=int(200 * k))
+    layer = layer.filter(ImageFilter.GaussianBlur(r * 0.5))
+    rgba = Image.new("RGBA", (size, size), col + (0,))
+    rgba.putalpha(layer)
+    return rgba, (int(x - pad), int(y - pad))
+
+
 def _pin(d, x, y, col, tag, k):
     if k <= 0.002:
         return
     a = int(255 * k)
-    r = int(7 + 3 * (1.0 - k) * 2)          # settles from a slightly larger ring
-    d.ellipse((x - r, y - r, x + r, y + r), outline=col + (a,), width=3)
-    d.ellipse((x - 3, y - 3, x + 3, y + 3), fill=col + (a,))
-    # short leader down-right to the tag, same vocabulary as LK's label leader
-    lx, ly = x + 26, y + 34
-    d.line([(x + 6, y + 6), (lx - 4, ly - 10)], fill=col + (int(a * 0.85),), width=2)
-    f = LK.inter(24, "SemiBold")
+    r = int(8 + 3 * (1.0 - k) * 2)          # settles from a slightly larger ring
+    d.ellipse((x - r, y - r, x + r, y + r), fill=col + (a,))
+    d.ellipse((x - r, y - r, x + r, y + r), outline=(255, 255, 255, int(a * 0.9)), width=2)
+    lx, ly = x + 28, y + 36
+    d.line([(x + 8, y + 8), (lx - 4, ly - 10)], fill=col + (int(a * 0.85),), width=2)
+    f = LK.inter(27, "Bold")
     d.text((lx + 2, ly + 2), tag, font=f, fill=(5, 8, 10, int(a * 0.6)), anchor="lm")
     d.text((lx, ly), tag, font=f, fill=INK + (a,), anchor="lm")
 
@@ -87,13 +113,14 @@ def _pin(d, x, y, col, tag, k):
 def _legend(d, x0, y0, k):
     if k <= 0.002:
         return
-    a = int(230 * k)
+    a = int(235 * k)
     rows = [(p[2], p[4]) for p in PINS]
-    w = 420
-    h = 34 * len(rows) + 56
-    d.rectangle([x0 - 22, y0 - 44, x0 + w, y0 + h - 44],
-                fill=(6, 9, 12, int(150 * k)))
-    ftitle = LK.inter(30, "Bold")
+    w = 380
+    h = 34 * len(rows) + 58
+    d.rounded_rectangle([x0 - 24, y0 - 46, x0 + w, y0 + h - 46], radius=14,
+                        fill=(6, 9, 12, int(178 * k)),
+                        outline=INK + (int(a * 0.35),), width=1)
+    ftitle = LK.inter(28, "Bold")
     d.text((x0, y0 - 18), "EXPERIENCE ZONES", font=ftitle, fill=INK + (a,),
            anchor="lm")
     fsub = LK.mono(20)
@@ -105,13 +132,22 @@ def _legend(d, x0, y0, k):
         fy += 34
 
 
-def draw_map(d, t, dur):
+def draw_map(img, t, dur):
     """Called every frame of the `map` beat. Fades in, holds, fades out."""
     k_in = _ease(min(1.0, t / 0.5))
     k_out = _ease(min(1.0, max(0.0, (dur - 0.12 - t) / 0.45)))
     base_k = k_in * k_out
     if base_k <= 0.002:
         return
+
+    for x, y, col, tag, label, t0 in PINS:
+        pk = _ease(min(1.0, max(0.0, (t - t0) / 0.45))) * base_k
+        glow = _glow(x, y, col, pk)
+        if glow:
+            layer, pos = glow
+            img.alpha_composite(layer, pos)
+
+    d = ImageDraw.Draw(img)
     for x, y, col, tag, label, t0 in PINS:
         pk = _ease(min(1.0, max(0.0, (t - t0) / 0.45))) * base_k
         _pin(d, x, y, col, tag, pk)
