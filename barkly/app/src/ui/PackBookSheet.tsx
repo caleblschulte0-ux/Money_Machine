@@ -1,13 +1,23 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RelationshipProfile, RelationshipLore } from '../barkly/relationship';
+import { Treasure, TREASURES } from '../world/stash';
 import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
+import { NPC_ART } from './npcArt';
+import TreasureIcon from './TreasureIcon';
+
+const BARKLY_FACE = require('../../assets/barkly/renders/face.png');
+
+/** Read from the list, never typed: adding a treasure must move the total. */
+const TREASURE_TOTAL = TREASURES.length;
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   profile: RelationshipProfile;
+  /** Everything he has dug up. Drawn here; it used to be text in Settings. */
+  stash: Treasure[];
 }
 
 /**
@@ -26,6 +36,43 @@ interface Props {
 
 function Tape({ side = 'left' }: { side?: 'left' | 'right' }) {
   return <View style={[styles.tape, side === 'right' && styles.tapeRight]} pointerEvents="none" />;
+}
+
+/**
+ * Colour carries the KIND of a receipt, so the pile reads before it is read.
+ * It used to alternate by index parity, which meant a beef file and a friend
+ * file were the same colour half the time and the palette said nothing.
+ */
+const LORE_LOOK: Record<RelationshipLore['kind'], { fill: string; edge: string; kicker: string; tilt: string }> = {
+  friendship: { fill: color.goodWell, edge: color.goodLine, kicker: color.good, tilt: '-0.5deg' },
+  rivalry: { fill: color.dangerWell, edge: color.dangerLine, kicker: color.danger, tilt: '0.5deg' },
+  treasure: { fill: color.goldWell, edge: color.gold, kicker: color.goldInk, tilt: '-0.4deg' },
+  obsession: { fill: color.violetWell, edge: color.violet, kicker: color.violetDeep, tilt: '0.4deg' },
+};
+
+/**
+ * The face or the object a receipt is about.
+ *
+ * An obsession has no subject art on purpose — it is an idea, not a thing —
+ * and gets a drawn thought-spiral rather than a blank hole or a stock icon.
+ */
+function LoreSubject({ item }: { item: RelationshipLore }) {
+  const look = LORE_LOOK[item.kind];
+  const subject = item.subject;
+  return (
+    <View style={[styles.subjectFrame, { borderColor: look.edge, backgroundColor: color.card }]}>
+      {subject?.art === 'npc' ? (
+        <Image source={NPC_ART[subject.id]} style={styles.subjectPhoto} resizeMode="contain" />
+      ) : subject?.art === 'treasure' ? (
+        <TreasureIcon id={subject.id} size={38} />
+      ) : (
+        <View style={styles.spiral}>
+          <View style={[styles.spiralRing, { borderColor: look.edge }]} />
+          <View style={[styles.spiralRing, styles.spiralInner, { borderColor: look.kicker }]} />
+        </View>
+      )}
+    </View>
+  );
 }
 
 function TraitStamp({ label, detail, index }: { label: string; detail: string; index: number }) {
@@ -47,7 +94,7 @@ function loreLabel(item: RelationshipLore): string {
   }
 }
 
-export default function PackBookSheet({ visible, onClose, profile }: Props) {
+export default function PackBookSheet({ visible, onClose, profile, stash }: Props) {
   const stageDots = Array.from({ length: 5 }, (_, i) => i < profile.stage.level);
 
   return (
@@ -72,8 +119,26 @@ export default function PackBookSheet({ visible, onClose, profile }: Props) {
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             <View style={styles.cover}>
               <Tape />
-              <Text style={styles.coverKicker}>THIS PARTICULAR BARKLY</Text>
-              <Text style={styles.archetype}>{profile.archetype}</Text>
+              {/*
+                The cover of the book about a specific dog now has the dog on
+                it. Everything above this line was type on a dark card; the
+                first thing a player saw on the most personal screen in the app
+                was a headline.
+              */}
+              <View style={styles.coverTop}>
+                <View style={styles.coverWords}>
+                  <Text style={styles.coverKicker}>THIS PARTICULAR BARKLY</Text>
+                  <Text style={styles.archetype}>{profile.archetype}</Text>
+                </View>
+                <View style={styles.portraitFrame}>
+                  <Image
+                    source={BARKLY_FACE}
+                    style={styles.portrait}
+                    resizeMode="contain"
+                    accessibilityLabel="Barkly"
+                  />
+                </View>
+              </View>
               <Text style={styles.tagline}>{profile.tagline}</Text>
 
               <View style={styles.stageRow} accessibilityLabel={`Pack stage ${profile.stage.label}`}>
@@ -144,13 +209,54 @@ export default function PackBookSheet({ visible, onClose, profile }: Props) {
               <Text style={styles.emptyLine}>Friends, enemies, sacred junk and ridiculous fixations will leave receipts here.</Text>
             ) : (
               <View style={styles.receipts}>
-                {profile.lore.map((item, index) => (
-                  <View key={item.id} style={[styles.receipt, index % 2 === 0 ? styles.receiptA : styles.receiptB]}>
-                    <Text style={styles.receiptKicker}>{loreLabel(item)}</Text>
-                    <Text style={styles.receiptTitle}>{item.title}</Text>
-                    <Text style={styles.receiptDetail}>{item.detail}</Text>
-                  </View>
-                ))}
+                {profile.lore.map((item) => {
+                  const look = LORE_LOOK[item.kind];
+                  return (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.receipt,
+                        { backgroundColor: look.fill, borderColor: look.edge, transform: [{ rotate: look.tilt }] },
+                      ]}
+                    >
+                      <LoreSubject item={item} />
+                      <View style={styles.receiptWords}>
+                        <Text style={[styles.receiptKicker, { color: look.kicker }]}>{loreLabel(item)}</Text>
+                        <Text style={styles.receiptTitle}>{item.title}</Text>
+                        <Text style={styles.receiptDetail}>{item.detail}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            <Text style={styles.section}>The stash</Text>
+            {/*
+              This lived in SETTINGS as a bulleted list of names, which is
+              where an app puts its cache size. It is the collectible spine of
+              the game: 24 dug-up objects with the funniest writing in the
+              product attached to them. Drawn, on a shelf, in the book about
+              what the two of you have.
+            */}
+            {stash.length === 0 ? (
+              <Text style={styles.emptyLine}>Empty. There is a dig spot at the park, and the sand at the beach gives things up too.</Text>
+            ) : (
+              <View style={styles.shelf}>
+                <View style={styles.shelfGrid}>
+                  {stash.map((t) => (
+                    <View key={t.id} style={styles.find} accessibilityLabel={t.name}>
+                      <View style={styles.findArt}>
+                        <TreasureIcon id={t.id} size={40} />
+                      </View>
+                      <Text style={styles.findName} numberOfLines={3}>{t.name}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.shelfBoard} />
+                <Text style={styles.shelfCount}>
+                  {stash.length} of {TREASURE_TOTAL} things he refuses to give back
+                </Text>
               </View>
             )}
 
@@ -219,6 +325,22 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-5deg' }],
   },
   tapeRight: { left: undefined, right: 24, transform: [{ rotate: '6deg' }] },
+  coverTop: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
+  coverWords: { flex: 1, minWidth: 0 },
+  portraitFrame: {
+    width: 78,
+    height: 78,
+    borderRadius: radius.md,
+    borderWidth: 3,
+    borderColor: color.goldSoft,
+    backgroundColor: color.violetDeep,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '2.5deg' }],
+    ...elevation.card,
+  },
+  portrait: { width: '124%', height: '124%' },
   coverKicker: { ...type.micro, color: color.goldSoft },
   archetype: { ...type.display, color: color.paper, marginTop: space.sm },
   tagline: { ...type.body, color: color.inkOn, marginTop: space.sm },
@@ -266,12 +388,52 @@ const styles = StyleSheet.create({
   ritualDetail: { ...type.caption, color: color.inkSoft, marginTop: space.xs },
 
   receipts: { gap: space.sm },
-  receipt: { borderRadius: radius.sm, padding: space.lg, borderWidth: 1, ...elevation.low },
-  receiptA: { backgroundColor: color.well, borderColor: color.line, transform: [{ rotate: '-0.25deg' }] },
-  receiptB: { backgroundColor: color.goldWell, borderColor: color.goldSoft, transform: [{ rotate: '0.25deg' }] },
-  receiptKicker: { ...type.micro, color: color.inkSoft },
+  receipt: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space.md,
+    borderRadius: radius.sm,
+    padding: space.lg,
+    borderWidth: 2,
+    ...elevation.low,
+  },
+  receiptWords: { flex: 1, minWidth: 0 },
+  subjectFrame: {
+    width: 54,
+    height: 54,
+    flexShrink: 0,
+    borderRadius: radius.sm,
+    borderWidth: 2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** The renders are full-body; crop up so the face fills the frame. */
+  subjectPhoto: { width: '150%', height: '150%', marginTop: '-26%' },
+  spiral: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  spiralRing: { position: 'absolute', width: 30, height: 30, borderRadius: radius.pill, borderWidth: 3 },
+  spiralInner: { width: 15, height: 15, borderWidth: 3 },
+  receiptKicker: { ...type.micro },
   receiptTitle: { ...type.strong, color: color.ink, marginTop: space.xs },
-  receiptDetail: { ...type.small, color: color.inkSoft, marginTop: space.xs },
+  receiptDetail: { ...type.small, color: color.inkMid, marginTop: space.xs },
+
+  shelf: { backgroundColor: color.well, borderRadius: radius.md, borderWidth: 2, borderColor: color.gold, padding: space.lg, ...elevation.low },
+  shelfGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
+  find: { width: 74, alignItems: 'center' },
+  findArt: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.sm,
+    backgroundColor: color.card,
+    borderWidth: 2,
+    borderColor: color.goldSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.low,
+  },
+  findName: { ...type.caption, color: color.goldInk, textAlign: 'center', marginTop: space.xs },
+  shelfBoard: { height: 5, borderRadius: radius.pill, backgroundColor: color.gold, marginTop: space.lg },
+  shelfCount: { ...type.caption, color: color.goldInk, marginTop: space.sm, textAlign: 'right', fontStyle: 'italic' },
 
   memoryWall: { gap: space.md },
   memoryCard: { backgroundColor: color.card, borderRadius: radius.xs, paddingHorizontal: space.lg, paddingTop: space.xl, paddingBottom: space.lg, borderWidth: 1, borderColor: color.line, ...elevation.card },

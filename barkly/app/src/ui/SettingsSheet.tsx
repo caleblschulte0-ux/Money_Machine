@@ -16,7 +16,6 @@ import ParentalGate from './ParentalGate';
 import PrivacySheet from './PrivacySheet';
 import { MemoryState } from '../barkly/memory';
 import { BarklyStats } from '../barkly/types';
-import { Treasure } from '../world/stash';
 import { DEFAULT_SHAPE, PITCH_RANGE, RATE_RANGE, VoiceShape } from '../providers/tts/expoSpeechTts';
 
 /**
@@ -39,7 +38,6 @@ interface Props {
   onClose: () => void;
   memory: MemoryState;
   stats: BarklyStats;
-  stash: Treasure[];
   brain: { using: 'primary' | 'fallback'; breakerOpen: boolean; lastFailure?: string };
   modelConfigured: boolean;
   voice: { route: 'barkly' | 'device' | 'silent' | null; muted: boolean };
@@ -139,7 +137,6 @@ export default function SettingsSheet(props: Props) {
     onClose,
     memory,
     stats,
-    stash,
     brain,
     modelConfigured,
     voice,
@@ -212,15 +209,13 @@ export default function SettingsSheet(props: Props) {
             <StatBar label="tummy" value={stats.hunger} invert />
             <StatBar label="bond" value={stats.affection} />
 
-            <Text style={styles.section}>Barkly's stash</Text>
-            {stash.length === 0 && <Text style={styles.empty}>Nothing yet. There's a dig spot at the park…</Text>}
-            {stash.map((t) => (
-              // The names ARE the joke — "a rock that looks like a duck",
-              // "a very old sandwich (do not ask)". They carried an emoji each,
-              // which was both the system's drawing rather than ours and a
-              // second, worse punchline in front of the first.
-              <Text key={t.id} style={styles.row}>· {t.name}</Text>
-            ))}
+            {/*
+              Barkly's stash used to be listed here, as bulleted names. It is
+              the collectible spine of the game and it was sitting in the
+              settings menu next to the provider rows; it is now a shelf of
+              DRAWN objects in the Pack Book, where a player looks to see what
+              the two of them have. See PackBookSheet.
+            */}
 
             <Text style={styles.section}>Providers</Text>
             {/*

@@ -277,3 +277,23 @@ export const NPCS: Record<NpcId, Npc> = {
     ],
   },
 };
+
+/**
+ * The name to PRINT for a bond key.
+ *
+ * Bonds are keyed by whatever wrote them, and not every writer used the
+ * display name — a seeded save keys them by id, so the Pack Book was headed
+ * "duke: generational feud" and the story arc was "The duke Situation" on a
+ * screen whose whole job is to feel authored. Resolve through the roster when
+ * the key names a dog we know; otherwise capitalise, because an unknown dog
+ * still deserves a capital letter.
+ */
+export function displayName(key: string): string {
+  const wanted = key.trim();
+  if (!wanted) return wanted;
+  const hit = (Object.keys(NPCS) as NpcId[]).find(
+    (id) => id === wanted.toLowerCase() || NPCS[id].name.toLowerCase() === wanted.toLowerCase(),
+  );
+  if (hit) return NPCS[hit].name;
+  return wanted[0].toUpperCase() + wanted.slice(1);
+}

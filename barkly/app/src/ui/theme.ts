@@ -48,6 +48,7 @@ export const color = {
   popDeep: '#249FC8',
 
   violet: '#BDA7FF',
+  violetWell: '#EDE4FF',
   violetDeep: '#7253BD',
   mint: '#79E08A',
   mintDeep: '#43AF59',

@@ -107,3 +107,22 @@ export class Stash {
     await this.store.remove(this.key());
   }
 }
+
+/**
+ * Resolve a treasure from the NAME a save stored.
+ *
+ * `character.favoriteTreasure` holds `Treasure.name` verbatim (useBarkly's dig
+ * handler writes `found.name`), because the prompt and Barkly's own lines need
+ * the words, not an id. Anything that wants to DRAW the object has to get back
+ * to the id, so it lives here next to the list rather than as a lookup table
+ * copied into the UI.
+ *
+ * Matching is loose on case and punctuation only — never on partial words, or
+ * "a sock (previously owned)" would answer to "sock" from a shark tooth.
+ */
+export function treasureByName(name: string | undefined): Treasure | undefined {
+  if (!name) return undefined;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const wanted = norm(name);
+  return TREASURES.find((t) => norm(t.name) === wanted);
+}

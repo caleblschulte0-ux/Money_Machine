@@ -86,16 +86,11 @@ import {
   spriteScale as scaleForScreen,
 } from './layout';
 import { NPCS, NpcId } from '../world/npcs';
+import { NPC_ART } from './npcArt';
 import { bondFor } from '../barkly/character';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Renderer = process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyView : BarklyPhotoView;
-
-const NPC_ART: Record<NpcId, ReturnType<typeof require>> = {
-  biscuit: require('../../assets/barkly/renders/npcs/biscuit_front.png'),
-  pepper: require('../../assets/barkly/renders/npcs/pepper_front.png'),
-  duke: require('../../assets/barkly/renders/npcs/duke_front.png'),
-};
 
 /**
  * Where the other dogs stand — and how far BACK they stand.
@@ -1201,7 +1196,7 @@ export default function BarklyRoom() {
       <FoodSheet visible={foodOpen} onClose={() => setFoodOpen(false)} onOpenShop={() => openOnly(setStoreOpen)} wallet={barkly.wallet} hungry={snapshot.stats.hunger > 45} onFeed={(itemId) => void barkly.feed(itemId)} />
       {playtest && <PlaytestSheet visible={playtestOpen} onClose={() => setPlaytestOpen(false)} />}
       <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={(id) => { const r = barkly.buy(id); if (r?.ok) react('delight'); return r; }} onEquip={barkly.equip} devMode={barkly.devMode} />
-      <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} />
+      <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} stash={barkly.stashItems} />
       <AdventureSheet visible={planOpen} onClose={() => setPlanOpen(false)} adventure={barkly.adventure} />
       <EncounterSheet
         moment={barkly.activeEncounter ? momentFromEncounter(barkly.activeEncounter) : null}
@@ -1226,7 +1221,6 @@ export default function BarklyRoom() {
         onClose={() => setSettingsOpen(false)}
         memory={barkly.memorySnapshot()}
         stats={snapshot.stats}
-        stash={barkly.stashItems}
         brain={{
           using: barkly.dialogueStatus().using,
           breakerOpen: barkly.dialogueStatus().breakerOpen,

@@ -9,6 +9,15 @@ import { sanitize } from './facts';
 import { MemoryState } from './memory';
 import { deriveStoryArc, describeStory, StoryArc } from './story';
 import { BarklyStats } from './types';
+import { displayName, NPCS, NpcId } from '../world/npcs';
+import { treasureByName } from '../world/stash';
+
+/** The bond map is keyed on display names ("Duke"); the art is keyed on ids. */
+function npcByName(who: string): NpcId | undefined {
+  const wanted = who.trim().toLowerCase();
+  const hit = (Object.keys(NPCS) as NpcId[]).find((id) => NPCS[id].name.toLowerCase() === wanted);
+  return hit;
+}
 
 export type BondTraitId = 'confidant' | 'trainer' | 'adventurer' | 'collector' | 'socialite' | 'velcro';
 
@@ -37,12 +46,29 @@ export interface RelationshipRitual {
   signature: boolean;
 }
 
+/**
+ * What a receipt is ABOUT, when it is about something the app can draw.
+ *
+ * The Pack Book is the screen where the player is supposed to see a specific
+ * dog and a specific mess, and every row of it was words. A rival is a face we
+ * already have a render of; a sacred object is a thing we can draw. Resolving
+ * that here rather than in the sheet keeps the UI from parsing `id` strings
+ * like `rival-Duke` back into art, which is the sort of thing that survives
+ * until someone renames a dog.
+ *
+ * `undefined` is normal: an obsession is an idea, and it has no portrait.
+ */
+export type LoreSubject =
+  | { art: 'npc'; id: NpcId }
+  | { art: 'treasure'; id: string };
+
 export interface RelationshipLore {
   id: string;
   title: string;
   detail: string;
   kind: 'friendship' | 'rivalry' | 'treasure' | 'obsession';
   strength: number;
+  subject?: LoreSubject;
 }
 
 export interface CoreMemory {
@@ -200,7 +226,8 @@ function coreMemories(memory: MemoryState): CoreMemory[] {
 function loreFrom(character?: CharacterState): RelationshipLore[] {
   if (!character) return [];
   const lore: RelationshipLore[] = [];
-  for (const [who, bond] of Object.entries(character.socialBonds ?? {})) {
+  for (const [key, bond] of Object.entries(character.socialBonds ?? {})) {
+    const who = displayName(key);
     const stage = bond.kind === 'friend' ? friendshipStage(bond.encounters) : rivalryStage(bond.encounters);
     // The pack book says what is NEXT, not just what is. A relationship
     // ladder you cannot see the top of is a number, not an arc.
@@ -213,6 +240,10 @@ function loreFrom(character?: CharacterState): RelationshipLore[] {
         : `${bond.encounters} incident${bond.encounters === 1 ? '' : 's'}. ${stage.blurb} ${progress.hint}`,
       kind: bond.kind === 'friend' ? 'friendship' : 'rivalry',
       strength: bond.encounters,
+      subject: (() => {
+        const id = npcByName(who);
+        return id ? { art: 'npc' as const, id } : undefined;
+      })(),
     });
   }
   if (character.favoriteTreasure) {
@@ -222,6 +253,10 @@ function loreFrom(character?: CharacterState): RelationshipLore[] {
       detail: `${sanitize(character.favoriteTreasure, 100)} is currently treated as museum-grade property.`,
       kind: 'treasure',
       strength: Math.max(1, character.treasuresFound ?? 1),
+      subject: (() => {
+        const t = treasureByName(character.favoriteTreasure);
+        return t ? { art: 'treasure' as const, id: t.id } : undefined;
+      })(),
     });
   }
   if (character.obsession) {

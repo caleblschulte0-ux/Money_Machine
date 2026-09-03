@@ -13,6 +13,7 @@
 import { CharacterState, friendshipStage, rivalryStage } from './character';
 import { MemoryState } from './memory';
 import { sanitize } from './facts';
+import { displayName } from '../world/npcs';
 
 export interface StoryArc {
   id: string;
@@ -51,7 +52,8 @@ export function deriveStoryArc(input: StoryInput): StoryArc | undefined {
 
   // A rival + something Barkly loves is instantly a story machine.
   if (rival && rival[1].encounters >= 3 && treasure) {
-    const [who, bond] = rival;
+    const [rawWho, bond] = rival;
+    const who = displayName(rawWho);
     const rivalry = rivalryStage(bond.encounters);
     const intensity: StoryArc['intensity'] = bond.encounters >= 12 ? 4 : bond.encounters >= 6 ? 3 : 2;
     return {

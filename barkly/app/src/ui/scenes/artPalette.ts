@@ -305,3 +305,42 @@ export const DIORAMA = {
   signFace: '#FFF9DE',
   signEdge: '#BC6E1C',
 } as const;
+
+/**
+ * The 24 dug-up treasures, drawn by `ui/TreasureIcon`.
+ *
+ * Beach finds run cooler than park finds on purpose: a shelf holding both
+ * should read as two places he has been, not one prop box.
+ */
+export const TREASURE = {
+  cloth: '#7FB3E8',
+  clothShade: '#4B7FB8',
+  clothCuff: '#FFF3DC',
+  leather: '#C98B4B',
+  leatherShade: '#8A5526',
+  stone: '#A9A296',
+  stoneShade: '#6F6A60',
+  stoneLight: '#D2CCC1',
+  bone: '#FFF4DC',
+  boneShade: '#CBB794',
+  shell: '#FFD9C2',
+  shellShade: '#D08D63',
+  seaGlass: '#7FE0B4',
+  seaGlassShade: '#2F9C71',
+  crab: '#FF7A59',
+  crabShade: '#C0402A',
+  paper: '#F6E7C2',
+  paperShade: '#C6A971',
+  ink: '#4A3A22',
+  kelp: '#3E8B4B',
+  kelpLight: '#69C06B',
+  rubber: '#FFD84D',
+  rubberShade: '#D9A314',
+  bill: '#FF9A33',
+  bread: '#F0C173',
+  breadShade: '#C08838',
+  filling: '#8FC46A',
+  disc: '#5EC8E8',
+  discShade: '#2C7FA0',
+  shine: '#FFFFFF',
+} as const;
