@@ -10,6 +10,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
+import { CARE_DOCK_HEIGHT } from './layout';
 import { BALL, BRASS, DIORAMA, DIRT, ITEM, SAND } from './scenes/artPalette';
 
 function useSpringIn(): Animated.Value {
@@ -20,15 +21,28 @@ function useSpringIn(): Animated.Value {
   return v;
 }
 
-export function FoodBowl({ food = 'dinner' }: { food?: string }) {
+/**
+ * THE BOWL EMPTIES WHEN HE EATS FROM IT, NOT WHEN IT IS PUT DOWN.
+ *
+ * These three timers used to start the moment the bowl mounted. But the bowl
+ * is served immediately and Barkly does not enter the `eating` state until
+ * his line has finished -- measured at ~3.6s later. So the food drained away
+ * while he stood in the middle of the room, and by the time he actually ate
+ * there was nothing left. Worse, the bowl was usually pulled before 4.2s, so
+ * the emptier stages and the crumbs at the bottom -- all of which are drawn
+ * below -- had almost certainly never been seen by anybody.
+ */
+export function FoodBowl({ food = 'dinner', eating = false }: { food?: string; eating?: boolean }) {
   const inV = useSpringIn();
   const [left, setLeft] = React.useState(3);
   React.useEffect(() => {
-    const t1 = setTimeout(() => setLeft(2), 1400);
-    const t2 = setTimeout(() => setLeft(1), 2800);
-    const t3 = setTimeout(() => setLeft(0), 4200);
+    if (!eating) return;
+    // Aligned with the three head-dips in BarklyRoom: each bite takes a piece.
+    const t1 = setTimeout(() => setLeft(2), 900);
+    const t2 = setTimeout(() => setLeft(1), 1800);
+    const t3 = setTimeout(() => setLeft(0), 2700);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, []);
+  }, [eating]);
 
   const steak = food === 'treat_steak';
   const cheese = food === 'treat_cheese';
@@ -173,6 +187,16 @@ export function WetSandMound({ active = false }: { active?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  bowl: { position: 'absolute', bottom: -2, left: '16.66%', marginLeft: -66, zIndex: 9 },
+  /*
+   * ABOVE THE CARE RACK, AND WITHIN REACH.
+   *
+   * At `bottom: -2` the bowl sat on the stage floor -- which is BEHIND the
+   * care dock, foreground scenery 68px tall that deliberately crosses his
+   * paws. So the meal was served half-buried under the furniture, in the
+   * bottom-left corner, a long way from a dog standing centre stage. Raised
+   * clear of the rack and brought in towards him, so a child can see the dog,
+   * the bowl and the gap between them close.
+   */
+  bowl: { position: 'absolute', bottom: CARE_DOCK_HEIGHT - 4, left: '31%', marginLeft: -66, zIndex: 9 },
   ball: { position: 'absolute', bottom: 16, left: 24, zIndex: 6 },
 });

@@ -647,6 +647,65 @@ export default function BarklyRoom() {
 
   const chaseX = useRef(new Animated.Value(0)).current;
   const ballFlight = useRef(new Animated.Value(0)).current;
+  /** Body lean and squash, used by the zoomies. -1 leans left, 1 leans right. */
+  const zoomLean = useRef(new Animated.Value(0)).current;
+  const zoomSquash = useRef(new Animated.Value(1)).current;
+  /** Stepping over to the bowl, and the head-dips into it. */
+  const eatX = useRef(new Animated.Value(0)).current;
+  const eatDip = useRef(new Animated.Value(0)).current;
+
+  /*
+   * HE ACTUALLY EATS IT.
+   *
+   * The bowl arrives and empties itself on a timer -- 3 -> 2 -> 1 -> crumbs
+   * over 4.2s (see StageProps.FoodBowl) -- while Barkly stood in the middle of
+   * the room facing forward and did not move. The food disappeared NEAR him.
+   * Nothing connected the dog to the meal, which is the whole of "he doesn't
+   * really eat".
+   *
+   * So he goes over and takes three bites, and the bites are timed to the
+   * exact moments the bowl loses a piece. The bowl is at 16.66% from the left
+   * and he stands centred, hence the step left before the first dip and back
+   * afterwards.
+   */
+  useEffect(() => {
+    // Driven by the EATING STATE, not by the bowl being served. He is served
+    // immediately and starts eating ~3.6s later, after his line; keying this
+    // off `serving` animated him eating an untouched bowl and then standing
+    // still through the actual meal.
+    if (snapshot.state !== 'eating') return;
+    const dip = (down: number, up: number) =>
+      Animated.sequence([
+        Animated.timing(eatDip, { toValue: 1, duration: down, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+        Animated.timing(eatDip, { toValue: 0.55, duration: up, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]);
+    const anim = Animated.sequence([
+      // Over to the bowl, head already lowering.
+      Animated.parallel([
+        Animated.timing(eatX, { toValue: -42, duration: 520, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(eatDip, { toValue: 0.55, duration: 520, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]),
+      // Three bites, on the beats the bowl actually loses food.
+      Animated.delay(120),
+      dip(170, 240),
+      Animated.delay(350),
+      dip(170, 240),
+      Animated.delay(350),
+      dip(190, 280),
+      // Up, satisfied, back to the middle of his room.
+      Animated.delay(180),
+      Animated.parallel([
+        Animated.timing(eatDip, { toValue: 0, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(eatX, { toValue: 0, duration: 620, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    ]);
+    anim.start();
+    return () => {
+      anim.stop();
+      eatX.setValue(0);
+      eatDip.setValue(0);
+    };
+  }, [snapshot.state, eatX, eatDip]);
   /** Throw, chase, grab, carry back. Used by fetch AND by ball play. */
   const runChase = (onDone: () => void) => {
     setFetching(true);
@@ -664,6 +723,68 @@ export default function BarklyRoom() {
         setVariant(null);
         setFetching(false);
         onDone();
+      });
+    });
+  };
+
+  /**
+   * ZOOMIES. What "he improvises" actually looks like.
+   *
+   * With no toy, at home -- which is EVERY new player's first press of the
+   * play button -- `routine` is 'none', and this fell through to `runChase`.
+   * So he threw nothing, sprinted after it, dipped to pick it up and carried
+   * it home: a full fetch performed on an invisible ball, because the ball is
+   * only rendered when the routine really is 'ball'. That is the single
+   * weakest thing in the app and it is the first thing a stranger presses.
+   *
+   * Zoomies are not a fetch without a prop. They are a shape: a crouch, a
+   * burst, a skid, a lap back the other way, a smaller second lap, and a
+   * landing. Built from the values that already move him -- no new art -- so
+   * the whole thing is choreography rather than assets.
+   */
+  const runZoomies = (onDone: () => void) => {
+    setFetching(true);
+    const lean = (to: number, duration: number) =>
+      Animated.timing(zoomLean, { toValue: to, duration, easing: Easing.out(Easing.quad), useNativeDriver: true });
+    const squash = (to: number, duration: number) =>
+      Animated.timing(zoomSquash, { toValue: to, duration, easing: Easing.out(Easing.quad), useNativeDriver: true });
+    const run = (to: number, duration: number) =>
+      Animated.timing(chaseX, { toValue: to, duration, easing: Easing.inOut(Easing.quad), useNativeDriver: true });
+    const hop = (height: number, up: number, down: number) =>
+      Animated.sequence([
+        Animated.timing(hopY, { toValue: -height, duration: up, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(hopY, { toValue: 0, duration: down, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      ]);
+
+    // Anticipation: he compresses before he goes. Without this the burst
+    // starts on frame one and reads as a teleport rather than a decision.
+    setVariant('runRight');
+    Animated.sequence([
+      Animated.parallel([squash(0.9, 130), lean(0.5, 130)]),
+      Animated.parallel([run(96, 400), squash(1, 180), lean(1, 160), hop(9, 150, 170)]),
+      // The skid. He overshoots, plants, and turns.
+      Animated.parallel([squash(0.92, 110), lean(0.2, 110)]),
+    ]).start(() => {
+      setVariant(null); // the default three-quarter pose faces left
+      Animated.sequence([
+        Animated.parallel([run(-78, 440), squash(1, 160), lean(-1, 180), hop(8, 150, 160)]),
+        Animated.parallel([squash(0.93, 110), lean(-0.2, 110)]),
+      ]).start(() => {
+        setVariant('runRight');
+        Animated.sequence([
+          // A shorter second lap: the joke is that he cannot stop, and a
+          // second lap the same size as the first reads as a loop, not a dog.
+          Animated.parallel([run(34, 300), squash(1, 140), lean(0.8, 140)]),
+          Animated.parallel([run(0, 300), lean(0, 220)]),
+          Animated.parallel([hop(14, 150, 190), squash(0.88, 150)]),
+          squash(1, 220),
+        ]).start(() => {
+          setVariant(null);
+          zoomLean.setValue(0);
+          zoomSquash.setValue(1);
+          setFetching(false);
+          onDone();
+        });
       });
     });
   };
@@ -770,6 +891,11 @@ export default function BarklyRoom() {
       return;
     }
     feel('act');
+    // 'none' is the improvised routine -- zoomies, not a mimed fetch.
+    if (routine === 'none') {
+      runZoomies(() => void barkly.play());
+      return;
+    }
     runChase(() => void barkly.play());
   };
 
@@ -980,9 +1106,16 @@ export default function BarklyRoom() {
           <Animated.View
             style={{
               transform: [
-                { translateX: Animated.add(Animated.add(chaseX, walkX), tugX) },
-                { translateY: hopY },
+                { translateX: Animated.add(Animated.add(Animated.add(chaseX, walkX), tugX), eatX) },
+                { translateY: Animated.add(hopY, eatDip.interpolate({ inputRange: [0, 1], outputRange: [0, 26] })) },
                 { rotate: digRotate.interpolate({ inputRange: [-1, 1], outputRange: ['-7deg', '7deg'] }) },
+                // A running dog leans into the direction he is going, and
+                // squashes when he lands. Both idle at 0/1, so nothing moves
+                // unless the zoomies are actually running.
+                { rotate: zoomLean.interpolate({ inputRange: [-1, 1], outputRange: ['6deg', '-6deg'] }) },
+                // Tipping into the bowl, and the squash of a head going down.
+                { rotate: eatDip.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-7deg'] }) },
+                { scaleY: Animated.multiply(zoomSquash, eatDip.interpolate({ inputRange: [0, 1], outputRange: [1, 0.93] })) },
               ],
             }}
           >
@@ -1030,7 +1163,9 @@ export default function BarklyRoom() {
               </Text>
             </Pressable>
           )}
-          {barkly.serving !== null && <FoodBowl key={barkly.serving} food={barkly.serving} />}
+          {barkly.serving !== null && (
+            <FoodBowl key={barkly.serving} food={barkly.serving} eating={snapshot.state === 'eating'} />
+          )}
           {snapshot.state === 'playing' && !fetching && routine === 'ball' && <Ball />}
           <HeartBurst burst={heartBurst} headY={CARE_DOCK_CLEARANCE + SPRITE_HEIGHT * spriteScale * 0.66} />
           <BarklyKit

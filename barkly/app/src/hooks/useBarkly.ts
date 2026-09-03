@@ -413,12 +413,31 @@ export function useBarkly(): BarklyController {
    */
   const [serving, setServing] = useState<string | null>(null);
 
+  /*
+   * THE BOWL WAITS UNTIL HE HAS ACTUALLY EATEN FROM IT.
+   *
+   * This cleared the bowl 1.2s after he was in any state other than eating or
+   * speaking -- and between serving the food and his line starting he is
+   * briefly IDLE, so the timer fired there and pulled the bowl roughly 2.4s
+   * before he ever got to it. Measured: served at 0ms, gone at ~1.2s, `eating`
+   * did not begin until ~3.6s. The meal happened over an absent bowl.
+   *
+   * So the countdown does not start until he has had at least one mouthful.
+   */
+  const hasEaten = useRef(false);
   useEffect(() => {
-    if (serving && snapshot.state !== 'eating' && snapshot.state !== 'speaking') {
-      // A beat after the meal, so the crumbs get seen before the bowl goes.
-      const t = setTimeout(() => setServing(null), 1200);
-      return () => clearTimeout(t);
+    if (!serving) {
+      hasEaten.current = false;
+      return;
     }
+    if (snapshot.state === 'eating') {
+      hasEaten.current = true;
+      return;
+    }
+    if (!hasEaten.current) return;
+    // A beat after the meal, so the crumbs get seen before the bowl goes.
+    const t = setTimeout(() => setServing(null), 1200);
+    return () => clearTimeout(t);
   }, [serving, snapshot.state]);
 
   const [devMode, setDevModeState] = useState(process.env.EXPO_PUBLIC_BARKLY_DEV === '1');
