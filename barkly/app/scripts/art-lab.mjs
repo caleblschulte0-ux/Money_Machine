@@ -87,7 +87,15 @@ async function newPage(hour) {
     );
     return labels.length >= 4 && !labels.some((l) => /locked/i.test(l));
   };
-  for (let attempt = 1; attempt <= 3 && !(await unlocked()); attempt += 1) {
+  let loaded = false;
+  /*
+   * Retry until the save is IN, not until everything is unlocked: on any
+   * preset that legitimately keeps a place locked, the unlock test can never
+   * become true, so this loop used to run its full three attempts -- three
+   * Settings -> Playtest -> slot round trips -- for every band, every time.
+   */
+  const settled = async () => (preset === 'longterm' ? await unlocked() : loaded);
+  for (let attempt = 1; attempt <= 3 && !(await settled()); attempt += 1) {
     try {
       const gear = page.getByLabel('Settings').first();
       if (await gear.count()) {
@@ -100,6 +108,7 @@ async function newPage(hour) {
           const slot = page.locator(`[data-testid="playtest-${preset}"]`).first();
           if (await slot.count()) {
             await slot.click({ force: true, timeout: 6000 });
+            loaded = true;
             await page.waitForSelector('[data-testid="dialogue-panel"]', { timeout: 20000 }).catch(() => {});
           }
         }
@@ -111,10 +120,24 @@ async function newPage(hour) {
     await page.keyboard.press('Escape').catch(() => {});
     await page.waitForTimeout(400);
   }
-  if (!(await unlocked())) {
+  /*
+   * A LOCKED PLACE IS ONLY A BUG ON A SAVE THAT SHOULD HAVE UNLOCKED IT.
+   *
+   * The unlock check was written for `longterm` and hard-coded its assumption,
+   * so every other preset was unreachable -- which is why the only save this
+   * lab has ever photographed is a level-8 furnished one, and the FRESH start
+   * every new player actually sees has never once been on a contact sheet.
+   *
+   * So: `longterm` still has to come back fully unlocked (there, a locked tab
+   * really does mean the save did not load). Any other preset only has to have
+   * been LOADED -- the playtest menu found and its slot clicked -- and the
+   * locations it legitimately cannot reach are skipped by `goTo`'s caller
+   * rather than failing the run.
+   */
+  const everythingOpen = await unlocked();
+  if (preset === 'longterm' ? !everythingOpen : !loaded) {
     const labels = await page.getByRole('tab').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
     console.error(`could not load the "${preset}" playtest save; tabs read: ${JSON.stringify(labels)}`);
-    console.error('Every location must be unlocked or the contact sheet is of a different game.');
     console.error('Most likely the artifact has no playtest menu: build it with');
     console.error('  npm run build:pages   (sets EXPO_PUBLIC_BARKLY_PLAYTEST=always for dist/playtest)');
     process.exit(3);
@@ -208,6 +231,16 @@ const shots = [];
 for (const [label, hour] of BANDS) {
   const { ctx, page } = await newPage(hour);
   for (const loc of PLACES) {
+    const tabLabel = await page
+      .getByRole('tab')
+      .evaluateAll((els, want) => {
+        const hit = els.find((e) => (e.getAttribute('aria-label') || '').toLowerCase().startsWith(want));
+        return hit ? hit.getAttribute('aria-label') : null;
+      }, loc);
+    if (tabLabel && /locked/i.test(tabLabel)) {
+      console.log(`skipped ${loc} ${label} — locked on the "${preset}" save`);
+      continue;
+    }
     await goTo(page, loc);
     const file = `${outDir}/frames/${loc}-${label}.png`;
     await page.screenshot({ path: file });

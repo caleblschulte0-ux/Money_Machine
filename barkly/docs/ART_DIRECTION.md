@@ -369,6 +369,27 @@ sampling the ground under his paws against bare grass in a captured frame --
 identical to within two values out of 255 -- which is the whole argument for
 the contact sheet in one line: the code read correctly, the render did not.
 
+## The lab had only ever photographed one save
+
+`--preset` has been an argument since the lab existed and nothing ever passed
+it. Worse, the "did the save load?" check asserted that EVERY location was
+unlocked -- true only of `longterm` -- so any other preset was unreachable by
+construction. Nine saves exist (`fresh`, `day3`, `established`, `longterm`,
+`duke`, `biscuit`, `trickdog`, `goblin`, `rich`) and every contact sheet in
+this file is of the level-8 furnished one. **The fresh start a new player
+actually opens the app to had never once been reviewed.**
+
+`longterm` still has to come back fully unlocked, because there a locked tab
+really does mean the save did not load. Any other preset only has to have been
+loaded, and a location it legitimately cannot reach is skipped and reported
+rather than killing the run:
+
+```bash
+node scripts/art-lab.mjs --preset fresh --bands day
+# captured home day / park day / town day
+# skipped beach day — locked on the "fresh" save
+```
+
 ## The harness was measuring the wrong build, four ways
 
 Every number in this file comes from `art-lab.mjs` + `art-lab-sheet.py`, so a
