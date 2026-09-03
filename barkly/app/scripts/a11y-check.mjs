@@ -10,6 +10,13 @@
  *
  *     node scripts/a11y-check.mjs [--html path] [--size 390x844]
  *
+ * ONE SIZE IS NOT A SWEEP. `--size` existed from the start and nothing ever
+ * passed it, so every run in this repo's history looked at 390x844 -- and
+ * Barkly's Plan shipped unclosable on a 360x568 phone with the gate green.
+ * `npm run check:a11y` and `check:ui` now drive the smallest, the reference and
+ * the largest phone in turn, so the short-screen case is covered by the
+ * standing command rather than by somebody remembering to pass a flag.
+ *
  * It checks three things on the room and on every sheet:
  *
  *   TAP TARGETS  every control is at least 44x44. Note that `hitSlop` does
