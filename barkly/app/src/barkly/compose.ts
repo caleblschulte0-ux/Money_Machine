@@ -27,7 +27,7 @@
  */
 
 import { opinionOn, Stance, stanceOn, STANCE_MOOD } from './opinions';
-import { Feeling, looksLikePerson, Understanding } from './understand';
+import { Feeling, isRelationWord, looksLikePerson, Tone, Understanding } from './understand';
 
 /**
  * A recurring dog he has real history with, keyed by lowercased name in
@@ -86,6 +86,22 @@ const at = <T>(list: T[], seed: number): T => list[Math.abs(Math.trunc(seed)) % 
 const opening = (word: string): string =>
   word.charAt(0) === word.charAt(0).toUpperCase() ? word : word.charAt(0).toUpperCase() + word.slice(1);
 
+/**
+ * Capitalise the first letter of a finished line, and ONLY that one.
+ *
+ * The subject used to be capitalised before it was handed to a shape, which
+ * worked for the shapes that open with it and produced "More people should be
+ * Teacher, in my opinion" and "I could tell you what Favorite is" for the ones
+ * that do not. A common noun with a capital in the middle of a sentence is the
+ * clearest possible tell that a machine assembled the line. So shapes now get
+ * the word as the player typed it, and the sentence is cased at the end.
+ */
+const sentence = (line: string): string =>
+  // EVERY sentence, not just the first. Several openers are two sentences
+  // ("Hold on. %s?"), so casing only the front left the subject lowercase
+  // after a full stop -- swapping one kind of wrong capital for another.
+  line.replace(/(^|[.!?]\s+)([a-z])/g, (_, lead: string, c: string) => lead + c.toUpperCase());
+
 // ------------------------------------------------------------------ openers
 
 const OPENER: Record<Stance, string[]> = {
@@ -97,8 +113,13 @@ const OPENER: Record<Stance, string[]> = {
   obsessed: ['%s!!', '%s. %s!', 'Did you say %s?', '%s. Finally.'],
 };
 
+// The subject goes in AS THE PLAYER TYPED IT. Half these shapes put it after
+// a word ("Oh, %s.", "Say %s again.", "We are doing %s now?"), and
+// pre-capitalising it produced "Say Park again" and "Oh, Sing." -- a capital
+// letter in the middle of a sentence, which is the tell that no one wrote
+// this. `sentence()` cases the finished line instead, once, at the front.
 const openerFor = (stance: Stance, subject: string, seed: number): string =>
-  at(OPENER[stance], seed / 2).split('%s').join(opening(subject));
+  at(OPENER[stance], seed / 2).split('%s').join(subject);
 
 /**
  * Glue an opener to an opinion without stuttering. Both halves can start with
@@ -106,8 +127,22 @@ const openerFor = (stance: Stance, subject: string, seed: number): string =>
  * that looks like — so when they collide, the opener is dropped.
  */
 function join(opener: string, body: string): string {
-  const head = (t: string) => t.replace(/^[^a-z0-9]*/i, '').split(/[\s.,!?]+/)[0].toLowerCase();
-  return head(opener) === head(body) ? body : `${opener} ${body}`;
+  const words = (t: string) => t.toLowerCase().split(/[^a-z0-9']+/i).filter(Boolean);
+  const o = words(opener);
+  const b = words(body);
+  if (o.length === 0) return body;
+  // Compare the opener's LAST word, not its first. Half the openers lead with
+  // their own words ("Hold on. rain?"), so a first-word test saw "hold" vs
+  // "rain", found no collision, and shipped "Hold on. Rain? Rain? We're
+  // watching rain." The stutter is always between what the opener ENDS on and
+  // what the body starts with.
+  // BOTH ends. Openers come in two shapes -- ones that lead with the subject
+  // ("%s. Interesting.") and ones that lead with his own words ("Hold on.
+  // %s?") -- and each produced a different stutter against a body that also
+  // opens on the subject: "Rain. Interesting. Rain? We're watching rain." and
+  // "Hold on. Rain? Rain? We're watching rain."
+  if (o[0] === b[0] || o[o.length - 1] === b[0]) return body;
+  return `${opener} ${body}`;
 }
 
 // ------------------------------------------------------------------- asides
@@ -262,13 +297,48 @@ function bondOn(subject: string, c: ComposeContext): ComposeBond | undefined {
  * Somebody the player cares about. Never a hashed verdict — the hash put
  * "sister" on `against` and had him say her name was bad history.
  */
-function personReply(who: string, c: ComposeContext, seed: number): Composed {
+function personReply(subject: string, c: ComposeContext, seed: number, tone?: Tone): Composed {
+  /*
+   * "Mia" drops into a sentence. "teacher" does not — it needs the possessive
+   * the player themselves used ("my teacher is mean"), or the line comes out
+   * as "Then teacher is wrong", which is a sentence with a hole in it.
+   */
+  const relation = isRelationWord(subject);
+  const who = relation ? `your ${subject.toLowerCase()}` : subject;
+  // "Your friends IS welcome here" is the same class of mistake one step later.
+  const plural = relation && /s$/i.test(subject) && !/ss$/i.test(subject);
+  const be = plural ? 'are' : 'is';
+  /*
+   * SOMEBODY UPSET THEM. He takes their side, immediately, without asking for
+   * evidence -- that is the entire proposition of a dog.
+   *
+   * Two rules hold these lines to a children's app. He is never cruel about
+   * the person (the worst he does is put them on a list and refuse to wag),
+   * and he never advises: he is not a counsellor, he is somebody warm who is
+   * on your side, which is a thing a nine-year-old can actually use.
+   */
+  if (tone === 'sour') {
+    const shapes = [
+      `${who} did that? Right. ${who} ${be} on the list now. It's a real list and it's getting long.`,
+      `I don't like the sound of ${who} today. You've got me though. I'm extremely on your side.`,
+      `Then ${who} ${be} wrong. I didn't need the details. I picked a side the second you started talking.`,
+      `Hm. I'd have barked. I'm not saying that's better. I'm saying that's what I'd have done.`,
+      `You can tell me about ${who} for as long as you like. I have nowhere to be and a lot of opinions.`,
+    ];
+    const line = at(shapes, seed);
+    return {
+      speech: c.personName && Math.abs(Math.trunc(seed / 5)) % 3 === 0 ? `${line} You're alright, ${c.personName}.` : line,
+      reaction: 'annoyed',
+      actions: ['EAR_PERK', 'HEAD_TILT'],
+    };
+  }
+
   const shapes = [
     `${who}? Any friend of yours is a friend of mine. Provisionally. Pending a sniff.`,
     `Oh, ${who}. I like ${who}. I've decided that just now and I'm sticking with it.`,
-    `${who} is welcome here. Tell ${who} I said that, but make it sound casual.`,
+    `${who} ${be} welcome here. Tell ${who} I said that, but make it sound casual.`,
     `Tell me more about ${who}. I'm building a file and it's a NICE file.`,
-    `${who}. Good. More people should be ${who}, in my opinion.`,
+    `${who}. Good. More people should be like ${who}, in my opinion.`,
     `I've got a lot of time for ${who}, and I've never met ${who}.`,
   ];
   const line = at(shapes, seed);
@@ -363,7 +433,21 @@ const GREETING = [
 
 // ------------------------------------------------------------------- compose
 
+/**
+ * ONE PLACE CASES THE FINISHED LINE.
+ *
+ * The asides and the hand-back question are glued on AFTER a branch has built
+ * its sentence, so casing inside the branches missed them: "School and I have
+ * history. It is not good history. Caleb. Seriously. school?" shipped with a
+ * lowercase word opening its own sentence. Every reply now leaves through
+ * here, once, and no branch has to remember.
+ */
 export function compose(u: Understanding, c: ComposeContext, seed: number): Composed {
+  const built = composeInner(u, c, seed);
+  return { ...built, speech: sentence(built.speech) };
+}
+
+function composeInner(u: Understanding, c: ComposeContext, seed: number): Composed {
   const you = c.personName;
   // Asides rotate on their OWN seed and only land a third of the time. The
   // first cut used the same divisor as the shape, so three replies running
@@ -425,26 +509,29 @@ export function compose(u: Understanding, c: ComposeContext, seed: number): Comp
     return { ...b, speech: b.speech + clean };
   }
 
-  if (u.person) return personReply(opening(subject), c, seed);
+  if (u.person) {
+    const r = personReply(subject, c, seed, u.tone);
+    return { ...r, speech: sentence(r.speech) };
+  }
 
   const stance = stanceOn(subject);
   const mood = STANCE_MOOD[stance];
 
   if (u.intent === 'opinion') {
     const { speech } = opinionOn(subject, seed);
-    return { speech: join(openerFor(stance, subject, seed), speech) + tail, reaction: mood.reaction, actions: mood.actions };
+    return { speech: sentence(join(openerFor(stance, subject, seed), speech)) + tail, reaction: mood.reaction, actions: mood.actions };
   }
 
-  if (u.intent === 'define') return { speech: defineReply(opening(subject), seed) + tail, ...moodOf(stance) };
-  if (u.intent === 'why') return { speech: whyReply(subject, seed) + tail, ...moodOf(stance) };
-  if (u.intent === 'ability') return { speech: abilityReply(subject, seed) + tail, ...moodOf(stance) };
-  if (u.intent === 'tell') return { speech: tellReply(opening(subject), seed) + tail, ...moodOf(stance) };
+  if (u.intent === 'define') return { speech: sentence(defineReply(subject, seed)) + tail, ...moodOf(stance) };
+  if (u.intent === 'why') return { speech: sentence(whyReply(subject, seed)) + tail, ...moodOf(stance) };
+  if (u.intent === 'ability') return { speech: sentence(abilityReply(subject, seed)) + tail, ...moodOf(stance) };
+  if (u.intent === 'tell') return { speech: sentence(tellReply(subject, seed)) + tail, ...moodOf(stance) };
 
   // A plain statement. Echo the subject, give the verdict, and every so often
   // hand the conversation back instead of ending it.
   const { speech } = opinionOn(subject, seed);
   const back = Math.abs(Math.trunc(seed / 11)) % 4 === 0 ? ' ' + questionBack(subject, c, seed) : tail;
-  return { speech: join(openerFor(stance, subject, seed), speech) + back, reaction: mood.reaction, actions: mood.actions };
+  return { speech: sentence(join(openerFor(stance, subject, seed), speech)) + back, reaction: mood.reaction, actions: mood.actions };
 }
 
 function moodOf(stance: Stance): { reaction?: string; actions: string[] } {

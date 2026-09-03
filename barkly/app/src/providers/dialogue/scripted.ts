@@ -26,7 +26,7 @@
 import { DialogueContext, DialogueProvider, DialogueRequest } from '../types';
 import { normalizeKey, personalFactFrom } from '../../barkly/facts';
 import { compose } from '../../barkly/compose';
-import { understand } from '../../barkly/understand';
+import { keywords, toneOf, understand } from '../../barkly/understand';
 
 interface Line {
   speech: string;
@@ -35,6 +35,8 @@ interface Line {
   /** Recorded as a durable fact when this line fires. */
   fact?: string;
 }
+
+const at = <T,>(list: T[], seed: number): T => list[Math.abs(Math.trunc(seed)) % list.length];
 
 /** Remembers what each pool last served so nothing repeats back to back. */
 function rotator() {
@@ -73,7 +75,9 @@ function answerQuestion(text: string, c: DialogueContext | undefined, you: strin
     // spoken words found nothing, and he told a player who had just answered
     // this exact question that they had never told him.
     const key = normalizeKey(asked[1]);
-    const hit = c?.facts?.find((f: string) => normalizeKey(f.slice(0, f.indexOf('='))) === key);
+    // The NEWEST one. Facts are merged upstream so there is normally one per
+    // key, but reading the first would answer with the value they replaced.
+    const hit = [...(c?.facts ?? [])].reverse().find((f: string) => normalizeKey(f.slice(0, f.indexOf('='))) === key);
     if (hit) {
       const raw = hit.slice(hit.indexOf('=') + 1).trim();
       // It opens the sentence, so it gets a capital -- "pizza. You told me."
@@ -136,14 +140,199 @@ function answerQuestion(text: string, c: DialogueContext | undefined, you: strin
   if (/\bwhat (can|should) (you|i|we)\b|\bwhat do we do\b|\bwhat now\b|\bhelp\b|\bany ideas\b/.test(t)) {
     return { speech: 'Feed me, throw something, or take me somewhere. Those are the options.', actions: ['EAR_PERK'] };
   }
+  /*
+   * BEING GIVEN A COMMAND. A child types "sit" in the first minute, every
+   * time, and it used to reach the composer as a noun: "Stop is my entire
+   * personality and I won't be apologising."
+   *
+   * A cue he has actually been TAUGHT never gets here -- `useBarkly` matches
+   * training rules before the provider is called and he performs it. So this
+   * branch is the untaught case only, and the honest answer to it is the best
+   * funnel in the app: he cannot do that yet, and he can be taught, and he
+   * will not forget. That is the product, stated by the dog, at the exact
+   * moment the player wants it.
+   */
+  if (/^\s*(sit|sit down|lie down|lay down|stay|come|come here|heel|paw|shake|give me your paw|roll over|speak|bark|play dead|drop it|fetch|stop|stop it|no|beg|spin|jump|dance)\b[\s.!]*$/.test(t)) {
+    const taught = c?.cues ?? [];
+    if (taught.length > 0) {
+      return at(
+        [
+          { speech: `Don't know that one. I know “${taught[0]}”. Try that and watch me be incredible.`, reaction: 'excited', actions: ['EAR_PERK'] },
+          { speech: `Not one of mine yet. “${taught[0]}” is one of mine. Teach me this one and it will be too.`, actions: ['HEAD_TILT'] },
+        ],
+        Math.floor(Math.random() * 89),
+      );
+    }
+    return at(
+      [
+        { speech: "I don't know that one yet. Teach me — say “when I say X, do Y” — and I'll have it forever.", actions: ['HEAD_TILT'] },
+        { speech: "Nope. Nobody's taught me that. Say “when I say X, play dead” and then I'm dangerous.", reaction: 'excited', actions: ['EAR_PERK'] },
+        { speech: "Can't. Yet. Teach me a word and I'll remember it longer than you will.", actions: ['HEAD_TILT'] },
+      ],
+      Math.floor(Math.random() * 89),
+    );
+  }
+  /*
+   * "DO YOU REMEMBER ME?" is the question the whole product is about, and it
+   * used to fall through to the composer's no-noun branch: "I'm nodding like I
+   * understood that. I did not understand that." A stranger asks this inside
+   * the first two minutes and that answer settles the matter for them.
+   *
+   * He answers from what he actually holds -- the name, the count of things on
+   * file -- so the claim is checkable rather than a warm noise.
+   */
+  if (/\b(do you )?(remember|know) me\b|\bdo you know who i am\b|\bwho am i\b/.test(t)) {
+    const kept = c?.facts?.length ?? 0;
+    if (!c?.personName && kept === 0) {
+      return {
+        speech: "Not yet. Tell me one true thing about you and that changes permanently.",
+        reaction: 'annoyed',
+        actions: ['HEAD_TILT'],
+      };
+    }
+    const who = c?.personName ? `You're ${c.personName}.` : "You're mine, that's who.";
+    const held =
+      kept > 0
+        ? ` I've got ${kept} thing${kept === 1 ? '' : 's'} about you on file and I didn't write any of it down.`
+        : ' I know the smell of you, which is more binding than a name.';
+    return { speech: who + held, reaction: 'happy', actions: ['TAIL_WAG', 'EAR_PERK'] };
+  }
+  if (/\bdo you (like|love) me\b|\bam i your (favou?rite|best)\b|\bare we friends\b/.test(t)) {
+    const aff = c?.stats.affection ?? 50;
+    if (aff > 70) {
+      return { speech: "Obviously. I'm not going to make a thing of it, but obviously.", reaction: 'happy', actions: ['TAIL_WAG', 'EAR_PERK'] };
+    }
+    if (aff < 30) {
+      return { speech: "We're getting there. You could speed it up with food. Just a thought.", reaction: 'annoyed', actions: ['HEAD_TILT'] };
+    }
+    return { speech: "I'm here, aren't I. I could be anywhere. I'm here.", reaction: 'happy', actions: ['EAR_PERK'] };
+  }
+  if (/\bhow old\b|\byour age\b|\bwhat age\b/.test(t)) {
+    return { speech: "In dog years? Devastating. Let's talk about literally anything else.", actions: ['LOOK_LEFT'] };
+  }
+  /*
+   * "What's YOUR favourite X" -- the mirror of the question he already
+   * answers about them. He has canon preferences (cheese, the ball, digging),
+   * and giving him one is a small thing that makes him a character with a
+   * self rather than a lookup table pointed at the player.
+   */
+  const yours = t.match(/\b(?:what|what'?s|which)\s+(?:is\s+)?your\s+favou?rite\s+([a-z ]{2,20}?)\s*\??$/);
+  if (yours) {
+    const thing = yours[1].trim();
+    if (/colou?r/.test(thing)) return { speech: "The colour of cheese. I don't know its official name. I know its effect on me.", reaction: 'excited', actions: ['EXCITED'] };
+    if (/food|snack|treat|meal/.test(thing)) return { speech: "Cheese. It's not close. There is no second place.", reaction: 'excited', actions: ['EXCITED', 'TAIL_WAG'] };
+    if (/toy|thing|game|sport/.test(thing)) return { speech: "The ball. Any ball. Every ball. I've thought about this a lot.", reaction: 'excited', actions: ['TAIL_WAG'] };
+    if (/place|spot|park|home/.test(thing)) return { speech: "Wherever you are, but say the park and I'll pretend that's what I meant.", reaction: 'happy', actions: ['EAR_PERK'] };
+    if (/person|human|people|friend/.test(thing)) {
+      return c?.personName
+        ? { speech: `${c.personName}. Don't tell anyone. Actually, do.`, reaction: 'happy', actions: ['TAIL_WAG', 'EAR_PERK'] }
+        : { speech: "You, provisionally. You haven't told me your name, which is holding this back.", reaction: 'happy', actions: ['EAR_PERK'] };
+    }
+    return { speech: `My favourite ${thing}? Whichever one is nearest and unattended.`, actions: ['HEAD_TILT'] };
+  }
+  /*
+   * Leaving is a beat, not a keyword. "bye" used to hit the composer, which
+   * treated it as a noun and produced "Do NOT get me started on bye" -- an
+   * answer that literally cannot be parsed by the person reading it.
+   */
+  if (/^\s*(bye|goodbye|see ya|see you|gtg|got to go|gotta go|night|good night|goodnight|later)\b/.test(t)) {
+    const h = c?.hour ?? 12;
+    const pool: Line[] =
+      h >= 20 || h < 6
+        ? [
+            { speech: "Night. I'll be here. I'm always here. It's my whole thing.", reaction: 'sleepy', actions: ['SLEEP'] },
+            { speech: `Goodnight${c?.personName ? `, ${c.personName}` : ''}. Wake me if anything happens. Anything at all.`, reaction: 'sleepy', actions: ['SLEEP'] },
+          ]
+        : [
+            { speech: "Fine. Go. I'll be exactly here, being brave, alone.", reaction: 'sleepy', actions: ['LOOK_LEFT'] },
+            { speech: `Bye${c?.personName ? `, ${c.personName}` : ''}. Come back and I'll act like it's been a year.`, reaction: 'happy', actions: ['EAR_PERK'] },
+            { speech: "You're leaving. Noted. I'm putting it in the file. The file is mostly this.", actions: ['HEAD_TILT'] },
+          ];
+    return at(pool, Math.floor(Math.random() * 97));
+  }
   if (/\bi love you\b|\bgood (boy|dog)\b|\byou'?re the best\b/.test(t)) {
-    return {
-      speech: `I know${c?.personName ? `, ${c.personName}` : ''}. But say it again, I wasn't ready.`,
-      reaction: 'happy',
-      actions: ['TAIL_WAG', 'EAR_PERK'],
-    };
+    // Rotated, because this is the thing a child says most often and the one
+    // fixed answer came back word for word twice in a thirty-turn sitting.
+    const you2 = c?.personName ? `, ${c.personName}` : '';
+    return at(
+      [
+        { speech: `I know${you2}. But say it again, I wasn't ready.`, reaction: 'happy', actions: ['TAIL_WAG', 'EAR_PERK'] },
+        { speech: `Obviously. I'm extremely good. But thank you${you2}.`, reaction: 'happy', actions: ['TAIL_WAG'] },
+        { speech: `Don't. I'll get emotional and I have a reputation.`, reaction: 'happy', actions: ['EAR_PERK'] },
+        { speech: `Same${you2 || ' about you'}. That's the most I'm saying out loud.`, reaction: 'happy', actions: ['TAIL_WAG', 'EAR_PERK'] },
+      ],
+      Math.floor(Math.random() * 89),
+    );
   }
   return null;
+}
+
+/**
+ * BEING TOLD SOMETHING IS THE WHOLE PITCH, SO IT GETS ITS OWN BEAT.
+ *
+ * Before this, "my favorite food is pizza" fell straight through to the
+ * composer and came back "We are doing Pizza now? I have been very clear about
+ * pizza and yet here we are. I have a whole file." He was performing OLD
+ * history about a thing he had been told four words ago. For a product whose
+ * entire claim is that he learns and remembers, the moment of learning was the
+ * one moment he faked -- and a stranger meets it inside the first minute.
+ *
+ * Three cases, and the second and third are the ones people remember:
+ *
+ *   new       he files it, and says so
+ *   repeated  he already had it, and says so ("you told me")
+ *   CHANGED   it used to be something else and he noticed
+ *
+ * The changed case is the strongest thing the offline brain does. Tell him
+ * your favourite food is pizza, come back and say it is noodles, and he
+ * answers "It was pizza. Now it's noodles. Noted, and I'm keeping both."
+ * Nothing else in the demo proves a durable memory that cheaply.
+ */
+function learnedReply(fact: string, c: DialogueContext | undefined, seed: number): Line | null {
+  const eq = fact.indexOf('=');
+  if (eq < 0) return null;
+  const key = normalizeKey(fact.slice(0, eq));
+  const value = fact.slice(eq + 1).trim();
+  if (!key || !value) return null;
+  // His own name is not a fact about them, and the name case already has its
+  // own warmer line in `complete`.
+  if (key === 'name') return null;
+
+  const Value = value.charAt(0).toUpperCase() + value.slice(1);
+  const previous = [...(c?.facts ?? [])].reverse().find((f: string) => normalizeKey(f.slice(0, f.indexOf('='))) === key);
+  const was = previous ? previous.slice(previous.indexOf('=') + 1).trim() : null;
+
+  if (was && was.toLowerCase() !== value.toLowerCase()) {
+    const Was = was.charAt(0).toUpperCase() + was.slice(1);
+    return at(
+      [
+        { speech: `It was ${was}. Now it's ${value}. I noticed. I notice everything.`, reaction: 'happy', actions: ['HEAD_TILT'] },
+        { speech: `${Was}, you said. Now ${value}. Fine. Updated. Both are staying in the file.`, reaction: 'happy', actions: ['EAR_PERK'] },
+        { speech: `Hold on. That's changed. ${Was} before, ${value} now. I'm not upset, I'm just keeping score.`, reaction: 'annoyed', actions: ['HEAD_TILT'] },
+      ],
+      seed,
+    );
+  }
+
+  if (was) {
+    return at(
+      [
+        { speech: `${Value}. I know. You told me. I keep things.`, reaction: 'happy', actions: ['TAIL_WAG'] },
+        { speech: `Still ${value}? Still on file. I haven't moved it.`, reaction: 'happy', actions: ['EAR_PERK'] },
+      ],
+      seed,
+    );
+  }
+
+  return at(
+    [
+      { speech: `${Value}. Noted. That's in the file now, and I don't lose the file.`, reaction: 'happy', actions: ['EAR_PERK'] },
+      { speech: `${Value}. Right. I'll remember that longer than you will.`, reaction: 'happy', actions: ['TAIL_WAG'] },
+      { speech: `Okay. ${Value}. Filed. Ask me in a week, it'll still be there.`, reaction: 'happy', actions: ['EAR_PERK', 'TAIL_WAG'] },
+      { speech: `${Value}. Got it. I'm writing this down with my mind.`, reaction: 'excited', actions: ['HEAD_TILT'] },
+    ],
+    seed,
+  );
 }
 
 /** Topic pools. Each is a list so the rotator can keep him from repeating. */
@@ -218,6 +407,10 @@ const RECENT = 14;
 
 export function createScriptedDialogue(): DialogueProvider {
   const recent: string[] = [];
+  const remember = (speech: string) => {
+    recent.push(speech);
+    if (recent.length > RECENT) recent.shift();
+  };
   const pick = rotator();
   // A walking seed rather than Math.random: successive replies land on
   // different shapes instead of clustering, and a test can drive it.
@@ -239,6 +432,34 @@ export function createScriptedDialogue(): DialogueProvider {
       if (named) {
         facts.push(`name = ${named[1]}`);
         prefix = `${named[1]}, huh. Good name. Mine's better, but good. `;
+        /*
+         * "My name is Caleb" is a whole sentence with one job, so it gets a
+         * whole reply. It used to take the prefix AND fall through to the
+         * composer, which saw the name, took the person branch and said "Caleb.
+         * Good. More people should be like Caleb, in my opinion." -- his very
+         * first line to a new player, and it read like two dogs talking over
+         * each other. Only when the sentence carries nothing else: "my name is
+         * Caleb and I hate mushrooms" still goes on to be understood.
+         */
+        const rest = text.replace(named[0], ' ');
+        if (keywords(rest).length === 0) {
+          const hello = at(
+            [
+              `${named[1]}, huh. Good name. Mine's better, but good. I'll be using it constantly.`,
+              `${named[1]}. Right. That's yours now, permanently, as far as I'm concerned.`,
+              `${named[1]}. Got it. I'm not going to forget that, and I forget almost everything else.`,
+              `Okay — ${named[1]}. Filed. Try me later, I'll still have it.`,
+            ],
+            seed++,
+          );
+          remember(hello);
+          return JSON.stringify({
+            speech: hello,
+            reaction: 'happy',
+            actions: ['TAIL_WAG', 'EAR_PERK'],
+            remember: { facts, experiences: [] },
+          });
+        }
       }
 
       // Anything else personal they just told him. Offline he used to keep
@@ -251,7 +472,13 @@ export function createScriptedDialogue(): DialogueProvider {
       // generated — "what's my name" has a right answer and he should give it.
       const known = answerQuestion(text, c, you);
       if (known) {
-        recent.push(known.speech);
+        // TRIM. This branch pushed and never shifted, so `recent` grew without
+        // bound for the life of the session -- and `recent` is handed to the
+        // composer as its `avoid` list. A long conversation therefore got
+        // progressively WORSE: after enough turns the composer could not find
+        // an unbanned line in its six tries and started serving repeats and
+        // fallbacks, in the one session length where quality matters most.
+        remember(known.speech);
         return JSON.stringify({
           speech: prefix + known.speech,
           reaction: known.reaction,
@@ -260,11 +487,39 @@ export function createScriptedDialogue(): DialogueProvider {
         });
       }
 
+      /*
+       * THEY JUST TOLD HIM SOMETHING. That is the product, so it gets its own
+       * answer instead of a verdict -- see `learnedReply`. It sits after the
+       * question branch because "what is my favorite food" is a question, and
+       * before everything else because being told a fact outranks having an
+       * opinion about the words in it.
+       */
+      //
+      // ... EXCEPT when they were complaining. `personalFactFrom` reads "my
+      // teacher is mean" as `teacher = mean`, which is a true and useful fact
+      // and a catastrophic thing to say out loud: "Mean. Right. I'll remember
+      // that longer than you will." The fact is still recorded; the REPLY goes
+      // to the composer's person branch, which takes their side. Being told
+      // about a bad day is not the same event as being told a preference.
+      if (personal && toneOf(text) !== 'sour') {
+        const learned = learnedReply(personal, c, seed++);
+        if (learned) {
+          remember(learned.speech);
+          return JSON.stringify({
+            speech: prefix + learned.speech,
+            reaction: learned.reaction,
+            actions: learned.actions ?? [],
+            remember: { facts, experiences: [] },
+          });
+        }
+      }
+
+      const u = understand(text);
+
       // Everything else is COMPOSED from what they actually said, rather than
       // picked out of a bucket. The seed walks so phrasing varies; if the
       // result is one he has used recently, walk it again. This is the whole
       // difference between "he has four lines" and "he has an opinion".
-      const u = understand(text);
 
       // The hand-written topic lines are the funniest thing he says, so they
       // are not thrown away — they are mixed IN. Roughly one matched topic in
@@ -288,12 +543,22 @@ export function createScriptedDialogue(): DialogueProvider {
       );
       const topic = TOPICS.find((t) => t.match.test(text));
       const aboutTheDog = topic && bondedNamed.length > 0 && !topic.match.test(textSansDogs);
-      if (topic && !aboutTheDog && seed % 3 === 0) {
+      /*
+       * AND NEVER WHEN THE SENTENCE IS ABOUT A PERSON OR A FEELING.
+       *
+       * "my friend jake is annoying" matched the `dogs` pool on the word
+       * "friend" and came back "Biscuit's alright. Biscuit gets it. Biscuit is
+       * also very slow." -- a canned line about a different character, in
+       * answer to a child telling him something that upset them. The pools are
+       * jokes about a topic; a person, a complaint or a mood is not a topic,
+       * and the composer is the only thing that knows who Jake is.
+       */
+      const aboutSomeone = u.person || u.tone === 'sour' || Boolean(u.feeling);
+      if (topic && !aboutTheDog && !aboutSomeone && seed % 3 === 0) {
         const line = pick(topic.id, topic.lines);
         if (!recent.includes(line.speech)) {
           seed++;
-          recent.push(line.speech);
-          if (recent.length > RECENT) recent.shift();
+          remember(line.speech);
           return JSON.stringify({
             speech: prefix + line.speech,
             reaction: line.reaction,
@@ -310,8 +575,7 @@ export function createScriptedDialogue(): DialogueProvider {
       for (let tries = 0; tries < 6 && recent.includes(built.speech); tries++) {
         built = compose(u, cc, seed++);
       }
-      recent.push(built.speech);
-      if (recent.length > RECENT) recent.shift();
+      remember(built.speech);
 
       return JSON.stringify({
         speech: prefix + built.speech,

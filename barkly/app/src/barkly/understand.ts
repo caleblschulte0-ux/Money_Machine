@@ -25,6 +25,17 @@ export type Intent =
 
 export type Feeling = 'sad' | 'happy' | 'tired' | 'bored' | 'angry' | 'scared' | 'sick';
 
+/**
+ * How the speaker feels about the thing they just mentioned.
+ *
+ * Only used for the PERSON branch today, and it exists because of one line
+ * that shipped: "my teacher is mean" came back "Teacher. Good. More people
+ * should be Teacher, in my opinion." He heard the person and threw the whole
+ * complaint away, which reads as not listening at best and siding with the
+ * teacher at worst. A dog whose entire pitch is loyalty has to notice.
+ */
+export type Tone = 'warm' | 'sour';
+
 export interface Understanding {
   intent: Intent;
   /** The thing the sentence is about, in the person's own words. */
@@ -32,6 +43,8 @@ export interface Understanding {
   /** True when the subject is somebody — family, a friend, a name. */
   person?: boolean;
   feeling?: Feeling;
+  /** How they feel about the subject, when the sentence says so. */
+  tone?: Tone;
   /** True when there was nothing to go on — a grunt, an emoji, punctuation. */
   empty: boolean;
 }
@@ -49,6 +62,20 @@ const STOP = new Set(
     'what who whom whose which when where why how not no yes yeah yep nope ok okay sure ' +
     'to of in on at by for with about from into over under up down out off again once ' +
     'so very really just quite too also only even still much more most some any all both each few other ' +
+    // Qualifiers, not subjects. "what is your favorite color" is about
+    // COLOUR; longest-first handed the composer "favorite" and he answered
+    // "I could tell you what Favorite is" -- which is not a sentence a
+    // person can read twice without deciding he is broken.
+    'favorite favourite favorites favourites fav fave least kind sort type ' +
+    // TYPED, NOT WRITTEN. Children type without apostrophes, and the
+    // contraction then reads as an ordinary noun: "whats up" came back
+    // "Whats is, as far as I can tell, a thing that happens near me" and
+    // "youre so silly" became "If youre comes up again I'm leaving the
+    // room." The apostrophe-less forms have to be in the stoplist next to
+    // the real ones.
+    'whats wheres hows whos whens whys hes shes theyre youre im ive id ill ' +
+    'dont cant wont didnt doesnt isnt arent wasnt werent havent hasnt couldnt wouldnt shouldnt ' +
+    'thats theres heres lets gonna wanna gotta aint ur u ya yah yeh nah idk lol omg pls plz kinda sorta ' +
     'everything anything something nothing everyone anyone someone nobody everybody somebody ' +
     'everywhere anywhere somewhere always never sometimes often maybe probably ' +
     'get got go goes going went come comes coming make makes made take takes took see sees saw look looks looked ' +
@@ -83,6 +110,18 @@ const PEOPLE = new Set(
 );
 
 /**
+ * True for a RELATIONSHIP word ("sister", "teacher") as opposed to a name.
+ *
+ * A name is a noun you can drop straight into a sentence; a relationship word
+ * is not. He shipped "Then teacher is wrong" and "Teacher is welcome here",
+ * which is a sentence with a word missing — it needs the possessive the player
+ * used in the first place.
+ */
+export function isRelationWord(word: string): boolean {
+  return PEOPLE.has(word.toLowerCase());
+}
+
+/**
  * True for a relationship word, or for a capitalised word in the middle of a
  * sentence — which is almost always somebody's name.
  */
@@ -105,6 +144,23 @@ const FEELINGS: { feeling: Feeling; re: RegExp }[] = [
   { feeling: 'sick', re: /\b(sick|ill|unwell|poorly|hurts|headache|sore)\b/i },
 ];
 
+/**
+ * What the speaker thinks of the thing they mentioned.
+ *
+ * SOUR is tested first on purpose: "she was nice until she yelled at me" is a
+ * complaint, and being wrong in the protective direction costs nothing.
+ */
+const SOUR =
+  /\b(mean|meanie|annoying|annoyed|rude|horrible|awful|nasty|unfair|strict|grumpy|bully|bullies|bullied|yell(?:s|ed|ing)?|shout(?:s|ed|ing)?|scream(?:s|ed|ing)?|hates? me|mad at me|angry at me|ignored me|left me out|laughed at me|took my|broke my|stupid|jerk|not fair)\b/i;
+const WARM =
+  /\b(nice|kind|funny|hilarious|the best|amazing|awesome|brilliant|lovely|sweet|cool|loves? me|helped me|looked after me|looks after me|my favou?rite person)\b/i;
+
+export function toneOf(text: string): Tone | undefined {
+  if (SOUR.test(text)) return 'sour';
+  if (WARM.test(text)) return 'warm';
+  return undefined;
+}
+
 /** Content words, longest first — the longest word is usually the point. */
 export function keywords(text: string): string[] {
   const words = text
@@ -113,6 +169,25 @@ export function keywords(text: string): string[] {
     .split(/\s+/)
     .filter((w) => w.length > 1 && !STOP.has(w) && !/^\d+$/.test(w));
   return [...new Set(words)].sort((a, b) => b.length - a.length);
+}
+
+/**
+ * "my friend jake is annoying" is about JAKE.
+ *
+ * Children do not capitalise names, so the capitalised-word rule that finds
+ * "Mia" finds nothing in "jake" and the relationship word won instead: he
+ * answered "Your friend did that? Right. Your friend is on the list now" about
+ * a boy whose name he had just been given and did not use. When a
+ * relationship word is followed immediately by a non-stopword, that word is
+ * the person's name -- "my friend is annoying" is safe because "is" is a
+ * stopword, and so are "my mum said..." and "my sister likes...".
+ */
+export function companionName(text: string): string | undefined {
+  const m = text.match(/\b(?:my|our)\s+([a-z]{3,20})\s+([a-z][a-z'-]{1,20})\b/i);
+  if (!m || !PEOPLE.has(m[1].toLowerCase())) return undefined;
+  const name = m[2].toLowerCase();
+  if (STOP.has(name) || PEOPLE.has(name)) return undefined;
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 /**
@@ -125,6 +200,8 @@ function subjectFrom(text: string): string | undefined {
   // A sentence with a PERSON in it is about that person. "my sister is
   // annoying" picked "annoying" (the longest word) and missed the person
   // branch entirely, so he gave a verdict on the adjective.
+  const companion = companionName(text);
+  if (companion) return companion;
   const named = words.find((w) => looksLikePerson(w, text) && /^[A-Z][a-z]+$/.test(cased(w, text) ?? ''));
   const person = words.find((w) => looksLikePerson(w, text));
   const best = named ?? person ?? complementOf(text, words) ?? words[0];
@@ -171,8 +248,10 @@ export function understand(text: string): Understanding {
   const raw = text.trim();
   const t = raw.toLowerCase();
   const subject = subjectFrom(raw);
-  const person = subject ? looksLikePerson(subject, raw) : false;
+  // A companion name is a person even when the player typed it lowercase.
+  const person = Boolean(companionName(raw)) || (subject ? looksLikePerson(subject, raw) : false);
   const feeling = FEELINGS.find((f) => f.re.test(t))?.feeling;
+  const tone = toneOf(raw);
 
   // Intent first, THEN emptiness. Getting this the other way round is what
   // made "hi" and "i had a bad day" — both made entirely of stopwords — come
@@ -184,12 +263,13 @@ export function understand(text: string): Understanding {
   const asked = /\?/.test(raw) || /\b(what|why|how|who|where|when|can|do|does|did|are|is|will|would|should)\b/.test(t);
   const empty = raw.length === 0 || (keywords(raw).length === 0 && intent === 'statement' && !asked);
 
-  return { intent, subject, person, feeling, empty };
+  return { intent, subject, person, feeling, tone, empty };
 }
 
 function readIntent(t: string, feeling: Feeling | undefined): Intent {
   // Order matters: the more specific shapes first.
   if (/^\s*(hi|hello|hey|yo|sup|hiya|morning|evening|good morning|good night)\b/.test(t)) return 'greeting';
+  if (/^\s*(what'?s up|whats up|wassup|whazzup|how'?s it going|hows it going)\b/.test(t)) return 'greeting';
   if (
     /\b(do|d'?you|would|did) (you|u) (like|love|hate|mind|enjoy|fancy)\b|\bwhat (do|d')? ?you think (of|about)\b|\bhow (do you feel|about)\b|\byour (opinion|thoughts)\b/.test(t)
   ) {

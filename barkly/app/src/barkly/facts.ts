@@ -15,6 +15,8 @@
  * a prompt. See prompts.ts for the delimiting.
  */
 
+import { companionName } from './understand';
+
 export type FactCategory =
   | 'identity'      // name, age, where they live
   | 'preference'    // favorite color, food, music
@@ -257,13 +259,75 @@ export function parseFactStatement(raw: string, now: number): Fact | null {
  * Returns a `key = value` string in the same shape every other caller uses,
  * so it flows through the identical merge/rank path as a model-extracted one.
  */
+/**
+ * "Actually my favourite food is tacos."
+ *
+ * Every pattern below is anchored to the start of the sentence, and the single
+ * most valuable one -- a preference CHANGING, which is the clearest proof he
+ * has a durable memory -- is the one a child prefixes with "actually". So the
+ * filler comes off first, or the update is heard as a brand new sentence about
+ * nothing and he answers with a joke about cheese.
+ */
+const FILLER = /^(actually|so|oh|well|um+|uh+|erm|wait|hey|also|and|but|ok|okay|hmm+|i think|i mean|by the way|btw|no wait)\b[,]?\s+/i;
+
 export function personalFactFrom(raw: string): string | null {
-  const s = sanitize(raw, 200).trim();
+  let s = sanitize(raw, 200).trim();
+  for (let i = 0; i < 3; i += 1) {
+    const shorter = s.replace(FILLER, '');
+    if (shorter === s) break;
+    s = shorter;
+  }
   if (!s || /\?/.test(s)) return null;
   // A wh-word anywhere in a short sentence means they are asking, not telling.
   if (/\b(what|which|who|where|when|why|how|do|does|did|is|are|can|could)\b/i.test(s.split(/\s+/)[0] ?? '')) {
     return null;
   }
+
+  /*
+   * "I have a sister named Mia" / "my sister's name is Mia".
+   *
+   * The relationship introduction was heard, answered warmly, and thrown away
+   * -- ask him the sister's name a minute later and he had nothing. This is
+   * exactly the shape a player uses to hand him the people in their life,
+   * which is the memory most worth keeping.
+   */
+  const introduced = s.match(
+    /^(?:i\s+(?:have|got)\s+(?:a|an|my)?\s*|my\s+)([a-z]{3,20})(?:'s)?\s+(?:is\s+)?(?:named|called|name\s+is)\s+([A-Za-z][\w'-]{1,24})[.!]?$/i,
+  );
+  if (introduced) {
+    const key = normalizeKey(introduced[1]);
+    if (key) return `${key} = ${introduced[2].trim()}`;
+  }
+
+  /*
+   * "my friend jake is annoying" -- the relationship word AND the name.
+   *
+   * Without this the generic possessive branch below filed it as
+   * `friend_jake = annoying`, a key nothing will ever look up again. Only the
+   * name is worth keeping; how they feel about them today is a mood, not a
+   * fact about the person.
+   */
+  const withName = s.match(/^my\s+([a-z]{3,20})\s+([a-z][a-z'-]{1,20})\s+(?:is|are|was|were)\b/i);
+  if (withName && companionName(s)) {
+    const key = normalizeKey(withName[1]);
+    const name = companionName(s);
+    if (key && name) return `${key} = ${name}`;
+  }
+
+  /*
+   * A MOOD IS NOT A FACT.
+   *
+   * "my day was terrible" fits the possessive shape exactly and was filed as
+   * `day = terrible`, permanently, alongside their name and their sister's.
+   * It then sat in the Settings memory list forever and inflated the count he
+   * quotes back ("I've got 9 things about you on file"). What happened today
+   * belongs in an experience, which the memory layer already keeps separately
+   * and ages out; a durable fact is something that will still be true next
+   * month.
+   */
+  const TRANSIENT = new Set(
+    'day week weekend morning afternoon evening night today tomorrow yesterday mood time turn'.split(' '),
+  );
 
   const possessive = s.match(
     /^my\s+(favou?rite\s+[a-z ]{2,24}|[a-z]{2,20}(?:'s)?\s?[a-z]{0,20})\s+(?:is|are|was)\s+(.{2,60}?)[.!]?$/i,
@@ -278,6 +342,7 @@ export function personalFactFrom(raw: string): string | null {
     const key = normalizeKey(possessive[1]);
     const value = possessive[2].trim();
     if (!key || !value) return null;
+    if (TRANSIENT.has(key)) return null;
     return `${key} = ${value}`;
   }
 
