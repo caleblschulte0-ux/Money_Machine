@@ -51,6 +51,7 @@ import {
   HomeScene,
   NightOverlay,
   ParkScene,
+  skyBand,
   TownScene,
 } from './scenes/Scenes';
 import { BarklyState } from '../barkly/types';
@@ -600,6 +601,9 @@ export default function BarklyRoom() {
               : Boolean(barkly.reward),
       ) ?? null);
   const hour = new Date().getHours();
+  // The same band the scenes grade themselves from, so the dog and the room
+  // can never disagree about what time it is.
+  const night = skyBand(hour) === 'night' || asleep;
   const worldMotion = asleep
     ? 'sleep' as const
     : arriving
@@ -1181,6 +1185,27 @@ export default function BarklyRoom() {
             <FoodBowl key={barkly.serving} food={barkly.serving} eating={snapshot.state === 'eating'} />
           )}
           {snapshot.state === 'playing' && !fetching && routine === 'ball' && <Ball />}
+
+          {/*
+            ONE LIGHT FOR THE ROOM AND EVERYONE STANDING IN IT.
+            
+            The scene is graded by `WorldLighting` -- at night it takes a deep
+            blue wash, strong enough to own the frame. Barkly is rendered ABOVE
+            the scene and got none of it, so after dark he stood in a midnight
+            room lit like noon: a daylight-bright dog pasted onto a dark
+            picture. The other dogs had the same problem. `NightOverlay` was
+            already the right idea and was applied only while he was ASLEEP,
+            and below him anyway.
+
+            Deliberately much lighter than the scene's own wash (the scene goes
+            to 0.50 alpha at the bottom; this is a fraction of that). He is the
+            hero and must stay readable -- the job here is to seat him in the
+            room, not to hide him. It sits above the dogs and the props and
+            below the kit, the chip and every piece of chrome, so nothing a
+            child has to read is dimmed by it.
+          */}
+          {night && <View pointerEvents="none" style={styles.stageNight} />}
+
           <HeartBurst burst={heartBurst} headY={CARE_DOCK_CLEARANCE + SPRITE_HEIGHT * spriteScale * 0.66} />
           <BarklyKit
             toyId={barkly.toy?.id ?? null}
@@ -1494,6 +1519,15 @@ const styles = StyleSheet.create({
   digSpot: { position: 'absolute', left: 10, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: -11, ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodSoft, paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodWarm, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
+  /*
+   * The night wash that falls on the dogs. Same hue family as the scene's own
+   * grade (WorldScene.GRADE.night) at a fraction of its strength.
+   */
+  stageNight: {
+    position: 'absolute',
+    left: 0, right: 0, top: 0, bottom: 0,
+    backgroundColor: 'rgba(20,38,104,0.17)',
+  },
   chip: { position: 'absolute', bottom: CARE_DOCK_HEIGHT + STATE_CHIP_GAP, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },

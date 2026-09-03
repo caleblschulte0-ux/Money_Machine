@@ -92,7 +92,19 @@ Turquoise sea, warm sand, big foam shapes, shells/gulls/seaweed. It should be th
    the a11y sweep pass on a freshly built artifact.
 2. Pack Book — add actual portrait/treasure/rival visual modules and stronger color blocks.
 3. Typing field — stop looking like a web input; make it a toy-console speech slot.
-4. Store items — eventually show mini Barkly previews wearing/using the selected object, not just an icon row.
+4. ~~Store items — eventually show mini Barkly previews wearing/using the
+   selected object, not just an icon row.~~
+   DONE 2026-09-03, for collars. `src/ui/CollarPreview.tsx` windows the
+   approved front render with the same aligned `renders/collars/front_*.png`
+   overlay the live renderer composites onto him, so each card is HIM in that
+   collar. The shop header's ~230px of dead lavender became the same preview
+   in whatever he is wearing right now (`framing="face"`, a higher window that
+   includes his eyes — a header cropped like a card is just a fifth swatch).
+   Front pose only: the overlays are derived against the front frame's collar
+   pixels, so a three-quarter preview needs its own derivation first.
+   PARTIAL, honestly: toys, food and treats still draw `ItemIcon`. A bag of
+   biscuits is not more legible for having a dog behind it, so those are
+   waiting on the item art itself rather than on this component.
 5. Food — animate bowl/food preview before choosing.
 6. Unique NPC silhouettes/assets.
 7. Replace major code-drawn scene furniture with authored diorama assets.

@@ -10,9 +10,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import ItemIcon from './ItemIcon';
+import CollarPreview, { hasCollarPreview } from './CollarPreview';
 import { color, elevation, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import {
+  equippedItem,
   isMultiSlot,
   SLOT_VERBS,
   isPlaced,
@@ -185,6 +187,18 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
               <Text style={styles.eyebrow}>BARKLY'S</Text>
               <Text style={styles.title}>STUFF</Text>
             </View>
+            {/*
+              HIM, IN WHAT HE IS WEARING RIGHT NOW.
+              
+              This header was ~230px of empty lavender gradient -- the largest
+              dead area in the app, on the screen where a player decides to
+              spend. A shop should be a shelf with the customer standing at it,
+              and the answer to "what does he look like at the moment" belongs
+              here, next to everything you could change it to.
+            */}
+            <View style={styles.mirror}>
+              <CollarPreview id={equippedItem(wallet, 'collar')?.id ?? null} size={70} framing="face" />
+            </View>
             <Pressable style={styles.closeButton} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
               <Text style={styles.close}>✕</Text>
             </Pressable>
@@ -236,7 +250,16 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                         {/* The art sits in a lit window, the way a toy sits in its box. */}
                         <View style={[styles.cardWindow, { backgroundColor: slotColor(slot) }]}>
                           <View style={styles.cardGloss} pointerEvents="none" />
-                          <ItemIcon id={item.id} tint={item.color} size={artSize} />
+                          {/*
+                            A collar is shown ON HIM. Everything else is still
+                            the drawn object, because a bag of biscuits does not
+                            get more legible for having a dog behind it.
+                          */}
+                          {hasCollarPreview(item.id) ? (
+                            <CollarPreview id={item.id} size={artSize} />
+                          ) : (
+                            <ItemIcon id={item.id} tint={item.color} size={artSize} />
+                          )}
                           {held > 0 && (
                             <View style={styles.heldTag}><Text style={styles.heldText}>×{held}</Text></View>
                           )}
@@ -294,8 +317,26 @@ const styles = StyleSheet.create({
   },
   hero: { position: 'absolute', left: 0, right: 0, top: 0, height: 118 },
   heroGloss: { position: 'absolute', left: space.xl, right: space.xl, top: space.sm, height: space.md, borderRadius: radius.pill, backgroundColor: color.glossSoft },
-  header: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space.md },
-  titleWrap: { minWidth: 76 },
+  /*
+   * `space-between` and a flexing title, like every other sheet in the app.
+   * Without them this row simply laid the close button down next to the
+   * title, so the X sat ON the word STUFF instead of at the far edge -- the
+   * third time this exact missing rule has turned up (the destination tray
+   * refused to fill its row, and the composer pushed its send button off the
+   * screen entirely).
+   */
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md, paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space.md },
+  titleWrap: { flex: 1, minWidth: 76 },
+  mirror: {
+    width: 70,
+    height: 70,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: color.card,
+    backgroundColor: color.violet,
+    ...elevation.low,
+  },
   eyebrow: { ...type.micro, color: color.inkMid },
   title: { ...type.display, color: color.ink },
   closeButton: { width: TAP_MIN, height: TAP_MIN, borderRadius: radius.pill, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center', ...elevation.low },
