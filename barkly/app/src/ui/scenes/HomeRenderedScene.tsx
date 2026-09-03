@@ -427,7 +427,30 @@ export function HomeScene({
    * tablet gets a wider room rather than the same phone furniture marooned in
    * empty wall.
    */
-  const wallInset = Math.max(12, width * 0.045);
+  /*
+   * THE ROOM HAS AN AUTHORED WIDTH. It does not stretch to fill an iPad.
+   *
+   * Window and shelf both hang from `wallInset`, one screen-edge margin used
+   * on both sides -- which is exactly the problem on a wide landscape canvas:
+   * that margin only grows 4.5% of screen width, so on a 1024px iPad the two
+   * pieces of furniture are still pinned near the true left/right edges and
+   * the biography strip between them (two small photos, or NOTHING at all on
+   * a young save -- an empty history renders an empty room on purpose, see
+   * HomeBiography) is stretched across a widening void. Measured at 1024x768:
+   * a bare beige wall roughly 900px wide with two postcard-sized photos
+   * floating in it, found by a ChatGPT doctor pass and confirmed by capturing
+   * the actual build rather than trusting the screenshot claim.
+   *
+   * Past ROOM_CAP, extra screen width stops feeding the gap between window
+   * and shelf and becomes side margin instead -- the room stays the same
+   * authored width, centered, and a wide screen reveals more plain wall
+   * around it. This is the same "wider screens reveal more environment, they
+   * do not stretch the composition" rule `worldScale` already documents for
+   * Barkly himself; the wall furniture just never followed it.
+   */
+  const ROOM_CAP = 620;
+  const wallInset =
+    width <= ROOM_CAP ? Math.max(12, width * 0.045) : (width - ROOM_CAP) / 2 + ROOM_CAP * 0.045;
   // One value, read by the lamp sprite and by the glow that has to sit on it.
   const lampLeft = wallInset + chairW * 0.84;
 
