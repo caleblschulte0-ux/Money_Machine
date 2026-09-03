@@ -27,6 +27,8 @@ export interface AdventureGoal {
   detail: string;
   target?: string;
   done: boolean;
+  /** Skips the daily rotation. Only the first-meeting on-ramp uses this. */
+  pinned?: boolean;
 }
 
 export interface AdventureState {
@@ -88,6 +90,35 @@ function candidates(input: AdventureInput): AdventureGoal[] {
   const routine = bestRoutine(input.memory);
   const level = levelFor(input.xp);
   const rows: AdventureGoal[] = [];
+
+  /*
+   * THE FIRST MEETING IS THE ON-RAMP, AND IT HAS TO BE PINNED.
+   *
+   * Every NPC goal below hangs off `topBond`, which filters `encounters > 0`
+   * -- so a player who has never met a dog was offered no reason to go and
+   * meet one. Their whole plan was "tell him something / cause zoomies /
+   * handle the food situation", none of which leave the room. Barkly holding
+   * a grudge for days is a third of the pitch, and nothing pointed at it: you
+   * had to wander into the park on your own and tap a dog twice.
+   *
+   * So while there are NO bonds at all, meeting Duke is the plan's first item
+   * -- pinned rather than left to the daily rotation, because a goal that
+   * carries a product pillar cannot appear three days out of four. It
+   * disappears the moment any bond exists, which is the same day it stops
+   * being an on-ramp.
+   */
+  const met = Object.values(input.character.socialBonds ?? {}).some((b) => b.encounters > 0);
+  if (!met) {
+    rows.push({
+      id: 'first-dog',
+      kind: 'npc',
+      target: 'duke',
+      label: 'Go and meet Duke',
+      detail: 'He is at the park. Barkly has opinions about him already, somehow.',
+      done: false,
+      pinned: true,
+    });
+  }
 
   if (rival) {
     rows.push({
@@ -175,7 +206,11 @@ export function createAdventure(input: AdventureInput): AdventureState {
   const day = adventureDay(input.now);
   const rows = candidates(input);
   const offset = rows.length === 0 ? 0 : hash(day) % rows.length;
-  const rotated = [...rows.slice(offset), ...rows.slice(0, offset)];
+  // Pinned goals sit in front of the rotation rather than inside it.
+  const pinned = rows.filter((r) => r.pinned);
+  const rest = rows.filter((r) => !r.pinned);
+  const spun = rest.length === 0 ? [] : [...rest.slice(offset % rest.length), ...rest.slice(0, offset % rest.length)];
+  const rotated = [...pinned, ...spun];
   const picked: AdventureGoal[] = [];
   const kinds = new Set<string>();
   for (const row of rotated) {

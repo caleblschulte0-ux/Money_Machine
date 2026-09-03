@@ -1217,7 +1217,18 @@ export function useBarkly(): BarklyController {
           : withFriend(c, npc.name, now),
       );
 
-      if (Math.random() < 0.3) {
+      /*
+       * THE FIRST MEETING IS ALWAYS WRITTEN DOWN.
+       *
+       * The 30% roll is right for the fiftieth trip to the park -- it keeps
+       * the memory store from filling up with "saw Duke again". But it was
+       * also applied to the very first time a player ever met a dog, so the
+       * encounter the whole first session is built around left no narratable
+       * memory seven times out of ten. The bond was recorded either way, so
+       * nothing looked broken; he simply had nothing to say about it later,
+       * which is the one thing that was supposed to happen.
+       */
+      if (current === 0 || Math.random() < 0.3) {
         const mem = npc.memories[Math.floor(Math.random() * npc.memories.length)];
         memory
           .remember([], [mem], { where: LOCATIONS[locationRef.current].name, withWhom: [npc.name] })

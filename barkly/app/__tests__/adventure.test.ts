@@ -82,3 +82,41 @@ describe("Barkly's Plan", () => {
     expect(tomorrow.goals.every((goal) => !goal.done)).toBe(true);
   });
 });
+
+describe('the plan is the on-ramp for a player with no history', () => {
+  /*
+   * Every other NPC goal hangs off a bond that already exists, so before this
+   * a brand-new player's plan never left the room -- and "Barkly holds a
+   * grudge for days" is a third of the product pitch with nothing pointing at
+   * it. Found by scoring the shipped first session as a stranger, 2026-09-03.
+   */
+  it('sends a player who has met nobody to meet a dog', () => {
+    const plan = createAdventure(base());
+    const first = plan.goals[0];
+    expect(first.id).toBe('first-dog');
+    expect(first.kind).toBe('npc');
+    expect(first.target).toBe('duke');
+  });
+
+  it('pins it, so it cannot be rotated out on an unlucky day', () => {
+    // The rotation offset is a hash of the calendar day; across a month of
+    // days the on-ramp must appear every single time, not most of the time.
+    for (let d = 1; d <= 28; d += 1) {
+      const plan = createAdventure({ ...base(), now: Date.UTC(2026, 7, d, 12) });
+      expect(plan.goals.some((g) => g.id === 'first-dog')).toBe(true);
+    }
+  });
+
+  it('disappears the moment they have actually met someone', () => {
+    const input = base();
+    input.character = withFriend(input.character, 'Biscuit', NOW);
+    const plan = createAdventure(input);
+    expect(plan.goals.some((g) => g.id === 'first-dog')).toBe(false);
+  });
+
+  it('still produces three goals, and does not crowd out the rest', () => {
+    const plan = createAdventure(base());
+    expect(plan.goals).toHaveLength(3);
+    expect(new Set(plan.goals.map((g) => g.id)).size).toBe(3);
+  });
+});
