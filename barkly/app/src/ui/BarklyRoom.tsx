@@ -42,6 +42,7 @@ import BarklyKit, { KitAction } from './BarklyKit';
 import PlaytestSheet from './PlaytestSheet';
 import { playtestAllowed } from '../dev/playtest';
 import { useAttention } from './useAttention';
+import { rivalInSight } from './attention';
 import { feel, setFeelMuted } from './feel';
 import {
   BeachScene,
@@ -834,12 +835,25 @@ export default function BarklyRoom() {
   /**
    * WHERE HE IS LOOKING — and the reason there is no "hungry" badge.
    */
+  /*
+   * The dog in this room he has actually fallen out with, if any.
+   *
+   * Gated on a real bond rather than on `relationship === 'rival'` alone, so
+   * the very first time a player meets Duke he is still just a dog standing
+   * there — the wariness is something the two of them EARNED, and it appears
+   * the moment there is history to justify it.
+   */
+  const rivalPresent = rivalInSight(
+    npcsHere.map((id) => ({ id, bond: bondFor(barkly.character, NPCS[id].name) })),
+  );
+
   const look = useAttention({
     wants,
     eating: snapshot.state === 'eating',
     npcSpeaking: npcBubble ? npcBubble.id : null,
     speaking: snapshot.state === 'speaking',
     asleep,
+    rivalPresent,
   });
 
   /**

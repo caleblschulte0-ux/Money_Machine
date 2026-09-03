@@ -9,7 +9,8 @@
  * not turn when addressed reads as furniture.
  */
 
-import { attentionFor, lookFor, GLANCE } from '../src/ui/attention';
+import {
+  rivalInSight, attentionFor, lookFor, GLANCE } from '../src/ui/attention';
 
 const base = { wants: null, npcSpeaking: null, speaking: false, asleep: false } as const;
 
@@ -86,5 +87,82 @@ describe('it is a glance, not a stare', () => {
     // The looking-BACK is the half that carries the meaning: checking the bowl
     // is information, checking you is a question.
     expect(GLANCE.back).toBeGreaterThan(GLANCE.away);
+  });
+});
+
+/*
+ * THE FEUD, VISIBLE BEFORE ANYONE SPEAKS.
+ *
+ * An NPC only entered his attention while it was actively SPEAKING, so Duke
+ * could stand four feet away with a recorded feud behind him and Barkly would
+ * carry on staring at his bowl. The Pack Book said "nemesis"; his body said
+ * nothing. Added 2026-09-03.
+ */
+describe('which dog he watches', () => {
+  const rival = (encounters: number) => ({ kind: 'rival' as const, encounters });
+  const friend = (encounters: number) => ({ kind: 'friend' as const, encounters });
+
+  it('watches a rival he has history with', () => {
+    expect(rivalInSight([{ id: 'duke', bond: rival(3) }])).toBe('duke');
+  });
+
+  it('does NOT watch a rival he has never actually met', () => {
+    // A first meeting is a first meeting. Wariness is earned on the second.
+    expect(rivalInSight([{ id: 'duke', bond: rival(0) }])).toBeNull();
+    expect(rivalInSight([{ id: 'duke' }])).toBeNull();
+  });
+
+  it('never watches a friend that way', () => {
+    expect(rivalInSight([{ id: 'biscuit', bond: friend(40) }])).toBeNull();
+  });
+
+  it('picks the worst relationship in the room', () => {
+    expect(
+      rivalInSight([
+        { id: 'biscuit', bond: friend(20) },
+        { id: 'pepper', bond: rival(2) },
+        { id: 'duke', bond: rival(9) },
+      ]),
+    ).toBe('duke');
+  });
+
+  it('an empty park is nobody to watch', () => {
+    expect(rivalInSight([])).toBeNull();
+  });
+});
+
+describe('he keeps an eye on the one he does not trust', () => {
+  const base = { wants: null, npcSpeaking: null, speaking: false, asleep: false } as const;
+
+  it('watches a rival who is standing there, unprompted', () => {
+    expect(attentionFor({ ...base, rivalPresent: 'duke' })).toEqual({ at: 'npc', id: 'duke' });
+  });
+
+  it('interrupts his own dinner to check on him', () => {
+    // The honest priority: a dog will look up from the bowl for a dog he
+    // dislikes. Wanting food does not outrank it.
+    expect(attentionFor({ ...base, wants: 'feed', rivalPresent: 'duke' })).toEqual({ at: 'npc', id: 'duke' });
+  });
+
+  it('still gives the floor to whoever is actually talking', () => {
+    expect(attentionFor({ ...base, npcSpeaking: 'biscuit', rivalPresent: 'duke' }))
+      .toEqual({ at: 'npc', id: 'biscuit' });
+  });
+
+  it('looks at YOU while answering you, rival or no rival', () => {
+    expect(attentionFor({ ...base, speaking: true, rivalPresent: 'duke' })).toEqual({ at: 'you' });
+  });
+
+  it('a meal in front of him still wins — a dog with food does not do eye contact', () => {
+    expect(attentionFor({ ...base, eating: true, rivalPresent: 'duke' })).toEqual({ at: 'bowl' });
+  });
+
+  it('asleep, nothing moves him, not even Duke', () => {
+    expect(attentionFor({ ...base, asleep: true, rivalPresent: 'duke' })).toEqual({ at: 'bed' });
+  });
+
+  it('behaves exactly as before when no rival is present', () => {
+    expect(attentionFor({ ...base, wants: 'feed' })).toEqual({ at: 'bowl' });
+    expect(attentionFor({ ...base, rivalPresent: null })).toEqual({ at: 'you' });
   });
 });

@@ -176,7 +176,9 @@ export default function DialoguePanel({ speaker, line, youSaid, thought, hint, a
             ) : (
               <View style={[styles.badge, { borderColor: color.popDeep }]}>
                 <View style={[styles.speakerPip, { backgroundColor: color.popDeep }]} />
-                <Text style={[styles.who, { color: color.popDeep }]}>BARKLY BRAIN</Text>
+                {/* popInk, not popDeep: see theme. The pip is decoration and
+                    may stay bright; the WORD has to be readable. */}
+                <Text style={[styles.who, { color: color.popInk }]}>BARKLY BRAIN</Text>
               </View>
             )}
             <Text style={[styles.line, !visibleLine && styles.thought]} numberOfLines={SPEECH_MAX_LINES}>{shown}</Text>
@@ -303,7 +305,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     borderWidth: 1.5,
     marginBottom: space.xs,
-    backgroundColor: 'rgba(255,255,255,0.78)',
+    /*
+     * 0.92, not 0.78. This badge floats over the live world, so at 0.78 the
+     * contrast of the label depended on whatever the scene happened to be
+     * doing behind it -- which became a moving target the day the room got
+     * ambient light. A speaker label should not be legible only on a good
+     * frame.
+     */
+    backgroundColor: 'rgba(255,255,255,0.92)',
   },
   speakerPip: { width: 6, height: 6, borderRadius: radius.pill },
   who: { ...type.micro },

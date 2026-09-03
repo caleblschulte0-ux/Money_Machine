@@ -66,6 +66,13 @@ export interface AttentionInput {
   /** He is mid-sentence. Talking to you means looking at you. */
   speaking: boolean;
   asleep: boolean;
+  /**
+   * A dog he has a GRIEVANCE with is standing here.
+   *
+   * Not merely "a rival exists in this location" — one he has actually fallen
+   * out with, so a first meeting is still a first meeting. See `watchesRival`.
+   */
+  rivalPresent?: NpcId | null;
 }
 
 /**
@@ -82,10 +89,49 @@ export function attentionFor(i: AttentionInput): Attending {
   if (i.eating) return { at: 'bowl' };
   if (i.npcSpeaking) return { at: 'npc', id: i.npcSpeaking };
   if (i.speaking) return { at: 'you' };
+  /*
+   * HE KEEPS AN EYE ON THE ONE HE DOES NOT TRUST.
+   *
+   * Duke could stand four feet away with a recorded feud behind him and Barkly
+   * would carry on staring at his own bowl, because an NPC only entered this
+   * list while it was actively SPEAKING. The Pack Book said "nemesis" and his
+   * body said nothing, which makes the relationship a database row instead of
+   * a thing you can see.
+   *
+   * Ranked below being spoken to (still the loudest signal in the room) and
+   * above his own appetite, which is the honest order: a dog will interrupt
+   * his dinner to check on a dog he dislikes. The GLANCE does the rest — he
+   * checks the rival, then checks you — so it reads as wariness rather than
+   * a stare.
+   */
+  if (i.rivalPresent) return { at: 'npc', id: i.rivalPresent };
   if (i.wants === 'feed') return { at: 'bowl' };
   if (i.wants === 'play') return { at: 'toy' };
   if (i.wants === 'sleep') return { at: 'bed' };
   return { at: 'you' };
+}
+
+/**
+ * Which dog standing here, if any, he has a reason to keep an eye on.
+ *
+ * Pure and separate for the same reason the rest of this module is: the
+ * DECISION is the part worth testing, and testing it through a browser meant
+ * fighting story sheets that open on exactly the saves that have the history
+ * this depends on.
+ *
+ * A rival with ZERO encounters is not watched. The first time a player meets
+ * Duke he is just a dog standing in a park — the wariness is something the
+ * two of them earn, and it should appear on the second meeting, not be
+ * preloaded into the character.
+ */
+export function rivalInSight(
+  present: readonly { id: NpcId; bond?: { kind: 'friend' | 'rival'; encounters: number } }[],
+): NpcId | null {
+  const watched = present
+    .filter((p) => p.bond?.kind === 'rival' && p.bond.encounters > 0)
+    // The worst relationship in the room wins his attention.
+    .sort((a, b) => (b.bond?.encounters ?? 0) - (a.bond?.encounters ?? 0))[0];
+  return watched ? watched.id : null;
 }
 
 /** How long he holds each half of a glance, in ms. */

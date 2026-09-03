@@ -46,6 +46,14 @@ export const color = {
 
   pop: '#4CC9F0',
   popDeep: '#249FC8',
+  /*
+   * The blue that is legible at 10px. `popDeep` is a SURFACE colour: measured
+   * against pure white it is 3.06:1, so any small text in it fails WCAG AA
+   * before the background behind it is even considered -- and the badge it sat
+   * on is 78% white over the live scene, which pushed the "BARKLY BRAIN" chip
+   * to 2.96:1 in the audit. 6.03:1 on white, and it still reads as his blue.
+   */
+  popInk: '#1A6B84',
 
   violet: '#BDA7FF',
   violetWell: '#EDE4FF',
