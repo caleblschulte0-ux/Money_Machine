@@ -97,7 +97,11 @@ describe('meeting Barkly', () => {
     // The cue leaves the state machine so the hook can store it as a REAL
     // training rule; an onboarding-only trick would vanish on reload.
     expect(events[3].learnedCue).toBe('IRS');
-    expect(lineFor(state)).toContain('IRS');
+    // The cue is on the BUTTON, not in the sentence: a line containing the
+    // player's own word can never be in the recorded bank, and this is the
+    // beat that most needs his actual voice.
+    expect(lineFor(state)).not.toContain('IRS');
+    expect(lineFor(state)).toMatch(/say it/i);
   });
 
   /*

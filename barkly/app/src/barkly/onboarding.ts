@@ -66,8 +66,20 @@ export function lineFor(state: OnboardingState): string {
     case 'teach':
       return "Now the good bit. Give me a secret word. Any word. I'll remember it forever.";
     case 'trick':
+      /*
+       * The cue is NOT in this sentence, deliberately.
+       *
+       * The recorded voice bank matches whole lines, so any line with the
+       * player's own word welded into it can never be banked -- it comes out
+       * in the browser's screen-reader narrator, in the middle of the one beat
+       * of onboarding that is supposed to sell the character. The BUTTON is
+       * already labelled with their word (see ui/Onboarding), so the cue is on
+       * screen either way and he can say a sentence he actually has a
+       * recording of. Same trade as the name, which is split off the front of
+       * the opening line for the same reason.
+       */
       return state.cue
-        ? `Learned it. Say “${state.cue}” and watch what happens.`
+        ? 'Learned it. Now say it, and watch what happens.'
         : "Suit yourself. You can teach me one any time — tell me what to do when you say a word.";
     case 'listening':
       return "One more thing. I'd rather hear you than read you. Can I?";

@@ -32,6 +32,12 @@
       "tag": "thoughts"
     },
     {
+      "key": "05f8c3d09d3e8119",
+      "spoken": "Now da good bit. Gimme a secret word. Any word. I'll remember it forever.",
+      "source": "Now the good bit. Give me a secret word. Any word. I'll remember it forever.",
+      "tag": "onboarding"
+    },
+    {
       "key": "0609773436d713dd",
       "spoken": "Wave: retreated. Barkly: victorious. Paws: regrettably wet.",
       "source": "Wave: retreated. Barkly: victorious. Paws: regrettably wet.",
@@ -420,6 +426,12 @@
       "spoken": "what if treats… but bigger",
       "source": "what if treats… but bigger",
       "tag": "thoughts"
+    },
+    {
+      "key": "4126095b04fb7b82",
+      "spoken": "Suit yourself. You can teach me one any time — tell me what to do when ya say a word.",
+      "source": "Suit yourself. You can teach me one any time — tell me what to do when you say a word.",
+      "tag": "onboarding"
     },
     {
       "key": "4169d0b2ff6e4a39",
@@ -1068,6 +1080,12 @@
       "spoken": "Who. Gimme a name. I'll bark at a general direction.",
       "source": "Who. Give me a name. I'll bark at a general direction.",
       "tag": "talk"
+    },
+    {
+      "key": "c5f43c1fd1b92a56",
+      "spoken": "Learned it. Now say it, and watch what happens.",
+      "source": "Learned it. Now say it, and watch what happens.",
+      "tag": "onboarding"
     },
     {
       "key": "c791218cb614e283",
