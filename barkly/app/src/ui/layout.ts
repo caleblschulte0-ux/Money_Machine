@@ -17,7 +17,17 @@ export function contentBottom(insetBottom: number): number {
 
 export const TAP_MIN = 44;
 export const STATUS_HEIGHT = TAP_MIN;
-export const PLACES_HEIGHT = TAP_MIN + 4;
+/*
+ * The destinations are TILES, not text tabs: a glyph pod over a label, inside
+ * a tray with its own padding and border. TAP_MIN for the tile + 8 padding + 4
+ * border + 2 for the selected tile's lift.
+ *
+ * The first cut of this was 72 and `hero_layout` caught it: an 844px phone's
+ * stage fell to 588 against that test's 600 floor, which is the automated form
+ * of the visual doc's own acceptance line -- "main-stage vertical budget must
+ * not shrink enough to crop Barkly". The tile shrank instead of the test.
+ */
+export const PLACES_HEIGHT = TAP_MIN + 14;
 export const CHROME_BOTTOM = STATUS_HEIGHT + PLACES_HEIGHT + 6;
 
 /**

@@ -31,6 +31,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { assertFreshArtifact } from './fresh-artifact.mjs';
 
 async function loadChromium() {
   for (const m of ['playwright', 'playwright-core', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
@@ -49,6 +50,7 @@ const arg = (name, fallback) => {
 };
 
 const html = resolve(arg('--html', 'barkly-artifact.html'));
+assertFreshArtifact(html, 'npm run build:web');
 if (!existsSync(html)) {
   console.error(`no such file: ${html}\nBuild it first: node scripts/build-artifact.mjs`);
   process.exit(2);

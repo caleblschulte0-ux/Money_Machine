@@ -7,24 +7,43 @@ import { CoinPill } from './StoreSheet';
 import { color, elevation, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 
-interface Props {
+/**
+ * The main screen's chrome, as toy objects.
+ *
+ * This file shipped on 2026-08-29 as a "reviewable drop-in prototype" and then
+ * sat imported by NOTHING for five days while `docs/VISUAL_DIRECTION_KIDS_GAME.md`
+ * listed "wire ToyHud into BarklyRoom" as the next thing to build. A component
+ * nothing renders is not a prototype, it is a second implementation of the tab
+ * bar that a reader cannot tell apart from the live one -- which cost this
+ * session ten minutes of chasing an accessible-name bug in the wrong file.
+ *
+ * It is now wired, and split in two because BarklyRoom does not stack these:
+ * portrait puts the chrome row above the destinations, landscape puts the
+ * chrome row across the top and the destinations in a vertical rail.
+ */
+export interface ChromeRowProps {
   coins: number;
   level: number;
   levelFrac: number;
-  location: LocationId;
-  locked?: boolean;
-  isUnlocked: (loc: LocationId) => boolean;
   onOpenShop: () => void;
   onOpenPack: () => void;
   onOpenPlan: () => void;
   onOpenSettings: () => void;
-  onLocation: (loc: LocationId) => void;
   packLevel: number;
   packLabel: string;
   planDone: number;
   planTotal: number;
   planComplete: boolean;
   hasPlan: boolean;
+}
+
+export interface DestinationTrayProps {
+  location: LocationId;
+  locked?: boolean;
+  isUnlocked: (loc: LocationId) => boolean;
+  onLocation: (loc: LocationId) => void;
+  /** Landscape stacks the same tiles into the nav rail. */
+  vertical?: boolean;
 }
 
 function locationColors(loc: LocationId): { body: string; edge: string } {
@@ -115,108 +134,111 @@ function PlanNote({ done, total, complete }: { done: number; total: number; comp
   );
 }
 
-export default function ToyHud({
+export function ToyChromeRow({
   coins,
   level,
   levelFrac,
-  location,
-  locked,
-  isUnlocked,
   onOpenShop,
   onOpenPack,
   onOpenPlan,
   onOpenSettings,
-  onLocation,
   packLevel,
   packLabel,
   planDone,
   planTotal,
   planComplete,
   hasPlan,
-}: Props) {
+}: ChromeRowProps) {
   return (
-    <View style={styles.wrap}>
-      <View style={styles.topRow}>
-        <Pressable
-          style={({ pressed }) => [styles.wallet, pressed && styles.pressed]}
-          onPress={onOpenShop}
-          accessibilityRole="button"
-          accessibilityLabel={`Shop. ${coins} coins, level ${level}.`}
-        >
-          <CoinPill coins={coins} level={level} frac={levelFrac} />
-        </Pressable>
+    <View style={styles.topRow}>
+      <Pressable
+        style={({ pressed }) => [styles.wallet, pressed && styles.pressed]}
+        onPress={onOpenShop}
+        accessibilityRole="button"
+        accessibilityLabel={`Shop. ${coins} coins, level ${level}.`}
+      >
+        <CoinPill coins={coins} level={level} frac={levelFrac} />
+      </Pressable>
 
-        <Pressable
-          style={({ pressed }) => [styles.bookButton, pressed && styles.pressed]}
-          onPress={onOpenPack}
-          accessibilityRole="button"
-          accessibilityLabel={`Pack Book. ${packLabel}.`}
-        >
-          <PackBook level={packLevel} label={packLabel} />
-        </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.bookButton, pressed && styles.pressed]}
+        onPress={onOpenPack}
+        accessibilityRole="button"
+        accessibilityLabel={`Pack Book. ${packLabel}.`}
+      >
+        <PackBook level={packLevel} label={packLabel} />
+      </Pressable>
 
-        {hasPlan && (
+      {hasPlan && (
+        <Pressable
+          style={({ pressed }) => [styles.planButton, pressed && styles.pressed]}
+          onPress={onOpenPlan}
+          accessibilityRole="button"
+          accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete.`}
+        >
+          <PlanNote done={planDone} total={planTotal} complete={planComplete} />
+        </Pressable>
+      )}
+
+      <Pressable
+        style={({ pressed }) => [styles.settings, pressed && styles.pressed]}
+        onPress={onOpenSettings}
+        accessibilityRole="button"
+        accessibilityLabel="Settings"
+      >
+        <View style={styles.settingsGloss} pointerEvents="none" />
+        <View style={styles.gearDot} />
+        <View style={styles.gearDot} />
+        <View style={styles.gearDot} />
+      </Pressable>
+    </View>
+  );
+}
+
+export function DestinationTray({ location, locked, isUnlocked, onLocation, vertical }: DestinationTrayProps) {
+  return (
+    <View style={[styles.destinationTray, vertical && styles.destinationTrayVertical]}>
+      {!vertical && <View style={styles.trayGloss} pointerEvents="none" />}
+      {LOCATION_ORDER.map((loc) => {
+        const open = isUnlocked(loc);
+        const selected = loc === location;
+        const paint = locationColors(loc);
+        return (
           <Pressable
-            style={({ pressed }) => [styles.planButton, pressed && styles.pressed]}
-            onPress={onOpenPlan}
-            accessibilityRole="button"
-            accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete.`}
+            key={loc}
+            disabled={Boolean(locked)}
+            onPress={() => onLocation(loc)}
+            style={({ pressed }) => [
+              styles.destination,
+              { backgroundColor: selected ? paint.body : color.card, borderColor: selected ? paint.edge : color.line },
+              selected && !vertical && styles.destinationSelected,
+              pressed && styles.pressed,
+              locked && styles.disabled,
+            ]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            /*
+             * The unlocked name is BARE -- "Park", not "Park, open" -- because
+             * the art lab drives the whole contact sheet with
+             * getByRole('tab', { name: /^park$/i }). Decorating it here silently
+             * turns a 16-frame capture into "no tab for beach".
+             */
+            accessibilityLabel={open ? LOCATIONS[loc].name : `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}. Tap and he will say so.`}
           >
-            <PlanNote done={planDone} total={planTotal} complete={planComplete} />
+            <View style={[styles.glyphPod, { backgroundColor: selected ? color.card : paint.body }]}>
+              <DestinationGlyph loc={loc} />
+            </View>
+            <Text style={styles.destinationLabel} numberOfLines={1}>{LOCATIONS[loc].name.toUpperCase()}</Text>
+            {!open && <LockDot />}
+            {selected && !vertical && <View style={[styles.destinationEdge, { backgroundColor: paint.edge }]} pointerEvents="none" />}
           </Pressable>
-        )}
-
-        <Pressable
-          style={({ pressed }) => [styles.settings, pressed && styles.pressed]}
-          onPress={onOpenSettings}
-          accessibilityRole="button"
-          accessibilityLabel="Settings"
-        >
-          <View style={styles.settingsGloss} />
-          <View style={styles.gearDot} />
-          <View style={styles.gearDot} />
-          <View style={styles.gearDot} />
-        </Pressable>
-      </View>
-
-      <View style={styles.destinationTray}>
-        <View style={styles.trayGloss} pointerEvents="none" />
-        {LOCATION_ORDER.map((loc) => {
-          const open = isUnlocked(loc);
-          const selected = loc === location;
-          const paint = locationColors(loc);
-          return (
-            <Pressable
-              key={loc}
-              disabled={Boolean(locked)}
-              onPress={() => onLocation(loc)}
-              style={({ pressed }) => [
-                styles.destination,
-                { backgroundColor: selected ? paint.body : color.card, borderColor: selected ? paint.edge : color.line },
-                selected && styles.destinationSelected,
-                pressed && styles.pressed,
-                locked && styles.disabled,
-              ]}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              accessibilityLabel={open ? LOCATIONS[loc].name : `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}.`}
-            >
-              <View style={[styles.glyphPod, { backgroundColor: selected ? color.card : paint.body }]}>
-                <DestinationGlyph loc={loc} />
-              </View>
-              <Text style={styles.destinationLabel} numberOfLines={1}>{LOCATIONS[loc].name.toUpperCase()}</Text>
-              {!open && <LockDot />}
-              {selected && <View style={[styles.destinationEdge, { backgroundColor: paint.edge }]} pointerEvents="none" />}
-            </Pressable>
-          );
-        })}
-      </View>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: space.sm },
   topRow: { minHeight: TAP_MIN, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   wallet: { flex: 1 },
   pressed: { transform: [{ scale: 0.975 }] },
@@ -243,11 +265,18 @@ const styles = StyleSheet.create({
   settingsGloss: { position: 'absolute', left: space.xs, right: space.xs, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
   gearDot: { width: space.xs, height: space.xs, borderRadius: radius.pill, backgroundColor: color.ink },
 
-  destinationTray: { flexDirection: 'row', gap: space.xs, padding: space.xs, borderRadius: radius.lg, backgroundColor: color.fill, borderWidth: 2, borderColor: color.line, overflow: 'visible', ...elevation.toy },
+  destinationTrayVertical: { flexDirection: 'column', flex: 1 },
+  /*
+   * `flex: 1` because the tray is a ROW OF FOUR and must own the whole row.
+   * Without it the tray shrank to its content, the tiles shared ~143px, and
+   * BEACH rendered as "BEA..." -- which the visual doc's own acceptance list
+   * forbids in as many words ("no destination label truncates").
+   */
+  destinationTray: { flex: 1, flexDirection: 'row', gap: space.xs, padding: space.xs, borderRadius: radius.lg, backgroundColor: color.fill, borderWidth: 2, borderColor: color.line, overflow: 'visible', ...elevation.toy },
   trayGloss: { position: 'absolute', left: space.md, right: space.md, top: space.xs, height: space.xs, borderRadius: radius.pill, backgroundColor: color.glossSoft },
-  destination: { flex: 1, minWidth: 0, minHeight: 58, borderRadius: radius.md, borderWidth: 2, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xs, paddingVertical: space.xs, overflow: 'visible' },
+  destination: { flex: 1, minWidth: 0, minHeight: TAP_MIN, borderRadius: radius.md, borderWidth: 2, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xxs, paddingVertical: space.xxs, overflow: 'visible' },
   destinationSelected: { transform: [{ translateY: -2 }] },
-  glyphPod: { width: 30, height: 30, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', marginBottom: space.xxs },
+  glyphPod: { width: 26, height: 26, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', marginBottom: space.xxs },
   destinationLabel: { ...type.micro, color: color.ink, letterSpacing: 0.6 },
   destinationEdge: { position: 'absolute', left: space.xs, right: space.xs, bottom: -5, height: space.sm, borderBottomLeftRadius: radius.sm, borderBottomRightRadius: radius.sm },
   lockDot: { position: 'absolute', right: -2, top: -4, width: 18, height: 18, borderRadius: radius.pill, backgroundColor: color.inkMid, alignItems: 'center', justifyContent: 'center', ...elevation.low },

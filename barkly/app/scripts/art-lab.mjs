@@ -13,9 +13,10 @@
  */
 import { createServer } from 'node:http';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { existsSync, readdirSync, statSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { basename, resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { assertFreshArtifact } from './fresh-artifact.mjs';
 
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 const htmlPath = resolve(arg('--html', 'dist/playtest/index.html'));
@@ -23,45 +24,7 @@ const outDir = resolve(arg('--out', 'art-lab'));
 const preset = arg('--preset', 'longterm');
 if (!existsSync(htmlPath)) { console.error(`missing ${htmlPath}`); process.exit(2); }
 
-/*
- * REFUSE TO MEASURE A STALE BUNDLE.
- *
- * This script serves a pre-built artifact; it does not build one. So running
- * it straight after an edit silently measures the LAST build, and the numbers
- * come out looking like the change did nothing -- which is indistinguishable
- * from the change genuinely doing nothing, and is the more likely reading when
- * you are hoping for a small effect. It happened in this session.
- *
- * Anything under src/ or assets/ newer than the artifact means the artifact
- * cannot represent it. `--stale-ok` is there for deliberately re-measuring an
- * old build (a baseline in a worktree, say), and it says so out loud.
- */
-const newestUnder = (dir) => {
-  let newest = 0;
-  const walk = (d) => {
-    for (const e of readdirSync(d, { withFileTypes: true })) {
-      if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
-      const full = join(d, e.name);
-      if (e.isDirectory()) walk(full);
-      else newest = Math.max(newest, statSync(full).mtimeMs);
-    }
-  };
-  if (existsSync(dir)) walk(dir);
-  return newest;
-};
-const staleOk = process.argv.includes('--stale-ok');
-const builtAt = statSync(htmlPath).mtimeMs;
-const sourceAt = Math.max(newestUnder(resolve('src')), newestUnder(resolve('assets')));
-if (sourceAt > builtAt) {
-  const mins = ((sourceAt - builtAt) / 60000).toFixed(1);
-  if (!staleOk) {
-    console.error(`${basename(htmlPath)} is ${mins} min older than the newest file in src/ or assets/.`);
-    console.error('Build first:  npm run build:web && node scripts/build-artifact.mjs --out dist/playtest/index.html');
-    console.error('Or pass --stale-ok to measure this build on purpose.');
-    process.exit(2);
-  }
-  console.warn(`--stale-ok: measuring a bundle ${mins} min older than the sources.`);
-}
+assertFreshArtifact(htmlPath, 'npm run build:pages');
 
 await mkdir(`${outDir}/frames`, { recursive: true });
 

@@ -24,6 +24,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { assertFreshArtifact } from './fresh-artifact.mjs';
 
 const APP = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (name, fallback) => {
@@ -31,6 +32,7 @@ const arg = (name, fallback) => {
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 };
 const html = resolve(arg('--artifact', join(APP, 'barkly-artifact.html')));
+assertFreshArtifact(html, 'npm run build:web');
 if (!existsSync(html)) {
   console.error(`no artifact at ${html} — run \`npm run build:web\` first`);
   process.exit(2);

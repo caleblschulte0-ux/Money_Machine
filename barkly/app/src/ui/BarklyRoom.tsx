@@ -29,10 +29,11 @@ import BarklyPhotoView from './BarklyPhotoView';
 import EncounterSheet, { momentFromEncounter, momentFromIncident } from './EncounterSheet';
 import Onboarding from './Onboarding';
 import PackBookSheet from './PackBookSheet';
-import StoreSheet, { CoinPill } from './StoreSheet';
+import StoreSheet from './StoreSheet';
+import { DestinationTray, ToyChromeRow } from './ToyHud';
 import FoodSheet from './FoodSheet';
 import ContestSheet from './ContestSheet';
-import { AREA_UNLOCKS, levelProgress } from '../game/progression';
+import { levelProgress } from '../game/progression';
 import BarklyView from './BarklyView';
 import DialoguePanel from './DialoguePanel';
 import SettingsSheet from './SettingsSheet';
@@ -52,7 +53,7 @@ import {
   TownScene,
 } from './scenes/Scenes';
 import { BarklyState } from '../barkly/types';
-import { LOCATION_ORDER, LOCATIONS, LocationId } from '../world/locations';
+import { LOCATIONS, LocationId } from '../world/locations';
 import {
   CARE_DOCK_CLEARANCE,
   CARE_DOCK_HEIGHT,
@@ -459,15 +460,6 @@ function KeyboardGlyph() {
       <Rect x={3.1} y={9} width={2.6} height={2.4} rx={0.8} fill={color.inkMid} />
       <Rect x={7.1} y={9} width={7.8} height={2.4} rx={1.2} fill={color.inkMid} />
       <Rect x={16.3} y={9} width={2.6} height={2.4} rx={0.8} fill={color.inkMid} />
-    </Svg>
-  );
-}
-
-function LockGlyph() {
-  return (
-    <Svg width={11} height={12} viewBox="0 0 11 12" style={{ marginRight: 4 }}>
-      <Path d="M3 5 V3.4 a2.5 2.5 0 0 1 5 0 V5" stroke={color.inkFaint} strokeWidth={1.4} fill="none" />
-      <Rect x={1.4} y={5} width={8.2} height={6.2} rx={1.6} fill={color.inkFaint} />
     </Svg>
   );
 }
@@ -882,46 +874,21 @@ export default function BarklyRoom() {
         style={[styles.content, { maxWidth: frameW, paddingHorizontal: landscape ? 12 : widePortrait ? 20 : 16 }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.header}>
-          <Pressable
-            style={styles.walletTap}
-            onPress={() => openOnly(setStoreOpen)}
-            accessibilityRole="button"
-            accessibilityLabel={`Shop. ${barkly.wallet.coins} coins, level ${barkly.level}.`}
-          >
-            <CoinPill coins={barkly.wallet.coins} level={barkly.level} frac={levelProgress(barkly.wallet.xp).frac} />
-          </Pressable>
-          <View style={styles.headerButtons}>
-            {/*
-              One material for the whole chrome row. The coin pill, the Pack
-              button and Settings used three different radii and three
-              different weights -- a pill, a dark rounded square and a flat
-              white circle -- so the top of the screen read as three unrelated
-              controls rather than one set. They now share a shape, an edge and
-              a highlight, and differ only in colour, which is how the
-              reference games do it.
-            */}
-            <Pressable
-              style={styles.packButton}
-              hitSlop={8}
-              onPress={() => openOnly(setPackOpen)}
-              accessibilityRole="button"
-              accessibilityLabel={`Pack Book. ${barkly.relationship.archetype}. ${barkly.relationship.stage.label}.`}
-            >
-              <View style={styles.chromeEdge} pointerEvents="none" />
-              <View style={styles.chromeGloss} pointerEvents="none" />
-              <Text style={styles.packLabel}>PACK</Text>
-              <Text style={styles.packLevel}>{barkly.relationship.stage.level}</Text>
-            </Pressable>
-            <Pressable style={styles.gear} hitSlop={10} onPress={() => openOnly(setSettingsOpen)} accessibilityRole="button" accessibilityLabel="Settings">
-              <View style={styles.chromeEdge} pointerEvents="none" />
-              <View style={styles.chromeGloss} pointerEvents="none" />
-              <View style={styles.gearDot} />
-              <View style={styles.gearDot} />
-              <View style={styles.gearDot} />
-            </Pressable>
-          </View>
-        </View>
+        <ToyChromeRow
+          coins={barkly.wallet.coins}
+          level={barkly.level}
+          levelFrac={levelProgress(barkly.wallet.xp).frac}
+          onOpenShop={() => openOnly(setStoreOpen)}
+          onOpenPack={() => openOnly(setPackOpen)}
+          onOpenPlan={() => openOnly(setPlanOpen)}
+          onOpenSettings={() => openOnly(setSettingsOpen)}
+          packLevel={barkly.relationship.stage.level}
+          packLabel={`${barkly.relationship.archetype}. ${barkly.relationship.stage.label}`}
+          planDone={planDone}
+          planTotal={planTotal}
+          planComplete={planComplete}
+          hasPlan={Boolean(barkly.adventure)}
+        />
 
         {notice && (
           <View
@@ -974,49 +941,22 @@ export default function BarklyRoom() {
           </View>
         )}
 
+        {/*
+          The destinations are OBJECTS now, not a segmented control: a coloured
+          tile per place with its own glyph, a lock badge instead of grey text,
+          and a moulded tray behind them. This is what
+          docs/VISUAL_DIRECTION_KIDS_GAME.md has had at the top of its build
+          order since 2026-08-29; the tiles came from ToyHud.tsx, which had been
+          sitting unwired the whole time.
+        */}
         <View style={[styles.places, landscape && styles.placesLandscape, landscape && { width: navW }]}>
-          <View style={[styles.tabs, landscape && styles.tabsLandscape]}>
-          {LOCATION_ORDER.map((loc: LocationId) => {
-            const areaLocked = !barkly.isUnlocked(loc);
-            return (
-              <Pressable
-                key={loc}
-                style={[styles.tab, landscape && styles.tabLandscape, location === loc && styles.tabActive, areaLocked && styles.tabLocked]}
-                disabled={locked || fetching}
-                onPress={() => { react('arrive'); barkly.goTo(loc); }}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: location === loc }}
-                accessibilityLabel={areaLocked ? `${LOCATIONS[loc].name}, locked until level ${AREA_UNLOCKS[loc]?.level}. Tap and he will say so.` : LOCATIONS[loc].name}
-              >
-                {areaLocked && <LockGlyph />}
-                <Text style={[styles.tabText, location === loc && styles.tabTextActive]} numberOfLines={1}>
-                  {LOCATIONS[loc].name.toLowerCase()}
-                </Text>
-              </Pressable>
-            );
-          })}
-          </View>
-          {/*
-            The plan chip lives BESIDE the tab bar, not inside it. Rendered as a
-            sibling of the tabs it drew a saturated circle on top of the white
-            pill -- two overlapping pills, which was the most obviously
-            unfinished thing in the first 200px of the screen. Its own chip with
-            real space around it reads as a control rather than a sticker.
-          */}
-          {barkly.adventure && (
-            <Pressable
-              style={[styles.planChip, planComplete && styles.planChipDone, landscape && styles.planChipLandscape]}
-              onPress={() => openOnly(setPlanOpen)}
-              accessibilityRole="button"
-              accessibilityLabel={`Barkly's plan. ${planDone} of ${planTotal} complete. ${
-                planComplete ? 'All done.' : barkly.adventure.goals.find((g) => !g.done)?.label ?? ''
-              }`}
-            >
-              <Text style={[styles.planChipText, planComplete && styles.planChipTextDone]}>
-                {planDone}/{planTotal}
-              </Text>
-            </Pressable>
-          )}
+          <DestinationTray
+            location={location}
+            locked={locked || fetching}
+            isUnlocked={barkly.isUnlocked}
+            onLocation={(loc) => { react('arrive'); barkly.goTo(loc); }}
+            vertical={landscape}
+          />
         </View>
 
         <View
@@ -1336,13 +1276,6 @@ const styles = StyleSheet.create({
     height: DIALOGUE_HEIGHT + CONTROLS_HEIGHT + 48,
   },
   content: { flex: 1, width: '100%', alignSelf: 'center', paddingHorizontal: 16 },
-  header: {
-    height: STATUS_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space.sm,
-  },
   places: {
     height: PLACES_HEIGHT,
     flexDirection: 'row',
@@ -1358,61 +1291,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
     zIndex: 30,
   },
-  planChip: {
-    minWidth: TAP_MIN,
-    height: TAP_MIN,
-    paddingHorizontal: 8,
-    borderRadius: radius.pill,
-    backgroundColor: color.goldWell,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...elevation.flat,
-  },
-  planChipLandscape: { width: '100%', height: TAP_MIN, marginTop: 2 },
-  planChipDone: { backgroundColor: color.goodWell },
-  planChipText: { ...type.caption, fontWeight: '900', color: color.inkSoft },
-  planChipTextDone: { color: color.good },
-  gear: {
-    width: TAP_MIN,
-    height: TAP_MIN,
-    borderRadius: radius.pill,
-    backgroundColor: color.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 3,
-    overflow: 'hidden',
-    ...elevation.card,
-  },
-  gearDot: { width: 4, height: 4, borderRadius: 8, backgroundColor: color.inkSoft },
-  headerButtons: { flexDirection: 'row', gap: 6 },
-  walletTap: { flexGrow: 0, flexShrink: 1, width: '62%', maxWidth: 250, minWidth: 176 },
-  packButton: {
-    minWidth: 46,
-    height: TAP_MIN,
-    borderRadius: radius.pill,
-    paddingHorizontal: 9,
-    // violetDeep, not violet: white on the lighter violet measured 1.99:1
-    // against a 4.5 requirement, which the a11y harness caught immediately.
-    backgroundColor: color.violetDeep,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    ...elevation.card,
-  },
   /** The moulded lower lip every candy control in the game already has. */
-  chromeEdge: {
-    position: 'absolute', left: 0, right: 0, bottom: 0, height: 5,
-    backgroundColor: 'rgba(0,0,0,0.16)',
-  },
-  chromeGloss: {
-    position: 'absolute', top: 3, left: 8, right: 8, height: 9,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.34)',
-  },
-  packLabel: { fontSize: 10, lineHeight: 8, fontWeight: '900', letterSpacing: 1.1, color: color.paper },
-  packLevel: { marginTop: 1, fontSize: 15, lineHeight: 16, fontWeight: '900', color: color.paper },
-  tabLocked: { opacity: 0.5 },
   noticeLayer: {
     position: 'absolute',
     height: NOTICE_MAX_HEIGHT,
@@ -1440,13 +1319,6 @@ const styles = StyleSheet.create({
   degraded: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'center', marginTop: 0, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: color.fill },
   degradedDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: BRASS.polished },
   degradedText: { fontSize: 12, color: color.inkSoft, flexShrink: 1 },
-  tabs: { flex: 1, height: TAP_MIN, flexDirection: 'row', backgroundColor: 'rgba(255,253,247,0.82)', borderRadius: 999, padding: 3, gap: 2, ...elevation.low },
-  tabsLandscape: { flex: 0, width: '100%', height: 248, flexDirection: 'column', padding: 4, gap: 4 },
-  tabLandscape: { flexGrow: 0, flexShrink: 0, width: '100%', height: TAP_MIN },
-  tab: { flexGrow: 1, flexShrink: 1, flexDirection: 'row', minHeight: TAP_MIN, paddingHorizontal: 6, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  tabActive: { backgroundColor: color.pop },
-  tabText: { fontSize: 13, fontWeight: '800', color: color.inkSoft, letterSpacing: 0.2 },
-  tabTextActive: { color: color.ink },
   bubble: { maxWidth: '92%', backgroundColor: color.card, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 18, ...elevation.card },
   errorNotice: {
     alignSelf: 'center',

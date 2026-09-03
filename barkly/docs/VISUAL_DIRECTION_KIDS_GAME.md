@@ -35,7 +35,7 @@ The main room should have:
 - typing secondary but still playful;
 - no generic white control dock behind Barkly's in-world bowl/toy/bed.
 
-`src/ui/ToyHud.tsx` is the concrete replacement prototype for the first four bullets. It is intentionally a reviewable drop-in component rather than a risky blind rewrite of the 60KB BarklyRoom orchestrator. Claude should wire or rework it into `BarklyRoom` and remove the old segmented location tabs after the standard five viewport checks pass.
+`src/ui/ToyHud.tsx` supplied the first four bullets and is now WIRED (2026-09-03). It sat imported by nothing for five days while this line asked for it, which is its own lesson: a drop-in prototype nobody drops in is a second implementation of the tab bar that a reader cannot tell apart from the live one. It is split into `ToyChromeRow` and `DestinationTray` because BarklyRoom does not stack them -- portrait puts the chrome above the destinations, landscape puts the chrome across the top and the destinations in the nav rail -- and the old segmented tabs, their 23 styles and the old lock glyph are deleted.
 
 ### ToyHud acceptance
 
@@ -81,7 +81,15 @@ Turquoise sea, warm sand, big foam shapes, shells/gulls/seaweed. It should be th
 
 ## Next cosmetic implementation order
 
-1. Wire/rework `ToyHud.tsx` into BarklyRoom and pass the five viewport/layout contracts.
+1. ~~Wire/rework `ToyHud.tsx` into BarklyRoom and pass the five viewport/layout contracts.~~
+   DONE 2026-09-03. Two things had to give: `PLACES_HEIGHT` grew from 48 to 58
+   (the horizon in every scene is placed against `CHROME_BOTTOM`, so this is a
+   world-layout constant, not decoration), and the first cut at 72 was caught
+   by `hero_layout` -- an 844px phone's stage fell to 588 against that test's
+   600 floor, which is the automated form of this file's own "must not shrink
+   enough to crop Barkly". The tile shrank instead of the test. `BEACH` also
+   truncated to `BEA...` until the tray was given `flex: 1`; 13 viewports and
+   the a11y sweep pass on a freshly built artifact.
 2. Pack Book — add actual portrait/treasure/rival visual modules and stronger color blocks.
 3. Typing field — stop looking like a web input; make it a toy-console speech slot.
 4. Store items — eventually show mini Barkly previews wearing/using the selected object, not just an icon row.

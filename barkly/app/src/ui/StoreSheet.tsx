@@ -169,12 +169,22 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
           />
           <View style={styles.heroGloss} pointerEvents="none" />
 
+          {/*
+            NO SECOND WALLET.
+
+            The shop carried its own CoinPill, and the sheet is capped at 92%
+            height, so the HUD's pill is never covered: measured with the shop
+            open, the HUD pill sits at y 0-44 and the shop's at y 61 on a
+            360x568 phone and y 84 on a 390x844 one. Two identical wallets, 17px
+            apart, on the smallest screen we support. Every other sheet is title
+            + close; so is this one now, and the balance is still on screen the
+            whole time you are spending it.
+          */}
           <View style={styles.header}>
             <View style={styles.titleWrap}>
               <Text style={styles.eyebrow}>BARKLY'S</Text>
               <Text style={styles.title}>STUFF</Text>
             </View>
-            <CoinPill coins={wallet.coins} level={progress.level} frac={progress.frac} />
             <Pressable style={styles.closeButton} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close">
               <Text style={styles.close}>✕</Text>
             </Pressable>
