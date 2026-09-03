@@ -187,10 +187,18 @@ And after the pavement, the prop-material and the lighting work below
 
 | scene | morning | day | evening | night |
 |---|---|---|---|---|
-| home | 0.419 / 2.8% | 0.435 / 1.5% | 0.454 / 1.3% | 0.381 / 17.4% |
-| park | 0.500 / 0.7% | 0.513 / 0.6% | 0.500 / 0.7% | 0.518 / 3.3% |
-| town | **0.330 / 9.9%** | **0.345 / 5.9%** | **0.347 / 12.2%** | 0.432 / 11.7% |
-| beach | 0.426 / 4.7% | 0.429 / 5.1% | 0.441 / 3.6% | 0.399 / 9.9% |
+| home | 0.419 / 2.7% | 0.434 / 1.6% | 0.460 / 1.3% | 0.383 / 17.5% |
+| park | 0.500 / 0.7% | 0.501 / 0.9% | 0.511 / 0.4% | 0.518 / 3.3% |
+| town | **0.330 / 9.9%** | **0.345 / 5.9%** | **0.345 / 12.4%** | 0.431 / 11.7% |
+| beach | 0.421 / 4.9% | 0.428 / 5.1% | 0.446 / 3.4% | 0.406 / 10.6% |
+
+(One run of the shipping build, not sixteen numbers assembled from four runs.
+Two things are worth knowing about reading this table: run-to-run spread on an
+unchanged scene is about +/-0.012 chroma and +/-0.7 points of `washed_frac`,
+because the scenes animate and the capture lands wherever it lands -- so
+anything inside that is noise, not a result. And the dusk lights and the
+rebuilt ground shadow, both landed after the numbers above were first taken,
+moved nothing outside it.)
 
 Town rises at all three lit bands and its colourless share falls at every one
 of the four. The two that get slightly worse are night scenes with a warm light
@@ -315,6 +323,51 @@ approach) puts a visibly lighter round patch in the sky wherever the night
 gradient is not exactly that colour, which is most of the sky. So the crescent
 is now ONE path: the major arc of the moon plus the minor arc of the cutter,
 from the circle-circle intersection. No mask, no fake sky.
+
+## Lights that were off, and one that was five edges
+
+Two follow-ons from the shared `RadialGlow`, both found by asking where else
+the same sentence had been written.
+
+**The street lights came on at 21:00, not at dusk.** `TownNightLights` was
+gated on `night`, so the 17:00-21:00 band -- a fifth of every day, and the one
+whose sky most obviously reads as evening -- had a row of dead posts under an
+orange sunset. They are lit at `intensity` 0.55 now, and so is Home's floor
+lamp at 0.5.
+
+But **only the bulbs -- not the halo, not the pools on the ground** -- and each
+step of that was measured rather than argued. Lighting the pavement too took
+town-evening from 12.2% to **15.0%** colourless; dropping the pools but keeping
+the bloom still left it at **14.8%**; the lit pane alone lands at **12.5%**,
+which is the baseline back inside noise. Gold spread across a still-bright
+peach pavement flattens it exactly the way gold over the blue night wash does.
+It is the same lesson as the lit shop windows, one step further -- after dark a
+lamp must land on something or it floats, but at dusk the sky is still lighting
+the town and all the lamps have to say is that they are ON.
+
+Which exposed a third thing. With the bloom off, the "bulb" was visibly NOT in
+the lantern: it was a rounded rect at the sprite's horizontal centre, and the
+lit pane on this prop sits at **0.374 / 0.192** of the PNG and is 0.452 x 0.173
+of it. Measured off the asset (the glass material is the only warm opaque
+region in it) rather than eyeballed, and mirrored for the flipped right-hand
+lamp. At night the bloom had been hiding the error for as long as it existed.
+
+**The character shadow was five stacked ellipses**, written around the same
+false premise in a fourth comment ("there is no radial gradient in React
+Native"). Five layers is five edges under every dog in the game. Replacing
+them was not a fresh guess at the profile: those five composite, so the darkest
+point was never the 0.20 written on the contact core, it was
+`1 - (0.95)(0.93)(0.90)(0.86)(0.80) = 0.45`, falling through 0.32 / 0.21 /
+0.12 / 0.05 at the successive rims -- which sampled at `RadialGlow`'s stops is
+0.45 / 0.30 / 0.13 to zero.
+
+The first version of that swap **deleted every shadow in the game** and looked
+completely reasonable in the diff. Giving the glow a negative `left` instead of
+letting the wrapper centre it opts out of the `alignItems: center` the stacked
+ellipses relied on, and the shadows silently vanished. It was caught by
+sampling the ground under his paws against bare grass in a captured frame --
+identical to within two values out of 255 -- which is the whole argument for
+the contact sheet in one line: the code read correctly, the render did not.
 
 ## The harness was measuring the wrong build, four ways
 

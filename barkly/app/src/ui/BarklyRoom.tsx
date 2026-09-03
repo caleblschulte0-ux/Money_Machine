@@ -21,6 +21,7 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { RadialGlow } from './scenes/WorldScene';
 import { useBarkly } from '../hooks/useBarkly';
 import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
@@ -246,51 +247,43 @@ const GROUND_SHADOW: Record<LocationId, string> = {
 /**
  * The shadow he casts.
  *
- * Two flat stadiums stacked on each other, which is what this was, read as a
- * green pill lying on the grass — hard-edged, obviously a shape rather than an
- * absence of light. There is no radial gradient in React Native, so the
- * falloff is faked the way it is faked in sprite work: several ellipses,
- * each smaller and each slightly darker, so the edge dissolves over four steps
- * instead of one.
+ * Two flat stadiums, then FIVE stacked ellipses "each smaller and each slightly
+ * darker, so the edge dissolves over four steps instead of one" -- all of it
+ * written around the belief that "there is no radial gradient in React Native".
+ * There is: `react-native-svg` is a dependency of every scene in this app, and
+ * `RadialGlow` in WorldScene now wraps it. Five steps is five edges; one
+ * gradient is none.
+ *
+ * The profile below is not a fresh guess, it is the OLD stack solved. Those
+ * five layers composite, so the darkest point was not the 0.20 written on the
+ * contact core -- it was 1 - (0.95)(0.93)(0.90)(0.86)(0.80) = 0.45, falling
+ * through 0.32 / 0.21 / 0.12 / 0.05 at the successive layer rims. Sampled at
+ * the three stops `RadialGlow` takes, that is 0.45 / 0.30 / 0.13, to zero at
+ * the rim. Same shadow, same weight where the feet touch, without the steps.
  */
-const SHADOW_LAYERS = [
-  { w: 1.12, h: 0.2, o: 0.05 },
-  { w: 1.02, h: 0.175, o: 0.07 },
-  { w: 0.8, h: 0.14, o: 0.1 },
-  { w: 0.56, h: 0.1, o: 0.14 },
-  /**
-   * THE CONTACT CORE, and the reason the other dogs looked like they were
-   * hovering.
-   *
-   * The four-step falloff above replaced two hard stadiums and was right about
-   * the EDGE — but it dropped the darkest value from 0.17 to 0.10 and spread
-   * it over a wide ellipse. On Barkly, 300px across, that still reads. On an
-   * NPC at 80px it is a faint smudge, and a character whose shadow you cannot
-   * see is a character standing in mid-air.
-   *
-   * A shadow does two jobs: it falls off softly at the rim AND it is dark
-   * where the feet actually touch. Only the first was being done.
-   */
-  { w: 0.34, h: 0.062, o: 0.2 },
-];
+const SHADOW_W = 1.12;
+const SHADOW_H = 0.2;
+const SHADOW_STOPS: [number, number, number] = [0.45, 0.3, 0.13];
 
 function GroundShadow({ location, width, style }: { location: LocationId; width: number; style?: object }) {
   const tint = GROUND_SHADOW[location];
+  const rx = (width * SHADOW_W) / 2;
+  const ry = (width * SHADOW_H) / 2;
   return (
     <View style={[{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }, style]} pointerEvents="none">
-      {SHADOW_LAYERS.map((layer) => (
-        <View
-          key={layer.w}
-          style={{
-            position: 'absolute',
-            width: width * layer.w,
-            height: width * layer.h,
-            borderRadius: width,
-            backgroundColor: tint,
-            opacity: layer.o,
-          }}
-        />
-      ))}
+      {/*
+        A SIZED, absolutely-positioned box with no left/top, which is exactly
+        how the five stacked ellipses were anchored: the wrapper is 0x0, so
+        `alignItems`/`justifyContent` centre such a child on its origin.
+        Positioning the glow itself at cx/cy 0 -- i.e. giving it a negative
+        `left` -- looks equivalent and is not: it opts out of that centring and
+        the shadow vanished from every frame. Caught in a captured frame by
+        sampling the ground under his paws against bare grass two pixels apart,
+        not by reading the diff.
+      */}
+      <View style={{ position: 'absolute', width: rx * 2, height: ry * 2 }}>
+        <RadialGlow cx={rx} cy={ry} r={rx} ry={ry} color={tint} stops={SHADOW_STOPS} />
+      </View>
     </View>
   );
 }

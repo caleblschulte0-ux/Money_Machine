@@ -7,6 +7,7 @@ import { skyBand, SkyBand } from './CandyScenesV2';
 import { elevation, radius } from '../theme';
 import { CHROME_BOTTOM } from '../layout';
 import {
+  crescentPath,
   RadialGlow,
   WorldLayer,
   WorldLighting,
@@ -88,38 +89,6 @@ function useAmbientLoop(duration: number, delay = 0) {
  * keeps its authored position and size, and a halo 3.4x its radius fades to
  * nothing well inside the canvas so there is never a hard edge to the glow.
  */
-/**
- * A crescent as ONE path: disc O minus disc C, with no mask and nothing
- * painted in a fake sky colour.
- *
- * The two circles meet at P1/P2 (standard circle-circle intersection). The
- * crescent's boundary is the MAJOR arc of O -- the side away from the cutter,
- * which is the major arc whenever the cutter's centre is outside the chord,
- * i.e. `a > 0` -- followed by the MINOR arc of C, the side facing O's centre.
- * Sweep flags follow from that and hold for any offset satisfying `a > 0`:
- * clockwise on the outer, anticlockwise on the inner.
- *
- * Written out because both alternatives are worse. An SVG `<Mask>` does not
- * survive react-native-svg's web renderer -- the moon shipped as a full flat
- * disc with no bite in it -- and painting the bite in `skyNightA`, which is
- * what this replaced, leaves a visibly lighter round patch wherever the night
- * gradient is not exactly that colour, which is most of the sky.
- */
-function crescentPath(cx: number, cy: number, R: number, r: number, dx: number, dy: number): string {
-  const d = Math.hypot(dx, dy);
-  const a = (d * d + R * R - r * r) / (2 * d);
-  const h = Math.sqrt(Math.max(0, R * R - a * a));
-  const ux = dx / d;
-  const uy = dy / d;
-  const nx = -uy;
-  const ny = ux;
-  const x1 = cx + a * ux + h * nx;
-  const y1 = cy + a * uy + h * ny;
-  const x2 = cx + a * ux - h * nx;
-  const y2 = cy + a * uy - h * ny;
-  return `M${x1} ${y1}A${R} ${R} 0 1 1 ${x2} ${y2}A${r} ${r} 0 0 0 ${x1} ${y1}Z`;
-}
-
 function SkyBody({ night, discTop }: { night: boolean; discTop: number }) {
   const disc = night ? DIORAMA.goldLight : DIORAMA.lemon;
   const glow = night ? DIORAMA.goldGlow : DIORAMA.butter;
@@ -378,32 +347,63 @@ function TownGlint({ night, top, fountainLeft }: { night: boolean; top: number; 
 }
 
 /**
- * A town at night has its lights ON.
+ * A town at dusk and after dark has its lights ON.
  *
  * Every street lamp in this scene rendered as a dark blue post and every shop
  * window as a dark hole, so night Town read as "the day scene with the
  * brightness turned down" -- which was the whole complaint about night. Light
  * SOURCES are what make a night exterior legible: a warm bulb, a halo around
- * it, a pool of it on the pavement, and warm rectangles where the shopfronts
- * are. This layer only exists after dark; nothing about the day scene changes.
+ * it, and a pool of it on the pavement.
  *
- * The glow is built from concentric rounded views rather than a radial
- * gradient because react-native-web has no radial primitive. Three rings with
- * falling size and rising opacity read as a soft light at these radii.
+ * EVENING GETS THEM TOO, at `intensity` 0.55. Gating this on `night` (>= 21:00)
+ * left the 17:00-21:00 band -- a fifth of every day, and the band whose sky is
+ * most obviously dusk -- with a row of dead posts under an orange sunset. It
+ * also left Town's weakest lit measurement there (12.2% colourless at evening
+ * against 5.9% at day), and warm light is exactly what that band wants: gold
+ * over an orange key stays chromatic, where gold over the blue night wash mixes
+ * toward neutral. Lighting evening is the rare change that makes the picture
+ * better and the number better at the same time.
  */
 function TownNightLights({
   lampCenters,
-  lampTop,
+  glassCenters,
+  glassW,
+  glassH,
   lampW,
   sidewalk,
   spills,
+  intensity = 1,
+  afterDark = true,
 }: {
+  /** Post centres. The pool on the pavement belongs under the POST. */
   lampCenters: number[];
-  lampTop: number;
+  /**
+   * Where the lit pane actually is, measured off the prop rather than guessed
+   * from the sprite box: the glass sits at 0.374 / 0.192 of the PNG and is
+   * 0.452 x 0.173 of it, so a bulb centred on the sprite lands up and to the
+   * left of the pane it is meant to be inside. Invisible at night behind the
+   * bloom, obvious at dusk with the bloom off -- which is how it was found.
+   */
+  glassCenters: { x: number; y: number }[];
+  glassW: number;
+  glassH: number;
   lampW: number;
   sidewalk: number;
   /** Warm light lying on the pavement in front of each lit shopfront. */
   spills: { left: number; top: number; width: number; height: number }[];
+  /** 1 after dark; lower at dusk, when the sky is still carrying the scene. */
+  intensity?: number;
+  /**
+   * Whether the light SPREADS -- bloom around the bulb, pools on the pavement.
+   * After dark it must: a lamp that lights nothing floats. At dusk it must not,
+   * and both halves of that were measured. Spilling gold across a still-bright
+   * peach pavement took town-evening 12.2% -> 15.0% colourless, and the bloom
+   * alone still left it at 14.8%, because gold over a pale warm surface
+   * flattens it the same way gold over the blue night wash does. At dusk the
+   * sky is still lighting the town; all the lamps have to say is that they are
+   * ON, and a lit BULB says it for the price of a few dozen pixels.
+   */
+  afterDark?: boolean;
 }) {
   const pulse = useAmbientLoop(3400);
   return (
@@ -421,16 +421,17 @@ function TownNightLights({
         on the ground in front of each door says the same thing, cannot be
         mistaken for geometry, and only touches pixels that are already lit.
       */}
-      {spills.map((sp, i) => (
-        <LinearGradient
-          key={`spill${i}`}
-          colors={['rgba(255,214,102,0)', 'rgba(255,214,102,0.34)', 'rgba(255,214,102,0)']}
-          locations={[0, 0.5, 1]}
-          style={[styles.shopSpill, sp]}
-        />
-      ))}
+      {afterDark &&
+        spills.map((sp, i) => (
+          <LinearGradient
+            key={`spill${i}`}
+            colors={['rgba(255,214,102,0)', 'rgba(255,214,102,0.34)', 'rgba(255,214,102,0)']}
+            locations={[0, 0.5, 1]}
+            style={[styles.shopSpill, sp, { opacity: intensity }]}
+          />
+        ))}
       {lampCenters.map((cx, i) => {
-        const bulb = lampW * 0.34;
+        const glass = glassCenters[i];
         return (
           <React.Fragment key={`lamp${i}`}>
             {/*
@@ -444,16 +445,28 @@ function TownNightLights({
               night contact sheet. The pulse now breathes the whole light
               instead of only its outermost ring.
             */}
-            <Animated.View
-              style={[styles.fill, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.78, 1] }) }]}
-              pointerEvents="none"
-            >
-              <RadialGlow cx={cx} cy={lampTop + bulb * 0.7} r={bulb * 3.0} color={DIORAMA.butterDeep} stops={[0.62, 0.30, 0.10]} />
-            </Animated.View>
+            {afterDark && (
+              <Animated.View
+                style={[
+                  styles.fill,
+                  { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.78 * intensity, intensity] }) },
+                ]}
+                pointerEvents="none"
+              >
+                <RadialGlow cx={glass.x} cy={glass.y} r={glassW * 2.2} color={DIORAMA.butterDeep} stops={[0.62, 0.30, 0.10]} />
+              </Animated.View>
+            )}
             <View
               style={[
                 styles.lampBulb,
-                { left: cx - bulb / 2, top: lampTop + bulb * 0.15, width: bulb, height: bulb * 1.15, borderRadius: bulb * 0.4 },
+                {
+                  left: glass.x - glassW / 2,
+                  top: glass.y - glassH / 2,
+                  width: glassW,
+                  height: glassH,
+                  borderRadius: glassW * 0.28,
+                  opacity: 0.96 * intensity,
+                },
               ]}
             />
             {/*
@@ -462,14 +475,16 @@ function TownNightLights({
               a pill radius shows its own edge and reads as a decal on the
               pavement rather than as light on it.
             */}
-            <LinearGradient
-              colors={['rgba(255,214,102,0)', 'rgba(255,214,102,0.30)', 'rgba(255,214,102,0)']}
-              locations={[0, 0.5, 1]}
-              style={[
-                styles.lampSpill,
-                { left: cx - lampW * 1.5, top: sidewalk - lampW * 0.34, width: lampW * 3, height: lampW * 0.72, borderRadius: lampW * 1.5 },
-              ]}
-            />
+            {afterDark && (
+              <LinearGradient
+                colors={['rgba(255,214,102,0)', 'rgba(255,214,102,0.30)', 'rgba(255,214,102,0)']}
+                locations={[0, 0.5, 1]}
+                style={[
+                  styles.lampSpill,
+                  { left: cx - lampW * 1.5, top: sidewalk - lampW * 0.34, width: lampW * 3, height: lampW * 0.72, borderRadius: lampW * 1.5, opacity: intensity },
+                ]}
+              />
+            )}
           </React.Fragment>
         );
       })}
@@ -493,6 +508,8 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const walkEdge = night ? DIORAMA.townSidewalkNightEdge : DIORAMA.townSidewalkDayEdge;
   const road = night ? DIORAMA.townRoadNight : DIORAMA.townRoadDay;
   const roadEdge = night ? DIORAMA.townRoadNightEdge : DIORAMA.townRoadDayEdge;
+  // The street lights come on at DUSK, not at 21:00. See TownNightLights.
+  const lampsOn = night || band === 'evening';
 
   // Match the trimmed render's real 422x519 aspect ratio. Oversized side
   // modules crop like a street continuing off-screen instead of three icons
@@ -501,6 +518,10 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const shopH = shopW * (519 / 422);
   const lampW = 62 * scale;
   const lampH = 174 * scale;
+  // Where the lamp SPRITE's top edge lands -- the same expression the sprite
+  // itself is positioned with, so the lit pane can be placed off the prop's
+  // own measured geometry instead of guessed from the sprite's centre.
+  const lampSpriteTop = sidewalk - lampH + 16;
   const fountainW = 112 * scale;
   const fountainH = 102 * scale;
   const planterW = 72 * scale;
@@ -575,8 +596,8 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
       <WorldLayer name="props">
         <WorldObject source={TOWN_PLANTER} left={planterInset} top={sidewalk - planterH + 11} width={planterW} height={planterH} night={night} depth={0.72} ambient="sway" contactShadow />
         <WorldObject source={TOWN_PLANTER} right={planterInset} top={sidewalk - planterH + 12} width={planterW} height={planterH} night={night} depth={0.72} ambient="sway" motionDelay={600} flip contactShadow />
-        <WorldObject source={TOWN_LAMP} left={plazaInset} top={sidewalk - lampH + 16} width={lampW} height={lampH} night={night} depth={0.64} contactShadow />
-        <WorldObject source={TOWN_LAMP} right={plazaInset} top={sidewalk - lampH + 16} width={lampW} height={lampH} night={night} depth={0.64} flip contactShadow />
+        <WorldObject source={TOWN_LAMP} left={plazaInset} top={lampSpriteTop} width={lampW} height={lampH} night={night} depth={0.64} contactShadow />
+        <WorldObject source={TOWN_LAMP} right={plazaInset} top={lampSpriteTop} width={lampW} height={lampH} night={night} depth={0.64} flip contactShadow />
         <WorldObject source={TOWN_FOUNTAIN} left={fountainLeft} top={sidewalk - fountainH + 30} width={fountainW} height={fountainH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
       <WorldLayer name="fx"><TownGlint night={night} top={horizon + 132} fountainLeft={fountainLeft + fountainW * 0.48} /></WorldLayer>
@@ -588,11 +609,19 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         than as a light. Same rule as the warm pools inside WorldLighting
         itself: light is not something the atmosphere sits in front of.
       */}
-      {night && (
+      {lampsOn && (
         <WorldLayer name="fx">
           <TownNightLights
+            intensity={night ? 1 : 0.55}
+            afterDark={night}
             lampCenters={[plazaInset + lampW / 2, width - plazaInset - lampW / 2]}
-            lampTop={sidewalk - lampH + 16 + lampH * 0.06}
+            glassCenters={[
+              { x: plazaInset + lampW * 0.374, y: lampSpriteTop + lampH * 0.192 },
+              // Mirrored: the right lamp is drawn with `flip`.
+              { x: width - plazaInset - lampW * 0.374, y: lampSpriteTop + lampH * 0.192 },
+            ]}
+            glassW={lampW * 0.452}
+            glassH={lampH * 0.173}
             lampW={lampW}
             sidewalk={sidewalk}
             spills={[

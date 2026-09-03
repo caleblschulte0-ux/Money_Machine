@@ -5,7 +5,7 @@ import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { radius } from '../theme';
 import { BRASS, DIORAMA, ITEM } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
-import { RadialGlow, WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
+import { crescentPath, RadialGlow, WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
 import { BiographyProp } from '../../world/biography';
 
 const CHAIR = require('../../../assets/world/home/props/chair.png');
@@ -14,6 +14,10 @@ const BED = require('../../../assets/world/home/props/bed.png');
 const RUG = require('../../../assets/world/home/props/rug.png');
 const SHELF = require('../../../assets/world/home/props/shelf.png');
 const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_frame.png');
+
+/** Window sun/moon geometry, in the aperture's own coordinates. */
+const SKY_BODY_R = 14;
+const SKY_BODY_INSET = 16;
 
 const SKY: Record<SkyBand, readonly [ColorValue, ColorValue]> = {
   morning: [DIORAMA.skyMorningA, DIORAMA.skyMorningB],
@@ -45,6 +49,8 @@ function RenderedWindow({
   const night = band === 'night';
   const width = (upgraded ? 224 : 208) * scale;
   const height = width * (760 / 720);
+  const apertureW = width * 0.61;
+  const apertureH = height * 0.53;
 
   return (
     <View style={[styles.windowWrap, { top, left, width, height }]}>
@@ -72,15 +78,42 @@ function RenderedWindow({
         ]}
       >
         <LinearGradient colors={SKY[band]} style={styles.fill} />
-        <View
-          style={[
-            styles.sunMoon,
-            {
-              backgroundColor: night ? DIORAMA.goldLight : DIORAMA.lemon,
-              opacity: night ? 0.82 : 1,
-            },
-          ]}
+        {/*
+          The same body as the sky outside, at window scale. It was the last
+          flat-filled disc left in the app after the outdoor sun and moon became
+          real lights, which read as the window showing a different weather
+          system from the one the tab bar switches to.
+        */}
+        <RadialGlow
+          cx={apertureW - SKY_BODY_INSET - SKY_BODY_R}
+          cy={SKY_BODY_INSET + SKY_BODY_R}
+          r={SKY_BODY_R * 3.2}
+          color={night ? DIORAMA.goldGlow : DIORAMA.butter}
+          stops={night ? [0.30, 0.15, 0.05] : [0.46, 0.23, 0.08]}
         />
+        <Svg width={apertureW} height={apertureH} style={styles.fill}>
+          {night ? (
+            <Path
+              d={crescentPath(
+                apertureW - SKY_BODY_INSET - SKY_BODY_R,
+                SKY_BODY_INSET + SKY_BODY_R,
+                SKY_BODY_R,
+                SKY_BODY_R * 0.92,
+                8.4,
+                -5,
+              )}
+              fill={DIORAMA.goldLight}
+              opacity={0.96}
+            />
+          ) : (
+            <Circle
+              cx={apertureW - SKY_BODY_INSET - SKY_BODY_R}
+              cy={SKY_BODY_INSET + SKY_BODY_R}
+              r={SKY_BODY_R}
+              fill={DIORAMA.lemon}
+            />
+          )}
+        </Svg>
         <View style={[styles.hillBack, { backgroundColor: night ? DIORAMA.hillNight : DIORAMA.parkHillDayLight }]} />
         <View style={[styles.hillFront, { backgroundColor: night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay }]} />
         {!night && <View style={styles.windowGlint} />}
@@ -304,13 +337,28 @@ function HomeBiography({
  * because it was faint. The shade band and the floor pool stay linear: both
  * are wide, flat ellipses where the falloff genuinely is one-dimensional.
  */
-function HomeLampGlow({ left, top, width, height, floorTop }: { left: number; top: number; width: number; height: number; floorTop: number }) {
+function HomeLampGlow({
+  left,
+  top,
+  width,
+  height,
+  floorTop,
+  intensity = 1,
+}: {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  floorTop: number;
+  /** 1 after dark; lower at dusk, when the window is still doing the lighting. */
+  intensity?: number;
+}) {
   // Centred on the shade, which sits in the top sixth of the lamp sprite.
   const cx = left + width / 2;
   const cy = top + height * 0.16;
   const r = width * 0.95;
   return (
-    <View style={styles.fill} pointerEvents="none">
+    <View style={[styles.fill, { opacity: intensity }]} pointerEvents="none">
       <RadialGlow cx={cx} cy={cy} r={r} color={DIORAMA.butterDeep} stops={[0.40, 0.20, 0.07]} />
       <LinearGradient
         colors={['rgba(255,242,190,0)', 'rgba(255,240,178,0.72)', 'rgba(255,224,140,0)']}
@@ -514,9 +562,22 @@ export function HomeScene({
         shade and the lamp read as a grey disc -- the same mistake the warm
         pools inside WorldLighting were making before they moved on top of it.
       */}
-      {night && (
+      {/*
+        The lamp is on at DUSK as well, at 0.5. Gated on `night` alone, a room
+        at 19:00 sat under an orange window with its own lamp off -- the indoor
+        half of the same bug Town had outside, where the street lights only came
+        on at 21:00.
+      */}
+      {(night || band === 'evening') && (
         <WorldLayer name="fx">
-          <HomeLampGlow left={lampLeft} top={floorTop - lampH + 11} width={lampW} height={lampH} floorTop={floorTop} />
+          <HomeLampGlow
+            left={lampLeft}
+            top={floorTop - lampH + 11}
+            width={lampW}
+            height={lampH}
+            floorTop={floorTop}
+            intensity={night ? 1 : 0.5}
+          />
         </WorldLayer>
       )}
     </WorldScene>
@@ -559,7 +620,6 @@ const styles = StyleSheet.create({
     backgroundColor: DIORAMA.skyDayA,
   },
   windowImage: { position: 'absolute', left: 0, top: 0 },
-  sunMoon: { position: 'absolute', right: 18, top: 16, width: 28, height: 28, borderRadius: radius.md },
   hillBack: {
     position: 'absolute', left: -24, right: 32, bottom: -30, height: 82,
     borderRadius: radius.pill, transform: [{ rotate: '-6deg' }],

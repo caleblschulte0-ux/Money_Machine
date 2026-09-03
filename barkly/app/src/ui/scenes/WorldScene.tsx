@@ -353,6 +353,38 @@ const GRADE: Record<SkyBand, {
 } as const;
 
 /**
+ * A crescent as ONE path: disc O minus disc C, with no mask and nothing
+ * painted in a fake sky colour.
+ *
+ * The two circles meet at P1/P2 (standard circle-circle intersection). The
+ * crescent's boundary is the MAJOR arc of O -- the side away from the cutter,
+ * which is the major arc whenever the cutter's centre is outside the chord,
+ * i.e. `a > 0` -- followed by the MINOR arc of C, the side facing O's centre.
+ * Sweep flags follow from that and hold for any offset satisfying `a > 0`:
+ * clockwise on the outer, anticlockwise on the inner.
+ *
+ * Written out because both alternatives are worse. An SVG `<Mask>` does not
+ * survive react-native-svg's web renderer -- the moon shipped as a full flat
+ * disc with no bite in it -- and painting the bite in `skyNightA`, which is
+ * what this replaced, leaves a visibly lighter round patch wherever the night
+ * gradient is not exactly that colour, which is most of the sky.
+ */
+export function crescentPath(cx: number, cy: number, R: number, r: number, dx: number, dy: number): string {
+  const d = Math.hypot(dx, dy);
+  const a = (d * d + R * R - r * r) / (2 * d);
+  const h = Math.sqrt(Math.max(0, R * R - a * a));
+  const ux = dx / d;
+  const uy = dy / d;
+  const nx = -uy;
+  const ny = ux;
+  const x1 = cx + a * ux + h * nx;
+  const y1 = cy + a * uy + h * ny;
+  const x2 = cx + a * ux - h * nx;
+  const y2 = cy + a * uy - h * ny;
+  return `M${x1} ${y1}A${R} ${R} 0 1 1 ${x2} ${y2}A${r} ${r} 0 0 0 ${x1} ${y1}Z`;
+}
+
+/**
  * A LIGHT, WITH A REAL FALLOFF.
  *
  * Every glow in this app used to be stacked opaque discs, each smaller and
@@ -372,6 +404,7 @@ export function RadialGlow({
   cx,
   cy,
   r,
+  ry = r,
   color,
   stops,
   opacity = 1,
@@ -379,6 +412,9 @@ export function RadialGlow({
   cx: number;
   cy: number;
   r: number;
+  /** Vertical radius. Defaults to `r`; give it a smaller value for a pool or
+   *  a contact shadow, which are ellipses seen at this camera angle. */
+  ry?: number;
   color: string;
   /** Alpha at 0%, 33%, 66% of the radius. Falls to 0 at the rim. */
   stops: [number, number, number];
@@ -387,8 +423,10 @@ export function RadialGlow({
   // Gradient ids are document-global and several lamps are lit at once.
   const id = `glow${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
-    <View style={{ position: 'absolute', left: cx - r, top: cy - r, width: r * 2, height: r * 2, opacity }} pointerEvents="none">
-      <Svg width="100%" height="100%" viewBox="0 0 100 100">
+    <View style={{ position: 'absolute', left: cx - r, top: cy - ry, width: r * 2, height: ry * 2, opacity }} pointerEvents="none">
+      {/* preserveAspectRatio="none" is what lets one square gradient serve
+          both a round glow and a squashed ground ellipse. */}
+      <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
         <Defs>
           <RadialGradient id={id} cx="50%" cy="50%" r="50%">
             <Stop offset="0" stopColor={color} stopOpacity={stops[0]} />
