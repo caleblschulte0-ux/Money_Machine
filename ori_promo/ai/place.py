@@ -274,6 +274,17 @@ def place(plate, rgba, foot, height_px, k=1.0, sun=(-0.55, 0.35),
     s = float(height_px) / fh
     nw, nh = max(2, int(fw * s)), max(2, int(height_px))
     fig = cv2.resize(fig, (nw, nh), interpolation=cv2.INTER_AREA)
+    # SOFTEN THE CUTOUT'S OWN SHARPNESS, RGB ONLY. Found on the "middle
+    # school production" pass: even with light_match pulling colour and
+    # exposure toward the plate, the figure still read as a decal because
+    # every edge inside it -- fabric folds, hair, hat brims -- was
+    # perfectly crisp where h264 video compression and the lens never let
+    # the PLATE be. Real footage of a person this size in frame has some
+    # softness; a generator's output has none. Alpha is untouched (the
+    # resolve line and the cast-shadow warp both key off its exact edge),
+    # only the colour the eye reads as "in focus or not."
+    sigma = max(0.5, height_px * 0.0018)
+    fig[..., :3] = cv2.GaussianBlur(fig[..., :3], (0, 0), sigma)
     # Kept BEFORE the frame-edge crop below. The cast shadow projects the
     # figure's full silhouette and its warp is defined in the figure's own
     # nw x nh space; handing it a clipped alpha would shear the shadow off

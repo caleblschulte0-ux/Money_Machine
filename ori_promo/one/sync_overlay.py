@@ -120,14 +120,27 @@ def _dot(d, x, y, col, k, r=10):
 
 
 def _tag(d, xy, title, sub, col, k, anchor="ls"):
+    """YOUR GROUP / ANOTHER GROUP, each with a subtitle underneath.
+
+    v26: THE SUBTITLE HAD NO SCRIM. `DIM` (198,201,203) at high alpha
+    directly on the plate reads fine against dark rock but nearly vanishes
+    against sunlit grass -- and this beat's plate is mostly sunlit grass.
+    Every other label in the film (labelkit's block/recon_block, the map
+    legend, the pill above) sits on a dark translucent card; this one
+    didn't, which is the actual reason it read as unfinished, not the
+    colour choice. Same card treatment as the rest of the film now.
+    """
     if k <= 0.002:
         return
     a = int(252 * k)
     x, y = xy
     f1, f2 = LK.inter(38, "Bold"), LK.mono(23)
+    tw = max(d.textlength(title, font=f1), d.textlength(sub, font=f2))
+    box = [x - 18, y - 46, x + tw + 18, y + 52]
+    d.rounded_rectangle(box, radius=12, fill=(6, 9, 12, int(150 * k)))
     d.text((x + 2, y + 2), title, font=f1, fill=(5, 8, 10, int(a * 0.6)), anchor=anchor)
     d.text((x, y), title, font=f1, fill=col + (a,), anchor=anchor)
-    d.text((x + 2, y + 38), sub, font=f2, fill=DIM + (int(a * 0.92),), anchor=anchor)
+    d.text((x, y + 38), sub, font=f2, fill=DIM + (int(a * 0.92),), anchor=anchor)
 
 
 def _pill(d, cx, cy, text, k):
