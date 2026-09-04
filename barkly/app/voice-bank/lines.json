@@ -8,6 +8,12 @@
       "tag": "onboarding"
     },
     {
+      "key": "00ed6206b7b40d1a",
+      "spoken": "Cheese is a food and also a personality. Mine.",
+      "source": "Cheese is a food and also a personality. Mine.",
+      "tag": "offline"
+    },
+    {
       "key": "02229c7e4c601e8c",
       "spoken": "da moon is just a big treat nobody can reach.",
       "source": "the moon is just a big treat nobody can reach.",
@@ -26,10 +32,22 @@
       "tag": "talk"
     },
     {
+      "key": "039b121f0b138860",
+      "spoken": "Nap. Yeah. I have made my decision and it is nap.",
+      "source": "Nap. Yes. I have made my decision and it is nap.",
+      "tag": "offline"
+    },
+    {
       "key": "03d132775b3ce206",
       "spoken": "da grass smells like EVERYONE was here.",
       "source": "the grass smells like EVERYONE was here.",
       "tag": "thoughts"
+    },
+    {
+      "key": "05e1e7645b7b7840",
+      "spoken": "I don't know dat one yet. Teach me — say “when I say X, do Y” — and I'll have it forever.",
+      "source": "I don't know that one yet. Teach me — say “when I say X, do Y” — and I'll have it forever.",
+      "tag": "offline"
     },
     {
       "key": "05f8c3d09d3e8119",
@@ -62,6 +80,12 @@
       "tag": "onboarding"
     },
     {
+      "key": "084e303c15a8184a",
+      "spoken": "Yo. Don't know that one. I know the one ya taught me, though. Try that and watch me be incredible.",
+      "source": "Don't know that one. I know the one you taught me, though. Try that and watch me be incredible.",
+      "tag": "offline"
+    },
+    {
       "key": "092ccc9f09ebfe68",
       "spoken": "Ya and the bee have HISTORY, Biscuit. Bad history. Be careful out there.",
       "source": "You and the bee have HISTORY, Biscuit. Bad history. Be careful out there.",
@@ -78,6 +102,12 @@
       "spoken": "Nuttin' gets past me. I've been practisin' on da vacuum.",
       "source": "Nothing gets past me. I've been practising on the vacuum.",
       "tag": "talk"
+    },
+    {
+      "key": "0b28354452ba52ab",
+      "spoken": "Every game is a competition and I have never lost one. Officially.",
+      "source": "Every game is a competition and I have never lost one. Officially.",
+      "tag": "offline"
     },
     {
       "key": "0b4c008e8f6e2840",
@@ -110,6 +140,12 @@
       "tag": "onboarding"
     },
     {
+      "key": "0c2505e33ae6a3cc",
+      "spoken": "Biscuit's alright. Biscuit gets it. Biscuit is also real slow.",
+      "source": "Biscuit's alright. Biscuit gets it. Biscuit is also very slow.",
+      "tag": "offline"
+    },
+    {
       "key": "0d1e745b0b8b5044",
       "spoken": "I can't hear you. Somethin' about ears. Check ya settings?",
       "source": "I can't hear you. Something about ears. Check your settings?",
@@ -122,6 +158,12 @@
       "tag": "npcs"
     },
     {
+      "key": "10cede9b174662b9",
+      "spoken": "Cheese. It's not close. Dere is no second place. awright?",
+      "source": "Cheese. It's not close. There is no second place.",
+      "tag": "offline"
+    },
+    {
       "key": "11106ea34fb230b3",
       "spoken": "Retired? Duke, I'm in my prime. You'd know — you keep da records.",
       "source": "Retired? Duke, I'm in my prime. You'd know — you keep the records.",
@@ -132,6 +174,12 @@
       "spoken": "You said somethin' earlier about playin'. I'm just leavin' that dere.",
       "source": "You said something earlier about playing. I'm just leaving that there.",
       "tag": "initiative"
+    },
+    {
+      "key": "117a862795e5dbf4",
+      "spoken": "Did you say treat? I heard treat. Dis conversation just got important.",
+      "source": "Did you say treat? I heard treat. This conversation just got important.",
+      "tag": "offline"
     },
     {
       "key": "11ffabcb591427bf",
@@ -170,6 +218,12 @@
       "tag": "hook"
     },
     {
+      "key": "146bebbfe4cf5dcc",
+      "spoken": "We're gettin' dere. You could speed it up with food. Just a thought.",
+      "source": "We're getting there. You could speed it up with food. Just a thought.",
+      "tag": "offline"
+    },
+    {
       "key": "146cd471f613f9fa",
       "spoken": "Exactly. Glad we agree. We do agree, right?",
       "source": "Exactly. Glad we agree. We do agree, right?",
@@ -182,16 +236,34 @@
       "tag": "npcs"
     },
     {
+      "key": "14fa08bac7097565",
+      "spoken": "I have a complicated social life. It is mostly grudges.",
+      "source": "I have a complicated social life. It is mostly grudges.",
+      "tag": "offline"
+    },
+    {
       "key": "1578388b1cb2aa87",
       "spoken": "Dat felt important. I have decided it was about me.",
       "source": "That felt important. I have decided it was about me.",
       "tag": "progression"
     },
     {
+      "key": "16a8b9e6c3878425",
+      "spoken": "Wherever you are, but say the park and I'll pretend dat's what I meant.",
+      "source": "Wherever you are, but say the park and I'll pretend that's what I meant.",
+      "tag": "offline"
+    },
+    {
       "key": "16ee62d4b430ddaf",
       "spoken": "Once. dere was a dog. Extremely handsome. Some say the best. He found a stick. The end.",
       "source": "Once, there was a dog. Extremely handsome. Some say the best. He found a stick. The end.",
       "tag": "talk"
+    },
+    {
+      "key": "16fd50e41e514662",
+      "spoken": "Ay. Now you're speakin' my language. Wake me if dere's cheese.",
+      "source": "Now you're speaking my language. Wake me if there's cheese.",
+      "tag": "offline"
     },
     {
       "key": "179f25cc2d520477",
@@ -204,6 +276,30 @@
       "spoken": "Dere ya are. I was about to start makin' decisions on my own.",
       "source": "There you are. I was about to start making decisions on my own.",
       "tag": "talk"
+    },
+    {
+      "key": "18ee5d1e34401b58",
+      "spoken": "Can't. Yet. Teach me a word and I'll remember it longer than you will.",
+      "source": "Can't. Yet. Teach me a word and I'll remember it longer than you will.",
+      "tag": "offline"
+    },
+    {
+      "key": "18ffb30541866ca1",
+      "spoken": "Nuttin' yet. There's a dig spot at da park with my name on it.",
+      "source": "Nothing yet. There's a dig spot at the park with my name on it.",
+      "tag": "offline"
+    },
+    {
+      "key": "195db4d2f9c0b66c",
+      "spoken": "Da ball. Any ball. Every ball. I've thought about this a lot.",
+      "source": "The ball. Any ball. Every ball. I've thought about this a lot.",
+      "tag": "offline"
+    },
+    {
+      "key": "1a29bc596dc1d20c",
+      "spoken": "Not one of mine yet. Da word you taught me is one of mine. Teach me this one and it will be too.",
+      "source": "Not one of mine yet. The word you taught me is one of mine. Teach me this one and it will be too.",
+      "tag": "offline"
     },
     {
       "key": "1a713319d29d319b",
@@ -258,6 +354,12 @@
       "spoken": "I'm full. I have standards. Not many, but dis is one.",
       "source": "I'm full. I have standards. Not many, but this is one.",
       "tag": "reactions"
+    },
+    {
+      "key": "1f6ca8e992e5101f",
+      "spoken": "Feed me, throw somethin', or take me somewhere. Doze are the options.",
+      "source": "Feed me, throw something, or take me somewhere. Those are the options.",
+      "tag": "offline"
     },
     {
       "key": "2370e4e70495953d",
@@ -320,6 +422,18 @@
       "tag": "talk"
     },
     {
+      "key": "2ac2cc5f0e33e86b",
+      "spoken": "Food. Now. I have cleared my schedule.",
+      "source": "Food. Now. I have cleared my schedule.",
+      "tag": "offline"
+    },
+    {
+      "key": "2b2423688fb77a31",
+      "spoken": "Ya. provisionally. You haven't told me your name, which is holdin' this back.",
+      "source": "You, provisionally. You haven't told me your name, which is holding this back.",
+      "tag": "offline"
+    },
+    {
       "key": "2b5ffb8a746a0b27",
       "spoken": "Every time ya talk I get slightly less sure about the world. Keep goin'.",
       "source": "Every time you talk I get slightly less sure about the world. Keep going.",
@@ -380,6 +494,18 @@
       "tag": "reactions"
     },
     {
+      "key": "333141d82affe2f3",
+      "spoken": "I'll go anywhere. I'll complain da entire time. Both true. Capisce?",
+      "source": "I'll go anywhere. I'll complain the entire time. Both true.",
+      "tag": "offline"
+    },
+    {
+      "key": "34435844dc0533ef",
+      "spoken": "I am runnin' on about four percent, so take dat as you will.",
+      "source": "I am running on about four percent, so take that as you will.",
+      "tag": "talk"
+    },
+    {
       "key": "354614903ec93f88",
       "spoken": "That's rubbish. I'm gonna sit against ya leg until it's less rubbish.",
       "source": "That's rubbish. I'm going to sit against your leg until it's less rubbish.",
@@ -416,6 +542,18 @@
       "tag": "escalation"
     },
     {
+      "key": "3dd0e4787ef9c53e",
+      "spoken": "It's daytime. Da birds are bein' smug about it.",
+      "source": "It's daytime. The birds are being smug about it.",
+      "tag": "offline"
+    },
+    {
+      "key": "404925296985017a",
+      "spoken": "Hungry. Dat's the whole report.",
+      "source": "Hungry. That's the whole report.",
+      "tag": "offline"
+    },
+    {
       "key": "408bda420e5f18dd",
       "spoken": "You MEASURED da park? This is why you're my nemesis. Nobody else commits like this.",
       "source": "You MEASURED the park? This is why you're my nemesis. Nobody else commits like this.",
@@ -440,6 +578,12 @@
       "tag": "greetings"
     },
     {
+      "key": "41f81f8af383fd0e",
+      "spoken": "Just us. Which is da correct number of people.",
+      "source": "Just us. Which is the correct number of people.",
+      "tag": "offline"
+    },
+    {
       "key": "4200a650ccb626ba",
       "spoken": "somewhere out there is da perfect stick.",
       "source": "somewhere out there is the perfect stick.",
@@ -450,6 +594,18 @@
       "spoken": "Then we lie down. Dat is the entire plan and it is a good plan. I'm just sayin'.",
       "source": "Then we lie down. That is the entire plan and it is a good plan.",
       "tag": "talk"
+    },
+    {
+      "key": "444e0697b8e99243",
+      "spoken": "Night. I'll be here. I'm always here. It's my whole thing.",
+      "source": "Night. I'll be here. I'm always here. It's my whole thing.",
+      "tag": "offline"
+    },
+    {
+      "key": "445a2fda1bc162be",
+      "spoken": "Fine. Go. I'll be exactly here, bein' brave, alone.",
+      "source": "Fine. Go. I'll be exactly here, being brave, alone.",
+      "tag": "offline"
     },
     {
       "key": "45010f87c496b0a5",
@@ -476,6 +632,12 @@
       "tag": "talk"
     },
     {
+      "key": "47b3cdb46ab97ed8",
+      "spoken": "I'm not gonna lie to ya. I know the smell of ya, which is more bindin' than a name.",
+      "source": " I know the smell of you, which is more binding than a name.",
+      "tag": "offline"
+    },
+    {
       "key": "487b7adf9289a572",
       "spoken": "favorite toy time",
       "source": "favorite toy time",
@@ -498,6 +660,18 @@
       "spoken": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
       "source": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
       "tag": "talk"
+    },
+    {
+      "key": "4c360b1f73686630",
+      "spoken": "You're mine, dat's who.",
+      "source": "You're mine, that's who.",
+      "tag": "offline"
+    },
+    {
+      "key": "4c6013e27e391719",
+      "spoken": "A cat? In OUR house? We need to talk about ya choices.",
+      "source": "A cat? In OUR house? We need to talk about your choices.",
+      "tag": "offline"
     },
     {
       "key": "4c84201fedc88198",
@@ -536,10 +710,22 @@
       "tag": "greetings"
     },
     {
+      "key": "4f7656aa2418623a",
+      "spoken": "Barkly. It's on da tag. Keep up.",
+      "source": "Barkly. It's on the tag. Keep up.",
+      "tag": "offline"
+    },
+    {
       "key": "4fcc9d87ff5af2b8",
       "spoken": "Oh good. I was about to start talkin' to da wall again.",
       "source": "Oh good. I was about to start talking to the wall again.",
       "tag": "greetings"
+    },
+    {
+      "key": "50e339cccc7f52c0",
+      "spoken": "Outside? Say it again slowly so I can lose my mind properly.",
+      "source": "Outside? Say it again slowly so I can lose my mind properly.",
+      "tag": "offline"
     },
     {
       "key": "51d6a6c2e4291950",
@@ -576,6 +762,12 @@
       "spoken": "Yo. Dat one is family now. They came with the house. I don't make the rules.",
       "source": "That one is family now. They came with the house. I do not make the rules.",
       "tag": "escalation"
+    },
+    {
+      "key": "5791b33e26c4ee3e",
+      "spoken": "Not yet. Tell me one true thing about ya and that changes permanently.",
+      "source": "Not yet. Tell me one true thing about you and that changes permanently.",
+      "tag": "offline"
     },
     {
       "key": "584ef07f58c8cdad",
@@ -626,6 +818,12 @@
       "tag": "mishaps"
     },
     {
+      "key": "5de609f077fb44d4",
+      "spoken": "Da beach has a whole sea. I intend to bark at all of it.",
+      "source": "The beach has a whole sea. I intend to bark at all of it.",
+      "tag": "offline"
+    },
+    {
       "key": "5f152e6d8ea2f056",
       "spoken": "GOOD. I'm doin' a tail thing about it. Look at da tail thing.",
       "source": "GOOD. I'm doing a tail thing about it. Look at the tail thing.",
@@ -638,10 +836,22 @@
       "tag": "npcs"
     },
     {
+      "key": "610695c79d988a75",
+      "spoken": "Ay, yo. In dog years? Devastatin'. Let's talk about literally anythin' else.",
+      "source": "In dog years? Devastating. Let's talk about literally anything else.",
+      "tag": "offline"
+    },
+    {
       "key": "6196c7ada6b4d768",
       "spoken": "I would ABSOLUTELY have barked, and dat's why you're in charge here.",
       "source": "I would ABSOLUTELY have barked, and that's why you're in charge here.",
       "tag": "npcs"
+    },
+    {
+      "key": "624b1f726c3c75ad",
+      "spoken": "Don't. I'll get emotional and I have a reputation.",
+      "source": "Don't. I'll get emotional and I have a reputation.",
+      "tag": "offline"
     },
     {
       "key": "62c350d36719b65c",
@@ -722,6 +932,12 @@
       "tag": "talk"
     },
     {
+      "key": "6f02b2f06890f6b3",
+      "spoken": "Lemme tell ya. Ya never told me. That's on you, not me.",
+      "source": "You never told me. That's on you, not me.",
+      "tag": "offline"
+    },
+    {
       "key": "7028b9b749103a6b",
       "spoken": "Formin' an opinion. Listen to her. I just bark at things and hope.",
       "source": "Forming an opinion. Listen to her. I just bark at things and hope.",
@@ -788,9 +1004,9 @@
       "tag": "talk"
     },
     {
-      "key": "81529687425d6de8",
-      "spoken": "I am runnin' on about four percent, so take dat as you'll.",
-      "source": "I am running on about four percent, so take that as you will.",
+      "key": "8211c45d89cfdb1e",
+      "spoken": "Hm. I'd have barked. I'm not sayin' dat's better. I'm sayin' that's what I'd have done.",
+      "source": "Hm. I'd have barked. I'm not saying that's better. I'm saying that's what I'd have done.",
       "tag": "talk"
     },
     {
@@ -806,16 +1022,40 @@
       "tag": "npcs"
     },
     {
+      "key": "84739b165f3144b1",
+      "spoken": "I'll play. Not because I'm desperate. Throw da ball.",
+      "source": "I'll play. Not because I'm desperate. Throw the ball.",
+      "tag": "offline"
+    },
+    {
       "key": "8557f8e3acc31580",
       "spoken": "i dug a hole and da sea filled it in. rude.",
       "source": "i dug a hole and the sea filled it in. rude.",
       "tag": "thoughts"
     },
     {
+      "key": "85630258f283c308",
+      "spoken": "Fetch? Throw it. Throw it right now. Why are ya still talkin'?",
+      "source": "Fetch? Throw it. Throw it right now. Why are you still talking?",
+      "tag": "offline"
+    },
+    {
       "key": "86b78a112b8997c3",
       "spoken": "Dat's the most Biscuit sentence anyone has ever said. I'm framin' it.",
       "source": "That's the most Biscuit sentence anyone has ever said. I'm framing it.",
       "tag": "npcs"
+    },
+    {
+      "key": "89150a8aa8106f4e",
+      "spoken": "You've never told me dat. Tell me and I'll keep it forever, obviously. I'm just sayin'.",
+      "source": "You've never told me that. Tell me and I'll keep it forever, obviously.",
+      "tag": "offline"
+    },
+    {
+      "key": "892d094c0eff4e51",
+      "spoken": "Fine. Ish. Ask me again after food.",
+      "source": "Fine. Ish. Ask me again after food.",
+      "tag": "offline"
     },
     {
       "key": "895a65be4ea5d58e",
@@ -836,6 +1076,12 @@
       "tag": "reactions"
     },
     {
+      "key": "8d457783a0b5ab39",
+      "spoken": "I'm not gonna lie to ya. You're leavin'. Noted. I'm puttin' it in the file. The file is mostly dis.",
+      "source": "You're leaving. Noted. I'm putting it in the file. The file is mostly this.",
+      "tag": "offline"
+    },
+    {
       "key": "8d6eda9cafe7bfc7",
       "spoken": "Best friend. Don't make it weird. It is already a little weird.",
       "source": "Best friend. Do not make it weird. It is already a little weird.",
@@ -854,10 +1100,22 @@
       "tag": "npcs"
     },
     {
+      "key": "95d5779b7c07c212",
+      "spoken": "I have no notes on cats. I have many notes on cats.",
+      "source": "I have no notes on cats. I have many notes on cats.",
+      "tag": "offline"
+    },
+    {
       "key": "971fb2071f627e4d",
       "spoken": "my bed is exactly da right amount of bed.",
       "source": "my bed is exactly the right amount of bed.",
       "tag": "thoughts"
+    },
+    {
+      "key": "98856a7aeade3fa0",
+      "spoken": "Obviously. Lemme tell ya. I'm not gonna make a thing of it, but obviously.",
+      "source": "Obviously. I'm not going to make a thing of it, but obviously.",
+      "tag": "offline"
     },
     {
       "key": "98a2c5ad7e797013",
@@ -882,6 +1140,12 @@
       "spoken": "I am not sayin' he is a problem. I am sayin' I have started noticin'.",
       "source": "I am not saying he is a problem. I am saying I have started noticing.",
       "tag": "escalation"
+    },
+    {
+      "key": "a1537bb0885366da",
+      "spoken": "Ay. Duke says he fetches at a national level. Duke says a lot of things.",
+      "source": "Duke says he fetches at a national level. Duke says a lot of things.",
+      "tag": "offline"
     },
     {
       "key": "a18a36aac15db8e3",
@@ -998,6 +1262,18 @@
       "tag": "npcs"
     },
     {
+      "key": "b38e0d4aa1a1b0b7",
+      "spoken": "Yeah. Next question. Actually no, act on dat one. I'm just sayin'.",
+      "source": "Yes. Next question. Actually no, act on that one.",
+      "tag": "offline"
+    },
+    {
+      "key": "b3c13a27980944b5",
+      "spoken": "Good, actually. Don't make it weird.",
+      "source": "Good, actually. Don't make it weird.",
+      "tag": "offline"
+    },
+    {
       "key": "b4ae2e04b89b7234",
       "spoken": "Counter-offer: we both lie down.",
       "source": "Counter-offer: we both lie down.",
@@ -1038,6 +1314,12 @@
       "spoken": "Ball. Air. Me. In dat order. Go. I'm just sayin'.",
       "source": "Ball. Air. Me. In that order. Go.",
       "tag": "reactions"
+    },
+    {
+      "key": "b7d253714f8d3f09",
+      "spoken": "Da colour of cheese. I don't know its official name. I know its effect on me.",
+      "source": "The colour of cheese. I don't know its official name. I know its effect on me.",
+      "tag": "offline"
     },
     {
       "key": "b855d58ff8a00b97",
@@ -1088,6 +1370,12 @@
       "tag": "onboarding"
     },
     {
+      "key": "c6e79177ef2463f7",
+      "spoken": "Nope. Nobody's taught me dat. Say “when I say X, play dead” and then I'm dangerous.",
+      "source": "Nope. Nobody's taught me that. Say “when I say X, play dead” and then I'm dangerous.",
+      "tag": "offline"
+    },
+    {
       "key": "c791218cb614e283",
       "spoken": "da bakery is doin' crimes of smell again.",
       "source": "the bakery is doing crimes of smell again.",
@@ -1104,6 +1392,12 @@
       "spoken": "Say dat again — I wasn't listenin' properly. I admit it. I'm just sayin'.",
       "source": "Say that again — I wasn't listening properly. I admit it.",
       "tag": "mishaps"
+    },
+    {
+      "key": "cdec229477e99c3f",
+      "spoken": "It's night. I can tell because everythin' smells better.",
+      "source": "It's night. I can tell because everything smells better.",
+      "tag": "offline"
     },
     {
       "key": "d01674c83a0dc1eb",
@@ -1190,6 +1484,12 @@
       "tag": "npcs"
     },
     {
+      "key": "da450c5052c49a31",
+      "spoken": "I'm a dog. You're da one talkin' to a dog.",
+      "source": "I'm a dog. You're the one talking to a dog.",
+      "tag": "offline"
+    },
+    {
       "key": "da79a524082a10c7",
       "spoken": "Ya COUNTED my fetches, Duke? That's not rivalry, that's fan behaviour.",
       "source": "You COUNTED my fetches, Duke? That's not rivalry, that's fan behaviour.",
@@ -1202,6 +1502,12 @@
       "tag": "npcs"
     },
     {
+      "key": "dc1c15c3ea89c048",
+      "spoken": "I'm listenin'. Especially if dis ends with food.",
+      "source": "I'm listening. Especially if this ends with food.",
+      "tag": "offline"
+    },
+    {
       "key": "dcb7494b7f8779ec",
       "spoken": "Fair. Be angry. I'll be angry next to ya, at nuttin' in particular.",
       "source": "Fair. Be angry. I'll be angry next to you, at nothing in particular.",
@@ -1212,6 +1518,12 @@
       "spoken": "I bit da sea. The sea did nuttin'. Cowardly.",
       "source": "I bit the sea. The sea did nothing. Cowardly.",
       "tag": "hook"
+    },
+    {
+      "key": "dea9d656f934c2bd",
+      "spoken": "Operational. Lemme tell ya. Could be improved with cheese.",
+      "source": "Operational. Could be improved with cheese.",
+      "tag": "offline"
     },
     {
       "key": "e71cea3a4696a243",
@@ -1292,6 +1604,12 @@
       "tag": "talk"
     },
     {
+      "key": "f8f04062ca8a06dc",
+      "spoken": "Tired. Structurally tired.",
+      "source": "Tired. Structurally tired.",
+      "tag": "offline"
+    },
+    {
       "key": "f9857ecb71c12b9b",
       "spoken": "The park. Dere are BIRDS there.",
       "source": "The park. There are BIRDS there.",
@@ -1302,6 +1620,12 @@
       "spoken": "Dat one's not stickin'. My head's full or somethin'.",
       "source": "That one's not sticking. My head's full or something.",
       "tag": "mishaps"
+    },
+    {
+      "key": "faa377154b52c598",
+      "spoken": "I'm here, ain't I. I could be anywhere. I'm here.",
+      "source": "I'm here, aren't I. I could be anywhere. I'm here.",
+      "tag": "offline"
     },
     {
       "key": "fb64a4d8f97eecf8",

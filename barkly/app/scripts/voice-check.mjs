@@ -112,9 +112,26 @@ const tap = async (testid) => {
   }
   await page.waitForTimeout(3200);
 };
+/*
+ * OPEN THE COMPOSER FIRST. It closes after every send, so a `type()` that only
+ * looked for a visible input found one on the first call and silently returned
+ * on every call after it -- this check typed five things, measured three
+ * utterances, and printed "3/3 lines (100%)". A gate that reports a perfect
+ * score off a sample of three is worse than no gate: it is a green light with
+ * nothing behind it.
+ */
 const type = async (text) => {
+  const open = page.getByRole('button', { name: /Type to Barkly/i }).first();
+  if (await open.count()) {
+    await open.click().catch(() => {});
+    await page.waitForTimeout(600);
+  }
   const input = page.locator('input:visible').first();
-  if (!(await input.count())) return;
+  if (!(await input.count())) {
+    console.error(`could not open the composer to say "${text}" — this check is not walking the app.`);
+    process.exitCode = 1;
+    return;
+  }
   await input.fill(text);
   await input.press('Enter');
   await page.waitForTimeout(5000);
@@ -125,6 +142,19 @@ await tap('kit-play');
 await type('hello barkly');
 await type('do you like squirrels');
 await type('what is a skateboard');
+/*
+ * The OFFLINE brain's own answers, which are the ones a stranger hears.
+ *
+ * Every question below lands in `scripted.answerQuestion` -- a different code
+ * path from the composed replies above, and one that was entirely missing from
+ * the voice bank's source list, so all of it came out in the browser narrator
+ * while this check reported 3/3. The check has to walk the paths, not a path.
+ */
+await type("what's your name");
+await type('are you a robot');
+await type('what should we do');
+await type('sit');
+await type('are you hungry');
 for (const where of [/park/i, /town/i, /home/i]) {
   const t = page.getByRole('tab').filter({ hasText: where }).first();
   if (await t.count()) {
@@ -147,6 +177,34 @@ console.log(`his own voice:  ${banked.length}/${total} lines` + (total ? ` (${Ma
 console.log(`the narrator:   ${spoke.length}/${total} lines`);
 if (broken.length) console.log(`not inlined:   ${broken.join('\n               ')}`);
 for (const line of spoke) console.log(`  narrator: ${line}`);
+
+/*
+ * A FLOOR, not just "did any recording play".
+ *
+ * The pass condition used to be "at least one banked clip", and this check
+ * reported "3/3 lines (100%)" on a session where it had only managed to say
+ * three things -- while an entire brain file was missing from the bank's
+ * source list and every one of its answers went to the narrator. One clip is
+ * not a voice; a share is.
+ *
+ * It is not 100% and cannot be. Some lines weld the player's own words into
+ * the middle of a sentence -- the composer echoes the word you typed, by
+ * design, and the bank matches whole recordings -- so those can never be
+ * recorded for anybody. Measured on this session: 8 of 11, with the three
+ * narrated ones all of that shape. 60% is the floor because which lines a
+ * session lands on is partly random; the point is to catch a whole path
+ * falling out of the bank, which is what happened.
+ */
+const FLOOR = 0.6;
+if (total > 0 && banked.length / total < FLOOR) {
+  console.error(
+    `\nFAIL: only ${banked.length} of ${total} lines were his own voice (floor is ${Math.round(FLOOR * 100)}%).\n` +
+      'Either a source file holding his fixed lines is missing from SOURCES in\n' +
+      'scripts/voice-bank.mjs, or lines that used to be fixed now interpolate\n' +
+      'player text and can no longer be banked. The narrator lines are listed above.',
+  );
+  process.exit(1);
+}
 
 if (banked.length === 0) {
   console.error(

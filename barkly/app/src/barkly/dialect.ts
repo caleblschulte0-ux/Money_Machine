@@ -98,9 +98,23 @@ const ALWAYS: [RegExp, string][] = [
    */
   [/\bthere you are\b/gi, 'dere ya are'],
   [/\bhere you are\b/gi, 'here ya are'],
-  [/\byou are\b/gi, "you're"],
-  [/\byou will\b/gi, "you'll"],
-  [/\byou have\b/gi, "you've"],
+  /*
+   * AN AUXILIARY AT THE END OF A CLAUSE CANNOT CONTRACT.
+   *
+   * "I'll remember that longer than you will." became "...longer than you'll.",
+   * which is not an accent, it is a grammar mistake, and it shipped on the
+   * SECOND thing he says to a new player -- the line that answers "my favourite
+   * food is pizza". Same shape as the "there you are" case a few lines up,
+   * which was handled as a one-off phrase; this is the general rule it was an
+   * instance of. When nothing follows the verb but punctuation or the end of
+   * the line, the verb is stressed and stays whole.
+   *
+   * Only the POSITIVE auxiliaries need it. "I do not." -> "I don't." is right,
+   * which is why the negatives above are left alone.
+   */
+  [/\byou are\b(?!\s*(?:[.,!?;:\u2026\u2014-]|$))/gi, "you're"],
+  [/\byou will\b(?!\s*(?:[.,!?;:\u2026\u2014-]|$))/gi, "you'll"],
+  [/\byou have\b(?!\s*(?:[.,!?;:\u2026\u2014-]|$))/gi, "you've"],
   [/\byes\b/gi, 'yeah'],
   [/\bvery\b/gi, 'real'],
 ];

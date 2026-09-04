@@ -281,3 +281,27 @@ describe('it actually does the job', () => {
     expect(bronx('I am waiting and watching.')).toMatch(/waitin'/);
   });
 });
+
+describe('an auxiliary at the end of a clause does not contract', () => {
+  // Shipped on the SECOND thing he says to a new player: "I'll remember that
+  // longer than you will." came out "...longer than you'll." The file already
+  // handled "there you are" as a one-off phrase; this is the rule that phrase
+  // was an instance of.
+  it('leaves a stressed verb whole', () => {
+    expect(bronx('I will remember that longer than you will.')).toContain('than you will.');
+    expect(bronx('That is exactly what you are.')).toContain('what you are.');
+    expect(bronx('I know how much you have.')).toContain('much you have.');
+    expect(bronx('Say it again and see how brave you are')).toMatch(/you are$/);
+  });
+
+  it('still contracts in the middle of a clause', () => {
+    expect(bronx('you are the best')).toContain("you're");
+    expect(bronx('you will see')).toContain("you'll");
+    expect(bronx('you have a stick')).toContain("you've");
+  });
+
+  it('leaves the negatives alone, which are right either way', () => {
+    expect(bronx('I do not.')).toContain("don't.");
+    expect(bronx('It is not.')).toContain("ain't.");
+  });
+});

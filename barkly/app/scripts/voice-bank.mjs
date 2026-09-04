@@ -71,6 +71,18 @@ const SOURCES = [
   { file: 'src/barkly/greetings.ts', tag: 'greetings' },
   { file: 'src/barkly/onboarding.ts', tag: 'onboarding' },
   { file: 'src/barkly/compose.ts', tag: 'talk' },
+  /*
+   * THE OFFLINE BRAIN, which is the only brain the published web build has.
+   *
+   * This list's own comment says guessing which files hold his voice does not
+   * work -- and then this file was missing from it, so every fixed answer the
+   * scripted provider gives went to the browser narrator: "Barkly. It's on the
+   * tag. Keep up.", "I'm a dog. You're the one talking to a dog.", and the
+   * whole answerQuestion set, which is the most on-thesis thing he says.
+   * `isSpeech` drops the template shapes on its own, so the lines that CAN be
+   * banked are, and the ones with the player's name in them stay out.
+   */
+  { file: 'src/providers/dialogue/scripted.ts', tag: 'offline' },
   { file: 'src/world/thoughts.ts', tag: 'thoughts' },
   { file: 'src/hooks/useBarkly.ts', tag: 'hook' },
   // Scoped to the property that is actually SPOKEN. These files also hold

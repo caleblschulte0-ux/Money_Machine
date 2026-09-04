@@ -153,12 +153,22 @@ function answerQuestion(text: string, c: DialogueContext | undefined, you: strin
    * moment the player wants it.
    */
   if (/^\s*(sit|sit down|lie down|lay down|stay|come|come here|heel|paw|shake|give me your paw|roll over|speak|bark|play dead|drop it|fetch|stop|stop it|no|beg|spin|jump|dance)\b[\s.!]*$/.test(t)) {
+    /*
+     * The cue is NOT quoted back, and that is deliberate.
+     *
+     * The bank matches whole recordings, so a line with the player's own
+     * invented word welded into it can never be recorded for anybody -- and
+     * `voice-check` caught exactly that: "Not one of mine yet. “IRS” is one of
+     * mine." went out in the browser's screen-reader narrator. Same trade the
+     * onboarding payoff line already makes. They invented the word and it is
+     * listed in Settings; what they need here is that he HAS one, in his voice.
+     */
     const taught = c?.cues ?? [];
     if (taught.length > 0) {
       return at(
         [
-          { speech: `Don't know that one. I know “${taught[0]}”. Try that and watch me be incredible.`, reaction: 'excited', actions: ['EAR_PERK'] },
-          { speech: `Not one of mine yet. “${taught[0]}” is one of mine. Teach me this one and it will be too.`, actions: ['HEAD_TILT'] },
+          { speech: "Don't know that one. I know the one you taught me, though. Try that and watch me be incredible.", reaction: 'excited', actions: ['EAR_PERK'] },
+          { speech: 'Not one of mine yet. The word you taught me is one of mine. Teach me this one and it will be too.', actions: ['HEAD_TILT'] },
         ],
         Math.floor(Math.random() * 89),
       );

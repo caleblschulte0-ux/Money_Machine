@@ -183,7 +183,7 @@ over each other, and a mouth flapping to a line that already finished.
 
 The chain is **banked voice → proxy voice → device voice → silent-but-timed**.
 
-**Banked** is ~180 of his fixed lines, pre-recorded in the real voice and
+**Banked** is ~276 of his fixed lines, pre-recorded in the real voice and
 shipped inside the app (`app/assets/voice/`, wired by `app/src/audio/
 voiceBank.ts`). It exists because everything below it needs something he does
 not always have: the proxy needs a machine running it, and a published web
@@ -191,11 +191,29 @@ artifact cannot reach one, so before the bank every demo anyone ever opened
 was the phone's screen-reader narrator wearing a dog costume. Greetings, feed
 and play reactions, idle thoughts, mishaps, the things he says to the other
 dogs and his level-ups are all in there — which is the whole first minute of
-the app and, measured in a real browser, 71% of a real session.
+the app and, measured in a real browser, **82% of a real session**.
+
+That number was 71%, and before 2026-09-04 the check that produced it was
+lying: `voice-check` typed five messages and measured three, because the
+composer closes after every send and its `type()` only looked for a visible
+input — so it reported "3/3 lines (100%)" while an entire brain file was
+missing from the allowlist below. It opens the composer now and fails under a
+60% floor. One clip playing is not a voice; a share is.
+
+**82% is close to the ceiling and the remaining 18% is structural.** The
+composer echoes the word you typed back at you, by design — that is what makes
+a reply feel heard — and the bank matches WHOLE recordings, so "I could tell
+you what skateboard is" can never be recorded for anybody. Raising the share
+further means either a reachable synthesizer or writing fewer lines that quote
+the player, and the second one costs more than it buys.
 
 Which files it reads is an ALLOWLIST, and both halves of that are load-bearing.
 A hand-picked list of seven files missed fixed lines living in files nobody
-thought of, and he fell back to the narrator mid-conversation. A sweep of
+thought of, and he fell back to the narrator mid-conversation — and it happened
+AGAIN on 2026-09-04, to the biggest one: `providers/dialogue/scripted.ts`, the
+only brain a published web build has, was never on the list, so every fixed
+answer it gives ("Barkly. It's on the tag. Keep up.") came out in the browser's
+narrator. Fifty-one lines. A sweep of
 everything recorded 114 journal entries out of `encounters.ts` alone — a voice
 narrating a scrapbook nobody hears it narrate. The list now takes the brain and
 the world whole, and scopes the mixed files to the property that is actually
