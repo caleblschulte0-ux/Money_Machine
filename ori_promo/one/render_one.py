@@ -353,6 +353,47 @@ def frame_cue(d, t, dur):
 DISSOLVE = 0.5          # seconds of cross-dissolve into each beat
 FIGURE_MAX_DRIFT = 0.03  # a plate carrying a figure must be this static
 
+# A cross-dissolve blends the incoming beat's first frames against the
+# previous beat's LAST COMPOSED FRAME held still. That is invisible when
+# neighbouring shots share a framing scale (every plate in this film drifts
+# 0.0-0.6% over its own duration -- see the comment at the dissolve site).
+# It is NOT invisible when the two shots disagree on scale: a wide
+# environmental POV dissolving against a tight portrait crop produces a
+# giant translucent face floating disconnected over the wrong background,
+# because for half a second the renderer is genuinely averaging two
+# pictures shot at completely different distances from their subject.
+# Confirmed by direct frame extraction across reach->dak (v29): the new
+# ChatGPT dak/settle plates are tight family-portrait crops, unlike the
+# wide-shot-with-distant-figure assets they replaced, so the beats either
+# side of that scale jump now ghost. `dak` picks it up from `reach` (wide
+# park POV); `ice` picks it up from `settle` (tight portrait) since ice is
+# a wide valley landscape. `dak` and `settle` are the same portrait scale
+# as each other, so that one boundary keeps its cross-dissolve.
+# `mam` picks up the same mismatch from `ice` -- confirmed the same way,
+# by extracting frames across that boundary too: mam is a tight
+# over-the-shoulder POV of the wearer's head against snow, dissolving off
+# ice's wide landscape produces the same translucent-head-over-background
+# ghost. This one predates v29 (ice was already a generated plate and mam
+# already real footage before the asset swap) -- it was simply never
+# caught until this pass looked at every boundary instead of stopping at
+# the one the operator's feedback pointed at directly.
+# `hero` (v28's glasses product shot) sits on BOTH sides of the same
+# problem: it is a tight macro of glasses on a dark table dropped between
+# two wide real-POV park shots (`prod` before, `on` after), so both of its
+# neighbours ghost -- a giant translucent park landscape over the glasses
+# macro going in, a giant translucent pair of glasses over the waterfall
+# coming out. Confirmed by frame extraction on both boundaries. Both sides
+# need the override: `hero`'s own incoming dissolve (from prod) and
+# `on`'s own incoming dissolve (from hero).
+# The fix is not to disable the transition, it is to change what it
+# dissolves FROM: these beats fade in from black instead of from the
+# mismatched previous frame. Nothing incompatible is blended, it stays a
+# soft transition rather than a hard cut (the operator's v6 complaint was
+# never "too many cuts", it was "too FAST" -- see the note at the dissolve
+# site), and a brief dip to black reads as a deliberate chapter break --
+# apt for hero/on too, since that is the moment the device switches on.
+DIP_TO_BLACK = {"hero", "on", "dak", "ice", "mam"}
+
 
 SAFE_T, SAFE_B = FL.safe_area(H, W)
 
@@ -586,7 +627,9 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
         # the entire timeline under them.
         if prev_last is not None and i < int(DISSOLVE * FPS):
             a = AR.ease((i + 1) / (DISSOLVE * FPS))
-            out = out * a + prev_last.astype(np.float32) * (1.0 - a)
+            src = (np.zeros_like(out) if beat in DIP_TO_BLACK
+                   else prev_last.astype(np.float32))
+            out = out * a + src * (1.0 - a)
         # vignette, moving grain, scope bars -- last thing that touches it
         out = FL.finish(out, global_i + i)
         yield out.astype(np.uint8)
