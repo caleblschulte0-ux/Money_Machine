@@ -1,3 +1,4 @@
+import { splitLeadingName } from '../src/barkly/dialect';
 import { awayBand, nameFromFacts, returnGreeting, welcomeBack } from '../src/barkly/greetings';
 
 describe('welcome-back greetings', () => {
@@ -84,5 +85,35 @@ describe('knowing who you are', () => {
   it('and the greeting then uses it', () => {
     const name = nameFromFacts(['your person: name = Caleb']);
     expect(returnGreeting(name, 90, 0)).toContain('Caleb');
+  });
+});
+
+describe('a greeting he can actually say out loud', () => {
+  // MEASURED: all twelve named greetings were missing from the recorded voice
+  // bank while all twelve anonymous ones were in it. The bank matches whole
+  // lines and the harvester skips any literal with a substitution in it, so a
+  // greeting written as "Oh, ${name}'s back" can never be recorded for
+  // anybody — and every returning player who told him their name (everyone;
+  // the onboarding asks) heard the screen reader on the first line of every
+  // session, on the beat this module exists for.
+  const NAME = 'Caleb';
+
+  it('puts the name at the front, where speakable can split it off', () => {
+    for (let seed = 0; seed < 30; seed += 1) {
+      for (const minutes of [5, 90, 12 * 60, 90 * 60]) {
+        const line = returnGreeting(NAME, minutes, seed);
+        expect(line).not.toBeNull();
+        const [name, body] = splitLeadingName(line!);
+        expect(name).toBe(NAME);
+        expect(body.length).toBeGreaterThan(8);
+        // ...and nowhere else, or the body is unbankable again.
+        expect(body).not.toContain(NAME);
+      }
+    }
+  });
+
+  it('still says something different per band', () => {
+    const bodies = [5, 90, 12 * 60, 90 * 60].map((m) => splitLeadingName(returnGreeting(NAME, m, 0)!)[1]);
+    expect(new Set(bodies).size).toBe(4);
   });
 });

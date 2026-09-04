@@ -221,6 +221,11 @@ export interface InitiativeContext {
 /** Minimum gap between unprompted lines. He is a dog, not a notification. */
 export const INITIATIVE_COOLDOWN_MS = 100_000;
 
+/* Bodies for the initiative lines that use the player's name -- see their
+ * call sites, and greetings.BODIES for why they are shaped this way. */
+const FOOD_SITUATION = 'Food situation. Thoughts?';
+const STILL_THERE = "Nothing. Just checking you're still there.";
+
 function personName(facts: Fact[]): string | undefined {
   return facts.find((f) => f.subject === 'person' && f.key === 'name')?.value;
 }
@@ -253,7 +258,10 @@ export function pickInitiative(ctx: InitiativeContext): Initiative | null {
     candidates.push({
       kind: 'hungry',
       priority: 90,
-      line: rng() < 0.5 ? "I'm hungry. This is your problem now." : `${you}. Food situation. Thoughts?`,
+      // Both halves are literals: the anonymous one outright, and the named
+      // one as name-at-the-front plus a body the voice bank can hold. Written
+      // inline the named variant was a template, which is never recorded.
+      line: rng() < 0.5 ? "I'm hungry. This is your problem now." : `${you}. ${FOOD_SITUATION}`,
     });
   }
   if (snapshot.stats.energy < 18) {
@@ -315,7 +323,7 @@ export function pickInitiative(ctx: InitiativeContext): Initiative | null {
     candidates.push({
       kind: 'affection',
       priority: 20,
-      line: name ? `${name}. Nothing. Just checking you're still there.` : "Just checking you're still there.",
+      line: name ? `${name}. ${STILL_THERE}` : "Just checking you're still there.",
     });
   }
 

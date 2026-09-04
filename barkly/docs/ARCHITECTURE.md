@@ -183,7 +183,7 @@ over each other, and a mouth flapping to a line that already finished.
 
 The chain is **banked voice → proxy voice → device voice → silent-but-timed**.
 
-**Banked** is ~278 of his fixed lines, pre-recorded in the real voice and
+**Banked** is ~304 of his fixed lines, pre-recorded in the real voice and
 shipped inside the app (`app/assets/voice/`, wired by `app/src/audio/
 voiceBank.ts`). It exists because everything below it needs something he does
 not always have: the proxy needs a machine running it, and a published web
@@ -227,6 +227,16 @@ remember that`, and the trick payoff was written out a second time inside
 free — `voiceEngine.speakable` splits it off — and a shared constant
 (`onboarding.DELIGHT_BODY`, `training.PLAY_DEAD_LINE`) is what puts the fixed
 half in front of the harvester at all.
+
+**Where it kept biting: the lines that say the player's NAME.** Measured
+2026-09-04, all twelve NAMED return greetings were missing from the bank while
+all twelve anonymous ones were in it — so every returning player who had told
+him their name (which is everyone, the onboarding asks) heard the screen reader
+on the first line of every session, on the beat `greetings.ts` exists for. The
+same shape was in the offline brain's "what's my name" answer and in two
+initiative lines. All of them are `${name}. ${BODY}` now with BODY a plain
+literal, which is the only shape that both records and plays back. If you write
+a new line that greets him by name, that is the shape to write it in.
 
 Which files it reads is an ALLOWLIST, and both halves of that are load-bearing.
 A hand-picked list of seven files missed fixed lines living in files nobody

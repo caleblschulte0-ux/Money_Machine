@@ -53,6 +53,13 @@ function rotator() {
 
 const NAME_RE = /\b(?:my name(?:'s| is)|i(?:'m| am) called|call me)\s+([A-Z][a-zA-Z]{1,20})/i;
 
+/*
+ * Bodies of the two lines that greet the player by name, kept as plain
+ * literals for the voice bank. See the note at their call sites.
+ */
+const KNOW_YOUR_NAME = 'Obviously. I remember things.';
+const FAVOURITE_PERSON = "Don't tell anyone. Actually, do.";
+
 /** Everything he can be asked that he can honestly answer from state. */
 function answerQuestion(text: string, c: DialogueContext | undefined, you: string): Line | null {
   const t = text.toLowerCase();
@@ -94,7 +101,11 @@ function answerQuestion(text: string, c: DialogueContext | undefined, you: strin
 
   if (/\b(what|who)('?s| is)? my name\b|\bdo you (know|remember) my name\b/.test(t)) {
     return c?.personName
-      ? { speech: `${c.personName}. Obviously. I remember things.`, reaction: 'happy', actions: ['TAIL_WAG'] }
+      // The body is its own constant so the harvester can see it and the bank
+      // can hold it; the name rides at the FRONT, where `speakable` splits it
+      // off. Written inline it was a template, and a template is never
+      // recorded -- see greetings.BODIES.
+      ? { speech: `${c.personName}. ${KNOW_YOUR_NAME}`, reaction: 'happy', actions: ['TAIL_WAG'] }
       : { speech: "You never told me. That's on you, not me.", reaction: 'annoyed', actions: ['HEAD_TILT'] };
   }
   if (/\bwhere are we\b|\bwhere am i\b|\bwhere is this\b|\bwhat is this place\b/.test(t)) {
@@ -235,7 +246,7 @@ function answerQuestion(text: string, c: DialogueContext | undefined, you: strin
     if (/place|spot|park|home/.test(thing)) return { speech: "Wherever you are, but say the park and I'll pretend that's what I meant.", reaction: 'happy', actions: ['EAR_PERK'] };
     if (/person|human|people|friend/.test(thing)) {
       return c?.personName
-        ? { speech: `${c.personName}. Don't tell anyone. Actually, do.`, reaction: 'happy', actions: ['TAIL_WAG', 'EAR_PERK'] }
+        ? { speech: `${c.personName}. ${FAVOURITE_PERSON}`, reaction: 'happy', actions: ['TAIL_WAG', 'EAR_PERK'] }
         : { speech: "You, provisionally. You haven't told me your name, which is holding this back.", reaction: 'happy', actions: ['EAR_PERK'] };
     }
     return { speech: `My favourite ${thing}? Whichever one is nearest and unattended.`, actions: ['HEAD_TILT'] };

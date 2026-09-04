@@ -93,7 +93,11 @@ const SOURCES = [
   { file: 'src/barkly/escalation.ts', tag: 'escalation', only: ['line'] },
   { file: 'src/barkly/training.ts', tag: 'training', only: ['speech', 'PLAY_DEAD_LINE'] },
   { file: 'src/game/contest.ts', tag: 'contest', only: ['line'] },
-  { file: 'src/barkly/character.ts', tag: 'initiative', only: ['pickInitiative'] },
+  // The two name-fronted initiative bodies live at module scope, outside
+  // `pickInitiative`, so the scope has to name them -- the same trap that hid
+  // `training.PLAY_DEAD_LINE`. A body extracted for the bank's benefit and
+  // then left outside the bank's reach is the joke telling itself twice.
+  { file: 'src/barkly/character.ts', tag: 'initiative', only: ['pickInitiative', 'FOOD_SITUATION', 'STILL_THERE'] },
   { file: 'src/game/progression.ts', tag: 'progression', only: ['levelUpLine', 'AREA_UNLOCKS'] },
 ];
 

@@ -32,13 +32,48 @@ export function awayBand(minutes: number): AwayBand | null {
 
 type Line = (name: string) => string;
 
-const LINES: Record<AwayBand, { named: Line[]; anon: Line[] }> = {
+/**
+ * THE NAMED LINES PUT THE NAME AT THE FRONT, AND THE REST IS A LITERAL.
+ *
+ * This is not a style choice, it is the only shape the recorded voice can
+ * take. The bank matches WHOLE lines and the harvester skips any literal with
+ * a substitution in it, so a greeting written as `Oh, ${n}'s back. I did not
+ * move.` could never be recorded for anybody -- and measured, ALL TWELVE named
+ * greetings were missing from the bank while all twelve anonymous ones were in
+ * it. Every returning player who had told him their name (which is everyone,
+ * the onboarding asks) heard the browser's screen reader on the first line of
+ * every session. On the beat this file's own header calls "the one that has to
+ * land".
+ *
+ * A name at the FRONT is free: `voiceEngine.speakable` splits it off with
+ * `dialect.splitLeadingName` and plays the body, which is why the bodies below
+ * are plain strings the harvester can see.
+ */
+const BODIES: Record<AwayBand, string[]> = {
+  blink: [
+    'I did not move. I want that on the record.',
+    'That was quick. I had only just started missing you.',
+    'I was mid-thought. It was not a good thought. Continue.',
+  ],
+  short: [
+    'Finally. I have been extremely brave about it.',
+    'There you are. I checked the door twice. Fine, four times.',
+    'Nothing happened while you were out. I checked. Twice.',
+  ],
+  day: [
+    "You're back. I counted the hours. It was a lot of hours.",
+    'Oh NOW you show up. I guarded the room the whole time. You are welcome.',
+    "I mean — hey. Whatever. I wasn't waiting by the door or anything.",
+  ],
+  long: [
+    'I had genuinely started a new life. Then I heard the door.',
+    'You were gone so long I forgot what you smelled like. Then I remembered instantly.',
+    'I want you to know I was fine. I was NOT fine. But I was fine.',
+  ],
+};
+
+const LINES: Record<AwayBand, { anon: Line[] }> = {
   blink: {
-    named: [
-      (n) => `Oh, ${n}'s back. I did not move. I want that on the record.`,
-      (n) => `That was quick, ${n}. I had only just started missing you.`,
-      (n) => `${n}. I was mid-thought. It was not a good thought. Continue.`,
-    ],
     anon: [
       () => `You're back already. I had plans. They were bad plans.`,
       () => `Oh good. I was about to start talking to the wall again.`,
@@ -46,11 +81,6 @@ const LINES: Record<AwayBand, { named: Line[]; anon: Line[] }> = {
     ],
   },
   short: {
-    named: [
-      (n) => `${n}. Finally. I have been extremely brave about it.`,
-      (n) => `There you are. I checked the door twice. Fine, four times, ${n}.`,
-      (n) => `Hey ${n}. Nothing happened while you were out. I checked. Twice.`,
-    ],
     anon: [
       () => `You're back. I was starting to think the squirrels got you.`,
       () => `Oh, hey. I did absolutely nothing productive while you were gone. It was great.`,
@@ -58,11 +88,6 @@ const LINES: Record<AwayBand, { named: Line[]; anon: Line[] }> = {
     ],
   },
   day: {
-    named: [
-      (n) => `${n}. You're back. I counted the hours. It was a lot of hours.`,
-      (n) => `Oh NOW ${n} shows up. I guarded the room the whole time. You're welcome.`,
-      (n) => `${n}! I mean — hey. Whatever. I wasn't waiting by the door or anything.`,
-    ],
     anon: [
       () => `You were gone a WHILE. I handled it. Mostly.`,
       () => `A whole day. I aged. Emotionally. Look at me.`,
@@ -70,11 +95,6 @@ const LINES: Record<AwayBand, { named: Line[]; anon: Line[] }> = {
     ],
   },
   long: {
-    named: [
-      (n) => `${n}. I had genuinely started a new life. Then I heard the door.`,
-      (n) => `You were gone so long I forgot what you smelled like. Then I remembered instantly. Hi, ${n}.`,
-      (n) => `${n}. I want you to know I was fine. I was NOT fine. But I was fine.`,
-    ],
     anon: [
       () => `That was a long one. I have a lot to tell you and none of it is important.`,
       () => `I had almost moved on. Almost. Sit down.`,
@@ -90,8 +110,13 @@ const LINES: Record<AwayBand, { named: Line[]; anon: Line[] }> = {
 export function returnGreeting(name: string | undefined, minutesAway: number, seed: number): string | null {
   const band = awayBand(minutesAway);
   if (!band) return null;
-  const pool = name ? LINES[band].named : LINES[band].anon;
-  return pool[Math.abs(Math.trunc(seed)) % pool.length](name ?? '');
+  const i = Math.abs(Math.trunc(seed));
+  if (name) {
+    const body = BODIES[band][i % BODIES[band].length];
+    return `${name}. ${body}`;
+  }
+  const pool = LINES[band].anon;
+  return pool[i % pool.length]('');
 }
 
 /**

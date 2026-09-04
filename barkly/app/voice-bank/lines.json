@@ -80,6 +80,12 @@
       "tag": "npcs"
     },
     {
+      "key": "07a8f3f78cd3b097",
+      "spoken": "I mean — hey. Whatever. I wasn't waitin' by da door or anythin'.",
+      "source": "I mean — hey. Whatever. I wasn't waiting by the door or anything.",
+      "tag": "greetings"
+    },
+    {
       "key": "07ca66ddf9b94e37",
       "spoken": "Ask me somethin'. Or feed me. Ya call, honestly.",
       "source": "Ask me something. Or feed me. Your call, honestly.",
@@ -152,6 +158,12 @@
       "tag": "offline"
     },
     {
+      "key": "0ca819a47cde226f",
+      "spoken": "Obviously. Ay, yo. I remember things.",
+      "source": "Obviously. I remember things.",
+      "tag": "offline"
+    },
+    {
       "key": "0d1e745b0b8b5044",
       "spoken": "I can't hear you. Somethin' about ears. Check ya settings?",
       "source": "I can't hear you. Something about ears. Check your settings?",
@@ -162,6 +174,12 @@
       "spoken": "Diagrams. Duke, our feud has DOCUMENTATION. We built somethin' generational here.",
       "source": "Diagrams! Duke, our feud has DOCUMENTATION. We built something generational here.",
       "tag": "npcs"
+    },
+    {
+      "key": "100c0d0ad2cc6ec9",
+      "spoken": "Food situation. Thoughts?",
+      "source": "Food situation. Thoughts?",
+      "tag": "initiative"
     },
     {
       "key": "10cede9b174662b9",
@@ -536,6 +554,12 @@
       "tag": "npcs"
     },
     {
+      "key": "36ea09d12971333c",
+      "spoken": "Nuttin' happened while you were out. I checked. Twice.",
+      "source": "Nothing happened while you were out. I checked. Twice.",
+      "tag": "greetings"
+    },
+    {
       "key": "37574718c532c3ee",
       "spoken": "We have passed rival. Dis is a nemesis situation. I am honestly thrilled. I'm just sayin'.",
       "source": "We have passed rival. This is a nemesis situation. I am honestly thrilled.",
@@ -608,6 +632,12 @@
       "tag": "talk"
     },
     {
+      "key": "441656f509221053",
+      "spoken": "I was mid-thought. It was not a good thought. Continue.",
+      "source": "I was mid-thought. It was not a good thought. Continue.",
+      "tag": "greetings"
+    },
+    {
       "key": "444e0697b8e99243",
       "spoken": "Night. I'll be here. I'm always here. It's my whole thing.",
       "source": "Night. I'll be here. I'm always here. It's my whole thing.",
@@ -672,6 +702,12 @@
       "spoken": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
       "source": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
       "tag": "talk"
+    },
+    {
+      "key": "4bee8d6dad7d93a7",
+      "spoken": "Nuttin'. Just checkin' you're still dere.",
+      "source": "Nothing. Just checking you're still there.",
+      "tag": "initiative"
     },
     {
       "key": "4c360b1f73686630",
@@ -756,6 +792,12 @@
       "spoken": "I'm gonna need a noun. Any noun. Throw me one.",
       "source": "I'm going to need a noun. Any noun. Throw me one.",
       "tag": "talk"
+    },
+    {
+      "key": "5307cb292862a38a",
+      "spoken": "You're back. I counted da hours. It was a lot of hours.",
+      "source": "You're back. I counted the hours. It was a lot of hours.",
+      "tag": "greetings"
     },
     {
       "key": "5380d68e1c2213de",
@@ -968,10 +1010,22 @@
       "tag": "thoughts"
     },
     {
+      "key": "707ee86aaf066387",
+      "spoken": "Oh NOW ya show up. I guarded the room the whole time. You're welcome.",
+      "source": "Oh NOW you show up. I guarded the room the whole time. You are welcome.",
+      "tag": "greetings"
+    },
+    {
       "key": "711cc2840787527e",
       "spoken": "Duke. Still doin' da eyebrow thing, I see. Bold, for a guy who's scared of the sprinkler.",
       "source": "Duke. Still doing the eyebrow thing, I see. Bold, for a guy who's scared of the sprinkler.",
       "tag": "npcs"
+    },
+    {
+      "key": "721decf70cb3f265",
+      "spoken": "Lemme tell ya. I want ya to know I was fine. I was NOT fine. But I was fine.",
+      "source": "I want you to know I was fine. I was NOT fine. But I was fine.",
+      "tag": "greetings"
     },
     {
       "key": "72e7e329d9b86669",
@@ -1136,6 +1190,18 @@
       "tag": "npcs"
     },
     {
+      "key": "93cece6b1e6e05a0",
+      "spoken": "Finally. I have been extremely brave about it. Capisce?",
+      "source": "Finally. I have been extremely brave about it.",
+      "tag": "greetings"
+    },
+    {
+      "key": "957244cab5a8a5d4",
+      "spoken": "Lemme tell ya. Don't tell anyone. Actually, do.",
+      "source": "Don't tell anyone. Actually, do.",
+      "tag": "offline"
+    },
+    {
       "key": "95d5779b7c07c212",
       "spoken": "I have no notes on cats. I have many notes on cats.",
       "source": "I have no notes on cats. I have many notes on cats.",
@@ -1194,6 +1260,12 @@
       "spoken": "Ya forgot again? Classic Biscuit. Fine, I'll dig. But I get half.",
       "source": "You forgot again? Classic Biscuit. Fine, I'll dig. But I get half.",
       "tag": "npcs"
+    },
+    {
+      "key": "a2424ce7c1785442",
+      "spoken": "I'm not gonna lie to ya. I had genuinely started a new life. Then I heard da door.",
+      "source": "I had genuinely started a new life. Then I heard the door.",
+      "tag": "greetings"
     },
     {
       "key": "a3600e8c576a5cb5",
@@ -1478,6 +1550,12 @@
       "tag": "npcs"
     },
     {
+      "key": "d2b413aaca259f39",
+      "spoken": "You were gone so long I forgot what ya smelled like. Then I remembered instantly.",
+      "source": "You were gone so long I forgot what you smelled like. Then I remembered instantly.",
+      "tag": "greetings"
+    },
+    {
       "key": "d57032dcbe935e3c",
       "spoken": "Lemme tell ya. Square business. I'm listenin'. I'm honoured and I'm listenin'.",
       "source": "Square business. I'm listening. I'm honoured and I'm listening.",
@@ -1538,6 +1616,18 @@
       "tag": "talk"
     },
     {
+      "key": "d90654d7e80f4e35",
+      "spoken": "Dat was quick. I had only just started missin' you.",
+      "source": "That was quick. I had only just started missing you.",
+      "tag": "greetings"
+    },
+    {
+      "key": "d9358f62e4b31ed1",
+      "spoken": "I'm not gonna lie to ya. Dere ya are. I checked the door twice. Fine, four times.",
+      "source": "There you are. I checked the door twice. Fine, four times.",
+      "tag": "greetings"
+    },
+    {
       "key": "d96039bf48e73af0",
       "spoken": "My spot. Obviously it's my spot. It's next to you, dat's the entire point of it.",
       "source": "My spot. Obviously it's my spot. It's next to you, that's the entire point of it.",
@@ -1590,6 +1680,12 @@
       "spoken": "'Ours.' I'm gonna be normal about dat for approximately nine more seconds.",
       "source": "'Ours.' I'm going to be normal about that for approximately nine more seconds.",
       "tag": "npcs"
+    },
+    {
+      "key": "e00987ebcad9d0c4",
+      "spoken": "I didn't move. I want that on da record.",
+      "source": "I did not move. I want that on the record.",
+      "tag": "greetings"
     },
     {
       "key": "e71cea3a4696a243",
