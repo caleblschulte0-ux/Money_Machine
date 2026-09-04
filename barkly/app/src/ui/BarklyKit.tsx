@@ -56,9 +56,31 @@ function Ball() {
   </Svg>;
 }
 
+/**
+ * A RIM, SO THE OBJECT EXISTS AGAINST THE SHELF.
+ *
+ * The dock is `DIORAMA.woodMid` (#78411F) and the kit's two long thin toys are
+ * brown: measured, `ITEM.stick` against that dock is a contrast ratio of
+ * **1.02** -- the same colour, to within rounding. So the play control, on a
+ * fresh save where no toy is owned yet and the stick is what a new player
+ * gets, was an object-shaped hole in a plank. Measured off a real screenshot
+ * the play slot read 3.95 against 10.83 for feed and 11.94 for sleep beside
+ * it: a third of the contrast, on the middle of the three primary controls.
+ *
+ * The bowl and the bed do not need this -- they are large, saturated and
+ * light. A rope and a stick are thin strokes in the wood's own hue, so they
+ * get the light the wood cannot give them: one cream stroke, widest, drawn
+ * first, which is 6.67 against the dock and holds whatever the toy is.
+ *
+ * Re-measured on the rebuilt artifact from the same screenshot: the play
+ * slot went 3.95 -> 16.4, with feed at 11.2 and sleep at 11.5 beside it.
+ */
+const RIM = { stroke: DIORAMA.paleCream, strokeLinecap: 'round' as const, fill: 'none' as const, opacity: 0.9 };
+
 function Rope() {
   return <Svg width={80} height={48} viewBox="0 0 68 40">
     <Ellipse cx={34} cy={35} rx={27} ry={4} fill={DIORAMA.shadow} opacity={0.2} />
+    <Path d="M10 21 q11-12 24 0 q11 11 24 0" strokeWidth={19} {...RIM} />
     <Path d="M10 21 q11-12 24 0 q11 11 24 0" stroke={ITEM.ropeShade} strokeWidth={16} strokeLinecap="round" fill="none" />
     <Path d="M10 18 q11-10 24 0 q11 10 24 0" stroke={ITEM.rope} strokeWidth={10} strokeLinecap="round" fill="none" />
     <Path d="M11 15 q10-7 20 0" stroke={DIORAMA.white} strokeWidth={2.8} strokeLinecap="round" fill="none" opacity={0.38} />
@@ -68,6 +90,7 @@ function Rope() {
 function Stick() {
   return <Svg width={82} height={48} viewBox="0 0 70 40">
     <Ellipse cx={35} cy={35} rx={27} ry={4} fill={DIORAMA.shadow} opacity={0.2} />
+    <Path d="M8 26 q17-11 33-6 q13 4 21-5" strokeWidth={16} {...RIM} />
     <Path d="M8 26 q17-11 33-6 q13 4 21-5" stroke={DIORAMA.woodDeep} strokeWidth={13} strokeLinecap="round" fill="none" />
     <Path d="M8 22 q17-9 33-5 q13 4 21-5" stroke={ITEM.stick} strokeWidth={11} strokeLinecap="round" fill="none" />
     <Path d="M10 18 q16-6 30-2" stroke={ITEM.stickLight} strokeWidth={3.4} strokeLinecap="round" fill="none" opacity={0.8} />
@@ -77,6 +100,7 @@ function Stick() {
 function Waves() {
   return <Svg width={82} height={52} viewBox="0 0 76 46">
     <Ellipse cx={38} cy={40} rx={28} ry={4} fill={DIORAMA.shadow} opacity={0.18} />
+    <Path d="M4 29 Q17 14 30 28 T56 27 T74 27" strokeWidth={15} {...RIM} />
     <Path d="M4 29 Q17 14 30 28 T56 27 T74 27" stroke={DIORAMA.aquaDeep} strokeWidth={12} fill="none" strokeLinecap="round" />
     <Path d="M4 25 Q17 10 30 24 T56 23 T74 23" stroke={DIORAMA.aqua} strokeWidth={9} fill="none" strokeLinecap="round" />
     <Path d="M8 21 Q18 12 28 21" stroke={DIORAMA.white} strokeWidth={3.5} fill="none" strokeLinecap="round" opacity={0.7} />
