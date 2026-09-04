@@ -107,6 +107,31 @@ export function conversationHeight(dialogueExpanded: boolean, composerExpanded =
 export function conversationReserve(composerExpanded = false): number {
   return Math.max(DIALOGUE_HEIGHT, conversationHeight(false, composerExpanded));
 }
+
+/**
+ * The same reserve, as a BOX the conversation dock actually occupies.
+ *
+ * `stageHeight` has always subtracted `conversationReserve` and said in its own
+ * comment that the stage is sized for the largest the conversation can get so
+ * it never resizes mid-sentence. The dock did not honour it: it was 44px tall
+ * at idle, 118 with a bubble, and 44 again with the composer open — and the
+ * stage above it carries `flex: 1`, which overrides the explicit height and
+ * lets it grow into whatever the dock gives back.
+ *
+ * Measured on a 390x844 phone, opening the composer: the scene layer did not
+ * move a pixel, the nav row did not move, the HUD did not move, and BARKLY
+ * dropped 74px, taking the care dock with him. One thing on screen moving
+ * while everything around it stays still is worse than the whole screen
+ * moving, because it reads as the character falling rather than the layout
+ * settling.
+ *
+ * So the dock is this tall always, with its contents aligned to the bottom of
+ * it. The panel's own `marginVertical: DIALOGUE_GAP` is inside the box, which
+ * is why the gap is counted twice here.
+ */
+export function conversationBox(): number {
+  return DIALOGUE_HEIGHT + DIALOGUE_GAP * 2;
+}
 export const SPEECH_MAX_LINES = 3;
 
 export function contentFrameWidth(width: number, mode: LayoutMode): number {

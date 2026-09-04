@@ -12,6 +12,11 @@ import {
   spriteScale,
   stageHeight,
   stageWidth,
+  conversationBox,
+  conversationHeight,
+  conversationReserve,
+  DIALOGUE_HEIGHT,
+  DIALOGUE_GAP,
 } from '../src/ui/layout';
 import { worldScale } from '../src/ui/scenes/WorldScene';
 
@@ -130,5 +135,57 @@ describe('hero-first phone composition', () => {
   it('uses one meaningful lower-third gutter instead of edge-hugging magic numbers', () => {
     expect(INTERACTION_GUTTER).toBeGreaterThanOrEqual(12);
     expect(INTERACTION_GUTTER).toBeLessThanOrEqual(20);
+  });
+});
+
+describe('the world does not move when he starts talking', () => {
+  /*
+   * Measured on a 390x844 phone before this: opening the composer left the
+   * scene layer, the nav row and the HUD exactly where they were, and moved
+   * BARKLY 74px down, taking the care dock with him. One thing on screen
+   * moving while everything around it holds still reads as the character
+   * falling, not as the layout settling — and it is the character that has a
+   * face, so it is the only thing anybody notices.
+   *
+   * The cause was two ideas of the same measurement. `stageHeight` subtracts
+   * `conversationReserve`, the WORST case, and says in its own comment that
+   * the stage is sized so it never resizes mid-sentence. The dock itself was
+   * 44px at idle, 118 with a bubble and 44 again with the composer open, and
+   * the stage above it carries `flex: 1` — which overrides its explicit height
+   * and lets it grow into every pixel the dock gives back, with the dog's feet
+   * following it down.
+   */
+  it('reserves the same box for the conversation whatever is in it', () => {
+    // The panel's own margins live inside the box, which is why the gap counts
+    // twice: this is the number the dock is pinned to.
+    expect(conversationBox()).toBe(DIALOGUE_HEIGHT + DIALOGUE_GAP * 2);
+    expect(conversationBox()).toBeGreaterThanOrEqual(conversationReserve(true));
+    expect(conversationBox()).toBeGreaterThanOrEqual(conversationReserve(false));
+  });
+
+  it('leaves the stage exactly the same height in every conversation state', () => {
+    for (const screen of [568, 640, 844, 932]) {
+      const states: [boolean, boolean][] = [[false, false], [true, false], [false, true]];
+      const heights = states.map(([d, c]) => stageHeight(screen, 'narrowPortrait', d, c));
+      expect(new Set(heights).size).toBe(1);
+    }
+  });
+
+  it('and the same dog, at the same size', () => {
+    for (const screen of [568, 640, 844, 932]) {
+      const scales = [[false, false], [true, false], [false, true]].map(
+        ([d, c]) => spriteScale(screen, 390, 'narrowPortrait', d as boolean, c as boolean),
+      );
+      expect(new Set(scales).size).toBe(1);
+    }
+  });
+
+  it('the box is never smaller than the tallest thing that goes in it', () => {
+    // If a state could want more than the box, the dock would grow and the
+    // stage would shrink — the same bug pointing the other way.
+    for (const composer of [false, true]) {
+      expect(conversationHeight(true, composer) + DIALOGUE_GAP * 2).toBeLessThanOrEqual(conversationBox());
+      expect(conversationHeight(false, composer) + DIALOGUE_GAP * 2).toBeLessThanOrEqual(conversationBox());
+    }
   });
 });

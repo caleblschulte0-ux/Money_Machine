@@ -86,6 +86,7 @@ import {
   stageWidth,
   TAP_MIN,
   spriteScale as scaleForScreen,
+  conversationBox,
 } from './layout';
 import { NPCS, NpcId } from '../world/npcs';
 import { NPC_ART } from './npcArt';
@@ -1565,7 +1566,20 @@ const styles = StyleSheet.create({
   chip: { position: 'absolute', bottom: CARE_DOCK_HEIGHT + STATE_CHIP_GAP, zIndex: 9, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: color.card, borderRadius: 999, paddingVertical: 6, paddingHorizontal: 13, ...elevation.card },
   chipDot: { width: 7, height: 7, borderRadius: 8, backgroundColor: ACCENT },
   chipText: { fontSize: 13, fontWeight: '700', color: color.inkSoft },
-  interactionStack: { width: '100%', alignSelf: 'center', minHeight: TAP_MIN, paddingHorizontal: INTERACTION_GUTTER },
+  /*
+   * A CONSTANT BOX. See layout.conversationBox — the stage above this carries
+   * `flex: 1`, so every pixel this row gives back is a pixel the stage takes,
+   * and `stageArea` is `justifyContent: 'flex-end'`, so the dog's feet follow
+   * it down. Measured: opening the composer moved Barkly 74px while the scene,
+   * the nav and the HUD all stayed exactly where they were.
+   */
+  interactionStack: {
+    width: '100%',
+    alignSelf: 'center',
+    minHeight: conversationBox(),
+    justifyContent: 'flex-end',
+    paddingHorizontal: INTERACTION_GUTTER,
+  },
   interactionStackLandscape: { position: 'absolute', right: 0, top: STATUS_HEIGHT + 8, bottom: 0, justifyContent: 'flex-end', paddingBottom: 2 },
   controls: { gap: 3, minHeight: TAP_MIN, justifyContent: 'center' },
   compactControls: {
