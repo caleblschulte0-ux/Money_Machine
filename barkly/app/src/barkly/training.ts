@@ -107,6 +107,21 @@ function splitRoutine(instruction: string): string[] {
   return plainAnd.length > 1 ? plainAnd : [instruction];
 }
 
+/**
+ * What he says when a "play dead" cue fires.
+ *
+ * A named export because THREE things have to be the same sentence: the rule
+ * this file builds, the caption `ui/Onboarding` draws while he performs it,
+ * and the recording the voice bank looks up. It was written out twice, and the
+ * copy in the UI was invisible to the voice harvester -- so the payoff beat of
+ * the whole meeting, the one where the word they invented makes a dog fall
+ * over, came out of the browser's screen-reader.
+ *
+ * `scripts/voice-bank.mjs` scopes this file to specific names; this one is on
+ * that list.
+ */
+export const PLAY_DEAD_LINE = 'I have tragically passed away.';
+
 export function inferLocalPerformance(instruction: string): RoutineBeat | null {
   let reaction: ReactionState | undefined;
   let actions: BodyAction[] = [];
@@ -115,7 +130,7 @@ export function inferLocalPerformance(instruction: string): RoutineBeat | null {
   if (/\b(?:play dead|pretend (?:you(?:'re| are)|to be) dead|lie down|go to sleep|fall asleep)\b/i.test(instruction)) {
     actions = ['SLEEP'];
     reaction = 'sleepy';
-    speech = 'I have tragically passed away.';
+    speech = PLAY_DEAD_LINE;
   } else if (/\b(?:terrified|scared|afraid|panic|freak out)\b/i.test(instruction)) {
     actions = ['LOOK_LEFT', 'LOOK_RIGHT', 'EAR_PERK'];
     reaction = 'excited';

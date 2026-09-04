@@ -183,7 +183,7 @@ over each other, and a mouth flapping to a line that already finished.
 
 The chain is **banked voice → proxy voice → device voice → silent-but-timed**.
 
-**Banked** is ~276 of his fixed lines, pre-recorded in the real voice and
+**Banked** is ~278 of his fixed lines, pre-recorded in the real voice and
 shipped inside the app (`app/assets/voice/`, wired by `app/src/audio/
 voiceBank.ts`). It exists because everything below it needs something he does
 not always have: the proxy needs a machine running it, and a published web
@@ -191,7 +191,19 @@ artifact cannot reach one, so before the bank every demo anyone ever opened
 was the phone's screen-reader narrator wearing a dog costume. Greetings, feed
 and play reactions, idle thoughts, mishaps, the things he says to the other
 dogs and his level-ups are all in there — which is the whole first minute of
-the app and, measured in a real browser, **82% of a real session**.
+the app and, measured in a real browser, **88% of a real session**.
+
+**The first meeting speaks.** It did not, at all, until 2026-09-04: ten
+recorded onboarding lines sat in the bank and nothing in the onboarding path
+ever called the voice engine, so a new player's introduction to a talking dog
+was silent. `useBarkly.sayLine` is the voice without the room's speaking
+lifecycle (the beat's caption is drawn by `ui/Onboarding`, and the room is not
+mounted), and `ui/Onboarding` calls it on every step CHANGE — not on mount,
+because a browser will not start audio before a gesture, so the opening line
+stays text-only and every beat after it is voiced by the press that reached
+it. `voice-check` measures the meeting separately and its bar there is ZERO
+narrated and at least four lines heard, because every line in the meeting is
+fixed and a walker that outruns the audio proves nothing.
 
 That number was 71%, and before 2026-09-04 the check that produced it was
 lying: `voice-check` typed five messages and measured three, because the
@@ -203,9 +215,18 @@ missing from the allowlist below. It opens the composer now and fails under a
 **82% is close to the ceiling and the remaining 18% is structural.** The
 composer echoes the word you typed back at you, by design — that is what makes
 a reply feel heard — and the bank matches WHOLE recordings, so "I could tell
-you what skateboard is" can never be recorded for anybody. Raising the share
-further means either a reachable synthesizer or writing fewer lines that quote
-the player, and the second one costs more than it buys.
+you what skateboard is" can never be recorded for anybody. Measured on the
+session `voice-check` drives: 14 of 16, with both narrated lines that shape.
+Raising the share further means either a reachable synthesizer or writing fewer
+lines that quote the player, and the second one costs more than it buys.
+
+A line with a substitution in the MIDDLE is the avoidable version of the same
+thing, and it kept happening: the name beat read `${name}. Okay. ${name}. I'll
+remember that`, and the trick payoff was written out a second time inside
+`ui/Onboarding` where the harvester could not see it. A name at the FRONT is
+free — `voiceEngine.speakable` splits it off — and a shared constant
+(`onboarding.DELIGHT_BODY`, `training.PLAY_DEAD_LINE`) is what puts the fixed
+half in front of the harvester at all.
 
 Which files it reads is an ALLOWLIST, and both halves of that are load-bearing.
 A hand-picked list of seven files missed fixed lines living in files nobody

@@ -91,7 +91,7 @@ const SOURCES = [
   // voice narrating a scrapbook nobody will ever hear it narrate.
   { file: 'src/world/npcs.ts', tag: 'npcs', only: ['barklyLines'] },
   { file: 'src/barkly/escalation.ts', tag: 'escalation', only: ['line'] },
-  { file: 'src/barkly/training.ts', tag: 'training', only: ['speech'] },
+  { file: 'src/barkly/training.ts', tag: 'training', only: ['speech', 'PLAY_DEAD_LINE'] },
   { file: 'src/game/contest.ts', tag: 'contest', only: ['line'] },
   { file: 'src/barkly/character.ts', tag: 'initiative', only: ['pickInitiative'] },
   { file: 'src/game/progression.ts', tag: 'progression', only: ['levelUpLine', 'AREA_UNLOCKS'] },

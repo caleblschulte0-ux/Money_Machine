@@ -224,6 +224,8 @@ export interface BarklyController {
   voiceRoute: 'barkly' | 'device' | 'silent' | null;
   onboarding: OnboardingState | undefined;
   advanceOnboarding(result: ReturnType<typeof advanceOnboarding>): void;
+  /** Play a line in his voice with no room-state side effects — see sayLine. */
+  sayLine(text: string): void;
 
   /** Explicit player intent wins over Barkly's interruptible speech. */
   claimConversationTurn(): boolean;
@@ -830,6 +832,33 @@ export function useBarkly(): BarklyController {
       if (opts.after && !interrupted) dispatch(opts.after);
     },
     [dispatch, voiceEngine],
+  );
+
+  /**
+   * HIS VOICE, WITHOUT THE ROOM.
+   *
+   * `speak` above is the room's whole speaking lifecycle: it drives the state
+   * machine, sets the caption and fires a follow-up reaction. Onboarding has
+   * none of that -- the room is not mounted, and the beat's caption is drawn
+   * by `ui/Onboarding` itself -- so it needs the audio and nothing else.
+   *
+   * It needed SOMETHING. The entire first meeting was silent: six beats, ten
+   * recorded lines sitting in the voice bank, and not one call into the voice
+   * engine anywhere in the onboarding path. A previous pass reported "0 lines
+   * to the narrator" through the meeting, which was true and meant nothing,
+   * because nothing spoke at all. The dog whose whole proposition is that he
+   * talks did not talk until the introduction was over.
+   *
+   * Same dialect and same `speakable` fallback as every other utterance, so a
+   * banked line is found here exactly as it is in the room.
+   */
+  const sayLine = useCallback(
+    (text: string): void => {
+      const line = voiceEngine.speakable(bronx(text.trim()));
+      if (!line) return;
+      voiceEngine.speak(line).catch(() => {});
+    },
+    [voiceEngine],
   );
 
   /**
@@ -1799,6 +1828,7 @@ export function useBarkly(): BarklyController {
     voiceRoute: voiceEngine.lastRoute,
     onboarding,
     advanceOnboarding: handleOnboarding,
+    sayLine,
     pendingContest,
     finishContest,
     wallet,

@@ -76,8 +76,64 @@ const page = await ctx.newPage();
 await page.goto(`file://${html}`);
 await page.waitForTimeout(2600);
 
-await walkOnboarding(page);
+// Slowly, so each beat actually gets to SPEAK before the next click. At the
+// default 700ms settle the walker outran the audio and this check saw one
+// line out of six -- a sample of one, which is the failure it was written to
+// stop happening somewhere else.
+await walkOnboarding(page, { settle: 2400 });
 
+/*
+ * ONBOARDING IS MEASURED ON ITS OWN, AND ITS BAR IS ZERO.
+ *
+ * Every line in the meeting is fixed, so every one of them can be recorded --
+ * unlike a conversation, where the composer quotes the word you typed and some
+ * lines are unbankable by construction. It is also the beat that most needs his
+ * voice, and it is where the narrator kept turning up: a line reading
+ * `${name}. Okay. ${name}. I'll remember that` has the name in the MIDDLE, the
+ * harvester skips any literal with a substitution in it, and so the sentence
+ * where he first says your name back to you was the screen reader. A previous
+ * pass reported "0 lines to the narrator" through the whole meeting from a
+ * harness that also reported 3/3 at 100%. This one reads the counter.
+ */
+const metSpoke = await page.evaluate('window.__SPOKE || []');
+const metPlayed = await page.evaluate('(window.__PLAYED || []).length');
+if (metSpoke.length) {
+  console.error(`\nFAIL: ${metSpoke.length} line(s) of ONBOARDING came out in the browser narrator:`);
+  for (const line of metSpoke) console.error(`  ${line}`);
+  console.error(
+    '\nEvery line in the meeting is fixed and every one of them can be banked.\n' +
+      'A line with a substitution in the MIDDLE cannot: pull the fixed half out\n' +
+      'into its own constant and put the name at the front, where\n' +
+      'voiceEngine.speakable can split it off. See onboarding.DELIGHT_BODY.',
+  );
+  await browser.close();
+  process.exit(1);
+}
+/*
+ * And it has to have HEARD something. "0 narrated" is trivially true of a
+ * walker that clicked through faster than the audio could start.
+ */
+const MEETING_FLOOR = 4;
+if (metPlayed < MEETING_FLOOR) {
+  console.error(
+    `\nFAIL: only ${metPlayed} line(s) played during the meeting, expected at least ${MEETING_FLOOR}.` +
+      '\nEither the walker is outrunning the audio (raise its settle) or beats that' +
+      '\nused to speak have stopped speaking.',
+  );
+  await browser.close();
+  process.exit(1);
+}
+console.log(`the meeting: ${metPlayed} lines, all in his own voice`);
+
+// WAIT for it. `walkOnboarding` returns the instant the room's Pack Book
+// button exists, which is a frame or two before the conversation dock under it
+// has mounted -- so asking straight away raced, and the check aborted saying it
+// had proved nothing on a build where onboarding had in fact completed.
+await page
+  .locator('[data-testid="dialogue-panel"]')
+  .first()
+  .waitFor({ state: 'attached', timeout: 8000 })
+  .catch(() => {});
 if (!(await page.locator('[data-testid="dialogue-panel"]').first().count())) {
   console.error('never reached the room — onboarding did not complete, so this check proved nothing.');
   await browser.close();

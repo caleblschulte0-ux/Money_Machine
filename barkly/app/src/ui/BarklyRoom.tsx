@@ -996,7 +996,15 @@ export default function BarklyRoom() {
 
   if (barkly.onboarding === undefined) return <View style={styles.room} />;
   if (barkly.onboarding.step !== 'done') {
-    return <Onboarding state={barkly.onboarding} micAvailable={sttAvailable} onAdvance={barkly.advanceOnboarding} Renderer={Renderer} />;
+    return (
+      <Onboarding
+        state={barkly.onboarding}
+        micAvailable={sttAvailable}
+        onAdvance={barkly.advanceOnboarding}
+        Renderer={Renderer}
+        say={barkly.sayLine}
+      />
+    );
   }
 
   return (

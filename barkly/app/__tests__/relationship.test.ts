@@ -89,3 +89,50 @@ describe('Relationship DNA', () => {
     expect(lines).toContain('Do not recite scores');
   });
 });
+
+describe('a stamp is a receipt, so it has to be earned', () => {
+  const DAY = 86_400_000;
+  const experience = (at: number) => ({
+    id: `e${at}`, what: 'we did a thing', at, importance: 3, lastReferencedAt: at, referenceCount: 0,
+  });
+
+  it('does not hand out "Velcro dog" for showing up once', () => {
+    // Measured on a real fresh launch: the Pack Book printed "Velcro dog —
+    // built by showing up enough that Barkly has decided personal space is
+    // mostly theoretical" about four minutes after they met. The score read
+    // `affection - 45` and a new Barkly starts at 50, so five points of it
+    // were a gift and one feed carried the rest.
+    const input = base();
+    input.stats = { ...input.stats, affection: 68 };
+    input.memory = { ...input.memory, experiences: Array.from({ length: 8 }, (_, i) => experience(NOW + i * 1000)) };
+    expect(buildRelationshipProfile(input).traits.map((t) => t.id)).not.toContain('velcro');
+  });
+
+  it('gives it to somebody who keeps coming back', () => {
+    const input = base();
+    input.stats = { ...input.stats, affection: 62 };
+    input.memory = { ...input.memory, experiences: [0, 1, 2].map((d) => experience(NOW + d * DAY)) };
+    expect(buildRelationshipProfile(input).traits.map((t) => t.id)).toContain('velcro');
+  });
+
+  it('counts days, not entries: one long session is one day', () => {
+    const input = base();
+    input.stats = { ...input.stats, affection: 70 };
+    input.memory = {
+      ...input.memory,
+      experiences: Array.from({ length: 30 }, (_, i) => experience(NOW + i * 60_000)),
+    };
+    expect(buildRelationshipProfile(input).traits.map((t) => t.id)).not.toContain('velcro');
+  });
+
+  it('does not hand out "Actually trained" for the cue the tutorial teaches', () => {
+    // The onboarding teaches exactly one cue, and one rule used to score 20 —
+    // the emergence threshold — so every player was given the stamp before
+    // they had used it once. Its own text says "and turning them into running
+    // bits", so a trigger is what carries it.
+    const input = base();
+    const merged = mergeTrainingRules([], [{ cue: 'pickle', instruction: 'play dead', speech: 'I have tragically passed away.', actions: ['SLEEP' as const] }], NOW);
+    input.memory = { ...input.memory, trainingRules: merged.rules };
+    expect(buildRelationshipProfile(input).traits.map((t) => t.id)).not.toContain('trainer');
+  });
+});

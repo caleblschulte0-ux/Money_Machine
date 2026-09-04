@@ -106,6 +106,22 @@ const STAGES: Array<Omit<BondStage, 'score' | 'progress' | 'nextAt'> & { at: num
 ];
 
 export const TRAIT_EMERGENCE_SCORE = 20;
+
+/**
+ * How many separate DAYS he has anything recorded from.
+ *
+ * Local days, not UTC, because "did you come back tomorrow" is a question
+ * about the player's calendar, not the server's. One long session is one day
+ * however many hours it runs.
+ */
+export function daysSeen(memory: { experiences: { at: number }[] }): number {
+  const days = new Set<string>();
+  for (const e of memory.experiences) {
+    const d = new Date(e.at);
+    days.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+  }
+  return days.size;
+}
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 
 function socialEncounters(character?: CharacterState): number {
@@ -138,7 +154,17 @@ function allTraitScores(input: RelationshipInput): BondTrait[] {
     {
       id: 'trainer' as const,
       label: 'Actually trained',
-      score: clamp(memory.trainingRules.length * 20 + triggers * 5),
+      /*
+       * TEACHING ONE CUE IS NOT THE TRAIT; USING IT IS.
+       *
+       * At 20 a single rule cleared the emergence threshold on its own -- and
+       * the onboarding TEACHES one, so every player was handed "Actually
+       * trained" by the tutorial before they had done anything with it. The
+       * detail line says "and turning them into running bits", so the trigger
+       * count is what has to carry it: one rule taught is 14 and stays below
+       * the line; teach it and use it once and he has earned the stamp.
+       */
+      score: clamp(memory.trainingRules.length * 14 + triggers * 6),
       detail: 'Built by teaching Barkly your own cues and turning them into running bits.',
     },
     {
@@ -162,7 +188,25 @@ function allTraitScores(input: RelationshipInput): BondTrait[] {
     {
       id: 'velcro' as const,
       label: 'Velcro dog',
-      score: clamp(Math.max(0, stats.affection - 45) * 1.7 + memory.experiences.length * 2),
+      /*
+       * "SHOWING UP ENOUGH" HAS TO MEAN SHOWING UP.
+       *
+       * This measured `affection - 45`, and a brand new Barkly starts at 50 --
+       * so five points of it were a gift, and normal first-session play (a
+       * feed is +3, a pet is +2) carried the rest. Measured on a real fresh
+       * launch: the Pack Book handed a player "Velcro dog -- built by showing
+       * up enough that Barkly has decided personal space is mostly
+       * theoretical" about four minutes after they met him. A receipt for
+       * something that did not happen is the one thing this screen must never
+       * print, and it is the difference between a bond and a progress bar
+       * dressed up as one.
+       *
+       * Days are counted from the timestamps already on his experiences, so
+       * this needs no new state and reads correctly on saves that predate it.
+       * Coming back tomorrow is worth more than anything you can do today,
+       * because that is the claim the words make.
+       */
+      score: clamp(Math.max(0, daysSeen(memory) - 1) * 16 + Math.max(0, stats.affection - 60) * 1.2),
       detail: 'Built by showing up enough that Barkly has decided personal space is mostly theoretical.',
     },
   ].sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));

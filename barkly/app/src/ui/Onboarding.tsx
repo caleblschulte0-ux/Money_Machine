@@ -29,6 +29,7 @@ import {
   needsInput,
   OnboardingState,
 } from '../barkly/onboarding';
+import { PLAY_DEAD_LINE } from '../barkly/training';
 import { BodyAction } from '../barkly/types';
 import { color, elevation, radius, space, type } from './theme';
 import { HomeScene } from './scenes/Scenes';
@@ -40,6 +41,12 @@ interface Props {
   /** Called with the result of advancing; the hook does the remembering. */
   onAdvance: (result: ReturnType<typeof advance>) => void;
   Renderer: React.ComponentType<BarklyRenderProps>;
+  /**
+   * Play a line in his voice. Optional so the component stays renderable in a
+   * test without an audio stack, and because a silent meeting is a degraded
+   * meeting, not a broken one.
+   */
+  say?: (text: string) => void;
 }
 
 /** He is doing something on every beat — a still dog reads as a loading screen. */
@@ -64,8 +71,28 @@ function actionsFor(state: OnboardingState): BodyAction[] {
   }
 }
 
-export default function Onboarding({ state, micAvailable, onAdvance, Renderer }: Props) {
+export default function Onboarding({ state, micAvailable, onAdvance, Renderer, say }: Props) {
   const [typed, setTyped] = useState('');
+  /*
+   * HE SAYS THE LINE OUT LOUD.
+   *
+   * The meeting used to be silent all the way through -- ten recorded lines in
+   * the bank and no call into the voice engine anywhere in this path -- so the
+   * first thing a new player learned about a talking dog was that he does not
+   * talk.
+   *
+   * On step CHANGE, not on mount, and that is the browser's rule rather than a
+   * choice: audio cannot start before a gesture, so the opening line (which is
+   * on screen before anything is pressed) stays text-only and every beat after
+   * it is voiced by the press that reached it.
+   */
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    say?.(lineFor(state));
+    // The caption is what he should be saying, so it is the dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step]);
   const [stageHeight, setStageHeight] = useState(420);
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(14)).current;
@@ -111,6 +138,9 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
   const press = () => {
     if (step === 'trick' && state.cue && !performing) {
       setPerforming(true);
+      // The payoff line, in his voice. This beat is the whole point of the
+      // meeting and it was mimed.
+      say?.(PLAY_DEAD_LINE);
       performTimer.current = setTimeout(() => {
         setPerforming(false);
         go();
@@ -143,7 +173,7 @@ export default function Onboarding({ state, micAvailable, onAdvance, Renderer }:
             accessibilityLiveRegion="polite"
           >
             <Text style={styles.line}>
-              {performing ? 'I have tragically passed away.' : lineFor(state)}
+              {performing ? PLAY_DEAD_LINE : lineFor(state)}
             </Text>
             <View style={styles.tail} />
           </Animated.View>

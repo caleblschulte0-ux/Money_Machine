@@ -1202,6 +1202,12 @@
       "tag": "npcs"
     },
     {
+      "key": "a93c76526c870a0c",
+      "spoken": "Okay. I'll remember dat — I remember most things.",
+      "source": "Okay. I'll remember that — I remember most things.",
+      "tag": "onboarding"
+    },
+    {
       "key": "abbe626ba88233d6",
       "spoken": "my tail is followin' me again.",
       "source": "my tail is following me again.",
@@ -1392,6 +1398,12 @@
       "spoken": "Say dat again — I wasn't listenin' properly. I admit it. I'm just sayin'.",
       "source": "Say that again — I wasn't listening properly. I admit it.",
       "tag": "mishaps"
+    },
+    {
+      "key": "cc93bbe017daaee7",
+      "spoken": "I have tragically passed away.",
+      "source": "I have tragically passed away.",
+      "tag": "training"
     },
     {
       "key": "cdec229477e99c3f",

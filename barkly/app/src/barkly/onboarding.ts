@@ -52,6 +52,25 @@ export function freshOnboarding(): OnboardingState {
   return { step: 'greeting', micOffered: false };
 }
 
+/**
+ * The half of the name beat that is the SAME for everybody.
+ *
+ * It used to be `${name}. Okay. ${name}. I'll remember that...` -- the name
+ * twice, once in the middle. The voice bank matches whole recordings and the
+ * harvester skips any literal with a substitution in it, so this line was
+ * never recorded for anybody and came out in the browser's screen-reader
+ * narrator, on the beat where he first says your name back to you. A previous
+ * pass reported "0 lines to the narrator" through the whole meeting; that
+ * measurement was taken with the same broken harness that reported 3/3 lines
+ * at 100%, and this was sitting behind it.
+ *
+ * `voiceEngine.speakable` splits a LEADING name off and plays the body, so a
+ * name at the front is free and a name in the middle costs the whole line.
+ * Keeping the body as its own constant is what puts it in front of the
+ * harvester at all.
+ */
+const DELIGHT_BODY = "Okay. I'll remember that — I remember most things.";
+
 /** What Barkly says at this beat. */
 export function lineFor(state: OnboardingState): string {
   switch (state.step) {
@@ -60,9 +79,10 @@ export function lineFor(state: OnboardingState): string {
     case 'name':
       return "I'm Barkly. What do I call you?";
     case 'delight':
-      return state.name
-        ? `${state.name}. Okay. ${state.name}. I'll remember that — I remember most things.`
-        : "Fine, be mysterious. I'll work it out.";
+      // The name goes at the FRONT and nowhere else, and the body is its own
+      // literal, because that is the only shape the voice bank can record.
+      // See DELIGHT_BODY.
+      return state.name ? `${state.name}. ${DELIGHT_BODY}` : "Fine, be mysterious. I'll work it out.";
     case 'teach':
       return "Now the good bit. Give me a secret word. Any word. I'll remember it forever.";
     case 'trick':
