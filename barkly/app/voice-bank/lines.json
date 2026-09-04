@@ -44,6 +44,12 @@
       "tag": "thoughts"
     },
     {
+      "key": "0534ccc716d11832",
+      "spoken": "Nobody organised it. Dat is the part I think about. We just kept turnin' up until it was a fact.",
+      "source": "Nobody organised it. That is the part I think about. We just kept turning up until it was a fact.",
+      "tag": "npcs"
+    },
+    {
       "key": "05e1e7645b7b7840",
       "spoken": "I don't know dat one yet. Teach me — say “when I say X, do Y” — and I'll have it forever.",
       "source": "I don't know that one yet. Teach me — say “when I say X, do Y” — and I'll have it forever.",
@@ -354,6 +360,12 @@
       "spoken": "I'm full. I have standards. Not many, but dis is one.",
       "source": "I'm full. I have standards. Not many, but this is one.",
       "tag": "reactions"
+    },
+    {
+      "key": "1de65a8f591fdcb8",
+      "spoken": "Not a visitor. Right. I'd have got dere eventually, but it's better hearin' it from you.",
+      "source": "Not a visitor. Right. I'd have got there eventually, but it's better hearing it from you.",
+      "tag": "npcs"
     },
     {
       "key": "1f6ca8e992e5101f",
@@ -752,6 +764,12 @@
       "tag": "thoughts"
     },
     {
+      "key": "551e35032b06ad61",
+      "spoken": "Good. Let them find out on their own, like we did. Biscuit — dat came out nice. Ignore it. I'm just sayin'.",
+      "source": "Good. Let them find out on their own, like we did. Biscuit — that came out nice. Ignore it.",
+      "tag": "npcs"
+    },
+    {
       "key": "559538eea383d821",
       "spoken": "Fine, be mysterious. I'll work it out.",
       "source": "Fine, be mysterious. I'll work it out.",
@@ -962,6 +980,12 @@
       "tag": "greetings"
     },
     {
+      "key": "7720cf63873b1950",
+      "spoken": "Ya restructured the CRUMB for me? Pepper. That's a monument. That's what that is.",
+      "source": "You restructured the CRUMB for me? Pepper. That's a monument. That's what that is.",
+      "tag": "npcs"
+    },
+    {
       "key": "791d1455e4e40839",
       "spoken": "let him hear",
       "source": "let him hear",
@@ -1004,6 +1028,12 @@
       "tag": "talk"
     },
     {
+      "key": "7dd61e65b0bbd856",
+      "spoken": "You LEFT it? For me? Biscuit, dat's the most restraint you've ever shown. Show me. Slowly.",
+      "source": "You LEFT it? For me? Biscuit, that's the most restraint you've ever shown. Show me. Slowly.",
+      "tag": "npcs"
+    },
+    {
       "key": "8211c45d89cfdb1e",
       "spoken": "Hm. I'd have barked. I'm not sayin' dat's better. I'm sayin' that's what I'd have done.",
       "source": "Hm. I'd have barked. I'm not saying that's better. I'm saying that's what I'd have done.",
@@ -1043,6 +1073,12 @@
       "key": "86b78a112b8997c3",
       "spoken": "Dat's the most Biscuit sentence anyone has ever said. I'm framin' it.",
       "source": "That's the most Biscuit sentence anyone has ever said. I'm framing it.",
+      "tag": "npcs"
+    },
+    {
+      "key": "88fbd78a5b3c44b5",
+      "spoken": "'Da other one.' I've been called worse by people who like me less. I'll take it.",
+      "source": "'The other one.' I've been called worse by people who like me less. I'll take it.",
       "tag": "npcs"
     },
     {
@@ -1163,6 +1199,12 @@
       "key": "a3600e8c576a5cb5",
       "spoken": "Da squirrels picked the winnin' side. Smart squirrels. Cowardly, but smart.",
       "source": "The squirrels picked the winning side. Smart squirrels. Cowardly, but smart.",
+      "tag": "npcs"
+    },
+    {
+      "key": "a4fbdd832267cb75",
+      "spoken": "Pepper. Ay, yo. Ya came for ME. Say it again slowly while I get comfortable.",
+      "source": "Pepper. You came for ME. Say it again slowly while I get comfortable.",
       "tag": "npcs"
     },
     {
@@ -1314,6 +1356,12 @@
       "spoken": "Okay okay okay yeah — throw it, throw it, THROW IT. I'm just sayin'.",
       "source": "Okay okay okay yes — throw it, throw it, THROW IT.",
       "tag": "reactions"
+    },
+    {
+      "key": "b5dc9008ea30d68f",
+      "spoken": "Deal. Nuttin' said, nuttin' needed. This is da best silence in this town.",
+      "source": "Deal. Nothing said, nothing needed. This is the best silence in this town.",
+      "tag": "npcs"
     },
     {
       "key": "b63c6748339a52f5",
@@ -1538,6 +1586,12 @@
       "tag": "offline"
     },
     {
+      "key": "df7802c746a30ed8",
+      "spoken": "'Ours.' I'm gonna be normal about dat for approximately nine more seconds.",
+      "source": "'Ours.' I'm going to be normal about that for approximately nine more seconds.",
+      "tag": "npcs"
+    },
+    {
       "key": "e71cea3a4696a243",
       "spoken": "da window shows outside. i own outside.",
       "source": "the window shows outside. i own outside.",
@@ -1638,6 +1692,12 @@
       "spoken": "I'm here, ain't I. I could be anywhere. I'm here.",
       "source": "I'm here, aren't I. I could be anywhere. I'm here.",
       "tag": "offline"
+    },
+    {
+      "key": "fad71c7190f23832",
+      "spoken": "Then dat's my job done and it's not even lunchtime. Don't tell Duke I have a job.",
+      "source": "Then that's my job done and it's not even lunchtime. Don't tell Duke I have a job.",
+      "tag": "npcs"
     },
     {
       "key": "fb64a4d8f97eecf8",

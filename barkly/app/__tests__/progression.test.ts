@@ -20,6 +20,7 @@ import {
   grantCoins,
   grantEverything,
   grantLevel,
+  talkWasWorthIt,
   isPlaced,
   levelFor,
   levelProgress,
@@ -383,5 +384,48 @@ describe('every slot has words that fit the thing', () => {
 
   it('covers every slot in the store, so no item can fall through', () => {
     for (const item of STORE) expect(SLOT_VERBS[item.slot]).toBeDefined();
+  });
+});
+
+describe('talking is rewarded, pressing the same key is not', () => {
+  // `earn`'s anti-farming rule is stated in its own doc comment — a useless
+  // repeat earns nothing — and TALK was the one caller that never invoked it.
+  // Every message credited 6 XP unconditionally and level 2 is 40 XP, so seven
+  // presses of the same key levelled you up. The number that inflates is the
+  // one the Pack Book reads as history.
+  it('counts a real turn, however short', () => {
+    expect(talkWasWorthIt('yes', [])).toBe(true);
+    expect(talkWasWorthIt('hi', [])).toBe(true);
+    expect(talkWasWorthIt('my favorite food is pizza', [])).toBe(true);
+    // Nonsense is play, not farming. He has an answer for it.
+    expect(talkWasWorthIt('blorp', [])).toBe(true);
+  });
+
+  it('refuses the same thing said again', () => {
+    expect(talkWasWorthIt('hi', ['hi'])).toBe(false);
+    expect(talkWasWorthIt('HI!!', ['hi'])).toBe(false);
+    expect(talkWasWorthIt('  hi  ', ['something else', 'hi'])).toBe(false);
+    // Only the last three, so a running joke can come back around.
+    expect(talkWasWorthIt('hi', ['hi', 'a thing', 'another', 'and another'])).toBe(true);
+  });
+
+  it('refuses something with no word in it', () => {
+    expect(talkWasWorthIt('', [])).toBe(false);
+    expect(talkWasWorthIt('   ', [])).toBe(false);
+    expect(talkWasWorthIt('!!!', [])).toBe(false);
+    expect(talkWasWorthIt('a b c d', [])).toBe(false);
+    expect(talkWasWorthIt('7', [])).toBe(false);
+  });
+
+  it('closes the farm: the same key seven times does not reach level 2', () => {
+    let w = freshWallet();
+    const recent: string[] = [];
+    for (let i = 0; i < 12; i += 1) {
+      const useful = talkWasWorthIt('a', recent);
+      w = earn(w, 'talk', useful).wallet;
+      recent.push('a');
+    }
+    expect(levelFor(w.xp)).toBe(1);
+    expect(w.coins).toBe(freshWallet().coins);
   });
 });

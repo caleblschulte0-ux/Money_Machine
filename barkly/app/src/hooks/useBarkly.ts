@@ -60,6 +60,7 @@ import {
   levelUpLine,
   unlockedAt,
   Wallet,
+  talkWasWorthIt,
 } from '../game/progression';
 import { parseLocalTrainingInstruction } from '../barkly/training';
 import {
@@ -462,6 +463,8 @@ export function useBarkly(): BarklyController {
   snapshotRef.current = snapshot;
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const permissionGranted = useRef(false);
+  /** The last few things the player typed, for the talk anti-farming rule. */
+  const recentSaid = useRef<string[]>([]);
 
   const credit = useCallback((kind: EarnKind, useful = true, note?: string) => {
     setWallet((w) => {
@@ -1015,6 +1018,11 @@ export function useBarkly(): BarklyController {
                 new Date().getHours(),
                 thoughtSeed.current,
                 memory.snapshot().trainingRules.map((r) => r.cue),
+                // What he knows about THEM. Same reason the cues are here: an
+                // idle thought about your own sister is the proof that does
+                // not look like a reply. `relevant()` ranks, so it is the
+                // facts that still matter rather than the oldest ones.
+                memory.relevant().facts.map((f) => `${f.key} = ${f.value}`),
               ),
             ),
           );
@@ -1106,7 +1114,11 @@ export function useBarkly(): BarklyController {
             after: reply.reaction ? { type: 'REACTION', state: reply.reaction } : undefined,
           });
         }
-        credit('talk');
+        // Only if it was an exchange rather than the same key pressed again --
+        // see progression.talkWasWorthIt. The plan step is credited either
+        // way: "tell Barkly something" is a thing you did, once.
+        credit('talk', talkWasWorthIt(userText, recentSaid.current));
+        recentSaid.current = [...recentSaid.current, userText].slice(-3);
         progressPlan({ kind: 'talk' });
         if (trainedBefore) {
           progressPlan({ kind: 'routine', target: trainedBefore.normalizedCue });

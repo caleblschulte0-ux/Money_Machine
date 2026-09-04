@@ -3,6 +3,9 @@ import { buildSystemPrompt } from '../src/barkly/prompts';
 import { freshSnapshot } from '../src/barkly/state';
 import { LOCATIONS, LOCATION_ORDER } from '../src/world/locations';
 import { NPCS } from '../src/world/npcs';
+import { poolFor } from '../src/world/npcExchange';
+import { ladderFor } from '../src/barkly/escalation';
+import { pickThought } from '../src/world/thoughts';
 
 describe('world data', () => {
   it('every location NPC exists and every NPC has paired line pools', () => {
@@ -52,5 +55,82 @@ describe('the other dogs are not one dog in three colours', () => {
     expect(NPCS.duke.build).toBeGreaterThan(NPCS.biscuit.build);
     // Big enough to see: a 20% spread between the two he meets most.
     expect(NPCS.duke.build / NPCS.biscuit.build).toBeGreaterThan(1.15);
+  });
+});
+
+describe('every dog climbs the whole ladder', () => {
+  // FOUND BY WALKING THE POOLS at 0/3/6/12/20/40 and reading them: Duke
+  // escalated four times and both friends stopped at 6, so a best friend of
+  // forty visits said exactly what he said at six while the RIVALRY kept
+  // developing. In a product about history developing, the feud developed and
+  // the friendship stalled. This test is here because that gap was invisible
+  // to every other check — the data was well formed, there was just less of it
+  // for the friends.
+  it('has a dialogue pool for every rung of its own escalation ladder', () => {
+    for (const npc of Object.values(NPCS)) {
+      const ladder = ladderFor(npc.relationship === 'rival' ? 'rival' : 'friend');
+      const rungs = ladder.map((r) => r.at).filter((at) => at > 0);
+      const stages = (npc.stages ?? []).map((s) => s.at).sort((a, b) => a - b);
+      expect(stages).toEqual(rungs);
+    }
+  });
+
+  it('actually says something different at the top', () => {
+    for (const npc of Object.values(NPCS)) {
+      const top = poolFor(npc, 999);
+      const mid = poolFor(npc, 6);
+      const base = { lines: npc.lines, barklyLines: npc.barklyLines };
+      expect(top.lines).not.toEqual(mid.lines);
+      expect(top.lines).not.toEqual(base.lines);
+      expect(top.barklyLines).not.toEqual(mid.barklyLines);
+      // Enough to rotate without repeating back to back.
+      expect(top.lines.length).toBeGreaterThanOrEqual(4);
+      expect(top.lines.length).toBe(top.barklyLines.length);
+    }
+  });
+});
+
+describe('he thinks about you, not just about squirrels', () => {
+  // Every thought in the pool was about the WORLD — the vacuum, the sea, a
+  // squirrel — while he sat on a file of things the player had told him.
+  // Catching him thinking about your sister's name when nobody asked is the
+  // cheapest proof in the app that any of it went in, because it is not a
+  // reply and so cannot be a trick of the conversation.
+  const FACTS = ['favorite_food = pizza', 'sister = Mia', 'likes = swimming', 'dislikes = thunder'];
+
+  it('brings up something they told him', () => {
+    const seen = new Set<string>();
+    for (let seed = 0; seed < 60; seed += 1) seen.add(pickThought('home', 14, seed, [], FACTS));
+    const aboutYou = [...seen].filter((t) => /pizza|Mia|swimming|thunder/.test(t));
+    expect(aboutYou.length).toBeGreaterThan(0);
+  });
+
+  it('does not do it so often that it reads as a database reciting itself', () => {
+    let hits = 0;
+    for (let seed = 0; seed < 100; seed += 1) {
+      if (/pizza|Mia|swimming|thunder/.test(pickThought('home', 14, seed, [], FACTS))) hits += 1;
+    }
+    expect(hits).toBeLessThan(30);
+  });
+
+  it('never says his own person\'s name back as an observation', () => {
+    // "Sam. i still think about Sam." from a dog standing next to Sam.
+    for (let seed = 0; seed < 60; seed += 1) {
+      expect(pickThought('home', 14, seed, [], ['name = Sam'])).not.toContain('Sam');
+    }
+  });
+
+  it('makes a sentence out of every fact shape, not just the tidy ones', () => {
+    for (let seed = 0; seed < 60; seed += 1) {
+      const t = pickThought('home', 14, seed, [], FACTS);
+      expect(t).not.toMatch(/their likes is|their dislikes is/);
+      expect(t.length).toBeLessThan(120);
+    }
+  });
+
+  it('still works with nothing on file', () => {
+    for (let seed = 0; seed < 30; seed += 1) {
+      expect(pickThought('park', 14, seed, [], []).length).toBeGreaterThan(4);
+    }
   });
 });

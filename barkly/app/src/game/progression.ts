@@ -126,6 +126,36 @@ const REWARDS: Record<EarnKind, Reward> = {
   daily: { coins: 25, xp: 30 },
 };
 
+/**
+ * WAS THAT ACTUALLY AN EXCHANGE?
+ *
+ * `earn` has an anti-farming rule and it is stated right above it: the caller
+ * says whether the action did something for him, and a useless repeat earns
+ * nothing. Feeding a full dog earns nothing; a refused game earns nothing.
+ * TALK was the one caller that never said no -- every message credited 2 coins
+ * and 6 XP unconditionally, and level 2 is 40 XP, so seven presses of the same
+ * key levelled you up.
+ *
+ * That matters more here than in a normal game economy. The number it inflates
+ * is the one the Pack Book reads as HISTORY, so farming the conversation does
+ * not just buy a collar early, it buys a relationship the player did not have.
+ *
+ * The rule is deliberately narrow: this must never punish a real short answer.
+ * "yes" is a whole turn the first time somebody says it. What earns nothing is
+ * saying the SAME thing again, or typing something with no word in it at all.
+ * Everything else counts, including one-word replies, misspellings and
+ * nonsense he cannot parse -- a child testing what he does with "blorp" is
+ * playing with him, and the composer has an answer for it.
+ */
+export function talkWasWorthIt(text: string, recent: string[]): boolean {
+  const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9']+/g, ' ').trim();
+  const said = norm(text);
+  if (!said) return false;
+  // At least one real word. "a b c d" is a keyboard, not a sentence.
+  if (!/[a-z]{2}/.test(said)) return false;
+  return !recent.slice(-3).some((r) => norm(r) === said);
+}
+
 export interface EarnResult {
   wallet: Wallet;
   gained: Reward;

@@ -134,6 +134,37 @@ export const NPCS: Record<NpcId, Npc> = {
           "The two-part bark needs both of us. That's not sentiment, that's engineering. Okay, it's sentiment.",
         ],
       },
+      {
+        /*
+         * PACK FAMILY -- the friend ladder's top rung, and it had no voice.
+         *
+         * `escalation.FRIEND_LADDER` has four rungs (0/3/6/12) and this file's
+         * own header names the thresholds as "3, 6, 12". Duke had all four.
+         * Biscuit and Pepper stopped at 6, so a best friend of forty visits
+         * said exactly what he said at six while the RIVALRY kept escalating
+         * -- in a product about developing history, the feud developed and the
+         * friendship stalled. Found by walking the pools at 0/3/6/12/20/40 and
+         * reading them.
+         *
+         * The register here is not "even more excited". It is settled: they
+         * have stopped introducing themselves and started assuming each other.
+         */
+        at: 12,
+        lines: [
+          'I stopped telling other dogs about you. They know. Everyone knows.',
+          "I found a thing. I didn't pick it up. I waited so we could find it together.",
+          "My person calls you 'the other one'. I have not corrected them. It's accurate.",
+          'Do you ever think about how we just... always show up? Nobody organised it.',
+          'I had a bad morning and then I saw you and it stopped being one. That is the whole update.',
+        ],
+        barklyLines: [
+          "Good. Let them find out on their own, like we did. Biscuit — that came out nice. Ignore it.",
+          "You LEFT it? For me? Biscuit, that's the most restraint you've ever shown. Show me. Slowly.",
+          "'The other one.' I've been called worse by people who like me less. I'll take it.",
+          'Nobody organised it. That is the part I think about. We just kept turning up until it was a fact.',
+          "Then that's my job done and it's not even lunchtime. Don't tell Duke I have a job.",
+        ],
+      },
     ],
     memories: [
       'Helped Biscuit dig for the thing he buried (he forgot what it was).',
@@ -204,6 +235,26 @@ export const NPCS: Record<NpcId, Npc> = {
           "You WAITED on a noon crumb? For me? That's the biggest honour this town gives.",
           "Second-most sensible. From you that's a trophy. I accept on behalf of my whole species.",
           "Watching the square with you IS the good part of the day. Don't quote me to Biscuit.",
+        ],
+      },
+      {
+        // Pack family. Pepper runs the square and has quietly stopped
+        // pretending she is unbothered — see the note on Biscuit's rung 12 for
+        // why this rung exists at all.
+        at: 12,
+        lines: [
+          'The square runs itself now. I mostly come for this part.',
+          "A new dog asked who you were. I said 'ours'. Nobody argued.",
+          "I keep the noon crumb schedule around you now. That is a restructure. I don't restructure.",
+          "You're not a visitor here any more. I'm telling you because nobody else will.",
+          'Sit. Say nothing for a bit. You are the only one I can do that with.',
+        ],
+        barklyLines: [
+          "Pepper. You came for ME. Say it again slowly while I get comfortable.",
+          "'Ours.' I'm going to be normal about that for approximately nine more seconds.",
+          "You restructured the CRUMB for me? Pepper. That's a monument. That's what that is.",
+          "Not a visitor. Right. I'd have got there eventually, but it's better hearing it from you.",
+          'Deal. Nothing said, nothing needed. This is the best silence in this town.',
         ],
       },
     ],
