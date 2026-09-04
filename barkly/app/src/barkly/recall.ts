@@ -203,6 +203,97 @@ function experienceReply(input: RecallInput, utterTokens: string[]): Recalled | 
  * let the normal path improvise — an invented story about an unrecorded
  * subject is in character; an invented story about a RECORDED one is a bug).
  */
+/**
+ * "WHAT DO YOU REMEMBER ABOUT ME?"
+ *
+ * The single most direct question anyone can ask this product, and it fell
+ * through every branch of this module to the composer, which does not read the
+ * record at all — so the answer to "what do you know about me" was a joke
+ * about squirrels. Recall answered from EXPERIENCES (things that happened) and
+ * from dogs, and never once from the FACTS, which are the things the player
+ * actually told him about themselves.
+ *
+ * Not a data dump. Three at most, newest and most-used first, said the way he
+ * says everything else — the point is that he is showing off, not printing a
+ * table. And it is honest when the file is thin, because "I know everything
+ * about you" from a dog who has been told one thing is the exact overclaim
+ * this app cannot afford.
+ */
+const ABOUT_ME =
+  /\b(?:what|how much|anything)\b[^?]*\b(?:know|remember)\b[^?]*\bab(?:ou)?t\s+me\b|\btell me (?:what|everything|all) (?:you|u) (?:know|remember)\b|\bdo (?:you|u) (?:know|remember) (?:anything|everything|much) about me\b/i;
+
+function aboutYouReply(input: RecallInput, _utterTokens: string[]): Recalled | null {
+  // Its own shape, deliberately narrow, because this branch runs BEFORE the
+  // general recall cue: "what do you KNOW about me" carries none of the words
+  // in RECALL_CUE (remember, history, that time...) and was rejected at the
+  // door — the most on-thesis question in the app, turned away for using the
+  // wrong verb.
+  if (!ABOUT_ME.test(input.text)) return null;
+
+  const mine = input.facts
+    .filter((f) => f.subject === 'person' && f.key !== 'name' && f.value.trim().length > 0)
+    .sort((a, b) => b.referenceCount - a.referenceCount || b.learnedAt - a.learnedAt);
+  const name = input.facts.find((f) => f.subject === 'person' && f.key === 'name')?.value;
+
+  if (mine.length === 0) {
+    return {
+      speech: name
+        ? `${name}. That's what I've got so far, and I've made it my whole personality. Tell me something else.`
+        : "Almost nothing, and I want you to sit with that. Start with your name.",
+      reaction: 'annoyed',
+      actions: ['HEAD_TILT'],
+      factIds: [],
+    };
+  }
+
+  const said = (f: Fact) => `${f.key.replace(/_/g, ' ')} is ${f.value}`;
+  const top = mine.slice(0, 3);
+  const list =
+    top.length === 1
+      ? `your ${said(top[0])}`
+      : `${top.slice(0, -1).map((f) => `your ${said(f)}`).join(', ')} and your ${said(top[top.length - 1])}`;
+  const openers = [
+    `${name ? `${name}. ` : ''}Loads. ${list.charAt(0).toUpperCase()}${list.slice(1)}.`,
+    `Everything, obviously. ${list.charAt(0).toUpperCase()}${list.slice(1)}. I could go on.`,
+    `${list.charAt(0).toUpperCase()}${list.slice(1)}. That's off the top of my head.`,
+  ];
+  const more = mine.length > 3 ? ` And ${mine.length - 3} more I'm holding back for effect.` : '';
+  return {
+    speech: at(openers, input.seed ?? 0) + more,
+    reaction: 'happy',
+    actions: ['TAIL_WAG', 'EAR_PERK'],
+    factIds: top.map((f) => f.id),
+  };
+}
+
+/**
+ * "Do you remember my sister?" — a question about a thing they TOLD him,
+ * rather than a thing that happened. Same gap as above from the other side:
+ * the sister's name is on file and nothing in here could reach it.
+ */
+function factReply(input: RecallInput, utterTokens: string[]): Recalled | null {
+  const hit = input.facts.find(
+    (f) =>
+      f.subject === 'person' &&
+      f.key
+        .split('_')
+        .some((part) => part.length >= 3 && utterTokens.includes(part)),
+  );
+  if (!hit) return null;
+  const label = hit.key.replace(/_/g, ' ');
+  const openers = [
+    `Your ${label} is ${hit.value}. I don't lose things.`,
+    `${hit.value}. That's your ${label}. Ask me a hard one.`,
+    `Course I do. Your ${label}: ${hit.value}. Filed, cross-referenced, unforgettable.`,
+  ];
+  return {
+    speech: at(openers, input.seed ?? 0),
+    reaction: 'happy',
+    actions: ['TAIL_WAG'],
+    factIds: [hit.id],
+  };
+}
+
 export function recall(input: RecallInput): Recalled | null {
   const utterTokens = tokens(input.text);
   if (utterTokens.length === 0 && !RECALL_CUE.test(input.text)) return null;
@@ -211,9 +302,20 @@ export function recall(input: RecallInput): Recalled | null {
   const treasure = treasureReply(input, utterTokens);
   if (treasure) return treasure;
 
+  // Neither does "what do you know about me": see ABOUT_ME.
+  const aboutYou = aboutYouReply(input, utterTokens);
+  if (aboutYou) return aboutYou;
+
   // Everything else only intercepts when they are reaching for the past;
   // a casual "is Duke around" stays a conversation, not a deposition.
   if (!RECALL_CUE.test(input.text)) return null;
 
-  return dogReply(input, utterTokens) ?? experienceReply(input, utterTokens);
+  // A dog by name first (most specific), then a thing they told him, then a
+  // thing that happened, then the roll-call — which is the broadest and must
+  // not swallow a question that had a precise answer.
+  return (
+    dogReply(input, utterTokens) ??
+    factReply(input, utterTokens) ??
+    experienceReply(input, utterTokens)
+  );
 }
