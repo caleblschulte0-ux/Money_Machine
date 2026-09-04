@@ -134,3 +134,25 @@ describe('he thinks about you, not just about squirrels', () => {
     }
   });
 });
+
+describe('two dogs are not the same shape', () => {
+  it('keeps every stance small enough to read as a build, not a bug', () => {
+    for (const npc of Object.values(NPCS)) {
+      const { x = 1, y = 1 } = npc.stance ?? {};
+      expect(Math.abs(x - 1)).toBeLessThanOrEqual(0.08);
+      expect(Math.abs(y - 1)).toBeLessThanOrEqual(0.08);
+    }
+  });
+
+  it('makes the rival taller and the small friend wider', () => {
+    // "Lanky" and "stocky" are real character reads that cost no art. The
+    // renders themselves are still one drawing in three palettes — see the
+    // build-order doc, item 6 — and this does not pretend otherwise.
+    expect(NPCS.duke.stance?.y ?? 1).toBeGreaterThan(NPCS.biscuit.stance?.y ?? 1);
+    expect(NPCS.biscuit.stance?.x ?? 1).toBeGreaterThan(NPCS.duke.stance?.x ?? 1);
+  });
+
+  it('leaves the one dog whose drawing already varies alone', () => {
+    expect(NPCS.pepper.stance).toBeUndefined();
+  });
+});

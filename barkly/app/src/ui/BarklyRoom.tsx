@@ -374,6 +374,11 @@ function NpcDog({
 
   const breathScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
   const build = NPCS[id].build;
+  // See Npc.stance. `stretch` rather than `contain` because the box and the
+  // source share an aspect exactly, so these two numbers are the only thing
+  // that ever distorts -- with them at 1 the two modes are identical.
+  const stanceX = NPCS[id].stance?.x ?? 1;
+  const stanceY = NPCS[id].stance?.y ?? 1;
   return (
     /*
      * The container's bottom edge IS the ground line under this dog.
@@ -399,7 +404,7 @@ function NpcDog({
         },
       ]}
     >
-      <GroundShadow location={location} width={spot.size * 0.92 * scale * build} style={{ bottom: 0 }} />
+      <GroundShadow location={location} width={spot.size * 0.92 * scale * build * stanceX} style={{ bottom: 0 }} />
       <Pressable
         onPress={onPress}
         hitSlop={8}
@@ -427,15 +432,18 @@ function NpcDog({
           */}
           <Image
             source={NPC_ART[id]}
-            style={{ width: spot.size * scale * build, height: spot.size * 1.25 * scale * build }}
-            resizeMode="contain"
+            style={{
+              width: spot.size * scale * build * stanceX,
+              height: spot.size * 1.25 * scale * build * stanceY,
+            }}
+            resizeMode="stretch"
           />
         </Animated.View>
       </Pressable>
       {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
       <Text
         testID={`npc-name-${id}`}
-        style={[styles.npcName, { bottom: compactLabel ? spot.size * 1.25 * scale * build + 4 : -4 * scale }]}
+        style={[styles.npcName, { bottom: compactLabel ? spot.size * 1.25 * scale * build * stanceY + 4 : -4 * scale }]}
       >
         {NPCS[id].name.toUpperCase()}
       </Text>

@@ -123,6 +123,20 @@ Turquoise sea, warm sand, big foam shapes, shells/gulls/seaweed. It should be th
    decoration — Duke's own `personality` line has described him as "a big
    russet dog" since the day it was written, and the renderer had never read
    it. Size is the differentiator that survives being 120px tall on a phone.
+   ALSO DONE 2026-09-04: `Npc.stance`, a small deliberate squash or stretch on
+   top of `build`. The source render is 416x520 and the box it goes into has
+   exactly that aspect, so `stretch` and `contain` were identical and these two
+   numbers are the only thing that ever distorts. Duke is tall with it (1.14
+   size, 0.97 x 1.05), Biscuit stocky (0.94 size, 1.06 x 0.97), Pepper left
+   alone. Capped at 8%: past that a squash stops reading as a build and starts
+   reading as a rendering bug. "Lanky" and "stocky" are real character reads
+   that cost no art, and it does not pretend to be the thing below.
+   A reshape of the ART was prototyped and NOT shipped: squashing the ear band
+   of the PNG took Duke-vs-Biscuit from 0.00% to 4.27% silhouette difference —
+   real, and about 1.8x the variation Pepper's drawing already has — but it
+   changes three characters' art without the operator seeing it, needs the
+   originals kept alongside for the derivation to be reproducible, and still
+   leaves the ears the same wedge. Recorded here rather than shipped.
    WHAT IS STILL OWED, and it needs authored art or an image generator this
    session did not have: distinct ear and head shapes. Biscuit's own dialogue
    says "someone said my ears are big" and his ears are the same ears as

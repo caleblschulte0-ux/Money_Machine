@@ -61,6 +61,27 @@ export interface Npc {
    */
   build: number;
 
+  /**
+   * STANCE — a deliberate squash or stretch, on top of `build`.
+   *
+   * The three NPC renders are ONE drawing in three palettes: measured,
+   * `duke_front.png` and `biscuit_front.png` have identical alpha silhouettes,
+   * pixel for pixel. Distinct authored ear and head shapes are still owed
+   * (build order item 6) and this is not a substitute for them -- but "lanky"
+   * and "stocky" are real character reads that cost no art at all, and a
+   * renderer is allowed to know that two dogs are not the same shape.
+   *
+   * The source render is 416x520 and the box it goes into is size x size*1.25,
+   * i.e. exactly the same aspect -- so before this, `stretch` and `contain`
+   * were identical and these numbers are the ONLY thing that distorts. The
+   * container is anchored at the ground line, so a taller dog grows upward
+   * from his own feet rather than sinking.
+   *
+   * Kept small on purpose. Past about 8% a squash stops reading as a build and
+   * starts reading as a rendering bug.
+   */
+  stance?: { x?: number; y?: number };
+
   /** Pools that replace the base ones as the bond climbs the ladder. */
   stages?: NpcStagePool[];
   /** Occasional durable memories from hanging out. */
@@ -73,8 +94,9 @@ export const NPCS: Record<NpcId, Npc> = {
     name: 'Biscuit',
     relationship: 'friend',
     // Smaller and rounder than Barkly: the sweet one, and the one who gets
-    // talked into things.
+    // talked into things, and built a bit wide for his height.
     build: 0.94,
+    stance: { x: 1.06, y: 0.97 },
     personality:
       "Biscuit — a pale blond dog, Barkly's best friend. Sweet, gullible, believes everything Barkly says, which Barkly mildly exploits.",
     lines: [
@@ -175,7 +197,10 @@ export const NPCS: Record<NpcId, Npc> = {
     id: 'pepper',
     name: 'Pepper',
     relationship: 'friend',
-    // The one who runs the square. Barkly's size, and entirely unbothered.
+    // The one who runs the square. Barkly's size, unbothered, and the only one
+    // of the three whose drawing has any variation of its own already (her
+    // three-quarter silhouette differs from the others by 28%), so she is the
+    // one left alone.
     build: 1.0,
     personality:
       'Pepper — a calm blue-grey dog who runs the town square like she owns it. Unimpressed by everyone, secretly fond of Barkly.',
@@ -267,8 +292,10 @@ export const NPCS: Record<NpcId, Npc> = {
     id: 'duke',
     name: 'Duke',
     relationship: 'rival',
-    // "A big russet dog" -- his own sheet, finally true on screen.
+    // "A big russet dog" -- his own sheet, finally true on screen. Tall with
+    // it, which is the half of "big" that size alone does not say.
     build: 1.14,
+    stance: { x: 0.97, y: 1.05 },
     personality:
       "Duke — a big russet dog, Barkly's rival. Thinks he's the best dog at the park. He is not. Their feud is dramatic and entirely harmless.",
     lines: [
