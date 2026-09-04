@@ -43,12 +43,14 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
 
-      # Do not auto-fix dependency trees in CI. Fail only on high/critical
-      # production dependency findings; moderate transitive findings are still
-      # visible in npm output and should be reviewed deliberately with Expo.
-      - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
-
+      # THE CODE CHECKS RUN FIRST, and that ordering is the point.
+      #
+      # The audit used to sit here, and on 2026-09-04 npm's audit endpoint
+      # returned 503 for seven minutes: the step failed, and typecheck and
+      # BOTH test suites were skipped. A registry outage marked the commit red
+      # without ever looking at the code, which is the wrong way round -- the
+      # checks that can actually tell you something about this diff should not
+      # be behind a third party's uptime.
       - name: Typecheck
         run: npm run typecheck
 
@@ -57,6 +59,43 @@ jobs:
 
       - name: Server tests
         run: npm run test:server
+
+      # Do not auto-fix dependency trees in CI. Fail only on high/critical
+      # production dependency findings; moderate transitive findings are still
+      # visible in npm output and should be reviewed deliberately with Expo.
+      #
+      # A REGISTRY OUTAGE IS NOT A VULNERABILITY. `npm audit` exits 1 both when
+      # it finds something and when it cannot reach the endpoint at all, and
+      # those two are not the same news. A real finding still fails the build,
+      # loudly, with the advisory table. An unreachable registry is retried,
+      # then reported as a warning that says plainly the tree was NOT audited
+      # in this run -- because "we could not check" must never be printed as
+      # "we checked and it is fine", and must not be printed as "you have a
+      # vulnerability" either.
+      - name: Production dependency audit
+        timeout-minutes: 4
+        run: |
+          set -uo pipefail
+          AUDIT='npm audit --omit=dev --audit-level=high --fetch-retries=2 --fetch-retry-maxtimeout=20000'
+          for attempt in 1 2 3; do
+            if $AUDIT >audit.out 2>audit.err; then
+              cat audit.out
+              echo "audit clean: no high or critical findings in production dependencies"
+              exit 0
+            fi
+            if grep -qiE 'audit endpoint returned an error|Service Unavailable|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up' audit.err; then
+              echo "attempt $attempt: the npm registry did not answer"
+              head -n 5 audit.err
+              sleep $((attempt * 15))
+              continue
+            fi
+            echo "high or critical findings in production dependencies:"
+            cat audit.out
+            cat audit.err
+            exit 1
+          done
+          echo "::warning::npm audit could not reach the registry after 3 attempts. Production dependencies were NOT audited in this run."
+          exit 0
 
   ui:
     name: Layout and accessibility
