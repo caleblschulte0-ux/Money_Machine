@@ -53,6 +53,11 @@ yarn-error.*
 overlap-*.png
 art-lab/
 world-art/
+# The playtest build the world-art snapshot serves. `barkly-artifact.html` is
+# tracked on purpose -- it is the deliverable -- and this one is not: it is the
+# same build with the playtest menu compiled in, rebuilt on every review pass,
+# and it went into a commit once as 13MB of noise.
+world-artifact.html
 # Blender's raw output. CI (and a local `blender -b --python tools/blender/...`)
 # writes it, then PROMOTES the trimmed PNGs into assets/world/, which is what
 # ships. Keeping both copies doubles ~2MB of binaries in the diff for nothing.
