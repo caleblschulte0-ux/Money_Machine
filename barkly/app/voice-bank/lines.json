@@ -392,6 +392,12 @@
       "tag": "offline"
     },
     {
+      "key": "1f95e0d1a322b353",
+      "spoken": "We already have dat one.",
+      "source": "We already have that one.",
+      "tag": "progression"
+    },
+    {
       "key": "2370e4e70495953d",
       "spoken": "Excellent. Ay. I'm takin' partial credit. I was here.",
       "source": "Excellent. I'm taking partial credit. I was here.",
@@ -444,6 +450,12 @@
       "spoken": "I've forgotten some stuff. Don't ask me how. Tell me about ya again?",
       "source": "I've forgotten some stuff. Don't ask me how. Tell me about you again?",
       "tag": "mishaps"
+    },
+    {
+      "key": "2909cc61ad014cdc",
+      "spoken": "I'm not gonna lie to ya. Dis was your idea.",
+      "source": "This was your idea.",
+      "tag": "training"
     },
     {
       "key": "29ef1784cb48967a",
@@ -572,6 +584,12 @@
       "tag": "greetings"
     },
     {
+      "key": "3b857ffea3cb87d5",
+      "spoken": "NOPE. Absolutely not. Ya deal with it.",
+      "source": "NOPE. Absolutely not. You deal with it.",
+      "tag": "training"
+    },
+    {
       "key": "3c0a1823e887de29",
       "spoken": "Dat settles it. He is official now. I will be keepin' records.",
       "source": "That settles it. He is official now. I will be keeping records.",
@@ -684,6 +702,12 @@
       "spoken": "favorite toy time",
       "source": "favorite toy time",
       "tag": "hook"
+    },
+    {
+      "key": "48bf107f3e2ad497",
+      "spoken": "Mine. Dat's mine now. Don't touch it. Capisce?",
+      "source": "Mine. That's mine now. Don't touch it.",
+      "tag": "progression"
     },
     {
       "key": "493af98e1e1024e4",
@@ -890,10 +914,22 @@
       "tag": "offline"
     },
     {
+      "key": "5e2e2626e3f818e1",
+      "spoken": "Right. Also suspicious.",
+      "source": "Right. Also suspicious.",
+      "tag": "training"
+    },
+    {
       "key": "5f152e6d8ea2f056",
       "spoken": "GOOD. I'm doin' a tail thing about it. Look at da tail thing.",
       "source": "GOOD. I'm doing a tail thing about it. Look at the tail thing.",
       "tag": "talk"
+    },
+    {
+      "key": "607cf64ad307568f",
+      "spoken": "Oh, we're doin' UPGRADES. About time.",
+      "source": "Oh, we're doing UPGRADES. About time.",
+      "tag": "progression"
     },
     {
       "key": "60df3d109fa13217",
@@ -1220,6 +1256,12 @@
       "tag": "offline"
     },
     {
+      "key": "96b06eefe2e6d16e",
+      "spoken": "Dat ain't a thing.",
+      "source": "That isn't a thing.",
+      "tag": "progression"
+    },
+    {
       "key": "971fb2071f627e4d",
       "spoken": "my bed is exactly da right amount of bed.",
       "source": "my bed is exactly the right amount of bed.",
@@ -1334,6 +1376,12 @@
       "tag": "onboarding"
     },
     {
+      "key": "aa0a8d4228f0fb98",
+      "spoken": "Look at dat. Trained.",
+      "source": "Look at that. Trained.",
+      "tag": "training"
+    },
+    {
       "key": "abbe626ba88233d6",
       "spoken": "my tail is followin' me again.",
       "source": "my tail is following me again.",
@@ -1344,6 +1392,12 @@
       "spoken": "Just checkin' you're still dere.",
       "source": "Just checking you're still there.",
       "tag": "initiative"
+    },
+    {
+      "key": "ac7265013a608ed5",
+      "spoken": "Blink. Nailed it.",
+      "source": "Blink. Nailed it.",
+      "tag": "training"
     },
     {
       "key": "ad69a70a3e325055",

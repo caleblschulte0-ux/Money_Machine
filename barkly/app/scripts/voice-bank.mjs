@@ -91,7 +91,11 @@ const SOURCES = [
   // voice narrating a scrapbook nobody will ever hear it narrate.
   { file: 'src/world/npcs.ts', tag: 'npcs', only: ['barklyLines'] },
   { file: 'src/barkly/escalation.ts', tag: 'escalation', only: ['line'] },
-  { file: 'src/barkly/training.ts', tag: 'training', only: ['speech', 'PLAY_DEAD_LINE'] },
+  // `inferLocalPerformance` is where the taught tricks get their voices, and
+  // it assigns to a local `speech` rather than declaring one, so the scope
+  // never reached inside it: every trick except "play dead" was performed in
+  // the browser's screen reader. Found by the scope audit in `check`.
+  { file: 'src/barkly/training.ts', tag: 'training', only: ['speech', 'PLAY_DEAD_LINE', 'inferLocalPerformance'] },
   // `only: ['line']` matched a local `const line = roundLine(...)` whose
   // initializer is a CALL, so it collected nothing and the duel -- the loudest
   // beat in the app -- was entirely narrated. The literals live inside the two
@@ -102,7 +106,10 @@ const SOURCES = [
   // `training.PLAY_DEAD_LINE`. A body extracted for the bank's benefit and
   // then left outside the bank's reach is the joke telling itself twice.
   { file: 'src/barkly/character.ts', tag: 'initiative', only: ['pickInitiative', 'FOOD_SITUATION', 'STILL_THERE'] },
-  { file: 'src/game/progression.ts', tag: 'progression', only: ['levelUpLine', 'AREA_UNLOCKS'] },
+  // `buy` and `buyLine` are what he SAYS about the shop — "Mine. That's mine
+  // now. Don't touch it." — as opposed to the item names and blurbs around
+  // them, which are read. Same audit, same day.
+  { file: 'src/game/progression.ts', tag: 'progression', only: ['levelUpLine', 'AREA_UNLOCKS', 'buy', 'buyLine'] },
 ];
 
 /* ------------------------------------------------------------------ harvest */
@@ -146,9 +153,23 @@ function literalsIn(sourcePath, only) {
     return undefined;
   };
 
+  /*
+   * SAVE AND RESTORE, rather than switch off on the way out.
+   *
+   * `if (entering) scoped = false` after the children looks harmless and is
+   * not: a NESTED name from the `only` list turns the scope off for everything
+   * that follows it in the ENCLOSING one. `training.ts` is scoped to `speech`
+   * and `inferLocalPerformance`; the function opens with
+   * `let speech = 'Right. I remember this one.'`, which is itself an entering
+   * node, and leaving it closed the scope for the rest of the function — so
+   * eight more lines he says while performing a taught trick were invisible to
+   * the bank no matter what was added to the list. Every trick except "play
+   * dead" was performed in the browser's screen reader.
+   */
   const walk = (node) => {
     const name = nameOf(node);
     const entering = only && name && only.includes(name);
+    const outer = scoped;
     if (entering) scoped = true;
 
     if (scoped && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))) {
@@ -156,7 +177,7 @@ function literalsIn(sourcePath, only) {
     }
     ts.forEachChild(node, walk);
 
-    if (entering) scoped = false;
+    scoped = outer;
   };
   walk(sf);
   return found;
@@ -303,7 +324,70 @@ function check() {
       console.log('  re-run with --prune to delete them');
     }
   }
-  return have === entries.length;
+  return have === entries.length && scopeAudit();
+}
+
+/**
+ * SPEECH THE HARVESTER CANNOT SEE.
+ *
+ * Three separate lines went out in the browser's screen reader this week and
+ * every one was the same shape: a FIXED string the bank could have held, in a
+ * file that IS on the SOURCES list, sitting somewhere the file's `only` scope
+ * does not reach.
+ *
+ *   training.PLAY_DEAD_LINE     module scope; the file is scoped to `speech`
+ *   character.FOOD_SITUATION    module scope; scoped to `pickInitiative`
+ *   contest roundLine/verdict   scoped to `line`, which matched a local
+ *                               `const line = roundLine(...)` — a call, not a
+ *                               literal — and collected nothing at all
+ *
+ * The scopes are right: these files also hold journal entries, badge labels
+ * and NPC lines that are deliberately never voiced, and a sweep of everything
+ * once recorded 114 scrapbook entries out of one file. So this cannot be "no
+ * speech outside the scope, ever". What it CAN be is a ratchet: the number of
+ * speech-shaped literals the scope excludes is written down, and this fails
+ * when it GROWS — which is exactly the moment somebody adds a spoken line
+ * where the bank will never find it.
+ *
+ * Raising a baseline is a deliberate act with a reason, the same as any other
+ * number in this repo. Lowering one happens on its own.
+ */
+function scopeAudit() {
+  const BASELINE_PATH = join(BANK_DIR, 'scope-baseline.json');
+  const baseline = existsSync(BASELINE_PATH) ? JSON.parse(readFileSync(BASELINE_PATH, 'utf8')) : {};
+  const counts = {};
+  let grew = false;
+  for (const { file, only } of SOURCES) {
+    if (!only) continue;
+    const full = join(APP, file);
+    if (!existsSync(full)) continue;
+    const all = literalsIn(full, undefined);
+    const seen = new Set(literalsIn(full, only));
+    const hidden = all.filter((l) => !seen.has(l));
+    counts[file] = hidden.length;
+    const was = baseline[file];
+    if (was === undefined) {
+      console.log(`  scope: ${file} — ${hidden.length} line(s) the bank cannot see (no baseline yet)`);
+      grew = true;
+    } else if (hidden.length > was) {
+      console.error(`\nFAIL: ${file} now hides ${hidden.length} speech-shaped line(s) from the voice bank, was ${was}.`);
+      for (const l of hidden.slice(0, 8)) console.error(`   "${l.slice(0, 72)}"`);
+      console.error('If one of those is something he SAYS, pull it into a named constant and add');
+      console.error(`that name to this file's \`only\` list. If none of them are, update`);
+      console.error(`${relativeToApp(BASELINE_PATH)} and say why in the commit.`);
+      grew = true;
+    }
+  }
+  if (!existsSync(BASELINE_PATH) || process.argv.includes('--write-baseline')) {
+    writeFileSync(BASELINE_PATH, `${JSON.stringify(counts, null, 2)}\n`);
+    console.log(`wrote ${relativeToApp(BASELINE_PATH)}`);
+    return true;
+  }
+  if (!grew) {
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    console.log(`scope audit clean: ${total} excluded line(s), none new`);
+  }
+  return !grew;
 }
 
 /* --------------------------------------------------------------------- main */

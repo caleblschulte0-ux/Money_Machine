@@ -142,6 +142,13 @@ jobs:
       # page looks fine, and he speaks in the browser's narrator because the
       # audio never became a data: URI. Every unit test mocks the player, so
       # only a real browser can tell.
+      # OFFLINE and instant: does every fixed line he says have a recording,
+      # and has any file started hiding new ones from the harvester? Three
+      # separate lines went out in the browser's screen reader in one week
+      # because this existed as a manual command nobody ran.
+      - name: Every line he says is recorded
+        run: npm run voice:check
+
       - name: His own voice
         run: node scripts/voice-check.mjs
 
