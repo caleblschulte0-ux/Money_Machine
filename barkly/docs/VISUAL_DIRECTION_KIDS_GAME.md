@@ -106,9 +106,50 @@ Turquoise sea, warm sand, big foam shapes, shells/gulls/seaweed. It should be th
    biscuits is not more legible for having a dog behind it, so those are
    waiting on the item art itself rather than on this component.
 5. Food — animate bowl/food preview before choosing.
-6. Unique NPC silhouettes/assets.
+6. Unique NPC silhouettes/assets. PARTIAL 2026-09-03 — and the measurement
+   is worth writing down, because it is worse than "the NPCs look samey":
+   `duke_front.png` and `biscuit_front.png` have **identical alpha
+   silhouettes, pixel for pixel**. One drawing, three palettes. The nemesis
+   and the best friend were separated by hue alone, which is the one thing
+   the cosmetic rules say a difference may never be. (Pepper's front differs
+   by 2.3%, her three-quarter by 28% — she is the only one with any real
+   variant.) All three also wear Barkly's own collar with the brass **B**
+   tag, so every dog in the world carries the hero's initial; at the scale
+   they render on the stage that tag is about seven pixels and invisible,
+   which is why it is recorded here rather than "fixed" in a way nobody
+   would see.
+   WHAT IS DONE: `Npc.build` is now a real field and the renderer reads it,
+   so Duke is 14% bigger and Biscuit 6% smaller than Barkly. That is not
+   decoration — Duke's own `personality` line has described him as "a big
+   russet dog" since the day it was written, and the renderer had never read
+   it. Size is the differentiator that survives being 120px tall on a phone.
+   WHAT IS STILL OWED, and it needs authored art or an image generator this
+   session did not have: distinct ear and head shapes. Biscuit's own dialogue
+   says "someone said my ears are big" and his ears are the same ears as
+   everyone else's. The ears are the strongest silhouette signal a dog has
+   and they are the right next move here.
 7. Replace major code-drawn scene furniture with authored diorama assets.
 8. Add SFX and micro-motion to every high-frequency surface.
+
+## The dialogue bubble has a measured budget
+
+`DIALOGUE_HEIGHT` is fixed and `SPEECH_MAX_LINES` clamps the text, so anything
+longer was ellipsised — the ends of his sentences replaced with "…" while the
+voice went on saying all of it. Two things were wrong and both are measured now
+by `npm run check:speech`, which is part of `check:ui`:
+
+- The text column reserved a flat 96px for the action buttons on every line,
+  room for two, when the web build draws one (the microphone needs a dev
+  build). On a 360px phone that left **156px of a 304px bubble** for words.
+  It is sized to the buttons actually drawn now: 194px.
+- Long lines are paged (`src/ui/speechPages.ts`), split at sentence then clause
+  then word seams, advanced on a reading-speed timer, with one dot per page in
+  the speaker row.
+
+Measured on the built artifact, 3 lines: **360×568 → 58 characters**,
+390×844 → 69, 430×932 → 93. `SPEECH_PAGE_BUDGET` is 54 and the gate fails if
+it drifts EITHER way — too high and he is cut off again, too low and the
+player turns a page they did not need.
 
 ## Rejection test
 

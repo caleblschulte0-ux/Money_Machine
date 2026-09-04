@@ -373,6 +373,7 @@ function NpcDog({
   }, [fidget]);
 
   const breathScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.014] });
+  const build = NPCS[id].build;
   return (
     /*
      * The container's bottom edge IS the ground line under this dog.
@@ -398,7 +399,7 @@ function NpcDog({
         },
       ]}
     >
-      <GroundShadow location={location} width={spot.size * 0.92 * scale} style={{ bottom: 0 }} />
+      <GroundShadow location={location} width={spot.size * 0.92 * scale * build} style={{ bottom: 0 }} />
       <Pressable
         onPress={onPress}
         hitSlop={8}
@@ -415,13 +416,26 @@ function NpcDog({
             ],
           }}
         >
-          <Image source={NPC_ART[id]} style={{ width: spot.size * scale, height: spot.size * 1.25 * scale }} resizeMode="contain" />
+          {/*
+            HOW BIG THIS DOG IS. Duke's own character sheet has called him "a
+            big russet dog" from the day it was written, and all three NPCs
+            were drawn at one size from one recoloured render -- measured,
+            Duke's and Biscuit's silhouettes are identical pixel for pixel, so
+            the nemesis and the best friend differed by hue alone. The height
+            grows from the ground line, which is where the anchor already is,
+            so a bigger dog stands taller rather than floating.
+          */}
+          <Image
+            source={NPC_ART[id]}
+            style={{ width: spot.size * scale * build, height: spot.size * 1.25 * scale * build }}
+            resizeMode="contain"
+          />
         </Animated.View>
       </Pressable>
       {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
       <Text
         testID={`npc-name-${id}`}
-        style={[styles.npcName, { bottom: compactLabel ? spot.size * 1.25 * scale + 4 : -4 * scale }]}
+        style={[styles.npcName, { bottom: compactLabel ? spot.size * 1.25 * scale * build + 4 : -4 * scale }]}
       >
         {NPCS[id].name.toUpperCase()}
       </Text>
@@ -1246,6 +1260,10 @@ export default function BarklyRoom() {
               thought={barkly.thought}
               hint=""
               asleep={asleep}
+              // Exactly the buttons that are drawn. The microphone needs a dev
+              // build, so on the web there is one, and the text used to be
+              // narrowed for two regardless.
+              actionSlots={sttAvailable ? 2 : 1}
               actions={
                 <>
                   {sttAvailable && (

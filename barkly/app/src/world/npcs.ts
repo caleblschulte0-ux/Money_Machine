@@ -43,6 +43,24 @@ export interface Npc {
   lines: string[];
   /** Barkly's replies (spoken + shown in his bubble). Drawn independently. */
   barklyLines: string[];
+  /**
+   * How big this dog is, as a multiple of the standard render.
+   *
+   * THE SHEET ALREADY SAID SO AND THE RENDERER NEVER READ IT. `personality`
+   * has described Duke as "a big russet dog" and given Biscuit big ears since
+   * the day they were written, and all three were drawn at one size from one
+   * recoloured render -- measured, Duke's and Biscuit's alpha silhouettes are
+   * IDENTICAL, pixel for pixel. So the nemesis and the best friend differed by
+   * hue alone, which is the one thing the visual doctrine says a difference
+   * may never be, and Barkly's rival was the same size as Barkly.
+   *
+   * This is not the whole fix. Distinct authored ear and head silhouettes are
+   * still owed (build order item 6); what this does is make the size the text
+   * already claims actually true, which is visible at the scale they are
+   * really drawn at, where a tag or a whisker is not.
+   */
+  build: number;
+
   /** Pools that replace the base ones as the bond climbs the ladder. */
   stages?: NpcStagePool[];
   /** Occasional durable memories from hanging out. */
@@ -54,6 +72,9 @@ export const NPCS: Record<NpcId, Npc> = {
     id: 'biscuit',
     name: 'Biscuit',
     relationship: 'friend',
+    // Smaller and rounder than Barkly: the sweet one, and the one who gets
+    // talked into things.
+    build: 0.94,
     personality:
       "Biscuit — a pale blond dog, Barkly's best friend. Sweet, gullible, believes everything Barkly says, which Barkly mildly exploits.",
     lines: [
@@ -123,6 +144,8 @@ export const NPCS: Record<NpcId, Npc> = {
     id: 'pepper',
     name: 'Pepper',
     relationship: 'friend',
+    // The one who runs the square. Barkly's size, and entirely unbothered.
+    build: 1.0,
     personality:
       'Pepper — a calm blue-grey dog who runs the town square like she owns it. Unimpressed by everyone, secretly fond of Barkly.',
     lines: [
@@ -193,6 +216,8 @@ export const NPCS: Record<NpcId, Npc> = {
     id: 'duke',
     name: 'Duke',
     relationship: 'rival',
+    // "A big russet dog" -- his own sheet, finally true on screen.
+    build: 1.14,
     personality:
       "Duke — a big russet dog, Barkly's rival. Thinks he's the best dog at the park. He is not. Their feud is dramatic and entirely harmless.",
     lines: [
