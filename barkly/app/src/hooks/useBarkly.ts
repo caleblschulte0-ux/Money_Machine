@@ -99,6 +99,7 @@ import { DEFAULT_PROFILE, profileKey } from '../storage/types';
 import {
   ADVENTURE_KEY,
   CHARACTER_KEY,
+  COAUTHOR_KEY,
   INCIDENT_KEY,
   DEV_KEY,
   LOCATION_KEY,
@@ -117,6 +118,14 @@ import { HydrationGate } from '../storage/hydration';
 import { VoiceShape } from '../providers/tts/expoSpeechTts';
 import { pickThought } from '../world/thoughts';
 import { bronx } from '../barkly/dialect';
+import {
+  BarklyCanon,
+  BarklyProposal,
+  CoauthorState,
+  deriveBarklyProposal,
+  freshCoauthorState,
+  resolveBarklyProposal,
+} from '../barkly/coauthor';
 import { BarklyIdentity, deriveBarklyIdentity } from '../barkly/identity';
 import {
   deriveWorldIncident,
@@ -210,6 +219,17 @@ export interface BarklyController {
   setWorldPaused: (paused: boolean) => void;
   resolveIncident: (choiceId: string) => Promise<void>;
   dismissIncident: () => void;
+  /**
+   * Canon Barkly wants ratified: a name for the object he never puts down, a
+   * claim on a place, a cue promoted to tradition. The one beat that runs from
+   * him to the player rather than the other way.
+   */
+  activeProposal: BarklyProposal | null;
+  /** 'accept' or 'reject'. Both are permanent; closing the sheet is neither. */
+  resolveProposal: (choiceId: string) => Promise<void>;
+  dismissProposal: () => void;
+  /** What the two of you have already agreed to call things. */
+  canon: BarklyCanon[];
   /** Three personalized things Barkly wants to do this session/day. */
   adventure: AdventureState | null;
 
@@ -1099,6 +1119,7 @@ export function useBarkly(): BarklyController {
           snapshotRef.current,
           worldContext(),
           characterRef.current,
+          coauthorRef.current,
         );
         setMemoryVersion((v) => v + 1);
         if (!reply.speech) {
@@ -1791,6 +1812,137 @@ export function useBarkly(): BarklyController {
     [activeIncident, busy, memory, speak, writeIncidentLedger],
   );
 
+  // ------------------------------------------------------------ co-authorship
+  //
+  // Every other system in this app records what the PLAYER decided. This one
+  // runs the other way: once something has been around long enough to earn it,
+  // Barkly proposes canon back -- the ball's real name, a corner of the park he
+  // considers his, a cue done so often it stopped being training. The player
+  // rules on it, and either answer is permanent.
+  //
+  // It shipped fully built and fully disconnected: `deriveBarklyProposal` had
+  // no caller, so the storage key existed, presets wrote it, and a test said
+  // canon "survives a restart" while nothing ever created any. The seam is
+  // asserted in __tests__/deep_systems_wired.test.ts now.
+  const [coauthor, setCoauthor] = useState<CoauthorState>(freshCoauthorState);
+  const coauthorRef = useRef<CoauthorState>(freshCoauthorState());
+  const [coauthorHydrated, setCoauthorHydrated] = useState(false);
+  const [activeProposal, setActiveProposal] = useState<BarklyProposal | null>(null);
+  // Proposals the player closed without answering, this session only.
+  //
+  // Closing is deliberately NOT a rejection -- a rejection is a decision he
+  // remembers, and it starts the six-hour cooldown, neither of which should
+  // happen because somebody tapped outside the sheet. But without this the
+  // derive effect re-runs the moment `activeProposal` clears and hands back
+  // the identical proposal seven seconds later, forever: the sheet you closed
+  // is the only sheet you can get. He asks again next launch instead.
+  const dismissedProposals = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let loaded = freshCoauthorState();
+      try {
+        const raw = await asyncStorageStore.get(COAUTHOR_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Partial<CoauthorState>;
+          if (parsed && Array.isArray(parsed.canon)) {
+            loaded = {
+              canon: parsed.canon,
+              rejected: parsed.rejected && typeof parsed.rejected === 'object' ? parsed.rejected : {},
+              lastProposalAt: typeof parsed.lastProposalAt === 'number' ? parsed.lastProposalAt : 0,
+            };
+          }
+        }
+      } catch {
+        loaded = freshCoauthorState();
+      }
+      if (cancelled) return;
+      coauthorRef.current = loaded;
+      setCoauthor(loaded);
+      setCoauthorHydrated(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const writeCoauthor = useCallback((next: CoauthorState) => {
+    coauthorRef.current = next;
+    setCoauthor(next);
+    gate.write(COAUTHOR_KEY, JSON.stringify(next)).catch(() => {});
+  }, []);
+
+  // Same quiet-world rule as an incident, and it yields to one: two sheets
+  // competing for the same moment is how a beat gets stolen mid-tap. The delay
+  // is longer than the incident's for the same reason -- if both are eligible,
+  // the world's news goes first and the proposal keeps until next time. Its own
+  // six-hour cooldown lives in the engine.
+  useEffect(() => {
+    if (!coauthorHydrated || !incidentHydrated) return;
+    if (activeProposal || activeIncident || worldPaused || onboarding?.step !== 'done') return;
+    if (conversationHeld || snapshotRef.current.state === 'sleepy') return;
+    const timer = setTimeout(() => {
+      if (conversationHeldRef.current) return;
+      const next = deriveBarklyProposal({
+        character: characterRef.current,
+        memory: memory.snapshot(),
+        stats: snapshotRef.current.stats,
+        state: coauthorRef.current,
+        now: Date.now(),
+      });
+      if (next && !dismissedProposals.current.has(next.id)) setActiveProposal(next);
+    }, 7200);
+    return () => clearTimeout(timer);
+  }, [
+    activeIncident,
+    activeProposal,
+    coauthorHydrated,
+    conversationHeld,
+    incidentHydrated,
+    location,
+    memory,
+    memoryVersion,
+    onboarding,
+    worldPaused,
+  ]);
+
+  // Closing the sheet is NOT a rejection. A no is a decision Barkly remembers;
+  // dismissing is "not now", and the cooldown has not started, so he may ask
+  // again. Only the two explicit answers write anything.
+  const dismissProposal = useCallback(() => {
+    setActiveProposal((current) => {
+      if (current) dismissedProposals.current.add(current.id);
+      return null;
+    });
+  }, []);
+
+  const resolveProposal = useCallback(
+    async (choiceId: string): Promise<void> => {
+      const proposal = activeProposal;
+      if (!proposal || busy) return;
+      const accepted = choiceId === 'accept';
+      setActiveProposal(null);
+      const outcome = resolveBarklyProposal(coauthorRef.current, proposal, accepted, Date.now());
+      writeCoauthor(outcome.state);
+      setBusy(true);
+      try {
+        await speak(outcome.line, { actions: accepted ? ['EAR_PERK', 'TAIL_WAG'] : ['HEAD_TILT'] });
+        // Both answers become history. A refusal you can look back on is the
+        // point -- it is the same object either way, and he was told no.
+        memory
+          .remember([], [
+            accepted
+              ? `We agreed that ${proposal.subject} is called "${proposal.proposedValue}".`
+              : `I wanted to call ${proposal.subject} "${proposal.proposedValue}". You said no.`,
+          ])
+          .then(() => setMemoryVersion((v) => v + 1))
+          .catch(() => {});
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeProposal, busy, memory, speak, writeCoauthor],
+  );
+
   void memoryVersion;
   const relationship = buildRelationshipProfile({
     memory: memory.snapshot(),
@@ -1823,6 +1975,10 @@ export function useBarkly(): BarklyController {
     setWorldPaused,
     resolveIncident,
     dismissIncident,
+    activeProposal,
+    resolveProposal,
+    dismissProposal,
+    canon: coauthor.canon,
     lastExchange,
     partialTranscript,
     error,

@@ -11,6 +11,7 @@
  */
 
 import { CharacterState, describeCharacter } from './character';
+import { CoauthorState, coauthorPromptTexture } from './coauthor';
 import { deriveBarklyIdentity, describeIdentity } from './identity';
 import { describeFact, Experience, Fact, sanitize } from './facts';
 import { IDENTITY, RULES, TRAITS, VOICE } from './personality';
@@ -42,6 +43,8 @@ export interface PromptContext {
   world?: WorldContext;
   relevant?: { facts: Fact[]; experiences: Experience[] };
   character?: CharacterState;
+  /** Names and traditions Barkly proposed and this player accepted. */
+  canon?: CoauthorState;
 }
 
 const MEM_OPEN = '<<<BARKLY_MEMORY_DATA>>>';
@@ -139,6 +142,14 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   if (identity.preferences.length > 0 || identity.axes.some((axis) => axis.score >= 28)) {
     memoryLines.push('Who you have become:');
     for (const line of describeIdentity(identity)) memoryLines.push(`- ${sanitize(line, 360)}`);
+  }
+
+  // Canon he PROPOSED and the player ratified. It sits above the plain fact
+  // list because it is the only material in the prompt that Barkly authored:
+  // the ball's real name, the corner he claims, what a rival is actually
+  // called. Two players' dogs use different words for the same objects.
+  if (ctx.canon) {
+    for (const line of coauthorPromptTexture(ctx.canon)) memoryLines.push(sanitize(line, 400));
   }
 
   if (facts && facts.length > 0) {

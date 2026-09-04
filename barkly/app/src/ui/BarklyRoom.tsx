@@ -26,7 +26,7 @@ import { useBarkly } from '../hooks/useBarkly';
 import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
 import BarklyPhotoView from './BarklyPhotoView';
-import EncounterSheet, { momentFromEncounter, momentFromIncident } from './EncounterSheet';
+import EncounterSheet, { momentFromEncounter, momentFromIncident, momentFromProposal } from './EncounterSheet';
 import Onboarding from './Onboarding';
 import PackBookSheet from './PackBookSheet';
 import StoreSheet from './StoreSheet';
@@ -1424,6 +1424,17 @@ export default function BarklyRoom() {
         busy={busy}
         onClose={barkly.dismissIncident}
         onChoose={(choiceId) => void barkly.resolveIncident(choiceId)}
+      />
+      {/*
+        And the same sheet again for the one beat that runs the other way:
+        Barkly asking the player to ratify something he decided. Closing it is
+        "not now", not a no -- see resolveProposal in the controller.
+      */}
+      <EncounterSheet
+        moment={barkly.activeProposal ? momentFromProposal(barkly.activeProposal) : null}
+        busy={busy}
+        onClose={barkly.dismissProposal}
+        onChoose={(choiceId) => void barkly.resolveProposal(choiceId)}
       />
       <SettingsSheet
         visible={settingsOpen}

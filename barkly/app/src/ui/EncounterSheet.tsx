@@ -1,6 +1,7 @@
 import React from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BarklyProposal } from '../barkly/coauthor';
 import { SocialEncounter } from '../barkly/encounters';
 import { WorldIncident } from '../world/incidents';
 import { LOCATIONS } from '../world/locations';
@@ -57,6 +58,39 @@ export function momentFromIncident(incident: WorldIncident): ChoiceMoment {
     footnote: incident.setup,
     choices: incident.choices.map((c) => ({ id: c.id, label: c.label, hint: c.barklyLine })),
     closeLabel: 'Leave this for later',
+  };
+}
+
+/**
+ * A canon proposal, as a moment.
+ *
+ * Every other beat on this sheet asks the player to react to something the
+ * world did. This one is the opposite direction: Barkly is asking for a
+ * ruling on something HE decided, so the badge is his own name and the
+ * choices are a yes and a no rather than a set of tactics.
+ */
+export const PROPOSAL_ACCEPT = 'accept';
+export const PROPOSAL_REJECT = 'reject';
+
+export function momentFromProposal(proposal: BarklyProposal): ChoiceMoment {
+  const TITLES: Record<BarklyProposal['kind'], string> = {
+    'object-name': 'He wants to name it',
+    territory: 'He is claiming ground',
+    signature: 'He says it is tradition now',
+    'dog-nickname': 'He has renamed somebody',
+  };
+  return {
+    badge: 'BARKLY',
+    tone: 'friend',
+    eyebrow: 'HE HAS A PROPOSAL',
+    title: TITLES[proposal.kind],
+    prompt: proposal.ask,
+    footnote: `Whatever you say becomes part of your history together.`,
+    choices: [
+      { id: PROPOSAL_ACCEPT, label: 'Make it official', hint: proposal.proposedValue },
+      { id: PROPOSAL_REJECT, label: 'Absolutely not', hint: 'He will take it badly, briefly.' },
+    ],
+    closeLabel: 'Not right now',
   };
 }
 

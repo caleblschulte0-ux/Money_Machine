@@ -44,6 +44,12 @@
       "tag": "thoughts"
     },
     {
+      "key": "041955f3a820d4e5",
+      "spoken": "Fine. Terrible brandin' decision, but fine.",
+      "source": "Fine. Terrible branding decision, but fine.",
+      "tag": "canon"
+    },
+    {
       "key": "0534ccc716d11832",
       "spoken": "Nobody organised it. Dat is the part I think about. We just kept turnin' up until it was a fact.",
       "source": "Nobody organised it. That is the part I think about. We just kept turning up until it was a fact.",
@@ -674,6 +680,12 @@
       "tag": "greetings"
     },
     {
+      "key": "450a8b52955bce42",
+      "spoken": "Excellent. Dat's the official name now. They'll adjust.",
+      "source": "Excellent. That's the official name now. They'll adjust.",
+      "tag": "canon"
+    },
+    {
       "key": "4541fbe9b6031499",
       "spoken": "You said a lot of words and none of dem were about food. Bold.",
       "source": "You said a lot of words and none of them were about food. Bold.",
@@ -1130,6 +1142,12 @@
       "tag": "npcs"
     },
     {
+      "key": "806cd46714b9b3fa",
+      "spoken": "Lemme tell ya. Property law remains my greatest enemy.",
+      "source": "Property law remains my greatest enemy.",
+      "tag": "canon"
+    },
+    {
       "key": "8211c45d89cfdb1e",
       "spoken": "Hm. I'd have barked. I'm not sayin' dat's better. I'm sayin' that's what I'd have done.",
       "source": "Hm. I'd have barked. I'm not saying that's better. I'm saying that's what I'd have done.",
@@ -1328,6 +1346,12 @@
       "tag": "npcs"
     },
     {
+      "key": "a493e85ec8cff37f",
+      "spoken": "Knew it. Tradition established.",
+      "source": "Knew it. Tradition established.",
+      "tag": "canon"
+    },
+    {
       "key": "a4fbdd832267cb75",
       "spoken": "Pepper. Ay, yo. Ya came for ME. Say it again slowly while I get comfortable.",
       "source": "Pepper. You came for ME. Say it again slowly while I get comfortable.",
@@ -1440,6 +1464,12 @@
       "spoken": "Admit it, Pepper — you missed me. Fine, don't admit it. Da tail did.",
       "source": "Admit it, Pepper — you missed me. Fine, don't admit it. The tail did.",
       "tag": "npcs"
+    },
+    {
+      "key": "b1bf5f835dae52d7",
+      "spoken": "Correct. I will notify absolutely nobody with authority.",
+      "source": "Correct. I will notify absolutely nobody with authority.",
+      "tag": "canon"
     },
     {
       "key": "b2aa685d9bc00b5b",
@@ -1754,6 +1784,12 @@
       "tag": "greetings"
     },
     {
+      "key": "e544b92d83fe4c89",
+      "spoken": "Good. That's da real name. Put it in the records.",
+      "source": "Good. That's the real name. Put it in the records.",
+      "tag": "canon"
+    },
+    {
       "key": "e71cea3a4696a243",
       "spoken": "da window shows outside. i own outside.",
       "source": "the window shows outside. i own outside.",
@@ -1764,6 +1800,12 @@
       "spoken": "Plan complete. Disturbingly productive. We should probably do somethin' pointless now.",
       "source": "Plan complete. Disturbingly productive. We should probably do something pointless now.",
       "tag": "hook"
+    },
+    {
+      "key": "eabbbbf8ffc0eea6",
+      "spoken": "Lemme tell ya. Wow. All dat service and no recognition. Brutal workplace.",
+      "source": "Wow. All that service and no recognition. Brutal workplace.",
+      "tag": "canon"
     },
     {
       "key": "ead5c3874f996e7f",
@@ -1818,6 +1860,12 @@
       "spoken": "Neither of ya. Deeply embarrassin' for everyone.",
       "source": "Neither of you. Deeply embarrassing for everyone.",
       "tag": "contest"
+    },
+    {
+      "key": "f39b6f2bf13f85cf",
+      "spoken": "Yo. Rejected by committee. I will workshop it privately.",
+      "source": "Rejected by committee. I will workshop it privately.",
+      "tag": "canon"
     },
     {
       "key": "f6797caff6547c91",

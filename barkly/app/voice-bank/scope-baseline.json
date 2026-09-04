@@ -4,5 +4,6 @@
   "src/barkly/training.ts": 0,
   "src/game/contest.ts": 0,
   "src/barkly/character.ts": 0,
-  "src/game/progression.ts": 14
+  "src/game/progression.ts": 14,
+  "src/barkly/coauthor.ts": 2
 }

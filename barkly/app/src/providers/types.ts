@@ -76,6 +76,15 @@ export interface DialogueContext {
   /** His active beef. */
   grievance?: { who: string; what: string };
   favoriteFriend?: string;
+  /**
+   * Canon HE proposed and this player ratified: the ball's real name, a corner
+   * he claims, what a rival is actually called. Unlike everything else here it
+   * was authored by Barkly rather than observed, so it is the private language
+   * of one household -- and the offline brain has to be handed it, or the
+   * object he personally named goes back to being "the ball" whenever the
+   * network drops.
+   */
+  canon?: { subject: string; value: string; kind: string }[];
 }
 
 export interface DialogueRequest {

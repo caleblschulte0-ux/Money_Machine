@@ -247,3 +247,41 @@ describe('what is worth keeping forever', () => {
     expect(personalFactFrom('my school is called Oakridge')).toBe('school = Oakridge');
   });
 });
+
+/*
+ * CANON — the one thing in the app Barkly authored rather than observed.
+ *
+ * A name he proposed and the player ratified is the private language of one
+ * household. The offline brain cannot read the system prompt, so if canon does
+ * not arrive as data it does not arrive at all, and the object he personally
+ * named goes back to being "the ball" the moment the network drops.
+ */
+describe('the names he gave things are the names he uses', () => {
+  const withCanon = (over: Partial<any> = {}) =>
+    ctx({
+      treasures: ['a rock that looks like a duck'],
+      canon: [{ subject: 'a rock that looks like a duck', value: 'The Good Rock', kind: 'object-name' }],
+      ...over,
+    });
+
+  it('calls the treasure by the name you both agreed on', async () => {
+    const r = await say('what did you find?', withCanon());
+    expect(r.speech).toContain('The Good Rock');
+    expect(r.speech).not.toContain('a rock that looks like a duck');
+  });
+
+  it('still uses the plain name when nothing was ratified', async () => {
+    const r = await say('what did you find?', ctx({ treasures: ['a rock that looks like a duck'] }));
+    expect(r.speech).toContain('a rock that looks like a duck');
+  });
+
+  it('answers what he calls something, which only canon makes answerable', async () => {
+    const r = await say('what do you call the rock?', withCanon());
+    expect(r.speech).toContain('The Good Rock');
+  });
+
+  it('does not invent a name for something you never ratified', async () => {
+    const r = await say('what do you call the stick?', withCanon());
+    expect(r.speech).not.toContain('The Good Rock');
+  });
+});

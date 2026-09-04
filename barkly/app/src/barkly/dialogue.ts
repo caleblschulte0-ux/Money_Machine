@@ -6,6 +6,7 @@
  */
 
 import { CharacterState, friendshipStage, rivalryStage } from './character';
+import { CoauthorState } from './coauthor';
 import { BarklyMemory } from './memory';
 import { buildSystemPrompt, parseReply, WorldContext } from './prompts';
 import { recall } from './recall';
@@ -33,6 +34,7 @@ export class DialogueEngine {
     snapshot: BarklySnapshot,
     world?: WorldContext,
     character?: CharacterState,
+    canon?: CoauthorState,
   ): Promise<ConverseResult> {
     const empty: BarklyReply = {
       speech: '',
@@ -139,6 +141,7 @@ export class DialogueEngine {
       world,
       relevant,
       character,
+      canon,
     });
 
     // The situation as DATA as well as prose. A model reads the prompt; the
@@ -179,6 +182,11 @@ export class DialogueEngine {
         ? { who: character.grievance.who, what: character.grievance.what }
         : undefined,
       favoriteFriend: character?.favoriteFriend,
+      // The offline brain cannot read the system prompt, so ratified canon
+      // reaches it as data or it does not reach it at all -- and then the ball
+      // he personally named goes back to being "the ball" the moment the
+      // network drops.
+      canon: canon?.canon.map((c) => ({ subject: c.subject, value: c.value, kind: c.kind })),
     };
 
     const raw = await this.provider.complete({

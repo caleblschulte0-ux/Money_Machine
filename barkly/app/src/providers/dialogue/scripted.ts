@@ -61,6 +61,19 @@ const KNOW_YOUR_NAME = 'Obviously. I remember things.';
 const FAVOURITE_PERSON = "Don't tell anyone. Actually, do.";
 
 /** Everything he can be asked that he can honestly answer from state. */
+/**
+ * The name HE gave something, if this player ratified it. Canon is matched on
+ * the subject rather than a key, because the subject is the word the player
+ * already types ("the ball", "Duke") -- and once a name is agreed, using the
+ * old one is the tell that nothing was really agreed.
+ */
+function canonName(c: DialogueContext | undefined, subject: string): string | null {
+  const want = subject.trim().toLowerCase();
+  if (!want) return null;
+  const hit = (c?.canon ?? []).find((entry) => entry.subject.trim().toLowerCase() === want);
+  return hit ? hit.value : null;
+}
+
 function answerQuestion(text: string, c: DialogueContext | undefined, you: string): Line | null {
   const t = text.toLowerCase();
 
@@ -129,9 +142,22 @@ function answerQuestion(text: string, c: DialogueContext | undefined, you: strin
   }
   if (/\bwhat did you (find|dig)\b|\byour (stash|treasure)\b/.test(t)) {
     const best = c?.treasures?.[c.treasures.length - 1];
+    // If the two of you agreed on a real name for it, that IS its name now.
+    const named = best ? canonName(c, best) : null;
     return best
-      ? { speech: `${best}. Found it myself. It's priceless now.`, reaction: 'excited', actions: ['TAIL_WAG'] }
+      ? { speech: `${named ?? best}. Found it myself. It's priceless now.`, reaction: 'excited', actions: ['TAIL_WAG'] }
       : { speech: "Nothing yet. There's a dig spot at the park with my name on it.", actions: ['EAR_PERK'] };
+  }
+  // "what do you call the ball" -- only answerable at all because he proposed
+  // the name himself and the player said yes.
+  const calls = t.match(/\bwhat (?:do you|d'?you|do u) call (?:the |your |my )?([a-z' ]{2,40}?)\s*\??$/);
+  if (calls) {
+    const subject = calls[1].trim();
+    const named = canonName(c, subject)
+      ?? (c?.canon ?? []).find((e) => e.subject.trim().toLowerCase().includes(subject))?.value;
+    if (named) {
+      return { speech: `${named}. We agreed. It's binding.`, reaction: 'happy', actions: ['TAIL_WAG'] };
+    }
   }
   if (/\bwho (else )?is here\b|\bwho'?s (that|there)\b/.test(t)) {
     const dogs = c?.npcsPresent ?? [];

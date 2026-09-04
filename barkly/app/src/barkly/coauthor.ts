@@ -67,13 +67,54 @@ function alreadyAnswered(state: CoauthorState, id: string): boolean {
   return state.canon.some((entry) => entry.id === id) || state.rejected[id] !== undefined;
 }
 
+/*
+ * Treasures are written as jokes, not as nouns: "a sock (previously owned)",
+ * "a map? or trash? unclear", "someone's frisbee (finders keepers)". Naming
+ * one used to title-case the whole joke and cut it at 32 characters, so 20 of
+ * the 24 treasures in the game produced things like "The A Sock (Previously
+ * Owned)" and "The Someone'S Frisbee (Finders Keep…" -- mid-word, with the
+ * ellipsis, in the one beat where Barkly is the author. A name he made up has
+ * to read like a name.
+ */
+const ARTICLE = /^(?:an?|the|one|half|exactly|piece of|length of)\s+/i;
+/** Never capitalised mid-name: "The Piece of Sea Glass", not "Piece Of". */
+const SMALL_WORDS = new Set(['a', 'an', 'the', 'of', 'and', 'that', 'with']);
+
+function treasureCore(name: string): string {
+  let core = sanitize(name, 80)
+    // The aside is the joke, not the thing: "(previously owned)".
+    .replace(/\s*\([^)]*\)/g, '')
+    // Everything after the first break is commentary: ", allegedly".
+    .split(/[?,;]/)[0]
+    // ...as is everything after a relative clause: "that lost its person".
+    .replace(/\s+(?:that|which|with|shaped like)\s+.*$/i, '')
+    .trim();
+  // "exactly one flip-flop" needs two passes, "a piece of sea glass" needs one.
+  for (let i = 0; i < 3; i += 1) core = core.replace(ARTICLE, '').trim();
+  return core;
+}
+
+function titleCase(core: string): string {
+  return core
+    .split(/\s+/)
+    .map((word, i) =>
+      i > 0 && SMALL_WORDS.has(word.toLowerCase())
+        ? word.toLowerCase()
+        // The boundary is the start of the word or a hyphen, so "flip-flop"
+        // becomes "Flip-Flop" and "someone's" does not become "Someone'S".
+        : word.replace(/(^|-)([a-z])/g, (_m, edge, c) => edge + c.toUpperCase()),
+    )
+    .join(' ');
+}
+
 function treasureNickname(name: string): string {
-  const lower = name.toLowerCase();
+  const core = treasureCore(name);
+  const lower = core.toLowerCase();
   if (lower.includes('rock')) return 'The Good Rock';
   if (lower.includes('stick')) return 'Executive Stick';
   if (lower.includes('duck')) return 'The Duck';
   if (lower.includes('ball')) return 'The Orb';
-  return `The ${sanitize(name, 32).replace(/\b\w/g, (m) => m.toUpperCase())}`;
+  return core ? `The ${titleCase(core)}` : 'The Artifact';
 }
 
 function dogNickname(name: string, rival: boolean): string {
@@ -97,7 +138,13 @@ function candidates(ctx: ProposalContext): BarklyProposal[] {
       if (!alreadyAnswered(state, id)) out.push({
         id, kind: 'object-name', subject: treasure, proposedValue, priority: 90,
         ask: `Okay, ${sanitize(treasure, 60)} has been here long enough. I think its real name is “${proposedValue}.” Are we making that official?`,
-        acceptLine: `Good. ${proposedValue}. Put it in the records.`,
+        // The name is NOT repeated here on purpose. Interpolating it made the
+        // line unrecordable, so the moment Barkly finally gets to name
+        // something came back in the browser's narrator -- and the player just
+        // tapped a button with the name printed on it, so he is not telling
+        // them anything they cannot see. A recorded voice beats a redundant
+        // one. Same for the nickname line below.
+        acceptLine: `Good. That's the real name. Put it in the records.`,
         rejectLine: `Fine. Terrible branding decision, but fine.`,
       });
     }
@@ -123,7 +170,9 @@ function candidates(ctx: ProposalContext): BarklyProposal[] {
       id, kind: 'signature', subject: ritual.cue, proposedValue: `Barkly's “${sanitize(ritual.cue, 44)}”`, priority: 82,
       ask: `We have done “${sanitize(ritual.cue, 50)}” ${ritual.timesTriggered} times. That is not training anymore. That's our thing. Official?`,
       acceptLine: 'Knew it. Tradition established.',
-      rejectLine: 'Wow. Eight performances and no tenure. Brutal workplace.',
+      // Never name a count here: the ask above quotes the real number, and this
+      // line was hard-coded to "Eight" while the ask said nine.
+      rejectLine: 'Wow. All that service and no recognition. Brutal workplace.',
     });
   }
 
@@ -138,7 +187,7 @@ function candidates(ctx: ProposalContext): BarklyProposal[] {
       ask: bond.kind === 'rival'
         ? `I have decided ${name}'s full legal name is “${proposedValue}.” Objections?`
         : `${name} is around enough that I think “${proposedValue}” is fair. We using it?`,
-      acceptLine: `Excellent. ${proposedValue} it is.`,
+      acceptLine: `Excellent. That's the official name now. They'll adjust.`,
       rejectLine: 'Rejected by committee. I will workshop it privately.',
     });
   }

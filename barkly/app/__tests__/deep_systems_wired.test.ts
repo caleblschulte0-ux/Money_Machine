@@ -64,6 +64,46 @@ describe('the deep systems stay wired to the runtime', () => {
     expect(all).toMatch(/COAUTHOR_KEY/);
   });
 
+  /*
+   * The test above is exactly the trap this file was written about. It passed
+   * for weeks while the co-authorship engine had NO caller: the key existed,
+   * the preset wrote it, ALL_SAVE_KEYS listed it -- and nothing ever produced
+   * a proposal, so the canon that "survived a restart" was always the empty
+   * array. A storage key is not a seam. These are.
+   */
+  it('Barkly can actually propose canon, and the player can answer', () => {
+    const hook = read('src/hooks/useBarkly.ts');
+    expect(hook).toContain("from '../barkly/coauthor'");
+    expect(hook).toMatch(/deriveBarklyProposal\(/);
+    expect(hook).toMatch(/resolveBarklyProposal\(/);
+    // Read back and written, or a ratified name dies with the session.
+    expect(hook).toMatch(/asyncStorageStore\.get\(COAUTHOR_KEY\)/);
+    expect(hook).toMatch(/gate\.write\(COAUTHOR_KEY/);
+    // Exposed, or the UI cannot show the question.
+    expect(hook).toMatch(/\n\s+activeProposal,\n/);
+    expect(hook).toMatch(/\n\s+resolveProposal,\n/);
+  });
+
+  it('the proposal is a sheet the player can see and answer', () => {
+    const room = read('src/ui/BarklyRoom.tsx');
+    expect(room).toMatch(/momentFromProposal\(barkly\.activeProposal\)/);
+    expect(room).toMatch(/barkly\.resolveProposal\(/);
+    const sheet = read('src/ui/EncounterSheet.tsx');
+    expect(sheet).toMatch(/export function momentFromProposal/);
+  });
+
+  it('ratified canon reaches BOTH brains, not just the model', () => {
+    // The prompt carries it as prose for a model...
+    const prompts = read('src/barkly/prompts.ts');
+    expect(prompts).toMatch(/coauthorPromptTexture\(/);
+    // ...and the offline brain gets it as data, or the ball he named goes
+    // back to being "the ball" the moment the network drops.
+    const dialogue = read('src/barkly/dialogue.ts');
+    expect(dialogue).toMatch(/canon: canon\?\.canon\.map/);
+    const scripted = read('src/providers/dialogue/scripted.ts');
+    expect(scripted).toMatch(/function canonName\(/);
+  });
+
   it('the incident gate reads onboarding COMPLETION, not its mere existence', () => {
     // `onboarding` stays a truthy record forever once the flow is done, so a
     // plain truthiness check silences the world permanently. This cost a

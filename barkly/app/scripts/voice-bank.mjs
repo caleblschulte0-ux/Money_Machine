@@ -110,6 +110,10 @@ const SOURCES = [
   // now. Don't touch it." — as opposed to the item names and blurbs around
   // them, which are read. Same audit, same day.
   { file: 'src/game/progression.ts', tag: 'progression', only: ['levelUpLine', 'AREA_UNLOCKS', 'buy', 'buyLine'] },
+  // What he says the moment a name he proposed is ratified or refused. Scoped
+  // to `candidates`, where every ask/accept/reject line is written; the rest of
+  // the file is nicknames and slugs, which are built, not said.
+  { file: 'src/barkly/coauthor.ts', tag: 'canon', only: ['candidates'] },
 ];
 
 /* ------------------------------------------------------------------ harvest */
