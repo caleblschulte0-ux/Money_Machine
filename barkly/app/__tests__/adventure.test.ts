@@ -1,7 +1,7 @@
 import { freshCharacter, withFriend, withGrievance } from '../src/barkly/character';
 import { emptyMemory } from '../src/barkly/memory';
 import { mergeTrainingRules } from '../src/barkly/training';
-import { adventureDay, createAdventure, progressAdventure } from '../src/game/adventure';
+import { AdventureInput, adventureDay, createAdventure, progressAdventure } from '../src/game/adventure';
 
 const NOW = Date.UTC(2026, 7, 27, 12);
 
@@ -118,5 +118,59 @@ describe('the plan is the on-ramp for a player with no history', () => {
     const plan = createAdventure(base());
     expect(plan.goals).toHaveLength(3);
     expect(new Set(plan.goals.map((g) => g.id)).size).toBe(3);
+  });
+});
+
+describe('the plan points at the thing that makes him yours', () => {
+  // Training is the most differentiating feature in the app — you invent a
+  // word, he keeps it, it is still there next week — and the daily plan had no
+  // goal for it. The onboarding teaches one cue and then never mentions
+  // teaching again, so the feature had to be rediscovered by accident. Every
+  // other pillar (meeting a dog, talking, digging, travelling) already had a
+  // goal pointing at it.
+  const base = (over: Partial<AdventureInput> = {}): AdventureInput => ({
+    character: freshCharacter(),
+    memory: emptyMemory(),
+    xp: 0,
+    now: Date.UTC(2026, 8, 4, 12),
+    ...over,
+  });
+
+  it('asks a new player to teach him something', () => {
+    const plan = createAdventure(base());
+    // Over a few days it has to actually appear, not merely be a candidate.
+    const seen = new Set<string>();
+    for (let d = 0; d < 6; d += 1) {
+      for (const g of createAdventure(base({ now: Date.UTC(2026, 8, 4 + d, 12) })).goals) seen.add(g.id);
+    }
+    expect(seen).toContain('teach-a-word');
+    expect(plan.goals.length).toBe(3);
+  });
+
+  it('stops asking once he already knows a few', () => {
+    const memory = emptyMemory();
+    memory.trainingRules = [1, 2, 3].map((n) => ({
+      id: `r${n}`, cue: `word${n}`, normalizedCue: `word${n}`, instruction: 'play dead',
+      speech: 'I have tragically passed away.', actions: ['SLEEP' as const],
+      learnedAt: 0, updatedAt: 0, timesTriggered: 1,
+    }));
+    for (let d = 0; d < 8; d += 1) {
+      const plan = createAdventure(base({ memory, now: Date.UTC(2026, 8, 4 + d, 12) }));
+      expect(plan.goals.map((g) => g.id)).not.toContain('teach-a-word');
+    }
+  });
+
+  it('is not ticked by performing a trick he already knew', () => {
+    // A goal with no target matches any event of its kind, so a target-less
+    // `routine` goal would have been completed by using an OLD cue — the
+    // opposite of the ask. That is why teaching has its own event kind.
+    const plan = [0, 1, 2, 3, 4, 5]
+      .map((d) => createAdventure(base({ now: Date.UTC(2026, 8, 4 + d, 12) })))
+      .find((p) => p.goals.some((g) => g.id === 'teach-a-word'));
+    expect(plan).toBeDefined();
+    const byOldTrick = progressAdventure(plan!, { kind: 'routine', target: 'anything' }, 1).state;
+    expect(byOldTrick.goals.find((g) => g.id === 'teach-a-word')?.done).toBe(false);
+    const byTeaching = progressAdventure(plan!, { kind: 'teach' }, 1).state;
+    expect(byTeaching.goals.find((g) => g.id === 'teach-a-word')?.done).toBe(true);
   });
 });

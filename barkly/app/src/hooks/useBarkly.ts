@@ -1120,6 +1120,9 @@ export function useBarkly(): BarklyController {
         credit('talk', talkWasWorthIt(userText, recentSaid.current));
         recentSaid.current = [...recentSaid.current, userText].slice(-3);
         progressPlan({ kind: 'talk' });
+        // He was just TAUGHT something, which is a different plan goal from
+        // being made to perform an old trick. See adventure.AdventureEventKind.
+        if ((reply.learnedTraining?.length ?? 0) > 0) progressPlan({ kind: 'teach' });
         if (trainedBefore) {
           progressPlan({ kind: 'routine', target: trainedBefore.normalizedCue });
         }

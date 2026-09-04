@@ -13,7 +13,13 @@ import { MemoryState } from '../barkly/memory';
 import { deriveStoryArc } from '../barkly/story';
 import { levelFor } from './progression';
 
-export type AdventureEventKind = 'talk' | 'dig' | 'npc' | 'travel' | 'play' | 'feed' | 'routine';
+/**
+ * `routine` is USING a cue he already knows. `teach` is giving him a new one,
+ * and it needed its own kind: a goal with no target matches any event of its
+ * kind (see targetMatches), so a target-less `routine` goal would have been
+ * ticked by performing an old trick, which is the opposite of the ask.
+ */
+export type AdventureEventKind = 'talk' | 'dig' | 'npc' | 'travel' | 'play' | 'feed' | 'routine' | 'teach';
 
 export interface AdventureEvent {
   kind: AdventureEventKind;
@@ -149,6 +155,28 @@ function candidates(input: AdventureInput): AdventureGoal[] {
       target: friend[0].toLowerCase(),
       label: `Check in with ${friend[0]}`,
       detail: friend[1].encounters >= 6 ? 'Best friends have business.' : 'See what they are up to.',
+      done: false,
+    });
+  }
+
+  /*
+   * TEACH HIM A WORD -- and nothing in the plan had ever asked.
+   *
+   * Training is the single most differentiating thing in this app: you invent
+   * a word, he keeps it, and it is still there next week. The onboarding
+   * teaches exactly one cue and then the daily plan never mentions teaching
+   * again, so the feature that makes him YOURS was a thing you had to
+   * rediscover on your own. Every other pillar had a goal pointing at it.
+   *
+   * It stops once he has a few, because a plan that asks for a new trick every
+   * day turns a running joke into homework.
+   */
+  if (input.memory.trainingRules.length < 3) {
+    rows.push({
+      id: 'teach-a-word',
+      kind: 'teach',
+      label: 'Teach him a new word',
+      detail: 'Say “when I say X, play dead”. He will have it forever, which is his whole thing.',
       done: false,
     });
   }
