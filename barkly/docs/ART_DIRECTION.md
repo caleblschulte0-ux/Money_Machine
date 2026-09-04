@@ -210,6 +210,47 @@ accepts for Home: the frames read as lamps now instead of as ringed toggles,
 and the fix for a muddy night scene is still more light in the pools, never
 less colour in the wash.
 
+### The night wash, re-measured 2026-09-04
+
+Home-night was the worst cell in the table above by some way, at 0.383 / 17.5%,
+in the room a player spends most of their time in. Three changes, all in the
+same commit family:
+
+- The night FLOOR was the day floor darkened — warm browns at hue 24-31 — and
+  warm brown under a strong blue wash mixes toward grey. It is the bottom half
+  of the frame. Moved into the violet family the night wall already uses, at
+  the same saturation. `woodNight` followed, for coherence rather than for a
+  number: on its own it measured inside the noise band.
+- Barkly and the other dogs were not graded with the room at all. The scene
+  takes the wash; the sprites are rendered ABOVE it and got none of it, so
+  after dark he stood daylight-bright in a midnight room. `BarklyRoom` now lays
+  a light version of the same wash over the dogs, above the props and below the
+  kit and every piece of chrome, so nothing a child has to read is dimmed.
+
+Measured on the shipping `build:pages` build with the same harness
+(`art-lab.mjs --bands night` + `art-lab-sheet.py`):
+
+| scene | before | after |
+|---|---|---|
+| home-night | 0.383 / 17.5% | **0.447 / 11.4%** |
+| park-night | 0.518 / 3.3% | 0.539 / 5.4% |
+| town-night | 0.431 / 11.7% | 0.450 / 11.3% |
+| beach-night | 0.406 / 10.6% | 0.446 / 6.2% |
+
+Home clears the under-12% target. Chroma is up in all four and the colourless
+share falls in three; park rises 2.1 points, which is outside the noise band
+and is the cost of laying a wash over sprites in the one scene that was already
+the cleanest. Kept, because the alternative is a dog who is not standing in the
+room he is standing in.
+
+An earlier report of this work said home-night was 13.4% and short of target.
+That number came from an ad-hoc crop taken mid-change, not from this harness;
+the harness says 11.4%. The instrument in the repo is the one that counts, and
+`art-lab-sheet.py` could not run at all until the same commit — it validated
+its INPUT directory carefully and then died with a raw FileNotFoundError
+writing to an output directory it never created, after doing all the measuring
+and before printing any of it.
+
 (`mean_sat` / `washed_frac`.) Evening is the tightest hue cluster of any band —
 32° / 78° / 45° / 42°, a 46° spread against day's 55° — which is the grade
 working: one strong low key pulls four different local palettes into one light.

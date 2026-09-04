@@ -33,6 +33,14 @@ def _args(argv):
 
 
 frames, out = _args(sys.argv[1:])
+# The input directory is checked carefully above and then the OUTPUT one was
+# not created at all: the script measured every frame, tiled the sheet, and
+# died with a raw FileNotFoundError on the first save -- after the work, before
+# the numbers, which are printed at the very end. So a first run in a fresh
+# directory threw away exactly the measurement it was invoked for. A tool that
+# refuses when it is called wrong has to be able to finish when it is called
+# right.
+out.mkdir(parents=True, exist_ok=True)
 
 LOCS = ["home", "park", "town", "beach"]
 # All four light bands. Morning and evening were never measured, which is how
