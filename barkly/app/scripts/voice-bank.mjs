@@ -92,7 +92,11 @@ const SOURCES = [
   { file: 'src/world/npcs.ts', tag: 'npcs', only: ['barklyLines'] },
   { file: 'src/barkly/escalation.ts', tag: 'escalation', only: ['line'] },
   { file: 'src/barkly/training.ts', tag: 'training', only: ['speech', 'PLAY_DEAD_LINE'] },
-  { file: 'src/game/contest.ts', tag: 'contest', only: ['line'] },
+  // `only: ['line']` matched a local `const line = roundLine(...)` whose
+  // initializer is a CALL, so it collected nothing and the duel -- the loudest
+  // beat in the app -- was entirely narrated. The literals live inside the two
+  // functions that build those strings.
+  { file: 'src/game/contest.ts', tag: 'contest', only: ['line', 'roundLine', 'verdictLine'] },
   // The two name-fronted initiative bodies live at module scope, outside
   // `pickInitiative`, so the scope has to name them -- the same trap that hid
   // `training.PLAY_DEAD_LINE`. A body extracted for the bank's benefit and

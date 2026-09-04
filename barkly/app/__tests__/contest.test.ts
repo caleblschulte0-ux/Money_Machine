@@ -14,6 +14,7 @@ import {
   roundSpec,
   verdictLine,
 } from '../src/game/contest';
+import { NPCS } from '../src/world/npcs';
 
 const rules = { kind: 'fetch' as const, opponent: 'Duke', rounds: CONTEST_ROUNDS };
 // opponentHits() fires when rng() is LOW, so a 0 makes Duke hit every time.
@@ -117,5 +118,44 @@ describe('rewards', () => {
 
   it('an unfinished contest pays nothing', () => {
     expect(contestReward(freshContest(rules))).toEqual({ coins: 0, xp: 0 });
+  });
+});
+
+describe('it calls the opponent what the rest of the game calls them', () => {
+  // Every authored line about Pepper says "she" — her personality line, her
+  // encounter choices, her stage notes. `roundLine` generates a line at
+  // runtime and hardcoded "He", so losing a race to her produced "Pepper got
+  // that one. He is going to talk about it." The real bug was that there was
+  // nowhere to look a pronoun up; the wrong word was where it surfaced.
+  const spec = { target: 0.5, halfWidth: 0.1, sweepMs: 1000 };
+  const lose = (rules: any) => {
+    const state = { ...freshContest(rules), round: 0 };
+    // Miss the zone, and force the opponent to hit.
+    return playRound(state, 0.95, spec, () => 0).line;
+  };
+
+  it('uses her pronoun for Pepper', () => {
+    const line = lose({ kind: 'race', opponent: 'Pepper', opponentPronouns: NPCS.pepper.pronouns, rounds: 3 });
+    expect(line).toContain('Pepper');
+    expect(line).toMatch(/\bShe is\b/);
+    expect(line).not.toMatch(/\bHe is\b/);
+  });
+
+  it('uses his for Duke', () => {
+    const line = lose({ kind: 'fetch', opponent: 'Duke', opponentPronouns: NPCS.duke.pronouns, rounds: 3 });
+    expect(line).toMatch(/\bHe is\b/);
+  });
+
+  it('falls back to they/them, with a verb that agrees, for a save that predates this', () => {
+    const line = lose({ kind: 'race', opponent: 'Somebody', rounds: 3 });
+    expect(line).toMatch(/\bThey are\b/);
+  });
+
+  it('every dog has one, so a new dog cannot be added without it', () => {
+    for (const npc of Object.values(NPCS)) {
+      expect(npc.pronouns.subject.length).toBeGreaterThan(1);
+      expect(npc.pronouns.object.length).toBeGreaterThan(1);
+      expect(npc.pronouns.possessive.length).toBeGreaterThan(1);
+    }
   });
 });

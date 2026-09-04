@@ -29,6 +29,20 @@ export interface Npc {
   id: NpcId;
   name: string;
   relationship: 'friend' | 'rival';
+
+  /**
+   * HOW THE GAME REFERS TO THIS DOG when it is not using their name.
+   *
+   * Every authored line about Pepper already says "she" — her personality
+   * line, her encounter choices, her stage notes. But `game/contest.ts`
+   * generates a line at runtime and hardcoded "He": lose a race to Pepper and
+   * the app said "Pepper got that one. He is going to talk about it." There
+   * was nowhere for it to look this up, which is the actual bug — the wrong
+   * pronoun was just where it surfaced.
+   *
+   * Required, not optional, so a new dog cannot be added without one.
+   */
+  pronouns: { subject: string; object: string; possessive: string };
   /** One-liner for the dialogue prompt. */
   personality: string;
   /**
@@ -93,6 +107,7 @@ export const NPCS: Record<NpcId, Npc> = {
     id: 'biscuit',
     name: 'Biscuit',
     relationship: 'friend',
+    pronouns: { subject: 'he', object: 'him', possessive: 'his' },
     // Smaller and rounder than Barkly: the sweet one, and the one who gets
     // talked into things, and built a bit wide for his height.
     build: 0.94,
@@ -197,6 +212,7 @@ export const NPCS: Record<NpcId, Npc> = {
     id: 'pepper',
     name: 'Pepper',
     relationship: 'friend',
+    pronouns: { subject: 'she', object: 'her', possessive: 'her' },
     // The one who runs the square. Barkly's size, unbothered, and the only one
     // of the three whose drawing has any variation of its own already (her
     // three-quarter silhouette differs from the others by 28%), so she is the
@@ -292,6 +308,7 @@ export const NPCS: Record<NpcId, Npc> = {
     id: 'duke',
     name: 'Duke',
     relationship: 'rival',
+    pronouns: { subject: 'he', object: 'him', possessive: 'his' },
     // "A big russet dog" -- his own sheet, finally true on screen. Tall with
     // it, which is the half of "big" that size alone does not say.
     build: 1.14,

@@ -37,7 +37,16 @@ export interface EncounterChoice {
    * "Challenge him" used to print two sentences and bump a counter, which is
    * an announcement rather than a challenge.
    */
-  contest?: { kind: 'fetch' | 'race' | 'dig'; opponent: string };
+  /**
+   * Carries the opponent's pronouns with their name — `game/contest` generates
+   * a line about them at runtime and had nowhere to look one up, so it said
+   * "He" about everybody.
+   */
+  contest?: {
+    kind: 'fetch' | 'race' | 'dig';
+    opponent: string;
+    opponentPronouns?: { subject: string; object: string; possessive: string };
+  };
   /** Said instead of barklyReply when a contest was won / lost. */
   wonReply?: string;
   lostReply?: string;
@@ -196,7 +205,7 @@ function dukeEncounter(character: CharacterState, memory: MemoryState): SocialEn
         npcReply: 'Finally. A serious competitor.',
         barklyReply: 'Serious? No. Competitor? Unfortunately yes.',
         memory: 'Accepted Duke’s dramatic fetch challenge. The rivalry intensified.',
-        contest: { kind: 'fetch', opponent: duke.name },
+        contest: { kind: 'fetch', opponent: duke.name, opponentPronouns: duke.pronouns },
         wonReply: 'Beat him. In front of everyone. I would like that noted.',
         lostReply: 'He won. Once. In specific conditions I intend to dispute.',
         wonMemory: 'Beat Duke in a real fetch duel. Duke has not recovered.',
@@ -449,7 +458,7 @@ function pepperEncounter(character: CharacterState, memory: MemoryState): Social
         npcReply: 'That is the exact opposite of patrol.',
         barklyReply: 'Then why did you say “lap,” Pepper?',
         memory: 'Turned Pepper’s dignified town patrol into an unauthorized race.',
-        contest: { kind: 'race', opponent: 'Pepper' },
+        contest: { kind: 'race', opponent: NPCS.pepper.name, opponentPronouns: NPCS.pepper.pronouns },
         wonReply: 'Won the lap. It was a patrol. I patrolled fastest.',
         lostReply: 'Pepper won. Pepper is built like a rumour and moves like one.',
         wonMemory: 'Beat Pepper in an unauthorized race around the town square.',

@@ -25,8 +25,21 @@ export type ContestKind = 'fetch' | 'race' | 'dig';
 
 export interface ContestRules {
   kind: ContestKind;
-  /** Who he is up against. */
+  /** Who Barkly is up against. */
   opponent: string;
+  /**
+   * How to refer to them without their name.
+   *
+   * `roundLine` below used to hardcode "He", so losing a race to Pepper — who
+   * is established as "she" in every authored line about her — produced
+   * "Pepper got that one. He is going to talk about it." The pronoun lives on
+   * the NPC record now (`world/npcs.Npc.pronouns`) and rides in here with the
+   * name it belongs to.
+   *
+   * Optional so a contest already in flight in an older save still resolves;
+   * a missing one falls back to they/them, which is wrong for nobody.
+   */
+  opponentPronouns?: { subject: string; object: string; possessive: string };
   rounds: number;
 }
 
@@ -98,11 +111,20 @@ export function opponentHits(round: number, rng: () => number = Math.random): bo
   return rng() < 0.55 + round * 0.05;
 }
 
-function roundLine(kind: ContestKind, youHit: boolean, themHit: boolean, opponent: string, acc: number): string {
+function roundLine(
+  kind: ContestKind,
+  youHit: boolean,
+  themHit: boolean,
+  opponent: string,
+  acc: number,
+  subject = 'they',
+): string {
+  const They = subject.charAt(0).toUpperCase() + subject.slice(1);
+  const are = subject === 'they' ? 'are' : 'is';
   if (youHit && !themHit) {
     return acc > 0.75 ? `Dead centre. ${opponent} watched it happen.` : `Got there first. Barely. Counts.`;
   }
-  if (!youHit && themHit) return `${opponent} got that one. He is going to talk about it.`;
+  if (!youHit && themHit) return `${opponent} got that one. ${They} ${are} going to talk about it.`;
   if (youHit && themHit) return `Both of you. Nobody is admitting it was close.`;
   return `Neither of you. Deeply embarrassing for everyone.`;
 }
@@ -125,7 +147,14 @@ export function playRound(
 
   const youHit = isHit(position, spec);
   const themHit = opponentHits(state.round, rng);
-  const line = roundLine(state.rules.kind, youHit, themHit, state.rules.opponent, accuracy(position, spec));
+  const line = roundLine(
+    state.rules.kind,
+    youHit,
+    themHit,
+    state.rules.opponent,
+    accuracy(position, spec),
+    state.rules.opponentPronouns?.subject,
+  );
 
   const you = state.you + (youHit && !themHit ? 1 : 0);
   const them = state.them + (themHit && !youHit ? 1 : 0);

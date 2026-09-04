@@ -830,6 +830,12 @@
       "tag": "offline"
     },
     {
+      "key": "57a24d826da6ef3e",
+      "spoken": "Got dere first. Barely. Counts.",
+      "source": "Got there first. Barely. Counts.",
+      "tag": "contest"
+    },
+    {
       "key": "584ef07f58c8cdad",
       "spoken": "Every time I get close it leaves. This is da most interestin' thing here.",
       "source": "Every time I get close it leaves. This is the most interesting thing here.",
@@ -1110,6 +1116,12 @@
       "spoken": "I'll play. Not because I'm desperate. Throw da ball.",
       "source": "I'll play. Not because I'm desperate. Throw the ball.",
       "tag": "offline"
+    },
+    {
+      "key": "852fb28702efe692",
+      "spoken": "Both of ya. Nobody is admittin' it was close.",
+      "source": "Both of you. Nobody is admitting it was close.",
+      "tag": "contest"
     },
     {
       "key": "8557f8e3acc31580",
@@ -1746,6 +1758,12 @@
       "spoken": "i could be nappin' right now. i am always partially nappin'.",
       "source": "i could be napping right now. i am always partially napping.",
       "tag": "thoughts"
+    },
+    {
+      "key": "f2a5b44006a7a4c9",
+      "spoken": "Neither of ya. Deeply embarrassin' for everyone.",
+      "source": "Neither of you. Deeply embarrassing for everyone.",
+      "tag": "contest"
     },
     {
       "key": "f6797caff6547c91",
