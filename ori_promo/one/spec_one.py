@@ -194,8 +194,19 @@ BEATS = [
  # children nearly the mother's height). fam3_s17.jpg has visible feet on
  # three of four figures and correct adult/child proportion, which is the
  # defect fixed rather than re-shipped.
- ("dak",  "6804", 10.0, 32.7, 4.0, "before the mill, the family answers where he has stopped"),
- ("settle", "6805", 70.3, 36.7, 3.8, "the settlement era, further up the same bank"),
+ # v29: dak/settle MOVED FROM A COMPOSITE TO A PLATE. ChatGPT's
+ # dak_family_chatgpt.jpg / settler_family_chatgpt.jpg (r117) bake the
+ # family AND a Falls-Park-like background into one flat photograph, not
+ # a transparent cutout -- running that through ai/place.py's rembg/matte/
+ # shadow pipeline onto the REAL IMG_6804/6805 footage would mean cutting
+ # a person-shaped hole out of a generated photo and pasting it onto real
+ # rock underneath: two different rock textures fighting in one frame.
+ # So both beats now work exactly like `ice` -- a fully generated PLATE
+ # (see ai/dak/build_dak_plate.py, ai/settle/build_settle_plate.py), not a
+ # figure standing on real footage. `mam`/`now` deliberately still keep
+ # the real ground; that tradeoff is unchanged.
+ ("dak",  "DAK1",  0.0, 32.7, 4.0, "before the mill, the family answers where he has stopped"),
+ ("settle", "SETTLE1", 0.0, 36.7, 3.8, "the settlement era, further up the same bank"),
  # ---- ACT 3: THE DEMO. `dak` AND `more` ARE GONE. v20, on direct
  # operator instruction, and this is a REMOVAL, not a taste note.
  # Operator, asked directly whether there is a Dakota cultural advisor or
@@ -293,24 +304,17 @@ TITLES = {
 # is smaller because it stands on the FAR ledge across the water, and at
 # that distance an animal reads by silhouette.
 FIGURES = {
- # ---- RESTORED v22, on the operator's reversal. See the BEATS note on
- # `dak`/`settle` for the full record, including the fact that the
- # cultural-review gap that caused the v20 removal is UNCHANGED and that
- # this is his call, made knowingly.
- # `dak` is a straight restore of the v15 placement: foot (1150, 745) at
- # 385px on IMG_6804@10.0, which is the scale he approved after the
- # mammoth was rebuilt. Nothing re-tuned, so nothing re-broken.
- "dak": [("ai/era/dak_s17.jpg", (1150, 745), 385, 1.0, 1.1, 0.30, 0.55)],
- # `settle` is NEW, not the v8 settlers beat brought back. That asset
- # failed on measurements, not taste: floor-length dresses gave it no
- # feet to stand on, and its two children were nearly the mother's
- # height. fam3_s17.jpg has visible feet and correct adult/child
- # proportion. IMG_6805@70.3 is the static plate the old `more` beat
- # used (drift 0.2%), so it clears the figure-plate gate.
- # 470px at foot y=830: the same ground-plane arithmetic as the second
- # Dakota group that used to stand here, which measured 529px at that
- # depth for a group standing slightly nearer than this one.
- "settle": [("ai/era/fam3_s17.jpg", (1560, 830), 470, 1.0, 1.0, 0.30, 0.45)],
+ # ---- `dak` and `settle` NO LONGER HAVE FIGURES ENTRIES, v29. Both
+ # beats moved to fully generated PLATES (see the BEATS note above and
+ # ai/dak/build_dak_plate.py) because ChatGPT's replacement assets bake
+ # the family and background into one flat photo, not a transparent
+ # cutout this dict's compositing pipeline could place. The cultural-
+ # review gap that caused the v20 Dakota removal is STILL UNCHANGED --
+ # restoring Dakota content at v22 and improving the asset at v29 are
+ # both the operator's calls, made knowingly, and neither one is a
+ # substitute for an actual cultural review. That review has not
+ # happened. Recorded here so it is not lost the next time this file
+ # is touched.
  # "dak" and "more" (dak_s17.jpg, dak_s3.jpg) were REMOVED at v20. Operator,
  # asked directly whether a Dakota cultural advisor or tribal contact is
  # attached to this project: "There is not currently a Dakota cultural
@@ -368,11 +372,16 @@ LABELS = {
  # ring (labelkit.recon_block, not the tracked-AR block() -- nothing
  # recognised this, it is a still of the product, not a live detection).
  "hero": ((150, 900), "THE HARDWARE", "VISUALISATION", 0.35, (0, 0)),
- # RESTORED v22 with their figures. Both are subtitled VISUALISATION for
- # the same reason the ice label is: something drawn is on screen. No
- # date, no attribution, no claim about who specifically stood here.
- "dak": ((1150, 700), "BEFORE THE MILL", "VISUALISATION", 1.3, (-560, -250)),
- "settle": ((1560, 780), "THE SETTLEMENT", "VISUALISATION", 1.3, (-980, -260)),
+ # RESTORED v22, RE-ANCHORED v29 when both moved to the new ChatGPT
+ # plates (new composition, so the old figure-tied anchor coordinates no
+ # longer land anywhere meaningful) -- same bottom-left placement as
+ # `hero`, since both new photos put the family right-of-centre with open
+ # ground lower-left, same as the glasses plate. Both subtitled
+ # VISUALISATION for the same reason the ice label is: something drawn is
+ # on screen. No date, no attribution, no claim about who specifically
+ # stood here.
+ "dak": ((150, 850), "BEFORE THE MILL", "VISUALISATION", 1.0, (0, 0)),
+ "settle": ((150, 850), "THE SETTLEMENT", "VISUALISATION", 1.0, (0, 0)),
  "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
  # RECOGNITION, and it is a different KIND of label from the one above.
  # That one names a generated era and is subtitled VISUALISATION because

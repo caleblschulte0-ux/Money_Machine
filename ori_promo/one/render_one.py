@@ -649,6 +649,26 @@ def main(only=None):
         spec.loader.exec_module(bhp)
         bhp.build()
 
+    # `dak`/`settle` moved from figure-on-real-footage to fully generated
+    # PLATES, v29 (same reasoning as `hero`/`ice`) -- build if missing.
+    dak_clip = os.path.join(RAW, "IMG_DAK1.MOV")
+    if not os.path.exists(dak_clip):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "build_dak_plate", asset("ai/dak/build_dak_plate.py"))
+        bdp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bdp)
+        bdp.build()
+
+    settle_clip = os.path.join(RAW, "IMG_SETTLE1.MOV")
+    if not os.path.exists(settle_clip):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "build_settle_plate", asset("ai/settle/build_settle_plate.py"))
+        bsp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bsp)
+        bsp.build()
+
     rows = [(b, c, t, d) for b, c, t, d, _n in
             [(x[0], x[1], x[2], x[4], x[5]) for x in BEATS] if c]
 
