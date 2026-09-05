@@ -133,6 +133,14 @@ jobs:
       - name: Layout contract
         run: npm run check:layout
 
+      # ...and the SCENE may not cover his face either. The layout contract
+      # only ever policed the UI, so the home room shipped a floor lamp whose
+      # shade sat on his skull: it had been positioned entirely by reasoning
+      # about the couch behind it, and the biggest thing on the screen was
+      # never in that arithmetic.
+      - name: Nothing stands on his face
+        run: npm run build:pages && node scripts/prop-clear-check.mjs
+
       # Every control at least 44x44, every control labelled, every word
       # clearing WCAG AA against what is actually behind it.
       - name: Accessibility

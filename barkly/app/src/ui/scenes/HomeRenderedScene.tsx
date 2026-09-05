@@ -577,8 +577,26 @@ export function HomeScene({
   const ROOM_CAP = 620;
   const wallInset =
     width <= ROOM_CAP ? Math.max(12, width * 0.045) : (width - ROOM_CAP) / 2 + ROOM_CAP * 0.045;
-  // One value, read by the lamp sprite and by the glow that has to sit on it.
-  const lampLeft = wallInset + chairW * 0.84;
+  /*
+   * THE LAMP STANDS ON THE OTHER SIDE OF THE ROOM, BECAUSE BARKLY STANDS HERE.
+   *
+   * It used to sit at `wallInset + chairW * 0.84`, which was reasoned about
+   * entirely against the COUCH -- see the note at its draw call, which is all
+   * about clearing the couch back so the pole reads. Nobody measured it against
+   * the biggest thing on the screen. Captured at 390x844: the lamp occupied
+   * x 143..224 and Barkly x 131..257, so the lamp was entirely inside his
+   * silhouette and its shade -- the one part of it that reads -- sat on his
+   * skull. The room shipped with a lampshade growing out of the dog's head.
+   *
+   * Standing it right of centre fixes three things at once: it clears his face,
+   * it shows the whole pole against wall and floor rather than against couch
+   * upholstery, and it balances a composition that had the couch AND the lamp
+   * both crowded into the left third with dead wall on the right.
+   *
+   * The clearance is not a hope -- `scripts/prop-clear-check.mjs` measures every
+   * scene prop against his face column in the real build and fails on a cover-up.
+   */
+  const lampLeft = width - wallInset - lampW - chairW * 0.06;
 
   /*
    * FIT THE WALL FURNITURE TO THE WALL.

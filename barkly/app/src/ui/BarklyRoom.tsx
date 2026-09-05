@@ -1578,7 +1578,23 @@ const styles = StyleSheet.create({
    * that band entirely. It also puts something in the empty middle of the
    * field, which was the largest dead area in any scene.
    */
-  digSpot: { position: 'absolute', left: 10, alignItems: 'center', zIndex: 2 },
+  /*
+   * THE WIDTH IS WHAT MAKES `left` MEAN ANYTHING.
+   *
+   * Absolutely positioned with only `left` set, this box stretched the full
+   * width of the stage -- measured 16..344 on a 360px phone -- and
+   * `alignItems: 'center'` then centred the mound inside THAT. So the control
+   * did not sit at the left of the field at all; it sat in the middle of the
+   * screen, which is exactly where Barkly stands. On a short phone the mound
+   * and its DIG label were pressed against his cheek and the label collided
+   * with BISCUIT's nameplate. Every note above this line reasons about the
+   * mound's HEIGHT, and each one is correct; none of them could have helped,
+   * because the horizontal placement was never in effect.
+   *
+   * A real width makes `left: 10` do what all of them assumed it already did.
+   * `scripts/prop-clear-check.mjs` measures the result against his face.
+   */
+  digSpot: { position: 'absolute', left: 10, width: 112, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: -11, ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodSoft, paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodWarm, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   /*
