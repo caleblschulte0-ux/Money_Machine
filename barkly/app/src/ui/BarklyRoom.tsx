@@ -1378,7 +1378,29 @@ export default function BarklyRoom() {
               </View>
             </View>
           ) : (
+            /*
+              THE RESTING DOCK IS A CONSOLE, NOT A HOLE.
+
+              Measured over a minute at home, the conversation dock holds
+              content in 5 samples out of 30 -- a thought shows for 5.2s every
+              ~23s. So for 83% of a session this is what the bottom of the
+              screen IS, and it was two pills floating on bare floorboards. The
+              flattest-band measurement over the four scenes found the same 70px
+              dead strip at y 725..795 in home, town and beach, and none in park
+              -- park was the one scene that happened to have a thought up.
+
+              The box itself is already reserved and pinned (layout.conversationBox),
+              so this adds a tray INSIDE it and changes no height; the hero-layout
+              tests fail if that stops being true. Same wood/cream material as
+              the care dock above it, so the bottom of the screen reads as one
+              piece of the toy rather than as leftover room.
+            */
             <View style={styles.compactControls}>
+              <View style={styles.restingTrayShadow} pointerEvents="none" />
+              <View style={styles.restingTray} pointerEvents="none">
+                <View style={styles.restingTrayGloss} pointerEvents="none" />
+                <View style={styles.restingTrayLip} pointerEvents="none" />
+              </View>
               {sttAvailable && (
                 <Pressable
                   style={({ pressed }) => [styles.compactAction, pressed && styles.pressed, locked && styles.disabled]}
@@ -1631,6 +1653,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
+  },
+  /*
+   * Highlight, body, darker lower lip, contact shadow -- the four parts
+   * docs/VISUAL_DIRECTION_KIDS_GAME.md asks of anything that should read as a
+   * physical object rather than a rectangle with a radius. Absolutely
+   * positioned so it paints behind the controls without touching the box's
+   * height, which is load-bearing: the stage is sized against it.
+   */
+  restingTrayShadow: {
+    position: 'absolute', left: 6, right: 6, top: 8, bottom: 1,
+    borderRadius: radius.xl, backgroundColor: DIORAMA.shadow, opacity: 0.22,
+  },
+  restingTray: {
+    // A tray sitting IN the room, not falling off the bottom of the phone.
+    position: 'absolute', left: 0, right: 0, top: 2, bottom: 6,
+    borderRadius: radius.xl, backgroundColor: DIORAMA.cream,
+    borderWidth: 2, borderColor: DIORAMA.woodWarm, overflow: 'hidden',
+  },
+  restingTrayGloss: {
+    position: 'absolute', left: 16, right: 16, top: 4, height: 5,
+    borderRadius: radius.pill, backgroundColor: DIORAMA.white, opacity: 0.66,
+  },
+  restingTrayLip: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, height: 7,
+    backgroundColor: DIORAMA.woodSoft, opacity: 0.55,
   },
   compactAction: {
     height: TAP_MIN,

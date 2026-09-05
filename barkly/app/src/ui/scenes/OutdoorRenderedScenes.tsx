@@ -21,6 +21,15 @@ const PARK_TREE = require('../../../assets/world/park/props/tree.png');
 const PARK_BENCH = require('../../../assets/world/park/props/bench.png');
 const PARK_HEDGE = require('../../../assets/world/park/props/hedge.png');
 
+/**
+ * The lowest a sky object may sit and still be seen.
+ *
+ * Measured, not guessed: the destination tabs end at y 109 at 360x568,
+ * 360x780, 390x844 and 430x932 alike, and the scene renders underneath them
+ * from y 0. Nine pixels of air above that.
+ */
+const CHROME_CLEAR = 118;
+
 const TOWN_STORE_CORAL = require('../../../assets/world/town/props/store_coral.png');
 const TOWN_STORE_AQUA = require('../../../assets/world/town/props/store_aqua.png');
 const TOWN_STORE_VIOLET = require('../../../assets/world/town/props/store_violet.png');
@@ -145,11 +154,23 @@ function SceneSky({ band, horizon, chromeBottom }: { band: SkyBand; horizon: num
         two rows give it a real edge, a soft tinted underside sells the volume,
         and a second smaller cloud further back gives the sky depth.
       */}
+      {/*
+        AND IT HAS TO CLEAR THE TAB BAR.
+
+        The floor of that clamp was 94, and the destination tabs end at 109 on
+        every tested viewport (they overlay the scene, which starts at y 0). So
+        whenever the horizon sat low enough for the clamp to bite -- town on a
+        phone, every time -- the cloud's whole lumpy top was hidden behind the
+        chrome and the only part left showing was its bottom puff: a 118x18
+        rounded pill under the tab tray. The exact "empty grey UI slab parked
+        under the tab bar" the note above was written to kill, reintroduced by
+        the clamp that was supposed to keep the cloud on screen.
+      */}
       <Animated.View
         style={[
           styles.cloud,
           {
-            top: Math.max(94, horizon - 104),
+            top: Math.max(CHROME_CLEAR, horizon - 104),
             opacity: night ? 0.14 : 0.94,
             transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-18, 22] }) }],
           },
@@ -166,7 +187,7 @@ function SceneSky({ band, horizon, chromeBottom }: { band: SkyBand; horizon: num
         style={[
           styles.cloudFar,
           {
-            top: Math.max(78, horizon - 148),
+            top: Math.max(CHROME_CLEAR - 4, horizon - 148),
             opacity: night ? 0.08 : 0.62,
             transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [14, -12] }) }],
           },
