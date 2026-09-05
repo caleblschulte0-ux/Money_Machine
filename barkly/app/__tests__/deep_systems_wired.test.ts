@@ -160,6 +160,24 @@ describe('the deep systems stay wired to the runtime', () => {
     }
   });
 
+  it('the bank holds what he SAYS, and his inner voice is not that', () => {
+    /*
+     * Ambient thoughts are rendered italic, in a different shell colour, with
+     * no speech tail, and no `speak()` call anywhere touches them -- `thought`
+     * reaches exactly one <Text>. They were on the harvest list anyway, so 25
+     * clips and 284KB rode in a bank whose check reports "N/N lines banked", a
+     * number that is meant to mean every line he says is recorded in his voice.
+     *
+     * If thoughts are ever made audible, this test is the thing that fails
+     * first and says to put the file back on the list.
+     */
+    const hook = read('src/hooks/useBarkly.ts');
+    expect(hook).not.toMatch(/speak\(\s*(?:bronx\()?pickThought/);
+    const room = read('src/ui/BarklyRoom.tsx');
+    expect(room).not.toMatch(/speak\([^)]*\bthought\b/);
+    expect(read('scripts/voice-bank.mjs')).not.toMatch(/file: 'src\/world\/thoughts\.ts'/);
+  });
+
   it('the incident gate reads onboarding COMPLETION, not its mere existence', () => {
     // `onboarding` stays a truthy record forever once the flow is done, so a
     // plain truthiness check silences the world permanently. This cost a

@@ -5,12 +5,41 @@
 
 import { LocationId } from './locations';
 
+/*
+ * SIZE IS A FEATURE HERE, not a nice-to-have.
+ *
+ * A brand-new player has no taught cues and no facts on file, so BOTH the
+ * branches below are unreachable and every thought they see comes from
+ * UNIVERSAL + their location. That was 9 lines at home. Thoughts surface every
+ * 16-30 seconds, so the whole of Barkly's inner life cycled in about three and
+ * a half minutes and then repeated in the same order -- inside the ten-minute
+ * window where a stranger decides whether this is a specific little dog or a
+ * loop with a face. Home is 28 now, which outlasts a first session at the
+ * cadence a player actually gets (see the test, which sizes to the MEAN
+ * interval rather than the floor).
+ *
+ * These cost nothing to add: thoughts are display-only (see the note on
+ * ABOUT_A_CUE), so unlike a spoken line none of them needs recording.
+ */
 const UNIVERSAL = [
   'i could be napping right now. i am always partially napping.',
   'my tail is following me again.',
   'what if treats… but bigger',
   'i smelled that smell again. investigating later.',
   'note to self: the vacuum knows what it did.',
+  'i have four legs and none of them agree.',
+  'the ceiling has been up there this entire time.',
+  'if i sit very still, food happens. usually.',
+  'i was going to do something. it was important. it is gone now.',
+  'my nose knows things i am not ready for.',
+  'somewhere a door is about to open. i will be ready.',
+  'i am not tired. i am conserving.',
+  'that noise was nothing. i checked. twice.',
+  'i have never lost a staring contest with a wall.',
+  'good dog is a fact, not an opinion.',
+  'i am owed something. i do not know what. i am owed it.',
+  'a leaf moved. i have made a note of the leaf.',
+  'everything is fine and i am watching it closely.',
 ];
 
 const BY_LOCATION: Record<LocationId, string[]> = {
@@ -19,6 +48,12 @@ const BY_LOCATION: Record<LocationId, string[]> = {
     'someone walked past the house. logged it.',
     'my bed is exactly the right amount of bed.',
     'i can hear the fridge thinking about opening.',
+    'this rug and i have a working relationship.',
+    'the hallway is longer at night. nobody talks about it.',
+    'i heard a bag. somewhere there was a bag.',
+    'the sofa is technically mine. we do not discuss it.',
+    'the front door is a portal and i am its warden.',
+    'i sat here yesterday as well. consistency.',
   ],
   park: [
     'that squirrel is back. bold. very bold.',
@@ -26,12 +61,24 @@ const BY_LOCATION: Record<LocationId, string[]> = {
     'duke thinks this is his park. incorrect.',
     'somewhere out there is the perfect stick.',
     'this fence has never once caught me.',
+    'a dog i do not know walked past. neutral. for now.',
+    'this bench has seen things.',
+    'the ball goes away and comes back. genius, honestly.',
+    'i buried something here. probably.',
+    'the wind brought news. mostly about geese.',
+    'that tree is a suspect.',
   ],
   town: [
     'the bakery is doing crimes of smell again.',
     'pigeons: overconfident. always.',
     'that lamppost and i have an understanding.',
     'someone dropped a crumb here in 2019. i remember.',
+    'a car went past very slowly. suspicious.',
+    'someone in there is eating something. i can tell.',
+    'this pavement is warm. that is a service.',
+    'a child pointed at me. correct call.',
+    'the bin on the corner is a museum.',
+    'doors that open by themselves. i respect the effort.',
   ],
   beach: [
     'the sea keeps coming at me. i keep letting it.',
@@ -39,12 +86,21 @@ const BY_LOCATION: Record<LocationId, string[]> = {
     'that gull looked at me. we both know what happened.',
     'i dug a hole and the sea filled it in. rude.',
     'seaweed: a snack? a foe? research ongoing.',
+    'a crab looked at me sideways. noted.',
+    'the horizon keeps moving away. rude, but fair.',
+    'wet sand holds a paw print. proof i was here.',
+    'a boat went past. i barked. it left. you are welcome.',
+    'shells: tiny hats for nobody.',
+    'the wind out here has opinions.',
   ],
 };
 
 const NIGHT = [
   'the moon is just a big treat nobody can reach.',
   'night smells different. better? different.',
+  'everyone is asleep and i am the only one working.',
+  'the house makes noises at night. i allow it.',
+  'stars. thousands of them. none edible.',
 ];
 
 /**

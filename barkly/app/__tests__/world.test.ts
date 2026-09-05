@@ -155,4 +155,53 @@ describe('two dogs are not the same shape', () => {
   it('leaves the one dog whose drawing already varies alone', () => {
     expect(NPCS.pepper.stance).toBeUndefined();
   });
+
+  /*
+   * WHAT A BRAND-NEW PLAYER ACTUALLY SEES.
+   *
+   * The two branches above -- a thought about a cue, a thought about you --
+   * both need history a first-time player does not have yet, so on day one
+   * EVERY thought comes from UNIVERSAL + their location. That pool was 9 lines
+   * at home. Thoughts surface every 16-30 seconds, so his whole inner life
+   * cycled in about three and a half minutes and then repeated in order --
+   * inside the ten-minute window where a stranger decides whether this is a
+   * specific little dog or a loop with a face.
+   *
+   * The bar is the session, not a number I like: enough distinct thoughts to
+   * outlast ten minutes at the FASTEST cadence, with no cues and no facts.
+   */
+  /*
+   * The cadence in useBarkly is `16000 + Math.random() * 14000`, so the MEAN
+   * interval is 23s -- not the 16s floor, which would need every one of ~38
+   * consecutive draws to land at the minimum. Sizing to the floor is sizing to
+   * a case that does not happen; the mean is the number a player actually
+   * lives through.
+   */
+  const MEAN_INTERVAL_S = (16 + 30) / 2;
+  const FIRST_SESSION_S = 10 * 60;
+
+  it('does not repeat itself inside a first session, in any location', () => {
+    const needed = Math.ceil(FIRST_SESSION_S / MEAN_INTERVAL_S);
+    for (const loc of LOCATION_ORDER) {
+      const seen = new Set<string>();
+      // Day hour, no cues, no facts: exactly what day one looks like.
+      for (let seed = 0; seed < 400; seed += 1) seen.add(pickThought(loc, 14, seed, [], []));
+      expect(seen.size).toBeGreaterThanOrEqual(needed);
+    }
+  });
+
+  it('every thought is his voice and fits the bubble', () => {
+    for (const loc of LOCATION_ORDER) {
+      for (const hour of [14, 23]) {
+        for (let seed = 0; seed < 200; seed += 1) {
+          const t = pickThought(loc, hour, seed, [], []);
+          expect(t.trim()).toBe(t);
+          expect(t.length).toBeGreaterThan(8);
+          // paginateSpeech would page a longer one, but a thought that needs
+          // turning is not a thought.
+          expect(t.length).toBeLessThanOrEqual(72);
+        }
+      }
+    }
+  });
 });

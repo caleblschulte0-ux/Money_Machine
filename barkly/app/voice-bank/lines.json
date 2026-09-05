@@ -20,12 +20,6 @@
       "tag": "offline"
     },
     {
-      "key": "02229c7e4c601e8c",
-      "spoken": "da moon is just a big treat nobody can reach.",
-      "source": "the moon is just a big treat nobody can reach.",
-      "tag": "thoughts"
-    },
-    {
       "key": "02d88ee7906c46c1",
       "spoken": "Look at me. Does dis look like a dog with room?",
       "source": "Look at me. Does this look like a dog with room?",
@@ -42,12 +36,6 @@
       "spoken": "Nap. Yeah. I have made my decision and it is nap.",
       "source": "Nap. Yes. I have made my decision and it is nap.",
       "tag": "offline"
-    },
-    {
-      "key": "03d132775b3ce206",
-      "spoken": "da grass smells like EVERYONE was here.",
-      "source": "the grass smells like EVERYONE was here.",
-      "tag": "thoughts"
     },
     {
       "key": "04160f31b78ebf8d",
@@ -398,12 +386,6 @@
       "tag": "saga"
     },
     {
-      "key": "1aa3a7432e955674",
-      "spoken": "someone dropped a crumb here in 2019. i remember.",
-      "source": "someone dropped a crumb here in 2019. i remember.",
-      "tag": "thoughts"
-    },
-    {
       "key": "1ad3e63a59d970aa",
       "spoken": "Cool. cool. I marked da fire hydrant. The BIG one. Checkmate.",
       "source": "Cool, cool. I marked the fire hydrant. The BIG one. Checkmate.",
@@ -432,12 +414,6 @@
       "spoken": "Dat's the spirit. Whatever that was.",
       "source": "That's the spirit. Whatever that was.",
       "tag": "talk"
-    },
-    {
-      "key": "1c2d235c977cb3b2",
-      "spoken": "dis fence has never once caught me.",
-      "source": "this fence has never once caught me.",
-      "tag": "thoughts"
     },
     {
       "key": "1dd6682b4a70270e",
@@ -728,12 +704,6 @@
       "tag": "npcs"
     },
     {
-      "key": "40a290911fc8ddc4",
-      "spoken": "what if treats… but bigger",
-      "source": "what if treats… but bigger",
-      "tag": "thoughts"
-    },
-    {
       "key": "4126095b04fb7b82",
       "spoken": "Suit yourself. You can teach me one any time — tell me what to do when ya say a word.",
       "source": "Suit yourself. You can teach me one any time — tell me what to do when you say a word.",
@@ -750,12 +720,6 @@
       "spoken": "Just us. Which is da correct number of people.",
       "source": "Just us. Which is the correct number of people.",
       "tag": "offline"
-    },
-    {
-      "key": "4200a650ccb626ba",
-      "spoken": "somewhere out there is da perfect stick.",
-      "source": "somewhere out there is the perfect stick.",
-      "tag": "thoughts"
     },
     {
       "key": "42c860bd55ad7fbd",
@@ -968,12 +932,6 @@
       "tag": "greetings"
     },
     {
-      "key": "5380d68e1c2213de",
-      "spoken": "dat gull looked at me. we both know what happened.",
-      "source": "that gull looked at me. we both know what happened.",
-      "tag": "thoughts"
-    },
-    {
       "key": "551e35032b06ad61",
       "spoken": "Good. Let them find out on their own, like we did. Biscuit — dat came out nice. Ignore it. I'm just sayin'.",
       "source": "Good. Let them find out on their own, like we did. Biscuit — that came out nice. Ignore it.",
@@ -1014,12 +972,6 @@
       "spoken": "Every time I get close it leaves. This is da most interestin' thing here.",
       "source": "Every time I get close it leaves. This is the most interesting thing here.",
       "tag": "hook"
-    },
-    {
-      "key": "58a099d0d81777f5",
-      "spoken": "i smelled dat smell again. investigatin' later.",
-      "source": "i smelled that smell again. investigating later.",
-      "tag": "thoughts"
     },
     {
       "key": "5a6ade4ebbd2a151",
@@ -1142,12 +1094,6 @@
       "tag": "npcs"
     },
     {
-      "key": "6880c11a87839865",
-      "spoken": "seaweed: a snack? a foe? research ongoin'.",
-      "source": "seaweed: a snack? a foe? research ongoing.",
-      "tag": "thoughts"
-    },
-    {
       "key": "68d357120c219884",
       "spoken": "Biscuit. Buddy. That's da same stick as yesterday. ...Okay it's a great stick.",
       "source": "Biscuit. Buddy. That's the same stick as yesterday. ...Okay it's a great stick.",
@@ -1200,12 +1146,6 @@
       "spoken": "Formin' an opinion. Listen to her. I just bark at things and hope.",
       "source": "Forming an opinion. Listen to her. I just bark at things and hope.",
       "tag": "npcs"
-    },
-    {
-      "key": "703524e4f1387537",
-      "spoken": "pigeons: overconfident. always.",
-      "source": "pigeons: overconfident. always.",
-      "tag": "thoughts"
     },
     {
       "key": "707ee86aaf066387",
@@ -1340,12 +1280,6 @@
       "tag": "contest"
     },
     {
-      "key": "8557f8e3acc31580",
-      "spoken": "i dug a hole and da sea filled it in. rude.",
-      "source": "i dug a hole and the sea filled it in. rude.",
-      "tag": "thoughts"
-    },
-    {
       "key": "85630258f283c308",
       "spoken": "Fetch? Throw it. Throw it right now. Why are ya still talkin'?",
       "source": "Fetch? Throw it. Throw it right now. Why are you still talking?",
@@ -1412,12 +1346,6 @@
       "tag": "saga"
     },
     {
-      "key": "8f4656d5b8f48515",
-      "spoken": "night smells different. better? different.",
-      "source": "night smells different. better? different.",
-      "tag": "thoughts"
-    },
-    {
       "key": "930aadbbd047e7f0",
       "spoken": "Ya saved me the good half? Biscuit, that's the nicest dumb thing anyone's done for me.",
       "source": "You saved me the good half? Biscuit, that's the nicest dumb thing anyone's done for me.",
@@ -1458,12 +1386,6 @@
       "spoken": "Dat ain't a thing.",
       "source": "That isn't a thing.",
       "tag": "progression"
-    },
-    {
-      "key": "971fb2071f627e4d",
-      "spoken": "my bed is exactly da right amount of bed.",
-      "source": "my bed is exactly the right amount of bed.",
-      "tag": "thoughts"
     },
     {
       "key": "98856a7aeade3fa0",
@@ -1616,12 +1538,6 @@
       "tag": "incidents"
     },
     {
-      "key": "abbe626ba88233d6",
-      "spoken": "my tail is followin' me again.",
-      "source": "my tail is following me again.",
-      "tag": "thoughts"
-    },
-    {
       "key": "abfb0bba2b1f4e75",
       "spoken": "Just checkin' you're still dere.",
       "source": "Just checking you're still there.",
@@ -1662,12 +1578,6 @@
       "spoken": "Biscuit. Classic. Hand it over.",
       "source": "Biscuit. Classic. Hand it over.",
       "tag": "hook"
-    },
-    {
-      "key": "b093826dd0770f51",
-      "spoken": "someone walked past da house. logged it. Capisce?",
-      "source": "someone walked past the house. logged it.",
-      "tag": "thoughts"
     },
     {
       "key": "b0b05375818fda55",
@@ -1722,12 +1632,6 @@
       "spoken": "Duke. Yo. Nemesis. Say it right — with RESPECT and mild fear, like in my head.",
       "source": "Duke. Nemesis. Say it right — with RESPECT and mild fear, like in my head.",
       "tag": "npcs"
-    },
-    {
-      "key": "b5a0b3fa846f24fc",
-      "spoken": "duke thinks dis is his park. incorrect.",
-      "source": "duke thinks this is his park. incorrect.",
-      "tag": "thoughts"
     },
     {
       "key": "b5a1c7b8e0070a25",
@@ -1832,18 +1736,6 @@
       "tag": "offline"
     },
     {
-      "key": "c791218cb614e283",
-      "spoken": "da bakery is doin' crimes of smell again.",
-      "source": "the bakery is doing crimes of smell again.",
-      "tag": "thoughts"
-    },
-    {
-      "key": "c9ad338168383c52",
-      "spoken": "dat squirrel is back. bold. real bold.",
-      "source": "that squirrel is back. bold. very bold.",
-      "tag": "thoughts"
-    },
-    {
       "key": "ca0494458f378d9e",
       "spoken": "Say dat again — I wasn't listenin' properly. I admit it. I'm just sayin'.",
       "source": "Say that again — I wasn't listening properly. I admit it.",
@@ -1920,18 +1812,6 @@
       "spoken": "No. Nap. We can do da runnin' thing later.",
       "source": "No. Nap. We can do the running thing later.",
       "tag": "reactions"
-    },
-    {
-      "key": "d6aa2cab529f72e9",
-      "spoken": "i can hear da fridge thinkin' about openin'. Capisce?",
-      "source": "i can hear the fridge thinking about opening.",
-      "tag": "thoughts"
-    },
-    {
-      "key": "d73d65ac8fbd7a8e",
-      "spoken": "dat lamppost and i have an understandin'.",
-      "source": "that lamppost and i have an understanding.",
-      "tag": "thoughts"
     },
     {
       "key": "d75ca49b942f8bb8",
@@ -2060,12 +1940,6 @@
       "tag": "encounters"
     },
     {
-      "key": "e71cea3a4696a243",
-      "spoken": "da window shows outside. i own outside.",
-      "source": "the window shows outside. i own outside.",
-      "tag": "thoughts"
-    },
-    {
       "key": "e7dc520193994a49",
       "spoken": "Plan complete. Disturbingly productive. We should probably do somethin' pointless now.",
       "source": "Plan complete. Disturbingly productive. We should probably do something pointless now.",
@@ -2136,24 +2010,6 @@
       "spoken": "Nope. Don't care. Not even a little. ...Stop lookin' at it though.",
       "source": "Nope. Don't care. Not even a little. ...Stop looking at it though.",
       "tag": "encounters"
-    },
-    {
-      "key": "f1beb5655ca54da1",
-      "spoken": "da sea keeps comin' at me. i keep lettin' it.",
-      "source": "the sea keeps coming at me. i keep letting it.",
-      "tag": "thoughts"
-    },
-    {
-      "key": "f21c07fe2041d3d1",
-      "spoken": "note to self: da vacuum knows what it did.",
-      "source": "note to self: the vacuum knows what it did.",
-      "tag": "thoughts"
-    },
-    {
-      "key": "f297bb48eb67b4be",
-      "spoken": "i could be nappin' right now. i am always partially nappin'.",
-      "source": "i could be napping right now. i am always partially napping.",
-      "tag": "thoughts"
     },
     {
       "key": "f2a5b44006a7a4c9",
@@ -2238,12 +2094,6 @@
       "spoken": "One time I found a sock that wasn't mine. It's mine now. That's da whole arc. Capisce?",
       "source": "One time I found a sock that wasn't mine. It's mine now. That's the whole arc.",
       "tag": "talk"
-    },
-    {
-      "key": "fbb48c0b93569f7e",
-      "spoken": "sand gets in everythin'. i respect da commitment.",
-      "source": "sand gets in everything. i respect the commitment.",
-      "tag": "thoughts"
     },
     {
       "key": "fdfc7f8ef6372a0c",

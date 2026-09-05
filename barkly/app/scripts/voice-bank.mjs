@@ -83,7 +83,20 @@ const SOURCES = [
    * banked are, and the ones with the player's name in them stay out.
    */
   { file: 'src/providers/dialogue/scripted.ts', tag: 'offline' },
-  { file: 'src/world/thoughts.ts', tag: 'thoughts' },
+  /*
+   * `src/world/thoughts.ts` IS NOT HERE, and that is the point of this note.
+   *
+   * It was, and it contributed 25 clips and 284KB to a bank whose own check
+   * reports "N/N lines banked" -- a number that is supposed to mean "every line
+   * he SAYS is recorded in his voice". Ambient thoughts are not said. They are
+   * his INNER voice: `setThought` in useBarkly reaches exactly one <Text>, drawn
+   * italic in a different shell colour with no speech tail, and no `speak()`
+   * call anywhere touches it. So those 25 clips could never be played, and the
+   * coverage number was 25 lines more confident than the truth.
+   *
+   * If thoughts are ever made audible, this line comes back -- and
+   * `tests/deep_systems_wired` fails first, which is the reminder.
+   */
   { file: 'src/hooks/useBarkly.ts', tag: 'hook' },
   // Scoped to the property that is actually SPOKEN. These files also hold
   // journal entries, badge labels and %s headlines — text that is read, not
@@ -342,7 +355,7 @@ function check() {
 
   const orphans = [...onDisk].filter((k) => !entries.some((e) => e.key === k));
   if (orphans.length) {
-    console.log(`${orphans.length} orphaned clip(s) — lines that were reworded since they were recorded`);
+    console.log(`${orphans.length} orphaned clip(s) — reworded since recording, or their source left SOURCES`);
     if (process.argv.includes('--prune')) {
       for (const k of orphans) rmSync(join(AUDIO_DIR, `${k}.mp3`));
       console.log('pruned');

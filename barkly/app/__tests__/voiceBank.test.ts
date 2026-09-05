@@ -76,8 +76,18 @@ describe('the generated module tells the truth about itself', () => {
     expect(BANKED_LINE_COUNT).toBeGreaterThanOrEqual(100);
   });
 
-  it('covers the moments you hear before you have typed anything', () => {
-    // Greetings, reactions and thoughts are the whole first minute of the app.
+  it('covers the moments you HEAR before you have typed anything', () => {
+    /*
+     * Greetings, reactions and mishaps are the whole first minute of the app.
+     *
+     * 'thoughts' was on this list and should not have been: ambient thoughts
+     * are his INNER voice -- rendered italic, in a different shell colour, with
+     * no speech tail -- and no `speak()` call anywhere touches them. They cost
+     * 25 clips and 284KB in a bank whose own check reports "N/N lines banked",
+     * a number meant to say every line he SAYS is recorded in his voice.
+     * __tests__/deep_systems_wired holds the other end: if thoughts ever
+     * become audible, that fails and points back here.
+     */
     const byTag = new Map<string, { have: number; want: number }>();
     for (const e of HARVEST.entries) {
       const row = byTag.get(e.tag) ?? { have: 0, want: 0 };
@@ -85,11 +95,12 @@ describe('the generated module tells the truth about itself', () => {
       if (VOICE_BANK[e.spoken] !== undefined) row.have += 1;
       byTag.set(e.tag, row);
     }
-    for (const tag of ['greetings', 'reactions', 'thoughts', 'mishaps']) {
+    for (const tag of ['greetings', 'reactions', 'mishaps']) {
       const row = byTag.get(tag);
       expect(row).toBeDefined();
       expect(row!.have).toBe(row!.want);
     }
+    expect(byTag.get('thoughts')).toBeUndefined();
   });
 });
 
