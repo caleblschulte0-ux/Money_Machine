@@ -20,14 +20,15 @@ skyline. That crop is the ENTIRE photographic content of the plate --
 nothing below y=365 in the source frame is used, because that is where he
 is.
 
-Below the photo, a soft defocused fade (a blurred, stretched echo of the
-photo's own last rows, opacity ramping to zero) into the film's own dark
-palette, where one/map_overlay.py draws the legend key. This is
-deliberately NOT the same move as the darkened/blurred "minimalist map"
-the operator rejected (trailer/v7_ui.py's z_map.mp4 lineage) -- that
-treatment darkened the WHOLE photo into near-illegibility and drew a
-synthetic path over it. Here the photo itself is never darkened or
-degraded; only the card it sits in fades away beneath it.
+Below the photo, a short fade into the film's own dark palette (the
+photo's own last row, sharp, dissolved by opacity alone -- see build()'s
+comment for why this is NOT a blur), where one/map_overlay.py draws the
+legend key. This is deliberately NOT the same move as the darkened/
+blurred "minimalist map" the operator rejected (trailer/v7_ui.py's
+z_map.mp4 lineage) -- that treatment darkened the WHOLE photo into
+near-illegibility and drew a synthetic path over it. Here the photo
+itself is never darkened, blurred, or degraded; only the card it sits in
+fades away beneath it.
 """
 import os
 import subprocess
@@ -93,18 +94,31 @@ def build():
     y0 = 138          # lands the photo just inside the 2.39 scope bar
     canvas[y0:y0 + PHOTO_H, 0:W] = photo
 
-    # a short soft fade into the dark below, so the photo's bottom edge
-    # does not end on a hard line -- much shorter now that the photo
-    # itself fills almost the whole visible window
+    # A short fade into the dark below, so the photo's bottom edge does not
+    # end on a hard line. This USED TO stretch+Gaussian-blur a 40-row echo
+    # of the photo across the full fade band -- which reads fine directly
+    # under the legend card (LEGEND_XY, one/map_overlay.py) but the legend
+    # only covers the left third of the frame, so across the other two
+    # thirds it was a band of grass and trees going visibly OUT OF FOCUS
+    # for no reason anything on screen explains. Every real-footage beat
+    # in this film runs sharp right up to a hard scope-bar cut; a plate
+    # that goes soft first, alone, reads as a rendering defect, not a
+    # deliberate look. A first fix (dissolving the photo's own last ROW,
+    # unblurred, into the dark) traded that for a different artifact: one
+    # row repeated across 60 rows stretches whatever fine texture sits on
+    # it (a fence line, grass blades) into a vertical barcode pattern --
+    # still reads as broken, just a different way. A real vignette is not
+    # a picture that goes soft OR streaky at its edge, it is a picture
+    # that goes DARK -- so this fades to the photo's own MEAN colour (one
+    # flat tone, no texture to stretch, no blur to go soft) instead of any
+    # texture sample at all.
     fade_h = min(60, H - (y0 + PHOTO_H))
     if fade_h > 0:
-        src = photo[-40:]
-        stretched = cv2.GaussianBlur(
-            cv2.resize(src, (W, fade_h), interpolation=cv2.INTER_LINEAR), (0, 0), 10)
+        mean_color = photo[-24:].reshape(-1, 3).mean(axis=0)
         for i in range(fade_h):
             a = (1.0 - i / fade_h) ** 1.6
             canvas[y0 + PHOTO_H + i, 0:W] = (
-                canvas[y0 + PHOTO_H + i, 0:W] * (1 - a) + stretched[i] * a)
+                canvas[y0 + PHOTO_H + i, 0:W] * (1 - a) + mean_color * a)
 
     cv2.imwrite(OUT, canvas.astype(np.uint8))
     print(f"  wrote {OUT} ({W}x{H}, photo band y={y0}-{y0+PHOTO_H}, "
@@ -144,15 +158,17 @@ def build_sync():
     y0 = 138
     canvas[y0:y0 + PHOTO_H, 0:W] = band
 
+    # Same fix as build()'s fade -- see that function's comment. Fades to
+    # the plate's own mean colour (flat, no texture), not a blurred or
+    # unblurred sample of it -- either of those stretches whatever texture
+    # sits on the sampled rows into an artifact of its own.
     fade_h = min(60, H - (y0 + PHOTO_H))
     if fade_h > 0:
-        src = band[-40:]
-        stretched = cv2.GaussianBlur(
-            cv2.resize(src, (W, fade_h), interpolation=cv2.INTER_LINEAR), (0, 0), 10)
+        mean_color = band[-24:].reshape(-1, 3).mean(axis=0)
         for i in range(fade_h):
             a = (1.0 - i / fade_h) ** 1.6
             canvas[y0 + PHOTO_H + i, 0:W] = (
-                canvas[y0 + PHOTO_H + i, 0:W] * (1 - a) + stretched[i] * a)
+                canvas[y0 + PHOTO_H + i, 0:W] * (1 - a) + mean_color * a)
 
     cv2.imwrite(SYNC_OUT, canvas.astype(np.uint8))
     print(f"  wrote {SYNC_OUT} ({W}x{H}, photo band y={y0}-{y0+PHOTO_H})")

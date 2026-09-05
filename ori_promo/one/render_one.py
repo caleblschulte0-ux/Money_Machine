@@ -680,6 +680,22 @@ def main(only=None):
         bmp.build()
         bmp.ensure_clip(map_clip)
 
+    # `sync` reads raw/IMG_MAP2.MOV -- the SAME built-plate discipline as
+    # `map`, one beat later, but this one had NO auto-build path: a fresh
+    # checkout (or the file simply missing) crashed the sync beat outright
+    # ("MAP2@0.0: wanted 63 frames, got 0") rather than rebuilding it the
+    # way every other plate in this block does. Found while rebuilding the
+    # map/sync plates for the v30.1 fade fix.
+    sync_clip = os.path.join(RAW, "IMG_MAP2.MOV")
+    if not os.path.exists(sync_clip):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "build_map_plate", asset("ai/map/build_map_plate.py"))
+        bmp2 = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bmp2)
+        bmp2.build_sync()
+        bmp2.ensure_sync_clip(sync_clip)
+
     # `hero` reads raw/IMG_HERO1.MOV the same way -- a BUILT plate (a
     # generated still, held with a slow push-in), not committed, same
     # discipline as map/ice. Build it here if a fresh checkout is missing it.
