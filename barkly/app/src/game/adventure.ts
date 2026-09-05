@@ -11,6 +11,7 @@
 import { CharacterState } from '../barkly/character';
 import { MemoryState } from '../barkly/memory';
 import { deriveStoryArc } from '../barkly/story';
+import { displayName } from '../world/npcs';
 import { levelFor } from './progression';
 
 /**
@@ -131,7 +132,13 @@ function candidates(input: AdventureInput): AdventureGoal[] {
       id: `rival-${rival[0].toLowerCase()}`,
       kind: 'npc',
       target: rival[0].toLowerCase(),
-      label: `Go see ${rival[0]}`,
+      /*
+       * The bond KEY is not his name -- it is whichever spelling arrived first,
+       * so a save carrying 'duke' printed "Go see duke" on the adventure card.
+       * `target` stays lowercased because it is a matching key; only what the
+       * player READS goes through displayName.
+       */
+      label: `Go see ${displayName(rival[0])}`,
       detail: rival[1].encounters >= 6 ? 'The nemesis situation is not going to resolve itself.' : 'There is unfinished business here.',
       done: false,
     });
@@ -153,7 +160,7 @@ function candidates(input: AdventureInput): AdventureGoal[] {
       id: `friend-${friend[0].toLowerCase()}`,
       kind: 'npc',
       target: friend[0].toLowerCase(),
-      label: `Check in with ${friend[0]}`,
+      label: `Check in with ${displayName(friend[0])}`,
       detail: friend[1].encounters >= 6 ? 'Best friends have business.' : 'See what they are up to.',
       done: false,
     });

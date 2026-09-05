@@ -1523,7 +1523,11 @@ export function useBarkly(): BarklyController {
     const line = lines[waveLineCounter.current++ % lines.length];
     await speak(line, { actions: ['EXCITED', 'TAIL_WAG'], after: { type: 'PLAY' } });
     memory
-      .remember([], ['Chased the waves at the beach and declared it a win.'], { where: 'the beach' })
+      // LOCATIONS[...].name, like every other `where` in this file. Hand-written
+      // as 'the beach' it filed a SECOND beach in the identity engine, so the
+      // place he actually goes to was split across two rows with half the
+      // evidence each.
+      .remember([], ['Chased the waves at the beach and declared it a win.'], { where: LOCATIONS.beach.name })
       .then(() => setMemoryVersion((v) => v + 1))
       .catch(() => {});
     credit('play');

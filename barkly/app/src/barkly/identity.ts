@@ -15,6 +15,7 @@ import { CharacterState, friendshipStage, rivalryStage } from './character';
 import { sanitize } from './facts';
 import { MemoryState } from './memory';
 import { BarklyStats } from './types';
+import { displayName } from '../world/npcs';
 
 export type PreferenceKind = 'place' | 'treasure' | 'friend' | 'rival' | 'ritual';
 
@@ -61,11 +62,27 @@ interface IdentityInput {
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 const key = (s: string) => sanitize(s, 80).trim().toLowerCase();
 
+/**
+ * One spelling for one place.
+ *
+ * `where` arrived in three shapes -- 'park' from a preset, 'Park' from
+ * LOCATIONS[...].name in live play, and one hand-written 'the beach' in the
+ * wave-chasing reward. Grouping on the raw string filed them as three separate
+ * places, each holding a fraction of the evidence, so a place he really does
+ * live at could sit under the `evidence >= 2` bar forever while the save had
+ * four visits to it.
+ */
+function placeLabel(where: string): string {
+  const bare = sanitize(where, 80).trim().replace(/^the\s+/i, '');
+  if (!bare) return '';
+  return bare[0].toUpperCase() + bare.slice(1);
+}
+
 function placePreferences(memory: MemoryState): FormedPreference[] {
   const counts = new Map<string, { display: string; score: number; evidence: number }>();
   for (const exp of memory.experiences) {
     if (!exp.where) continue;
-    const display = sanitize(exp.where, 80);
+    const display = placeLabel(exp.where);
     if (!display) continue;
     const k = key(display);
     const prev = counts.get(k) ?? { display, score: 0, evidence: 0 };
@@ -108,15 +125,35 @@ function socialPreferences(character?: CharacterState): FormedPreference[] {
     .filter(([, bond]) => bond.encounters >= 3)
     .map(([who, bond]) => {
       const stage = bond.kind === 'friend' ? friendshipStage(bond.encounters) : rivalryStage(bond.encounters);
+      /*
+       * The bond KEY is not his name.
+       *
+       * A bond is stored under whichever spelling arrived first -- 'Duke' from
+       * live play, 'duke' from a preset -- and this used it verbatim, so the
+       * system prompt told the model his nemesis was called "duke" and his best
+       * friend "biscuit". story.ts already had `displayName` for exactly this;
+       * identity never called it.
+       */
+      const name = sanitize(displayName(who), 60);
       return {
         id: `${bond.kind}-${key(who).replace(/[^a-z0-9]+/g, '-')}`,
         kind: bond.kind as 'friend' | 'rival',
-        subject: sanitize(who, 60),
+        subject: name,
         strength: clamp(bond.encounters * 8),
         evidence: bond.encounters,
+        /*
+         * "Duke is a generational feud." "Biscuit is a pack family."
+         *
+         * The top rung of each ladder is a name for the RELATIONSHIP, not for
+         * the dog, so `${name} is a ${label}` was both ungrammatical and wrong
+         * about who is what -- and it was wrong precisely for the long-term
+         * player, since these are the rungs you only reach after months. Naming
+         * the pair instead reads correctly at every rung on both ladders, and
+         * drops the a/an problem ("a official rival") with it.
+         */
         line: bond.kind === 'friend'
-          ? `${sanitize(who, 60)} is a ${stage.label}; Barkly expects them to be part of the world now.`
-          : `${sanitize(who, 60)} is a ${stage.label}; Barkly is keeping receipts.`,
+          ? `Barkly and ${name}: ${stage.label}. He expects them to be part of the world now.`
+          : `Barkly and ${name}: ${stage.label}. He is keeping receipts.`,
       };
     });
 }
@@ -136,6 +173,16 @@ function ritualPreferences(memory: MemoryState): FormedPreference[] {
     }));
 }
 
+const axis = (
+  id: PersonalityAxis['id'],
+  label: string,
+  weight: number,
+  line: string,
+): { row: PersonalityAxis; weight: number } => ({
+  row: { id, label, score: clamp(weight), line },
+  weight,
+});
+
 function axesFor(input: IdentityInput, preferences: FormedPreference[]): PersonalityAxis[] {
   const { character, memory, stats } = input;
   const social = Object.values(character?.socialBonds ?? {}).reduce((sum, bond) => sum + bond.encounters, 0);
@@ -144,15 +191,28 @@ function axesFor(input: IdentityInput, preferences: FormedPreference[]): Persona
   const places = preferences.filter((p) => p.kind === 'place').reduce((sum, p) => sum + p.evidence, 0);
   const treasures = character?.treasuresFound ?? 0;
 
-  const rows: PersonalityAxis[] = [
-    { id: 'attached', label: 'Attached', score: clamp((stats.affection - 35) * 1.45 + memory.experiences.length * 2), line: 'How much Barkly treats you as his person rather than the person with the food.' },
-    { id: 'social', label: 'Social', score: clamp(social * 7), line: 'How much his recurring dog relationships define his life.' },
-    { id: 'collector', label: 'Collector', score: clamp(treasures * 9 + (character?.favoriteTreasure ? 18 : 0)), line: 'How seriously he takes ownership of objectively questionable objects.' },
-    { id: 'trained', label: 'Trained-ish', score: clamp(memory.trainingRules.length * 16 + triggers * 5), line: 'How much private language and learned behavior exists between you.' },
-    { id: 'adventurous', label: 'Adventurous', score: clamp(places * 8 + memory.experiences.filter((e) => Boolean(e.where)).length * 3), line: 'How much his identity was built by going places instead of sitting in the room.' },
-    { id: 'dramatic', label: 'Dramatic', score: clamp(rivals * 9 + (character?.grievance ? 22 : 0) + (character?.obsession ? 10 : 0)), line: 'How likely Barkly is to turn a normal event into ongoing lore.' },
+  /*
+   * RANK ON THE RAW SCORE, CLAMP ONLY FOR DISPLAY.
+   *
+   * Every axis was clamped to 100 before sorting, so a long-term save with four
+   * maxed axes had a four-way tie broken by `a.id.localeCompare(b.id)` -- the
+   * summary "collector, dramatic, social" was alphabetical order, not this
+   * dog. Two players with completely different histories read the same
+   * sentence, at exactly the point they have invested most. The raw score
+   * keeps its resolution above the ceiling, so the strongest thing about a
+   * Barkly is still the strongest thing about him at month six.
+   */
+  const raw: { row: PersonalityAxis; weight: number }[] = [
+    axis('attached', 'Attached', (stats.affection - 35) * 1.45 + memory.experiences.length * 2, 'How much Barkly treats you as his person rather than the person with the food.'),
+    axis('social', 'Social', social * 7, 'How much his recurring dog relationships define his life.'),
+    axis('collector', 'Collector', treasures * 9 + (character?.favoriteTreasure ? 18 : 0), 'How seriously he takes ownership of objectively questionable objects.'),
+    axis('trained', 'Trained-ish', memory.trainingRules.length * 16 + triggers * 5, 'How much private language and learned behavior exists between you.'),
+    axis('adventurous', 'Adventurous', places * 8 + memory.experiences.filter((e) => Boolean(e.where)).length * 3, 'How much his identity was built by going places instead of sitting in the room.'),
+    axis('dramatic', 'Dramatic', rivals * 9 + (character?.grievance ? 22 : 0) + (character?.obsession ? 10 : 0), 'How likely Barkly is to turn a normal event into ongoing lore.'),
   ];
-  return rows.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+  return raw
+    .sort((a, b) => b.weight - a.weight || a.row.id.localeCompare(b.row.id))
+    .map((entry) => entry.row);
 }
 
 function opinionsFor(preferences: FormedPreference[]): BarklyOpinion[] {

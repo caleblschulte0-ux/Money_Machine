@@ -173,4 +173,23 @@ describe('the plan points at the thing that makes him yours', () => {
     const byTeaching = progressAdventure(plan!, { kind: 'teach' }, 1).state;
     expect(byTeaching.goals.find((g) => g.id === 'teach-a-word')?.done).toBe(true);
   });
+
+  it('calls a dog by his name on the card, not by his bond key', () => {
+    // A bond is filed under whichever spelling arrived first, so a save
+    // carrying 'duke' printed "Go see duke" on the adventure card -- player-
+    // facing text, not prompt texture. `target` stays lowercased on purpose;
+    // it is a matching key, not a label.
+    const character = freshCharacter();
+    character.socialBonds = {
+      duke: { kind: 'rival', encounters: 9, firstSeenAt: 1, lastSeenAt: 9 },
+      biscuit: { kind: 'friend', encounters: 12, firstSeenAt: 1, lastSeenAt: 9 },
+    };
+    const plan = createAdventure({ ...base(), character });
+    const labels = plan.goals.map((g) => g.label).join(' | ');
+    expect(labels).not.toMatch(/\b(?:duke|biscuit)\b/);
+    expect(labels).toMatch(/Duke|Biscuit/);
+    for (const goal of plan.goals.filter((g) => g.kind === 'npc')) {
+      expect(goal.target).toBe(goal.target!.toLowerCase());
+    }
+  });
 });

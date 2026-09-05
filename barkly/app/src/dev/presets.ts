@@ -280,7 +280,7 @@ export const PRESETS: Preset[] = [
         stash: ['sock'],
         memory: memory({
           facts: [fact(now, 'person', 'name', 'Caleb', 3, 1), fact(now, 'person', 'favorite_color', 'green', 2, 0.4)],
-          experiences: [did(now, 'Caleb threw the ball at the park until his arm gave out.', 2, { where: 'park' })],
+          experiences: [did(now, 'Caleb threw the ball at the park until his arm gave out.', 2, { where: 'Park' })],
           turns: [said(now, 'user', 'do you like the park', 40), said(now, 'barkly', 'Da park is da best place. Obviously.', 39)],
         }),
         adventure: (() => plan(now, 1))(),
@@ -323,8 +323,8 @@ export const PRESETS: Preset[] = [
             fact(now, 'Duke', 'opinion', 'not to be trusted', 12, 0.8),
           ],
           experiences: [
-            did(now, 'Found the good stick at the park. It is the best one.', 16, { where: 'park' }),
-            did(now, 'Duke said the stick was ordinary. It is not ordinary.', 12, { where: 'park', withWhom: ['Duke'] }),
+            did(now, 'Found the good stick at the park. It is the best one.', 16, { where: 'Park' }),
+            did(now, 'Duke said the stick was ordinary. It is not ordinary.', 12, { where: 'Park', withWhom: ['Duke'] }),
             did(now, 'Biscuit helped look for the stick and found a different stick.', 9, { withWhom: ['Biscuit'] }),
           ],
           openThreads: ['whether Duke should be forgiven'],
@@ -438,9 +438,9 @@ export const PRESETS: Preset[] = [
           experiences: [
             did(now, 'The duck rock incident. We do not discuss it. We have procedures now.', 40, { withWhom: ['Duke'] }),
             did(now, 'Biscuit got the duck rock back. He was PROTECTING it, apparently.', 38, { withWhom: ['Biscuit'] }),
-            did(now, 'First time at the beach. Barked at the entire sea. Sea unmoved.', 70, { where: 'beach' }),
+            did(now, 'First time at the beach. Barked at the entire sea. Sea unmoved.', 70, { where: 'Beach' }),
             did(now, 'Caleb was away a week. Barkly claims he was fine. He was not fine.', 22),
-            did(now, 'Won the fetch duel at the park. Duke has not mentioned it since.', 15, { where: 'park', withWhom: ['Duke'] }),
+            did(now, 'Won the fetch duel at the park. Duke has not mentioned it since.', 15, { where: 'Park', withWhom: ['Duke'] }),
           ],
           openThreads: ['the duck rock security protocol', 'whether Duke is allowed at the beach'],
           trainingRules: [
@@ -485,8 +485,8 @@ export const PRESETS: Preset[] = [
           sessionSummary: 'The Duke situation is ongoing and Barkly would like it on the record.',
           facts: [fact(now, 'person', 'name', 'Caleb', 60, 1), fact(now, 'Duke', 'opinion', 'nemesis. official.', 30, 1)],
           experiences: [
-            did(now, 'Duke called the good stick a twig in front of everyone.', 30, { where: 'park', withWhom: ['Duke'] }),
-            did(now, 'Duke won a fetch duel by cheating. Allegedly. Definitely.', 21, { where: 'park', withWhom: ['Duke'] }),
+            did(now, 'Duke called the good stick a twig in front of everyone.', 30, { where: 'Park', withWhom: ['Duke'] }),
+            did(now, 'Duke won a fetch duel by cheating. Allegedly. Definitely.', 21, { where: 'Park', withWhom: ['Duke'] }),
             did(now, 'Refused to look at Duke for an entire afternoon. Held strong.', 9, { withWhom: ['Duke'] }),
           ],
           openThreads: ['the Duke situation'],
@@ -579,8 +579,8 @@ export const PRESETS: Preset[] = [
           sessionSummary: 'Barkly digs. It is not a hobby, it is a calling.',
           facts: [fact(now, 'person', 'name', 'Caleb', 70, 1)],
           experiences: [
-            did(now, 'Dug up a rock shaped like a duck. Everything changed that day.', 60, { where: 'park' }),
-            did(now, 'Found a map. Or trash. The investigation is ongoing.', 25, { where: 'park' }),
+            did(now, 'Dug up a rock shaped like a duck. Everything changed that day.', 60, { where: 'Park' }),
+            did(now, 'Found a map. Or trash. The investigation is ongoing.', 25, { where: 'Park' }),
           ],
           openThreads: ['what the map leads to'],
         }),
