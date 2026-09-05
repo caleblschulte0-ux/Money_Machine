@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { RelationshipProfile, RelationshipLore } from '../barkly/relationship';
+import { StoryState } from '../barkly/storyV2';
 import { Treasure, TREASURES } from '../world/stash';
 import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
@@ -18,6 +19,13 @@ interface Props {
   profile: RelationshipProfile;
   /** Everything he has dug up. Drawn here; it used to be text in Settings. */
   stash: Treasure[];
+  /**
+   * The saga ledger. `profile.story` above is the story CURRENT history
+   * implies -- it has no past tense and cannot end. This is the part that
+   * accumulates: the chapters this one has actually been through, the choices
+   * that routed it, and the sagas that finished.
+   */
+  story: StoryState;
 }
 
 /**
@@ -94,7 +102,7 @@ function loreLabel(item: RelationshipLore): string {
   }
 }
 
-export default function PackBookSheet({ visible, onClose, profile, stash }: Props) {
+export default function PackBookSheet({ visible, onClose, profile, stash, story }: Props) {
   const stageDots = Array.from({ length: 5 }, (_, i) => i < profile.stage.level);
 
   return (
@@ -168,6 +176,45 @@ export default function PackBookSheet({ visible, onClose, profile, stash }: Prop
                     <Text style={styles.nextText}>{profile.story.nextHook}</Text>
                   </View>
                 </View>
+              </>
+            )}
+
+            {/*
+              The chapters this saga has actually been through, and the ones
+              that ended. "Current drama" above says what is going on; this
+              says what HAPPENED, which is the half a player can look back at.
+              A resolved saga keeps its finale line, because a decision you can
+              no longer see the consequence of was not really a decision.
+            */}
+            {(story.active?.chapters.length ?? 0) > 1 && (
+              <>
+                <Text style={styles.section}>How it went</Text>
+                <View style={styles.dramaCard}>
+                  <Tape side="left" />
+                  {story.active!.chapters.map((chapter) => (
+                    <View key={chapter.number} style={styles.chapterRow} testID={`saga-chapter-${chapter.number}`}>
+                      <Text style={styles.chapterNumber}>{chapter.title}</Text>
+                      {chapter.consequence ? <Text style={styles.chapterText}>{chapter.consequence}</Text> : null}
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {story.archive.length > 0 && (
+              <>
+                <Text style={styles.section}>Stories that ended</Text>
+                {story.archive.map((past) => {
+                  const finale = past.chapters[past.chapters.length - 1];
+                  return (
+                    <View key={past.id} style={styles.dramaCard} testID={`saga-archived-${past.id}`}>
+                      <Tape side="right" />
+                      <Text style={styles.dramaTitle}>{past.title}</Text>
+                      <Text style={styles.dramaChapter}>{past.chapters.length} chapters · ended {past.route}</Text>
+                      {finale?.consequence ? <Text style={styles.dramaPremise}>{finale.consequence}</Text> : null}
+                    </View>
+                  );
+                })}
               </>
             )}
 
@@ -361,6 +408,21 @@ const styles = StyleSheet.create({
   dramaTitle: { ...type.display, color: color.ink, marginTop: space.sm },
   dramaChapter: { ...type.caption, color: color.goldInk, textTransform: 'uppercase', marginTop: space.xs },
   dramaPremise: { ...type.small, color: color.inkMid, marginTop: space.md },
+  chapterRow: {
+    borderLeftWidth: 3,
+    borderLeftColor: color.lemonDeep,
+    paddingLeft: space.sm,
+    marginTop: space.sm,
+  },
+  chapterNumber: {
+    ...type.caption,
+    color: color.inkSoft,
+  },
+  chapterText: {
+    ...type.body,
+    color: color.ink,
+    marginTop: 2,
+  },
   nextCard: { marginTop: space.lg, paddingTop: space.md, borderTopWidth: 1.5, borderTopColor: color.warmLine },
   nextLabel: { ...type.micro, color: color.danger },
   nextText: { ...type.small, color: color.ink, fontWeight: '600', marginTop: space.xs },

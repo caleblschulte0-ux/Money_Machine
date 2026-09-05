@@ -114,6 +114,28 @@ const SOURCES = [
   // to `candidates`, where every ask/accept/reject line is written; the rest of
   // the file is nicknames and slugs, which are built, not said.
   { file: 'src/barkly/coauthor.ts', tag: 'canon', only: ['candidates'] },
+  // What he says when the saga forks. `decisionsFor` is where every branch's
+  // `barklyLine` is written; the consequences and labels beside them are read
+  // on the sheet and in the Pack Book, never spoken, and `isSpeech` is not what
+  // separates them -- the scope is.
+  { file: 'src/barkly/storyV2.ts', tag: 'saga', only: ['barklyLine'] },
+  /*
+   * Two more that the same audit turned up, both found by asking what every
+   * `speak(...)` in the controller is actually holding rather than by reading
+   * this list.
+   *
+   * `encounters.ts` is the one this file's own comment says a full sweep must
+   * never take -- 114 journal entries, 1.3 MB of a voice narrating a scrapbook.
+   * That was an argument against sweeping it, not against reading it: the three
+   * reply properties are what he SAYS when you pick an option, and they are the
+   * main NPC interaction in the game. Every one was narrated.
+   *
+   * `incidents.ts` is the same shape: `barklyLine` on a choice is spoken by
+   * resolveIncident, while `barklyOpening`, `setup` and `memory` beside it are
+   * read on the sheet.
+   */
+  { file: 'src/barkly/encounters.ts', tag: 'encounters', only: ['barklyReply', 'wonReply', 'lostReply'] },
+  { file: 'src/world/incidents.ts', tag: 'incidents', only: ['barklyLine'] },
 ];
 
 /* ------------------------------------------------------------------ harvest */

@@ -149,9 +149,19 @@ export function advanceStory(state: StoryState, decisionId: string, now: number)
   const decision = current.choices.find((choice) => choice.id === decisionId);
   if (!decision) return null;
 
+  /*
+   * Later chapters are titled by WHAT THE PLAYER DID, not by a number.
+   *
+   * Numbering them fought the opening chapter, whose title is authored by the
+   * arc and carries its own heading -- so a two-chapter saga rendered as
+   * "Chapter II . Bad Vibes Around the Treasure" followed by "Chapter 2",
+   * two things both calling themselves the second chapter, one written and one
+   * counted. The decision label is the truer name for these anyway: a chapter
+   * of this story IS the choice that was made in it.
+   */
   const chapter: StoryChapter = {
     number: current.chapters.length + 1,
-    title: decision.resolves ? 'Finale' : `Chapter ${current.chapters.length + 1}`,
+    title: decision.resolves ? `Finale \u00b7 ${decision.label}` : decision.label,
     happenedAt: now,
     decisionId: decision.id,
     consequence: decision.consequence,
@@ -189,7 +199,11 @@ export function storyPromptTexture(state: StoryState): string[] {
   const recent = state.archive[0];
   if (recent) {
     const finale = recent.chapters[recent.chapters.length - 1];
-    lines.push(`Resolved history: ${recent.title} ended on route ${recent.route}${finale?.consequence ? ` — ${finale.consequence}` : ''}. You may remember it; do not restart it.`);
+    // The consequence is a full sentence and ends in a stop of its own, so it
+    // is trimmed before this line adds one: "another incident.. You may" is
+    // the kind of seam that makes a prompt read as generated.
+    const ending = finale?.consequence?.replace(/\s*[.!?]+\s*$/, '');
+    lines.push(`Resolved history: ${recent.title} ended on route ${recent.route}${ending ? ` — ${ending}` : ''}. You may remember it; do not restart it.`);
   }
   return lines;
 }

@@ -2,6 +2,12 @@
   "generated": "scripts/voice-bank.mjs harvest",
   "entries": [
     {
+      "key": "000a2fe9b6e0cd3d",
+      "spoken": "Correct. We defend our artifacts.",
+      "source": "Correct. We defend our artifacts.",
+      "tag": "saga"
+    },
+    {
       "key": "0022ba44365c2264",
       "spoken": "One more thing. I'd rather hear ya than read you. Can I?",
       "source": "One more thing. I'd rather hear you than read you. Can I?",
@@ -44,10 +50,22 @@
       "tag": "thoughts"
     },
     {
+      "key": "04160f31b78ebf8d",
+      "spoken": "Fine. If they are gonna know it, I am gonna be famous for it.",
+      "source": "Fine. If they are going to know it, I am going to be famous for it.",
+      "tag": "incidents"
+    },
+    {
       "key": "041955f3a820d4e5",
       "spoken": "Fine. Terrible brandin' decision, but fine.",
       "source": "Fine. Terrible branding decision, but fine.",
       "tag": "canon"
+    },
+    {
+      "key": "0448b15fb035d0e3",
+      "spoken": "You're obstructin' justice.",
+      "source": "You are obstructing justice.",
+      "tag": "incidents"
     },
     {
       "key": "0534ccc716d11832",
@@ -110,16 +128,34 @@
       "tag": "npcs"
     },
     {
+      "key": "0951ea8b618b51a3",
+      "spoken": "Neutrality. Suspicious, but efficient.",
+      "source": "Neutrality. Suspicious, but efficient.",
+      "tag": "saga"
+    },
+    {
       "key": "09a339117c5d4259",
       "spoken": "I'd think about it harder if I weren't dis hungry.",
       "source": "I'd think about it harder if I weren't this hungry.",
       "tag": "talk"
     },
     {
+      "key": "0a276638704f6259",
+      "spoken": "I am not forgivin'. I am... suspendin' hostilities.",
+      "source": "I am not forgiving. I am... suspending hostilities.",
+      "tag": "saga"
+    },
+    {
       "key": "0a5006bc51351dbf",
       "spoken": "Nuttin' gets past me. I've been practisin' on da vacuum.",
       "source": "Nothing gets past me. I've been practising on the vacuum.",
       "tag": "talk"
+    },
+    {
+      "key": "0a794f54aa81dc28",
+      "spoken": "Yo. I am dignity itself. ...Dere is a pigeon.",
+      "source": "I am dignity itself. ...There is a pigeon.",
+      "tag": "encounters"
     },
     {
       "key": "0b28354452ba52ab",
@@ -188,6 +224,12 @@
       "tag": "initiative"
     },
     {
+      "key": "10ab3ad518e02851",
+      "spoken": "Fine. But now it is a public performance.",
+      "source": "Fine. But now it is a public performance.",
+      "tag": "incidents"
+    },
+    {
       "key": "10cede9b174662b9",
       "spoken": "Cheese. It's not close. Dere is no second place. awright?",
       "source": "Cheese. It's not close. There is no second place.",
@@ -222,6 +264,12 @@
       "spoken": "My ears are switched off, apparently. Not my choice.",
       "source": "My ears are switched off, apparently. Not my choice.",
       "tag": "mishaps"
+    },
+    {
+      "key": "12f803cb66712f19",
+      "spoken": "No idea. Start smellin' dirt. Capisce?",
+      "source": "No idea. Start smelling dirt.",
+      "tag": "encounters"
     },
     {
       "key": "1352ee0f261f3d82",
@@ -302,6 +350,12 @@
       "tag": "npcs"
     },
     {
+      "key": "17f67c5d9680ab13",
+      "spoken": "Higher clearance than government, Biscuit. I'm just sayin'.",
+      "source": "Higher clearance than government, Biscuit.",
+      "tag": "encounters"
+    },
+    {
       "key": "1831ac74148fda6b",
       "spoken": "Dere ya are. I was about to start makin' decisions on my own.",
       "source": "There you are. I was about to start making decisions on my own.",
@@ -336,6 +390,12 @@
       "spoken": "Finally. I was about to file a complaint. awright?",
       "source": "Finally. I was about to file a complaint.",
       "tag": "reactions"
+    },
+    {
+      "key": "1a84893bead79249",
+      "spoken": "Fine. If they know it, I am gonna be famous for it.",
+      "source": "Fine. If they know it, I am going to be famous for it.",
+      "tag": "saga"
     },
     {
       "key": "1aa3a7432e955674",
@@ -416,6 +476,12 @@
       "tag": "hook"
     },
     {
+      "key": "240547c13945b431",
+      "spoken": "Good. I was not done anyway.",
+      "source": "Good. I was not done anyway.",
+      "tag": "saga"
+    },
+    {
       "key": "242163a85faf7eea",
       "spoken": "Cheese. See, dis is why I keep you around.",
       "source": "Cheese. See, this is why I keep you around.",
@@ -482,6 +548,12 @@
       "tag": "offline"
     },
     {
+      "key": "2b2ed022c20d46cc",
+      "spoken": "Watch closely, Biscuit. Dis is advanced curriculum.",
+      "source": "Watch closely, Biscuit. This is advanced curriculum.",
+      "tag": "encounters"
+    },
+    {
       "key": "2b5ffb8a746a0b27",
       "spoken": "Every time ya talk I get slightly less sure about the world. Keep goin'.",
       "source": "Every time you talk I get slightly less sure about the world. Keep going.",
@@ -510,6 +582,24 @@
       "spoken": "Hey. Dis is me. Say it back and I will judge you.",
       "source": "Hey. This is me. Say it back and I will judge you.",
       "tag": "hook"
+    },
+    {
+      "key": "2f50c7dc2624955a",
+      "spoken": "Finally. A clear organizational chart.",
+      "source": "Finally. A clear organizational chart.",
+      "tag": "saga"
+    },
+    {
+      "key": "2f7626a78a8b2fc7",
+      "spoken": "Shelves are cheaper than restraint.",
+      "source": "Shelves are cheaper than restraint.",
+      "tag": "saga"
+    },
+    {
+      "key": "3076e3218cee1881",
+      "spoken": "Ay, yo. Never heard of it. Fake news. Next question.",
+      "source": "Never heard of it. Fake news. Next question.",
+      "tag": "incidents"
     },
     {
       "key": "308b871ca0ee43d6",
@@ -554,6 +644,12 @@
       "tag": "talk"
     },
     {
+      "key": "34a2dd6eb6572552",
+      "spoken": "Da resemblance is uncanny if you stop lookin' at both objects.",
+      "source": "The resemblance is uncanny if you stop looking at both objects.",
+      "tag": "encounters"
+    },
+    {
       "key": "354614903ec93f88",
       "spoken": "That's rubbish. I'm gonna sit against ya leg until it's less rubbish.",
       "source": "That's rubbish. I'm going to sit against your leg until it's less rubbish.",
@@ -570,6 +666,12 @@
       "spoken": "Da wind was biased. Sure. Toward the dog who brought back the right ball. Me.",
       "source": "The wind was biased. Sure. Toward the dog who brought back the right ball. Me.",
       "tag": "npcs"
+    },
+    {
+      "key": "36c4fcb063f74ba9",
+      "spoken": "Pepper won. Pepper is built like a rumour and moves like one.",
+      "source": "Pepper won. Pepper is built like a rumour and moves like one.",
+      "tag": "encounters"
     },
     {
       "key": "36ea09d12971333c",
@@ -606,6 +708,12 @@
       "spoken": "It's daytime. Da birds are bein' smug about it.",
       "source": "It's daytime. The birds are being smug about it.",
       "tag": "offline"
+    },
+    {
+      "key": "3f39536132b355cc",
+      "spoken": "A LOOK. With his eyes. From dere.",
+      "source": "A LOOK. With his eyes. From there.",
+      "tag": "incidents"
     },
     {
       "key": "404925296985017a",
@@ -674,6 +782,12 @@
       "tag": "offline"
     },
     {
+      "key": "44e5acd443537771",
+      "spoken": "I'm not gonna lie to ya. You asked for dis, Duke.",
+      "source": "You asked for this, Duke.",
+      "tag": "encounters"
+    },
+    {
       "key": "45010f87c496b0a5",
       "spoken": "Ay. You were gone a WHILE. I handled it. Mostly.",
       "source": "You were gone a WHILE. I handled it. Mostly.",
@@ -716,6 +830,12 @@
       "tag": "hook"
     },
     {
+      "key": "48a068e58ba7ff07",
+      "spoken": "Dis meetin' could have been an email.",
+      "source": "This meeting could have been an email.",
+      "tag": "saga"
+    },
+    {
       "key": "48bf107f3e2ad497",
       "spoken": "Mine. Dat's mine now. Don't touch it. Capisce?",
       "source": "Mine. That's mine now. Don't touch it.",
@@ -738,6 +858,12 @@
       "spoken": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
       "source": "Rest. I'll keep watch. I'll probably fall asleep first, but I'll mean it.",
       "tag": "talk"
+    },
+    {
+      "key": "4b0a1260e03b18b0",
+      "spoken": "Don't make me regret dis.",
+      "source": "Do not make me regret this.",
+      "tag": "encounters"
     },
     {
       "key": "4bee8d6dad7d93a7",
@@ -806,6 +932,12 @@
       "tag": "greetings"
     },
     {
+      "key": "509960706d4290a7",
+      "spoken": "No. But you can stand near da exhibit.",
+      "source": "No. But you can stand near the exhibit.",
+      "tag": "encounters"
+    },
+    {
       "key": "50e339cccc7f52c0",
       "spoken": "Outside? Say it again slowly so I can lose my mind properly.",
       "source": "Outside? Say it again slowly so I can lose my mind properly.",
@@ -848,6 +980,12 @@
       "tag": "npcs"
     },
     {
+      "key": "556f567bb7a9f7e0",
+      "spoken": "Then why did ya say “lap,” Pepper?",
+      "source": "Then why did you say “lap,” Pepper?",
+      "tag": "encounters"
+    },
+    {
       "key": "559538eea383d821",
       "spoken": "Fine, be mysterious. I'll work it out.",
       "source": "Fine, be mysterious. I'll work it out.",
@@ -882,6 +1020,12 @@
       "spoken": "i smelled dat smell again. investigatin' later.",
       "source": "i smelled that smell again. investigating later.",
       "tag": "thoughts"
+    },
+    {
+      "key": "5a6ade4ebbd2a151",
+      "spoken": "Sure, buddy. Cousins.",
+      "source": "Sure, buddy. Cousins.",
+      "tag": "encounters"
     },
     {
       "key": "5b6176eaae0466e8",
@@ -1136,6 +1280,12 @@
       "tag": "talk"
     },
     {
+      "key": "7d78521b1d8e9153",
+      "spoken": "National level. He said it with his whole chest.",
+      "source": "National level. He said it with his whole chest.",
+      "tag": "encounters"
+    },
+    {
       "key": "7dd61e65b0bbd856",
       "spoken": "You LEFT it? For me? Biscuit, dat's the most restraint you've ever shown. Show me. Slowly.",
       "source": "You LEFT it? For me? Biscuit, that's the most restraint you've ever shown. Show me. Slowly.",
@@ -1170,6 +1320,12 @@
       "spoken": "I'll play. Not because I'm desperate. Throw da ball.",
       "source": "I'll play. Not because I'm desperate. Throw the ball.",
       "tag": "offline"
+    },
+    {
+      "key": "8507d919b2baca91",
+      "spoken": "Perfect. Ay. Problem solved itself.",
+      "source": "Perfect. Problem solved itself.",
+      "tag": "encounters"
     },
     {
       "key": "852fb28702efe692",
@@ -1244,6 +1400,12 @@
       "tag": "escalation"
     },
     {
+      "key": "8dad92b556369e2b",
+      "spoken": "Exactly. Museum rules now.",
+      "source": "Exactly. Museum rules now.",
+      "tag": "saga"
+    },
+    {
       "key": "8f4656d5b8f48515",
       "spoken": "night smells different. better? different.",
       "source": "night smells different. better? different.",
@@ -1256,10 +1418,22 @@
       "tag": "npcs"
     },
     {
+      "key": "934080b61202384e",
+      "spoken": "Excellent question. I was hopin' ya knew.",
+      "source": "Excellent question. I was hoping you knew.",
+      "tag": "encounters"
+    },
+    {
       "key": "93cece6b1e6e05a0",
       "spoken": "Finally. I have been extremely brave about it. Capisce?",
       "source": "Finally. I have been extremely brave about it.",
       "tag": "greetings"
+    },
+    {
+      "key": "95061acaa3d7b46f",
+      "spoken": "Nobody panic. I have a nose and no formal trainin'.",
+      "source": "Nobody panic. I have a nose and no formal training.",
+      "tag": "incidents"
     },
     {
       "key": "957244cab5a8a5d4",
@@ -1292,6 +1466,12 @@
       "tag": "offline"
     },
     {
+      "key": "98932664e11c0f3a",
+      "spoken": "Correct. North is whichever way I point.",
+      "source": "Correct. North is whichever way I point.",
+      "tag": "encounters"
+    },
+    {
       "key": "98a2c5ad7e797013",
       "spoken": "No. Nap. I have made my decision. I'm just sayin'.",
       "source": "No. Nap. I have made my decision.",
@@ -1308,6 +1488,12 @@
       "spoken": "Showtime. Ya made me learn choreography.",
       "source": "Showtime. You made me learn choreography.",
       "tag": "training"
+    },
+    {
+      "key": "9eb47d4a65275da8",
+      "spoken": "They may LOOK. Lookin' ain't ownin'. awright?",
+      "source": "They may LOOK. Looking is not owning.",
+      "tag": "saga"
     },
     {
       "key": "a0b69903e8e8288f",
@@ -1358,6 +1544,12 @@
       "tag": "npcs"
     },
     {
+      "key": "a51b74c1223b3f11",
+      "spoken": "Ay. Won da lap. It was a patrol. I patrolled fastest.",
+      "source": "Won the lap. It was a patrol. I patrolled fastest.",
+      "tag": "encounters"
+    },
+    {
       "key": "a68fc131c1d767bf",
       "spoken": "Zoomies engaged. This was ya idea, remember that.",
       "source": "Zoomies engaged. This was your idea, remember that.",
@@ -1406,6 +1598,12 @@
       "tag": "training"
     },
     {
+      "key": "aa6ff85780a61982",
+      "spoken": "Correct. Perimeter established.",
+      "source": "Correct. Perimeter established.",
+      "tag": "incidents"
+    },
+    {
       "key": "abbe626ba88233d6",
       "spoken": "my tail is followin' me again.",
       "source": "my tail is following me again.",
@@ -1428,6 +1626,12 @@
       "spoken": "Yo. You're gonna lose this and I want you to know dat now.",
       "source": "You're going to lose this and I want you to know that now.",
       "tag": "reactions"
+    },
+    {
+      "key": "add341725af8d7bf",
+      "spoken": "Cold. Efficient. I respect it a little.",
+      "source": "Cold. Efficient. I respect it a little.",
+      "tag": "incidents"
     },
     {
       "key": "af7826bf099e4159",
@@ -1562,10 +1766,22 @@
       "tag": "hook"
     },
     {
+      "key": "bc2674fc09e348c5",
+      "spoken": "You take dat back. This is an artifact.",
+      "source": "You take that back. This is an artifact.",
+      "tag": "encounters"
+    },
+    {
       "key": "bd0663bf92f7ec1c",
       "spoken": "A ball went under da sofa. Nobody has seen it since. I think about it most days.",
       "source": "A ball went under the sofa. Nobody has seen it since. I think about it most days.",
       "tag": "talk"
+    },
+    {
+      "key": "bd8cdc71e31c24c1",
+      "spoken": "Incorrect. It proved everythin'.",
+      "source": "Incorrect. It proved everything.",
+      "tag": "encounters"
     },
     {
       "key": "c0c1ccc9f97d45a0",
@@ -1584,6 +1800,12 @@
       "spoken": "Who. Gimme a name. I'll bark at a general direction.",
       "source": "Who. Give me a name. I'll bark at a general direction.",
       "tag": "talk"
+    },
+    {
+      "key": "c5d18d06ffed3f05",
+      "spoken": "Witnesses are famously unreliable.",
+      "source": "Witnesses are famously unreliable.",
+      "tag": "encounters"
     },
     {
       "key": "c5f43c1fd1b92a56",
@@ -1628,6 +1850,12 @@
       "tag": "offline"
     },
     {
+      "key": "ce654e363c7fef72",
+      "spoken": "Serious? No. Competitor? Unfortunately yeah. I'm just sayin'.",
+      "source": "Serious? No. Competitor? Unfortunately yes.",
+      "tag": "encounters"
+    },
+    {
       "key": "d01674c83a0dc1eb",
       "spoken": "Da perimeter! I've been promoted. I won't tell the pigeons.",
       "source": "The perimeter! I've been promoted. I won't tell the pigeons.",
@@ -1640,6 +1868,12 @@
       "tag": "greetings"
     },
     {
+      "key": "d16183d8d1ce8f31",
+      "spoken": "See? Teamwork. Horrible. Effective.",
+      "source": "See? Teamwork. Horrible. Effective.",
+      "tag": "encounters"
+    },
+    {
       "key": "d278ccb4648bf142",
       "spoken": "It is definitely ya. I have never been wrong about a time in my life. I'm just sayin'.",
       "source": "It is definitely you. I have never been wrong about a time in my life.",
@@ -1650,6 +1884,12 @@
       "spoken": "You were gone so long I forgot what ya smelled like. Then I remembered instantly.",
       "source": "You were gone so long I forgot what you smelled like. Then I remembered instantly.",
       "tag": "greetings"
+    },
+    {
+      "key": "d40eb65a71d71d6d",
+      "spoken": "Strategic relocation. Not retreat. I'm just sayin'.",
+      "source": "Strategic relocation. Not retreat.",
+      "tag": "incidents"
     },
     {
       "key": "d57032dcbe935e3c",
@@ -1730,6 +1970,12 @@
       "tag": "npcs"
     },
     {
+      "key": "da2763af4763acaa",
+      "spoken": "Exactly. Historic final performance.",
+      "source": "Exactly. Historic final performance.",
+      "tag": "encounters"
+    },
+    {
       "key": "da450c5052c49a31",
       "spoken": "I'm a dog. You're da one talkin' to a dog.",
       "source": "I'm a dog. You're the one talking to a dog.",
@@ -1790,6 +2036,12 @@
       "tag": "canon"
     },
     {
+      "key": "e6b569f297b857ab",
+      "spoken": "Finally. Municipal intelligence.",
+      "source": "Finally. Municipal intelligence.",
+      "tag": "encounters"
+    },
+    {
       "key": "e71cea3a4696a243",
       "spoken": "da window shows outside. i own outside.",
       "source": "the window shows outside. i own outside.",
@@ -1808,10 +2060,22 @@
       "tag": "canon"
     },
     {
+      "key": "ead527ab9b986d9e",
+      "spoken": "Beat him. In front of everyone. I would like dat noted.",
+      "source": "Beat him. In front of everyone. I would like that noted.",
+      "tag": "encounters"
+    },
+    {
       "key": "ead5c3874f996e7f",
       "spoken": "Was dat a word? Do it again with more consonants.",
       "source": "Was that a word? Do it again with more consonants.",
       "tag": "talk"
+    },
+    {
+      "key": "ebb2097532a07c0d",
+      "spoken": "He won. Once. In specific conditions I intend to dispute.",
+      "source": "He won. Once. In specific conditions I intend to dispute.",
+      "tag": "encounters"
     },
     {
       "key": "ec498424670412d6",
@@ -1826,16 +2090,34 @@
       "tag": "reactions"
     },
     {
+      "key": "ee5c3f2513a63164",
+      "spoken": "I'm not performin' on command for Duke. I have standards now.",
+      "source": "I'm not performing on command for Duke. I have standards now.",
+      "tag": "encounters"
+    },
+    {
       "key": "eee3845d8831ee35",
       "spoken": "I know dat dog. Not well. But I know that dog.",
       "source": "I know that dog. Not well. But I know that dog.",
       "tag": "escalation"
     },
     {
+      "key": "f0f24cbf4bcb1f33",
+      "spoken": "Ay, yo. A stick is a stick. I am prepared to defend dis in court.",
+      "source": "A stick is a stick. I am prepared to defend this in court.",
+      "tag": "incidents"
+    },
+    {
       "key": "f13cfbb4d9a1b82d",
       "spoken": "New level. Same dog. Slightly smugger dog. awright?",
       "source": "New level. Same dog. Slightly smugger dog.",
       "tag": "progression"
+    },
+    {
+      "key": "f18ac37b2f4ab5f2",
+      "spoken": "Nope. Don't care. Not even a little. ...Stop lookin' at it though.",
+      "source": "Nope. Don't care. Not even a little. ...Stop looking at it though.",
+      "tag": "encounters"
     },
     {
       "key": "f1beb5655ca54da1",
@@ -1866,6 +2148,12 @@
       "spoken": "Yo. Rejected by committee. I will workshop it privately.",
       "source": "Rejected by committee. I will workshop it privately.",
       "tag": "canon"
+    },
+    {
+      "key": "f55614b265155b15",
+      "spoken": "Good. Classified again.",
+      "source": "Good. Classified again.",
+      "tag": "saga"
     },
     {
       "key": "f6797caff6547c91",
@@ -1904,6 +2192,12 @@
       "tag": "mishaps"
     },
     {
+      "key": "fa32644f4a797323",
+      "spoken": "You wanted da official version. No refunds.",
+      "source": "You wanted the official version. No refunds.",
+      "tag": "encounters"
+    },
+    {
       "key": "faa377154b52c598",
       "spoken": "I'm here, ain't I. I could be anywhere. I'm here.",
       "source": "I'm here, aren't I. I could be anywhere. I'm here.",
@@ -1914,6 +2208,12 @@
       "spoken": "Then dat's my job done and it's not even lunchtime. Don't tell Duke I have a job.",
       "source": "Then that's my job done and it's not even lunchtime. Don't tell Duke I have a job.",
       "tag": "npcs"
+    },
+    {
+      "key": "fb1c4e0d2a3743b7",
+      "spoken": "THIEF WITH WINGS. COME BACK AND FACE Da LAW.",
+      "source": "THIEF WITH WINGS. COME BACK AND FACE THE LAW.",
+      "tag": "incidents"
     },
     {
       "key": "fb64a4d8f97eecf8",

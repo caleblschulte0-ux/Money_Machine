@@ -12,6 +12,7 @@
 
 import { CharacterState, describeCharacter } from './character';
 import { CoauthorState, coauthorPromptTexture } from './coauthor';
+import { StoryState, storyPromptTexture } from './storyV2';
 import { deriveBarklyIdentity, describeIdentity } from './identity';
 import { describeFact, Experience, Fact, sanitize } from './facts';
 import { IDENTITY, RULES, TRAITS, VOICE } from './personality';
@@ -45,6 +46,8 @@ export interface PromptContext {
   character?: CharacterState;
   /** Names and traditions Barkly proposed and this player accepted. */
   canon?: CoauthorState;
+  /** The saga in progress, and the ones that already ended. */
+  story?: StoryState;
 }
 
 const MEM_OPEN = '<<<BARKLY_MEMORY_DATA>>>';
@@ -150,6 +153,13 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   // called. Two players' dogs use different words for the same objects.
   if (ctx.canon) {
     for (const line of coauthorPromptTexture(ctx.canon)) memoryLines.push(sanitize(line, 400));
+  }
+
+  // The saga, with its route and its endings. The "do not restart it" line in
+  // the texture is the load-bearing part: a resolved story that comes back is
+  // not history, it is a loop.
+  if (ctx.story) {
+    for (const line of storyPromptTexture(ctx.story)) memoryLines.push(sanitize(line, 400));
   }
 
   if (facts && facts.length > 0) {

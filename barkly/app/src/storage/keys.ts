@@ -28,6 +28,8 @@ export const STASH_KEY = profileKey(DEFAULT_PROFILE, 'stash-v1');
 export const INCIDENT_KEY = profileKey(DEFAULT_PROFILE, 'incidents-v1');
 /** Canon Barkly proposed and the player accepted -- names, territory, bits. */
 export const COAUTHOR_KEY = profileKey(DEFAULT_PROFILE, 'coauthor-v1');
+/** The saga ledger: chapters, the decisions taken, and the sagas that ended. */
+export const STORY_KEY = profileKey(DEFAULT_PROFILE, 'story-v2');
 
 /**
  * A whole Barkly, as it sits on disk. Anything not listed here is not part of
@@ -46,6 +48,7 @@ export const ALL_SAVE_KEYS = [
   STASH_KEY,
   INCIDENT_KEY,
   COAUTHOR_KEY,
+  STORY_KEY,
 ] as const;
 
 /**

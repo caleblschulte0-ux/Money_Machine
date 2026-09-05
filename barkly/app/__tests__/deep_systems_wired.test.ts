@@ -104,6 +104,62 @@ describe('the deep systems stay wired to the runtime', () => {
     expect(scripted).toMatch(/function canonName\(/);
   });
 
+  /*
+   * storyV2 was the same story as coauthor, one file over: 195 lines of
+   * persistent, branching, resolvable sagas, imported by its own test and by
+   * nothing else. `story.ts` -- which IS wired -- derives the saga current
+   * history implies, so the Pack Book always had a "current drama"; it just
+   * had no past tense, could not be decided, and could never end. Closing the
+   * app put you back at Chapter I.
+   */
+  it('the saga ledger is loaded, synced, decided and saved', () => {
+    const hook = read('src/hooks/useBarkly.ts');
+    expect(hook).toContain("from '../barkly/storyV2'");
+    expect(hook).toMatch(/syncStoryState\(/);
+    expect(hook).toMatch(/advanceStory\(/);
+    expect(hook).toMatch(/asyncStorageStore\.get\(STORY_KEY\)/);
+    expect(hook).toMatch(/gate\.write\(STORY_KEY/);
+    expect(hook).toMatch(/\n\s+activeStoryChoice,\n/);
+    expect(hook).toMatch(/\n\s+resolveStoryChoice,\n/);
+    const keys = read('src/storage/keys.ts');
+    expect(keys.slice(keys.indexOf('ALL_SAVE_KEYS'))).toMatch(/STORY_KEY/);
+  });
+
+  it('the saga is a fork the player can take, and a history they can read', () => {
+    const room = read('src/ui/BarklyRoom.tsx');
+    expect(room).toMatch(/momentFromStory\(barkly\.activeStoryChoice\)/);
+    expect(room).toMatch(/barkly\.resolveStoryChoice\(/);
+    // The chapters and the endings have to be somewhere the player can LOOK,
+    // or a resolved saga is a row in a JSON file.
+    expect(room).toMatch(/story=\{barkly\.storyState\}/);
+    const pack = read('src/ui/PackBookSheet.tsx');
+    expect(pack).toMatch(/testID=\{`saga-chapter-\$\{chapter\.number\}`\}/);
+    expect(pack).toMatch(/testID=\{`saga-archived-\$\{past\.id\}`\}/);
+    // And the model is told what already ended, so it cannot restart it.
+    expect(read('src/barkly/prompts.ts')).toMatch(/storyPromptTexture\(/);
+  });
+
+  it('every line the controller speaks comes from a file the bank harvests', () => {
+    /*
+     * Not a style rule -- an audit that keeps finding the same bug. Three
+     * spoken surfaces were narrated by the browser because the harvest list
+     * had never been checked against what `speak(...)` actually holds:
+     * encounter replies (the main NPC interaction), incident choices, and the
+     * saga forks added here. The scope names are what the SOURCES entries use;
+     * a new spoken property added to one of these files without extending its
+     * scope is exactly the failure this catches.
+     */
+    const bank = read('scripts/voice-bank.mjs');
+    for (const file of [
+      'src/barkly/encounters.ts',
+      'src/world/incidents.ts',
+      'src/barkly/storyV2.ts',
+      'src/barkly/coauthor.ts',
+    ]) {
+      expect(bank).toContain(file);
+    }
+  });
+
   it('the incident gate reads onboarding COMPLETION, not its mere existence', () => {
     // `onboarding` stays a truthy record forever once the flow is done, so a
     // plain truthiness check silences the world permanently. This cost a

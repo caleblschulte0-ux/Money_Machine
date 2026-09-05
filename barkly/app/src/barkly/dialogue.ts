@@ -7,6 +7,7 @@
 
 import { CharacterState, friendshipStage, rivalryStage } from './character';
 import { CoauthorState } from './coauthor';
+import { StoryState } from './storyV2';
 import { BarklyMemory } from './memory';
 import { buildSystemPrompt, parseReply, WorldContext } from './prompts';
 import { recall } from './recall';
@@ -34,8 +35,15 @@ export class DialogueEngine {
     snapshot: BarklySnapshot,
     world?: WorldContext,
     character?: CharacterState,
-    canon?: CoauthorState,
+    /**
+     * The two durable ledgers that are not memory and not the character record:
+     * canon Barkly proposed and the player ratified, and the saga this Barkly
+     * is living through. Passed as one bag rather than a sixth and seventh
+     * positional argument.
+     */
+    ledger?: { canon?: CoauthorState; story?: StoryState },
   ): Promise<ConverseResult> {
+    const canon = ledger?.canon;
     const empty: BarklyReply = {
       speech: '',
       actions: [],
@@ -142,6 +150,7 @@ export class DialogueEngine {
       relevant,
       character,
       canon,
+      story: ledger?.story,
     });
 
     // The situation as DATA as well as prose. A model reads the prompt; the

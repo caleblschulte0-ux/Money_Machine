@@ -32,6 +32,7 @@ import { AdventureState } from '../game/adventure';
 
 import { LocationId } from '../world/locations';
 import { CoauthorState, freshCoauthorState } from '../barkly/coauthor';
+import { freshStoryState, StoryState } from '../barkly/storyV2';
 import { IncidentLedger } from '../world/incidents';
 import {
   ADVENTURE_KEY,
@@ -45,6 +46,7 @@ import {
   STASH_KEY,
   INCIDENT_KEY,
   COAUTHOR_KEY,
+  STORY_KEY,
   WALLET_KEY,
 } from '../storage/keys';
 
@@ -206,6 +208,7 @@ function save(now: number, p: {
   stash?: string[];
   incidents?: IncidentLedger;
   canon?: CoauthorState;
+  story?: StoryState;
   adventure?: AdventureState;
   name?: string;
 }): Save {
@@ -243,6 +246,14 @@ function save(now: number, p: {
      */
     [INCIDENT_KEY]: JSON.stringify(p.incidents ?? {}),
     [COAUTHOR_KEY]: JSON.stringify(p.canon ?? freshCoauthorState()),
+    /*
+     * The saga ledger is empty by default for the same reason, with one
+     * exception below: a saga is supposed to be earned. Long-Term Barkly ships
+     * one because "three to six months" is precisely the save where a story
+     * having a PAST is the thing under test, and nothing else can produce that
+     * in a playtest session.
+     */
+    [STORY_KEY]: JSON.stringify(p.story ?? freshStoryState()),
   };
 }
 
@@ -354,6 +365,66 @@ export const PRESETS: Preset[] = [
           socialChoices: { biscuit: 6, duke: 5, pepper: 3 },
         },
         stash: ['duck_rock', 'good_stick', 'sock', 'tiny_duck', 'caps', 'shell', 'sea_glass', 'button', 'glove'],
+        /*
+         * A saga mid-run and a saga that ended. The active one matches the arc
+         * this character's history derives (`treasure-rival-duke`), so
+         * `syncStoryState` recognises it and keeps these chapters instead of
+         * starting over at Chapter I -- which is the whole thing the ledger
+         * exists to prevent, and worth having a preset that proves it.
+         */
+        story: {
+          version: 2,
+          active: {
+            id: 'treasure-rival-duke',
+            title: 'The Duke Situation',
+            premise: 'Duke is Barkly\u2019s nemesis, and Barkly is extremely protective of a rock that looks like a duck. This combination has become a whole thing.',
+            cast: ['Duke'],
+            status: 'active',
+            route: 'protected',
+            intensity: 4,
+            startedAt: now - 40 * DAY,
+            updatedAt: now - 9 * DAY,
+            chapters: [
+              { number: 1, title: 'Chapter IV \u00b7 This Is Generational Now', happenedAt: now - 40 * DAY },
+              {
+                number: 2,
+                title: 'Guard the treasure',
+                happenedAt: now - 9 * DAY,
+                decisionId: 'guard-it',
+                consequence: 'Barkly chose possession over peace. The rival now knows this object matters.',
+              },
+            ],
+            choices: [
+              { id: 'let-them-see', label: 'Let the rival see it', route: 'shared', consequence: 'Barkly allowed a rival near something he loves. The feud has a crack in it now.', barklyLine: 'They may LOOK. Looking is not owning.' },
+              { id: 'end-the-beef', label: 'Try to end the beef', route: 'reconciled', consequence: 'You pushed Barkly toward an actual truce instead of another incident.', barklyLine: 'I am not forgiving. I am... suspending hostilities.', resolves: true },
+            ],
+            nextHook: 'The next beat must honor this route: protected.',
+          },
+          archive: [{
+            id: 'ritual-spreads-showtime',
+            title: 'The Bit Has Escaped Containment',
+            premise: 'The \u201cshowtime\u201d routine became a signature tradition, and Biscuit has seen it.',
+            cast: ['Biscuit'],
+            status: 'resolved',
+            route: 'public',
+            intensity: 2,
+            startedAt: now - 70 * DAY,
+            updatedAt: now - 52 * DAY,
+            resolvedAt: now - 52 * DAY,
+            chapters: [
+              { number: 1, title: 'Chapter I \u00b7 Other Dogs Have Seen It', happenedAt: now - 70 * DAY },
+              {
+                number: 2,
+                title: 'Finale \u00b7 Make it his signature',
+                happenedAt: now - 52 * DAY,
+                decisionId: 'make-signature',
+                consequence: 'A private ritual became Barkly\u2019s public reputation.',
+              },
+            ],
+            choices: [],
+            nextHook: 'This is history now. Barkly can remember that you chose \u201cMake it his signature.\u201d',
+          }],
+        },
         memory: memory({
           sessionSummary:
             'Months of this. Caleb and Barkly have a routine, a nemesis, and a rock shaped like a duck that is not up for discussion.',

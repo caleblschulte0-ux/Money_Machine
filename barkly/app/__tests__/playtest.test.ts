@@ -318,3 +318,43 @@ describe('the gate', () => {
     expect(playtestAllowed()).toBe(false);
   });
 });
+
+/*
+ * "Long-Term Barkly" is the slot a tester loads to see a story with a PAST.
+ * Nothing in a playtest session can produce one -- a saga takes weeks -- so the
+ * preset ships one, and this holds it to the only property that matters: it has
+ * to survive the reconciliation the app runs the moment it loads. A preset
+ * whose saga is silently replaced by a fresh Chapter I on hydration is
+ * demonstrating the exact bug the ledger was built to fix.
+ */
+describe('the long save really has a story behind it', () => {
+  const { STORY_KEY } = require('../src/storage/keys') as any;
+  const { syncStoryState } = require('../src/barkly/storyV2') as any;
+  const { emptyMemory } = require('../src/barkly/memory') as any;
+  const { CHARACTER_KEY } = require('../src/storage/keys') as any;
+  const { PRESETS } = require('../src/dev/presets') as any;
+
+  const longterm = () => {
+    const preset = PRESETS.find((p: any) => p.id === 'longterm');
+    return preset.build(Date.now());
+  };
+
+  it('ships a saga mid-run and a saga that ended', () => {
+    const story = JSON.parse(longterm()[STORY_KEY]);
+    expect(story.version).toBe(2);
+    expect(story.active?.chapters.length).toBeGreaterThan(1);
+    expect(story.active?.choices.length).toBeGreaterThan(0);
+    expect(story.archive).toHaveLength(1);
+    expect(story.archive[0].status).toBe('resolved');
+  });
+
+  it('and the app does not throw that history away when it loads it', () => {
+    const save = longterm();
+    const story = JSON.parse(save[STORY_KEY]);
+    const character = JSON.parse(save[CHARACTER_KEY]);
+    const synced = syncStoryState(story, { character, memory: emptyMemory(), now: Date.now() });
+    expect(synced.active?.id).toBe(story.active.id);
+    expect(synced.active?.chapters).toHaveLength(story.active.chapters.length);
+    expect(synced.archive).toHaveLength(1);
+  });
+});

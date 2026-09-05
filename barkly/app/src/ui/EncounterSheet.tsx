@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BarklyProposal } from '../barkly/coauthor';
 import { SocialEncounter } from '../barkly/encounters';
+import { PersistentStory } from '../barkly/storyV2';
 import { WorldIncident } from '../world/incidents';
 import { LOCATIONS } from '../world/locations';
 import { NPCS } from '../world/npcs';
@@ -91,6 +92,32 @@ export function momentFromProposal(proposal: BarklyProposal): ChoiceMoment {
       { id: PROPOSAL_REJECT, label: 'Absolutely not', hint: 'He will take it badly, briefly.' },
     ],
     closeLabel: 'Not right now',
+  };
+}
+
+/**
+ * A fork in the ongoing saga, as a moment.
+ *
+ * The badge is the chapter, because that is what makes this one different: the
+ * question is not about right now, it is about which story the last several
+ * weeks turn out to have been. A choice marked `resolves` ends the saga, and
+ * the hint says so plainly rather than springing it on the player.
+ */
+export function momentFromStory(story: PersistentStory): ChoiceMoment {
+  const last = story.chapters[story.chapters.length - 1];
+  return {
+    badge: `CHAPTER ${story.chapters.length}`,
+    tone: story.intensity >= 3 ? 'rival' : 'friend',
+    eyebrow: story.title.toUpperCase(),
+    title: 'Where does this go?',
+    prompt: story.premise,
+    footnote: last?.consequence ?? story.nextHook,
+    choices: story.choices.map((choice) => ({
+      id: choice.id,
+      label: choice.label,
+      hint: choice.resolves ? `Ends it. ${choice.consequence}` : choice.consequence,
+    })),
+    closeLabel: 'Let it keep going for now',
   };
 }
 

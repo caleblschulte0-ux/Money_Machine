@@ -26,7 +26,12 @@ import { useBarkly } from '../hooks/useBarkly';
 import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
 import BarklyPhotoView from './BarklyPhotoView';
-import EncounterSheet, { momentFromEncounter, momentFromIncident, momentFromProposal } from './EncounterSheet';
+import EncounterSheet, {
+  momentFromEncounter,
+  momentFromIncident,
+  momentFromProposal,
+  momentFromStory,
+} from './EncounterSheet';
 import Onboarding from './Onboarding';
 import PackBookSheet from './PackBookSheet';
 import StoreSheet from './StoreSheet';
@@ -1405,7 +1410,7 @@ export default function BarklyRoom() {
       <FoodSheet visible={foodOpen} onClose={() => setFoodOpen(false)} onOpenShop={() => openOnly(setStoreOpen)} wallet={barkly.wallet} hungry={snapshot.stats.hunger > 45} onFeed={(itemId) => void barkly.feed(itemId)} />
       {playtest && <PlaytestSheet visible={playtestOpen} onClose={() => setPlaytestOpen(false)} />}
       <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={(id) => { const r = barkly.buy(id); if (r?.ok) react('delight'); return r; }} onEquip={barkly.equip} devMode={barkly.devMode} />
-      <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} stash={barkly.stashItems} />
+      <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} stash={barkly.stashItems} story={barkly.storyState} />
       <AdventureSheet visible={planOpen} onClose={() => setPlanOpen(false)} adventure={barkly.adventure} />
       <EncounterSheet
         moment={barkly.activeEncounter ? momentFromEncounter(barkly.activeEncounter) : null}
@@ -1435,6 +1440,17 @@ export default function BarklyRoom() {
         busy={busy}
         onClose={barkly.dismissProposal}
         onChoose={(choiceId) => void barkly.resolveProposal(choiceId)}
+      />
+      {/*
+        And the fork in the ongoing saga -- the same sheet a fourth time. The
+        question is not about right now; it is about which story the last few
+        weeks turn out to have been.
+      */}
+      <EncounterSheet
+        moment={barkly.activeStoryChoice ? momentFromStory(barkly.activeStoryChoice) : null}
+        busy={busy}
+        onClose={barkly.dismissStoryChoice}
+        onChoose={(decisionId) => void barkly.resolveStoryChoice(decisionId)}
       />
       <SettingsSheet
         visible={settingsOpen}

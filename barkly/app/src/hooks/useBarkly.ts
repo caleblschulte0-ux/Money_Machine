@@ -101,6 +101,7 @@ import {
   CHARACTER_KEY,
   COAUTHOR_KEY,
   INCIDENT_KEY,
+  STORY_KEY,
   DEV_KEY,
   LOCATION_KEY,
   MUTE_KEY,
@@ -127,6 +128,14 @@ import {
   resolveBarklyProposal,
 } from '../barkly/coauthor';
 import { BarklyIdentity, deriveBarklyIdentity } from '../barkly/identity';
+import {
+  advanceStory,
+  freshStoryState,
+  PersistentStory,
+  StoryDecision,
+  StoryState,
+  syncStoryState,
+} from '../barkly/storyV2';
 import {
   deriveWorldIncident,
   IncidentLedger,
@@ -230,6 +239,16 @@ export interface BarklyController {
   dismissProposal: () => void;
   /** What the two of you have already agreed to call things. */
   canon: BarklyCanon[];
+  /**
+   * The saga this Barkly is living through, with its chapters so far, and the
+   * sagas that already ended. `story.ts` derives what the CURRENT history
+   * implies; this is the part that accumulates and can be resolved.
+   */
+  storyState: StoryState;
+  /** A fork in the active saga, waiting on the player. */
+  activeStoryChoice: PersistentStory | null;
+  resolveStoryChoice: (decisionId: string) => Promise<void>;
+  dismissStoryChoice: () => void;
   /** Three personalized things Barkly wants to do this session/day. */
   adventure: AdventureState | null;
 
@@ -1119,7 +1138,7 @@ export function useBarkly(): BarklyController {
           snapshotRef.current,
           worldContext(),
           characterRef.current,
-          coauthorRef.current,
+          { canon: coauthorRef.current, story: storyRef.current },
         );
         setMemoryVersion((v) => v + 1);
         if (!reply.speech) {
@@ -1943,6 +1962,129 @@ export function useBarkly(): BarklyController {
     [activeProposal, busy, memory, speak, writeCoauthor],
   );
 
+  // ------------------------------------------------------------------- sagas
+  //
+  // `story.ts` reads the story implicit in current history -- true, but with no
+  // memory: close the app mid-saga and it starts again at Chapter I, and there
+  // is no way for it to END. This ledger gives it time. Chapters accumulate, a
+  // decision permanently routes the saga, and a finale moves it to an archive
+  // he can refer back to but never restart.
+  //
+  // Like the co-authorship engine above, it shipped complete and unreachable:
+  // storyV2.ts was imported by its own test and nothing else.
+  const [storyState, setStoryState] = useState<StoryState>(freshStoryState);
+  const storyRef = useRef<StoryState>(freshStoryState());
+  const [storyHydrated, setStoryHydrated] = useState(false);
+  const [activeStoryChoice, setActiveStoryChoice] = useState<PersistentStory | null>(null);
+  // Same rule as a dismissed proposal: closing the sheet is "not now", and
+  // without this the identical fork returns eight seconds later, forever.
+  const dismissedSagas = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let loaded = freshStoryState();
+      try {
+        const raw = await asyncStorageStore.get(STORY_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Partial<StoryState>;
+          // version 2 or nothing: an older shape is not migrated, it is
+          // discarded, because a half-understood saga is worse than a fresh one.
+          if (parsed && parsed.version === 2 && Array.isArray(parsed.archive)) {
+            loaded = { version: 2, active: parsed.active, archive: parsed.archive };
+          }
+        }
+      } catch {
+        loaded = freshStoryState();
+      }
+      if (cancelled) return;
+      storyRef.current = loaded;
+      setStoryState(loaded);
+      setStoryHydrated(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const writeStory = useCallback((next: StoryState) => {
+    storyRef.current = next;
+    setStoryState(next);
+    gate.write(STORY_KEY, JSON.stringify(next)).catch(() => {});
+  }, []);
+
+  // Reconcile the ledger with what history now implies. Pure and idempotent --
+  // `syncStoryState` returns the SAME object when nothing changed, so this is
+  // safe to run on every history change and writes nothing when it is a no-op.
+  useEffect(() => {
+    if (!storyHydrated) return;
+    const next = syncStoryState(storyRef.current, {
+      character: characterRef.current,
+      memory: memory.snapshot(),
+      now: Date.now(),
+    });
+    if (next !== storyRef.current) writeStory(next);
+  }, [character, memory, memoryVersion, storyHydrated, writeStory]);
+
+  // The fork is offered last of the three quiet-world beats, and only when the
+  // saga actually has a choice left in it.
+  useEffect(() => {
+    if (!storyHydrated || !coauthorHydrated || !incidentHydrated) return;
+    if (activeStoryChoice || activeIncident || activeProposal || worldPaused) return;
+    if (onboarding?.step !== 'done' || conversationHeld || snapshotRef.current.state === 'sleepy') return;
+    const timer = setTimeout(() => {
+      if (conversationHeldRef.current) return;
+      const saga = storyRef.current.active;
+      if (!saga || saga.status !== 'active' || saga.choices.length === 0) return;
+      if (dismissedSagas.current.has(`${saga.id}@${saga.chapters.length}`)) return;
+      setActiveStoryChoice(saga);
+    }, 9600);
+    return () => clearTimeout(timer);
+  }, [
+    activeIncident,
+    activeProposal,
+    activeStoryChoice,
+    coauthorHydrated,
+    conversationHeld,
+    incidentHydrated,
+    location,
+    memoryVersion,
+    onboarding,
+    storyHydrated,
+    storyState,
+    worldPaused,
+  ]);
+
+  // Keyed on the CHAPTER as well as the saga: a fork you skipped stays skipped,
+  // but once the story has moved on, the next fork is a new question.
+  const dismissStoryChoice = useCallback(() => {
+    setActiveStoryChoice((current) => {
+      if (current) dismissedSagas.current.add(`${current.id}@${current.chapters.length}`);
+      return null;
+    });
+  }, []);
+
+  const resolveStoryChoice = useCallback(
+    async (decisionId: string): Promise<void> => {
+      if (!activeStoryChoice || busy) return;
+      const result = advanceStory(storyRef.current, decisionId, Date.now());
+      if (!result) return;
+      setActiveStoryChoice(null);
+      writeStory(result.state);
+      setBusy(true);
+      try {
+        await speak(result.decision.barklyLine, { actions: ['EAR_PERK'] });
+        // The consequence is written into memory as well as the ledger, so the
+        // choice shows up in who he is afterwards and not only in a saga panel.
+        memory
+          .remember([], [result.decision.consequence])
+          .then(() => setMemoryVersion((v) => v + 1))
+          .catch(() => {});
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeStoryChoice, busy, memory, speak, writeStory],
+  );
+
   void memoryVersion;
   const relationship = buildRelationshipProfile({
     memory: memory.snapshot(),
@@ -1979,6 +2121,10 @@ export function useBarkly(): BarklyController {
     resolveProposal,
     dismissProposal,
     canon: coauthor.canon,
+    storyState,
+    activeStoryChoice,
+    resolveStoryChoice,
+    dismissStoryChoice,
     lastExchange,
     partialTranscript,
     error,
