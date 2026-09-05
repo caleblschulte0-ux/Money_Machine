@@ -51,17 +51,92 @@ export function normalizeCue(input: string): string {
  * If even one beat is unknown, return null and let the real brain interpret it
  * instead of pretending Barkly learned something he cannot perform.
  */
+/**
+ * The word that starts an instruction, anchored.
+ *
+ * This is the same vocabulary `inferLocalPerformance` recognises, but it must
+ * match at the START of the remainder rather than anywhere inside it -- that
+ * anchoring is what lets a split be VALIDATED instead of guessed. Searching
+ * loosely would let "when I say good boy sit down" split at "good", because
+ * "boy sit down" contains "sit" somewhere.
+ */
+const ACTION_OPENER =
+  /^(?:play dead|pretend|lie down|go to sleep|fall asleep|be (?:terrified|scared|afraid)|panic|freak out|spin|dance|zoom|run|jump|hop|wag|tilt|cock|do a head tilt|head tilt|look|perk|raise|blink|sit)\b/i;
+
+/** Strip the connective a child puts between the cue and the action. */
+function actionPart(words: string[]): string {
+  let tail = words;
+  while (tail.length > 0 && /^(?:you|then|please|and)$/i.test(tail[0])) tail = tail.slice(1);
+  return tail.join(' ').trim();
+}
+
+/**
+ * WHERE THE CUE ENDS AND THE TRICK BEGINS.
+ *
+ * The old pattern required a comma or the word "then" as the boundary, so the
+ * flagship feature of this app failed on the phrasing a child is most likely
+ * to type. Measured across twenty realistic phrasings, EVERY comma-less one
+ * was refused:
+ *
+ *   "when I say spin, you spin around"   learned
+ *   "when i say spin you spin around"    nothing, and no explanation
+ *
+ * `looksLikeTrainingInstruction` returned true for the second, so it did not
+ * even fall through as ordinary conversation cleanly -- the offline brain
+ * answered a question about the word "around", and the trick was silently
+ * never learned.
+ *
+ * The same alternation caused a second bug in a case that "worked":
+ * "when i say showtime you spin then sit then play dead" split at the FIRST
+ * "then", giving the cue "showtime you spin" and a two-beat routine out of
+ * three.
+ *
+ * So the boundary is now found rather than demanded, in order of how explicit
+ * the author was: quotes, then a comma, then the first split whose remainder
+ * actually begins an action Barkly can perform. "then" is no longer a
+ * top-level separator at all -- it is routine punctuation, which is what it
+ * was doing wrong above.
+ */
+function splitTeaching(clean: string): { cue: string; instruction: string } | null {
+  // Not anchored: "from now on, when I say X ..." is a real thing people type.
+  const opener = clean.match(/(?:when|whenever|if)\s+i\s+say\s+(.+)$/i)
+    ?? clean.match(/when\s+you\s+hear\s+(?:me\s+)?say\s+(.+)$/i);
+  if (!opener) return null;
+  const rest = opener[1].trim();
+
+  // 1. Quotes are the author saying exactly where the cue ends.
+  const quoted = rest.match(/^["“'](.{2,64}?)["”']\s*[,:]?\s*(.{2,280})$/);
+  if (quoted) return { cue: quoted[1], instruction: actionPart(quoted[2].split(/\s+/)) };
+
+  // 2. A comma is the same statement, less formally.
+  const comma = rest.indexOf(',');
+  if (comma > 1) {
+    return {
+      cue: rest.slice(0, comma),
+      instruction: actionPart(rest.slice(comma + 1).trim().split(/\s+/)),
+    };
+  }
+
+  // 3. No punctuation at all. Take the shortest cue whose remainder actually
+  //    starts with something he can do; a split that leaves an unperformable
+  //    remainder is not a split, it is a guess.
+  const words = rest.split(/\s+/);
+  for (let n = 1; n < Math.min(5, words.length); n += 1) {
+    const instruction = actionPart(words.slice(n));
+    if (instruction && ACTION_OPENER.test(instruction)) {
+      return { cue: words.slice(0, n).join(' '), instruction };
+    }
+  }
+  return null;
+}
+
 export function parseLocalTrainingInstruction(text: string): LearnedTrainingRule | null {
   const clean = sanitize(text, 420).trim();
-  const patterns = [
-    /(?:when|whenever|if)\s+i\s+say\s+["“']?(.{2,64}?)["”']?\s*(?:,|\bthen\b)\s*(?:you\s+)?(.{2,280})$/i,
-    /when\s+you\s+hear\s+(?:me\s+)?say\s+["“']?(.{2,64}?)["”']?\s*(?:,|\bthen\b)\s*(?:you\s+)?(.{2,280})$/i,
-  ];
-  const match = patterns.map((re) => clean.match(re)).find(Boolean);
-  if (!match) return null;
+  const split = splitTeaching(clean);
+  if (!split) return null;
 
-  const cue = sanitize(match[1], 64).replace(/^[\s"'“”]+|[\s"'“”,.!?]+$/g, '').trim();
-  const instruction = sanitize(match[2], 280).replace(/[.!?]+$/g, '').trim();
+  const cue = sanitize(split.cue, 64).replace(/^[\s"'“”]+|[\s"'“”,.!?]+$/g, '').trim();
+  const instruction = sanitize(split.instruction, 280).replace(/[.!?]+$/g, '').trim();
   if (normalizeCue(cue).length < 2 || !instruction) return null;
 
   const parts = splitRoutine(instruction);

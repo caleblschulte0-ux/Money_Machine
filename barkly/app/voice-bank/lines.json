@@ -1250,6 +1250,12 @@
       "tag": "npcs"
     },
     {
+      "key": "7b290beb0c86ea28",
+      "spoken": "Dat's a trick I don't have in me. Try sit, spin, jump, wag, or play dead and I'll learn it on the spot. I'm just sayin'.",
+      "source": "That's a trick I don't have in me. Try sit, spin, jump, wag, or play dead and I'll learn it on the spot.",
+      "tag": "offline"
+    },
+    {
       "key": "7c22d96c521faff3",
       "spoken": "Our grandchildren will inherit dis. I hope they are ready.",
       "source": "Our grandchildren will inherit this. I hope they are ready.",
@@ -1488,6 +1494,12 @@
       "spoken": "Showtime. Ya made me learn choreography.",
       "source": "Showtime. You made me learn choreography.",
       "tag": "training"
+    },
+    {
+      "key": "9e51c4d88804dbd5",
+      "spoken": "I want dat one. I can't do it yet, though. Gimme a move I know: sit, spin, wag, or play dead.",
+      "source": "I want that one. I can't do it yet, though. Give me a move I know: sit, spin, wag, or play dead.",
+      "tag": "offline"
     },
     {
       "key": "9eb47d4a65275da8",
@@ -2028,6 +2040,12 @@
       "spoken": "I didn't move. I want that on da record.",
       "source": "I did not move. I want that on the record.",
       "tag": "greetings"
+    },
+    {
+      "key": "e06ab432728c6bec",
+      "spoken": "Almost. I'm not gonna lie to ya. Say it like dis: when I say bedtime, play dead. Then it's mine forever.",
+      "source": "Almost. Say it like this: when I say bedtime, play dead. Then it's mine forever.",
+      "tag": "offline"
     },
     {
       "key": "e544b92d83fe4c89",

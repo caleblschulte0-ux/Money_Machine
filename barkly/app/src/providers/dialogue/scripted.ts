@@ -27,6 +27,7 @@ import { DialogueContext, DialogueProvider, DialogueRequest } from '../types';
 import { normalizeKey, personalFactFrom } from '../../barkly/facts';
 import { compose } from '../../barkly/compose';
 import { keywords, toneOf, understand } from '../../barkly/understand';
+import { looksLikeTrainingInstruction } from '../../barkly/training';
 
 interface Line {
   speech: string;
@@ -74,8 +75,33 @@ function canonName(c: DialogueContext | undefined, subject: string): string | nu
   return hit ? hit.value : null;
 }
 
+/*
+ * A TEACHING ATTEMPT HE COULD NOT PARSE.
+ *
+ * Reaching the provider at all is the proof it failed: `DialogueEngine` learns
+ * a parseable rule and returns before any provider is called, and it suppresses
+ * the trained-cue path while `looksLikeTrainingInstruction` is true. So if a
+ * teaching-shaped sentence arrives here, nothing was learned.
+ *
+ * Before this it fell through to the composer, which read the sentence as
+ * conversation and answered about a word out of the middle of it -- teach him
+ * "when i say spin you spin around" and he replied "Around. Interesting. I've
+ * got my eye on around." A published web build has no model behind it to catch
+ * that, so the flagship feature failed silently and confusingly at once. Say
+ * what happened instead, and say the shape that works.
+ */
+const TEACH_MISSED: Line[] = [
+  { speech: "I want that one. I can't do it yet, though. Give me a move I know: sit, spin, wag, or play dead.", actions: ['HEAD_TILT'] },
+  { speech: "Almost. Say it like this: when I say bedtime, play dead. Then it's mine forever.", reaction: 'excited', actions: ['EAR_PERK'] },
+  { speech: "That's a trick I don't have in me. Try sit, spin, jump, wag, or play dead and I'll learn it on the spot.", actions: ['HEAD_TILT'] },
+];
+
 function answerQuestion(text: string, c: DialogueContext | undefined, you: string): Line | null {
   const t = text.toLowerCase();
+
+  if (looksLikeTrainingInstruction(text)) {
+    return at(TEACH_MISSED, Math.floor(Math.random() * 89));
+  }
 
   if (/\b(what|who)('?s| is)? (your|ur) name\b|\bwhat are you called\b/.test(t)) {
     return { speech: "Barkly. It's on the tag. Keep up.", actions: ['HEAD_TILT'] };

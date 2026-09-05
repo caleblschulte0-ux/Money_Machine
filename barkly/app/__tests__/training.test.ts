@@ -8,6 +8,7 @@ import {
   normalizeCue,
   parseLocalTrainingInstruction,
 } from '../src/barkly/training';
+import { createScriptedDialogue } from '../src/providers/dialogue/scripted';
 import { createInMemoryStore } from '../src/storage/inMemoryStore';
 
 const candidate = (cue: string, instruction: string, speech = 'Got it.') => ({
@@ -178,5 +179,94 @@ describe('Barkly training', () => {
       ['SLEEP'],
     ]);
     expect(memory.snapshot().trainingRules[0].timesTriggered).toBe(1);
+  });
+});
+
+/*
+ * HOW A CHILD ACTUALLY TYPES.
+ *
+ * The parser demanded a comma or the word "then" as the boundary between the
+ * cue and the trick, so the flagship feature of this app failed on the phrasing
+ * a seven-year-old is most likely to produce. Measured across twenty realistic
+ * sentences, every comma-less one was refused -- and the app's own hint tells
+ * you to write one WITH a comma, which a child on a phone will not do.
+ */
+describe('teaching without punctuation', () => {
+  const cueOf = (text: string) => parseLocalTrainingInstruction(text)?.cue ?? null;
+
+  it('learns the same trick with or without the comma', () => {
+    for (const [withComma, without] of [
+      ['when I say spin, you spin around', 'when i say spin you spin around'],
+      ['when I say bedtime, play dead', 'when i say bedtime play dead'],
+      ['if I say freeze, sit down', 'if i say freeze sit down'],
+      ['whenever I say up, you jump', 'whenever i say up you jump'],
+      ['when you hear me say hello, wag your tail', 'when you hear me say hello wag your tail'],
+      ['when I say goodnight, go to sleep', 'when i say goodnight you go to sleep'],
+    ]) {
+      const a = parseLocalTrainingInstruction(withComma);
+      const b = parseLocalTrainingInstruction(without);
+      expect(a).not.toBeNull();
+      expect(b).not.toBeNull();
+      expect(b!.cue).toBe(a!.cue);
+      expect(b!.actions).toEqual(a!.actions);
+    }
+  });
+
+  it('finds the end of a multi-word cue instead of taking the first word', () => {
+    // The remainder has to BEGIN with something he can perform, or it is not a
+    // split. Searching loosely would cut "good boy sit down" at "good",
+    // because "boy sit down" contains "sit" somewhere inside it.
+    expect(cueOf('when I say good boy sit down')).toBe('good boy');
+    expect(cueOf('when i say the magic word you play dead')).toBe('the magic word');
+    expect(cueOf('when i say dinner time you spin and then sit')).toBe('dinner time');
+  });
+
+  it('does not let a "then" inside the routine eat the cue', () => {
+    // "then" used to be a top-level separator, so this split at the FIRST one:
+    // cue "showtime you spin", and a two-beat routine out of three.
+    const rule = parseLocalTrainingInstruction('when i say showtime you spin then sit then play dead');
+    expect(rule?.cue).toBe('showtime');
+    expect(rule?.routine).toHaveLength(3);
+    // Identical to the punctuated form, which always worked.
+    expect(rule?.routine).toEqual(
+      parseLocalTrainingInstruction('when I say showtime, spin then sit then play dead')?.routine,
+    );
+  });
+
+  it('still refuses what he genuinely cannot perform', () => {
+    // The contract is unchanged: never pretend to have learned a move that has
+    // no performance behind it. There is no roll-over animation.
+    expect(parseLocalTrainingInstruction('when i say roll over roll over')).toBeNull();
+    expect(parseLocalTrainingInstruction('when i say hush you do nothing')).toBeNull();
+    expect(parseLocalTrainingInstruction('when i say hello')).toBeNull();
+  });
+
+  it('says so out loud when a teach does not land', async () => {
+    /*
+     * Reaching the provider at all is the proof it failed: the engine learns a
+     * parseable rule and returns before any provider call. Before this the miss
+     * fell through to the composer, which answered about a word out of the
+     * middle of the sentence -- "Around. Interesting. I've got my eye on
+     * around." A published web build has no model behind it to catch that.
+     */
+    const memory = new BarklyMemory(createInMemoryStore(), 'default', () => 100);
+    await memory.load();
+    const engine = new DialogueEngine(createScriptedDialogue(), memory);
+    const result = await engine.converse('when i say roll over roll over', freshSnapshot(100));
+    expect(result.reply.speech).toMatch(/sit|spin|wag|play dead/i);
+    expect(memory.snapshot().trainingRules).toHaveLength(0);
+  });
+
+  it('and learns it, silently and correctly, when it does', async () => {
+    const memory = new BarklyMemory(createInMemoryStore(), 'default', () => 100);
+    await memory.load();
+    const engine = new DialogueEngine(createScriptedDialogue(), memory);
+    await engine.converse('when i say bedtime play dead', freshSnapshot(100));
+    const rules = memory.snapshot().trainingRules;
+    expect(rules).toHaveLength(1);
+    expect(rules[0].cue).toBe('bedtime');
+    // ...and the cue fires afterwards, with no provider involved.
+    const fired = await engine.converse('bedtime', freshSnapshot(100));
+    expect(fired.reply.actions).toContain('SLEEP');
   });
 });
