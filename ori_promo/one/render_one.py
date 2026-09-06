@@ -33,8 +33,8 @@ import shotnorm
 import filmlook as FL
 from ai import place as PL
 import depthtools as DT
-import map_overlay
-import sync_overlay
+# map_overlay / sync_overlay imports REMOVED, v31 restart -- see the note
+# at the old call site (search "legend-card and group-sync-circle").
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
                       GEN_ICE, figures, W, H, FPS, TOTAL)
 
@@ -392,7 +392,20 @@ FIGURE_MAX_DRIFT = 0.03  # a plate carrying a figure must be this static
 # never "too many cuts", it was "too FAST" -- see the note at the dissolve
 # site), and a brief dip to black reads as a deliberate chapter break --
 # apt for hero/on too, since that is the moment the device switches on.
-DIP_TO_BLACK = {"hero", "on", "dak", "ice", "mam"}
+#
+# TWO MORE FOUND, v31 restart. Removing `map`/`sync` created a brand new
+# adjacency, open->reach, never checked before because it never existed
+# before; and off->walk existed before but was never in this list either
+# -- both went unchecked because nothing flagged them, not because they
+# were verified fine. Direct frame extraction at both (out/v31_check/) on
+# the freshly rendered v31 master shows the same translucent-ghost pattern
+# as every other case above: open (tight two-person shot at the falls) vs
+# reach (wide path POV) at 27.65s, and off (medium shot, boy looking out)
+# vs walk (wide ground-level POV) at 69.55s -- a visible double-exposure
+# of the wrong-scale previous frame bleeding through the new one. Same
+# fix, same reasoning: `reach` and `walk` fade in from black instead of
+# dissolving from their mismatched predecessor.
+DIP_TO_BLACK = {"hero", "on", "dak", "ice", "mam", "reach", "walk"}
 
 
 SAFE_T, SAFE_B = FL.safe_area(H, W)
@@ -537,10 +550,12 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                             reveal=(toff is None and k < 1.0), match=mtch,
                             shadow_strength=shw, contact=ct)
 
-        if beat == "map":
-            map_overlay.draw_map(img, t, dur)
-        if beat == "sync":
-            sync_overlay.draw_sync(img, t, dur)
+        # map/sync overlay calls REMOVED, v31 restart -- those beats no
+        # longer exist (spec_one.py). one/map_overlay.py and
+        # one/sync_overlay.py (the legend-card and group-sync-circle
+        # widgets) are retired, not deleted -- the facts they carried
+        # (rental pickup, group sync) now ride as VO clauses on `open`
+        # and `lock` instead of owning a dedicated menu-UI beat.
 
         if lab and lpath:
             # 6th field is an optional label SCALE; absent means 1.0, so
@@ -666,35 +681,12 @@ def main(only=None):
     """
     os.makedirs(OUT, exist_ok=True)
 
-    # `map` reads raw/IMG_MAP1.MOV like any other plate, but that file is a
-    # BUILT asset (a real photo, held static), not raw footage -- it is not
-    # committed, the same discipline as every other generated plate in this
-    # project. Build it here if a fresh checkout does not have it yet.
-    map_clip = os.path.join(RAW, "IMG_MAP1.MOV")
-    if not os.path.exists(map_clip):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "build_map_plate", asset("ai/map/build_map_plate.py"))
-        bmp = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(bmp)
-        bmp.build()
-        bmp.ensure_clip(map_clip)
-
-    # `sync` reads raw/IMG_MAP2.MOV -- the SAME built-plate discipline as
-    # `map`, one beat later, but this one had NO auto-build path: a fresh
-    # checkout (or the file simply missing) crashed the sync beat outright
-    # ("MAP2@0.0: wanted 63 frames, got 0") rather than rebuilding it the
-    # way every other plate in this block does. Found while rebuilding the
-    # map/sync plates for the v30.1 fade fix.
-    sync_clip = os.path.join(RAW, "IMG_MAP2.MOV")
-    if not os.path.exists(sync_clip):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "build_map_plate", asset("ai/map/build_map_plate.py"))
-        bmp2 = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(bmp2)
-        bmp2.build_sync()
-        bmp2.ensure_sync_clip(sync_clip)
+    # map/sync auto-build blocks REMOVED, v31 restart -- `map` and `sync`
+    # are no longer beats (spec_one.py), so raw/IMG_MAP1.MOV and
+    # IMG_MAP2.MOV are no longer read by anything. ai/map/
+    # build_map_plate.py is retired along with the beats it fed; it is
+    # not deleted, in case the legend-card treatment is ever wanted again
+    # for something other than this film.
 
     # `hero` reads raw/IMG_HERO1.MOV the same way -- a BUILT plate (a
     # generated still, held with a slow push-in), not committed, same

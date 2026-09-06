@@ -1,499 +1,163 @@
-# ORI — "WHAT THIS PLACE WAS". v8.
+# ORI — "WHAT THIS PLACE WAS". v31 — FULL CREATIVE RESTART.
 #
-# OPERATOR on v7:
-#   "those first settlers, like, the... their sizing is terrible. Their
-#    anchoring is terrible. The falls when it hits the ice age looks like
-#    complete shit. ... the other two AI pictures I don't think were
-#    anchored or put in that horribly ... add a little narration and
-#    completely cut the sound out of the videos because there's a lot of
-#    me talking in the background ... it's still not quite giving me the
-#    feeling I wanted to."
+# OPERATOR: "Save the video that you currently have somewhere so I can
+# retrieve it later if I want to. But you and ChatGPT need to completely
+# restart. Completely burn down what you have. Completely restart with
+# the whole thing in mind that this needs to look like an Apple promo
+# video." The v30.2 cut is archived (commit 9ad5599, delivered to the
+# operator directly) and is not this file's problem anymore.
 #
-# THE SETTLERS BEAT IS GONE. Not moved, not resized -- cut. r78, r80, r82
-# and now the operator have all named that asset as the weakest thing on
-# screen; it is the only element every reviewer independently failed. Its
-# figures wear floor-length dresses, so there are no feet to land on the
-# ground, and its own internal proportions are wrong (the two children are
-# nearly the mother's height). No placement fixes either. I cannot
-# regenerate it -- the image endpoint now serves one model and ignores the
-# one that made these assets (see ai/eras.py) -- so the honest move is to
-# stop showing it. It returns when there is an asset that earns its place.
+# WHAT "BURN DOWN" MEANT IN PRACTICE. Every prior round from v18 through
+# v30.2 was a PATCH on one structure: 17 beats in 65s, averaging 3.8s a
+# cut, built around a menu-and-diagram HUD (a legend card with four
+# colour-coded bullet points, a group-sync circle diagram). Every fix
+# made that structure cleaner. None of them asked whether that structure
+# was the right one for "look like an Apple promo video" -- which is not
+# a grading note, it is a pacing and information-density note. Apple
+# spots do not narrate every capability with its own on-screen menu; they
+# pick the two or three that matter, say them in a sentence each, and
+# spend the rest of the runtime holding a single beautiful image long
+# enough to feel like something instead of scanning like a spec sheet.
 #
-# THE FALLS ICE BEAT IS GONE TOO, and for a reason worth writing down: the
-# frozen-falls still looked spectacular to ME in a single test frame, and
-# it fails in motion for two things a still does not show. Its plate holds
-# TWO sharp present-day people in bright modern clothes filling the right
-# third -- on the hero plate the wearer is one out-of-focus head, which
-# reads as intentional, but two of them read as a mistake. And moving
-# water cannot be frozen by killing its local contrast: it reads as
-# over-exposed water, not ice. The ice now runs on plates that are mostly
-# rock: the wide valley, which has no one near camera at all, and the
-# hero shelf, which is the version nobody objected to.
+# WHAT CHANGED, CONCRETELY:
+#  - map/sync ARE GONE AS BEATS. The rental-pickup fact and the group-sync
+#    fact are both still in the film -- folded into `open`'s and `lock`'s
+#    VO as one clause each -- but neither owns a dedicated visual anymore,
+#    and the legend-card / circle-diagram UI they carried (one/
+#    map_overlay.py, one/sync_overlay.py) is retired with them. Nothing
+#    the operator asked to have SAID is gone; what's gone is the widget
+#    that said it.
+#  - EVERY BEAT THAT CARRIES AN ERA (`dak`, `settle`, `ice`, `mam`) IS
+#    ROUGHLY DOUBLED IN LENGTH. These are the emotional core of the film
+#    and they were getting 3.8-5.0s each -- barely enough to register
+#    before the dissolve. They now hold 7-8s each, which is the
+#    difference between "a slide changed" and "something arrived."
+#  - `hero` (the product itself) DOUBLES too, 2.5s -> 5.0s. If this
+#    device is the entire premise of the film, the one shot that shows it
+#    with nothing else on screen has earned more than a glance.
+#  - VO IS SPARSER, NOT JUST SHORTER. Four beats now carry NO narration at
+#    all (`sign`, `hero`, `now`, `end`) -- the location card, the product
+#    shot, the "ONE PLACE / EVERY TIME" title and the wordmark all say
+#    what they need to say without a voice under them. Silence over a
+#    beautiful frame is not dead air in this genre, it is the point.
 #
-# WHAT CARRIES OVER FROM v7, because it worked: five slow beats, every cut
-# a half-second dissolve. Measured on the v7 master, the worst single-frame
-# change fell from 82.3% of the picture to 19.0%.
+# WHAT DID NOT CHANGE: same real footage (no new shoot exists to draw
+# on), same approved facts and claims (nothing here states a date, a
+# measurement, a partnership, traction or a deployment that isn't real --
+# same standing rule as every version before this one), same operator-
+# approved lines reused verbatim where a line was already exactly right
+# (`off`'s "No tour group. No phone in your face. You just look." did not
+# need touching). The Dakota cultural-review gap is UNCHANGED -- still no
+# advisor or tribal contact has reviewed the reconstruction, and that is
+# still true regardless of how the beat around it is paced.
 #
-# SOUND: the location audio is GONE, all of it, on the operator's
-# instruction -- he is audible talking behind several plates and the
-# footage was never shot for sound. Score, confirmation ticks and
-# narration only. See one/vo_one.py.
+# FOOTAGE SAFETY FACTS, CARRIED FORWARD (measured across v18-v30, not
+# re-guessed here -- render_one.py's own footage gate re-checks all of
+# this at render time regardless, but these are the known edges):
+#  - IMG_6799 (`prod`) is 12.37s long; in-point 7.0 for MORE than ~3.0s
+#    visibly picks up hand-shake in the shot's last second. Left at 3.0s.
+#  - IMG_6803 (`off`) is 7.10s long; in-point 2.5 for MORE than ~3.5-4.0s
+#    runs into the handheld drift as the original recording stops.
+#  - IMG_6806 (`on`/`lock`/`open`) is one continuous 59.5s take; the
+#    temple-reach gesture itself sits at 8.6-9.0s on the clip's own
+#    clock, so `on`'s in-point (8.4) must not move later than that.
+#  - IMG_6797 (`reach`), IMG_6807 (`walk`), IMG_6796 (`sign`), IMG_6808
+#    (`past`) and IMG_6804 (`mam`/`now`) are all 25-71s long with room to
+#    spare at their existing in-points.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 65.0
+TOTAL = 79.0
 
 # beat, clip, in-point, start, dur, what the beat does
-#
-# ---- v19: THE FRONT END WAS TOO LONG. Operator, on v18: "way too much
-# b roll on the front end, we don't even see an ai overlay until the
-# last half of the video, and we don't breakdown what makes our product
-# special." All three are correct and measurable: v18 ran 36.0 of 75.0
-# seconds (48%) before the first generated overlay. The operator's own
-# ORIGINALLY APPROVED 34s cut (ori_promo/README.md) reached its first AI
-# overlay at 14.5 of 34s (43%) and ran THREE distinct capability beats
-# back to back. v18 had drifted past that pace across six versions of
-# additions nobody re-checked against the total.
-#
-# THE FIX IS COMPRESSION, NOT A REWRITE. Same clips, same in-points where
-# a beat carries generated imagery (changing those would mean re-gating
-# figure placement), shorter durations everywhere else, and `rail` CUT
-# entirely -- it was a third establishing beat making the same point
-# `sign` and `past` already make (the story is here and unseen), and
-# every second spent there is a second not spent on the product. Every
-# shortened window was re-gated (shotqc.py, unmodified): all PASS, no
-# flags, same as the durations they replace.
-#
-# THE MISSING BREAKDOWN: `open`'s line changes from "So take the falls,
-# and run them backwards" -- a transition, not a claim -- to the
-# operator's OWN approved capability language from that original cut:
-# "the history, pinned to the exact spot where it happened." Paired with
-# `lock`'s unchanged "They know where you're standing, and what you're
-# looking at," that is two consecutive, concrete statements of what the
-# device does, immediately before the film proves both of them. Nothing
-# invented -- this is the operator's own vetted line, reused, not new
-# copy written on his behalf.
 BEATS = [
- # ---- ACT 1: THE PROBLEM. Fast. Two beats, not three.
- ("sign", "6796", 29.0, 0.0, 3.5, "how the story is told today: a man reading a plaque"),
- # in-point 22.0, not 3.5 (r101: a headless torso walked out of frame at
- # 3.5). Same note as v16/v17/v18 -- kept here so nobody re-picks the bad
- # in-point off a thumbnail. 28.8 gates DRIFT+JOLT; still refused.
- ("past", "6808", 22.0, 3.5, 2.5, "and the park going by around it, nobody stopping"),
- # `rail` IS GONE. v19. It was a third shot making the point `sign` and
- # `past` already make. Its VO line is gone with it, not folded into
- # another beat -- the film does not need to say "the story is right
- # there, you just can't see it" a third way when it has already said it
- # twice and is one beat from showing the product that fixes it.
- # ---- ACT 2: THE PRODUCT. What it is, on a face, and the act of using
- # it -- compressed, but the SAME footage: in-point 7.0 on IMG_6799,
- # same reason as always (the clip is only 12.4s long).
- # DURATION 5.0 -> 3.0, v23. A bulk re-time (v22, adding `map`/`sync`)
- # silently widened this from its original 3.0s to 5.0s with no reason
- # tied to the footage -- IMG_6799 is only 12.37s long and this window ran
- # to 12.0s, 0.37s from the clip's own end. Operator: "you're seeing my
- # hands start to shake at the end." Confirmed both ways: shotqc tail
- # rises from 0.50 (ratio 0.18) at 3.0s to 0.71 (ratio 1.00) at 5.0s --
- # neither crosses the automated flag thresholds, same blind spot as the
- # `off` beat earlier -- and frame-by-frame from 9.6-12.2s shows the
- # framing visibly sliding as the shot approaches its own end. Back to
- # 3.0s, the duration that was actually gated clean before this beat's
- # timing was touched for an unrelated reason.
- ("prod", "6799",  7.0, 6.0, 3.0, "the wearer, the glasses on him, the whole park in front"),
- # ---- `hero`: THE PRODUCT ITSELF, v28. Operator, repeatedly: "I did not
- # see any three d renderings of the glasses or any cool glasses hero
- # shots" -- then, directly, "Yes get it do stop asking questions." The
- # film never once showed the object; every beat is either real park
- # footage or a historical era. This is the one still of the glasses,
- # placed right after `prod`'s line ("we build what runs on them") so the
- # line has something to land on -- `prod`'s own VO regularly overruns its
- # beat by ~1.2s (see vo_one.py), so it actually finishes SPEAKING over
- # this shot rather than over `on`'s unrelated wearer footage, which reads
- # as intentional, not sloppy.
- # NINE PRIOR ATTEMPTS FAILED the same way (ai/gen_glasses.py): the free
- # generator kept returning a portrait of a person wearing glasses despite
- # an explicit no-person/no-face prompt -- it appears to key hard off the
- # word "glasses" toward its portrait training data regardless of
- # qualifiers. The fix was not a better negative prompt, it was a
- # different CAMERA ANGLE: a flat-lay/top-down product shot has nowhere
- # for a face to fit. ai/hero/glasses_hero_s12.png is the result. The
- # frame reads as ordinary eyewear, not a sci-fi visor -- deliberate, since
- # ORI licenses software onto glasses it does not design (see `prod`'s own
- # line); a distinctive hardware look would have invented a product this
- # company does not have. Carries the same VISUALISATION tag as every
- # other generated image here (see LABELS below) and, like `map`/`ice`, a
- # slow push-in rather than a locked-still frame (ai/hero/build_hero_plate.py).
- ("hero", "HERO1", 0.0, 9.0, 2.5, "the product itself — the one shot that is not the wearer"),
- # ---- ONE CONTINUOUS SHOT, STILL CUT INTO THREE BEATS, JUST SHORTER.
- # `on`, `lock` and `open` are consecutive windows of IMG_6806 with NO
- # GAP -- 8.4-10.7, 10.7-13.2, 13.2-16.4 -- so the in-points are DERIVED
- # from each other's end, not reused from v18's longer windows; reusing
- # the old fixed in-points here would have jump-cut within one take. The
- # temple-reach gesture itself is a fixed point in the SOURCE footage
- # (8.6-9.0 on IMG_6806's own clock) and both new durations still cover
- # it, so the causal chain -- reach, recognise, reveal -- is intact, just
- # faster.
- ("on",   "6806",  8.4, 11.5, 2.3, "he raises a hand to the temple — he is switching it on"),
- ("lock", "6806", 10.7, 13.8, 2.5, "the glasses recognise the falls and name them"),
- ("open", "6806", 13.2, 16.3, 3.2, "anchored to the real place — the capability, stated correctly"),
- # ---- `map`: THE SITE MAP, v21. Operator: "it needs that sky view map
- # that kinda shows what points in the falls we would be doing what, which
- # I made and gave you... if you don't like the way it looks, fine, but
- # then you need to generate something that looks very similar and just
- # better. In that minimalist map you tried to do at one point -- not
- # that. That didn't work, I didn't like it." His original file could not
- # be re-sent into this session, so this is built from HIS CONCEPT (a
- # colour-coded legend: blue=visual scenes, purple=audio narration,
- # orange=ambient noise, green=lookout points) on a REAL aerial-style
- # photo of the actual park, not the darkened/minimalist treatment he
- # rejected and not a stock or generated satellite image. The photo is
- # ORI'S OWN footage: the clean upper portion of IMG_6803 (the same clip
- # `off` uses two beats later), the one moment in that clip before the
- # wearer leans onto the rail where the whole park -- mill ruin, falls,
- # paths, green fields, city skyline -- is unobstructed. See
- # one/map_overlay.py for the pin placement and ai/map/park_map_plate.png
- # for the built plate. This is a STATIC card, held for the whole beat
- # (like `end`), not a panned or zoomed plate -- a photo card does not
- # need to move to read, and holding it keeps every pin anchor a fixed
- # pixel rather than a tracked one.
- ("map",  "MAP1",  0.0, 19.5, 5.0, "the site map — his own legend, on the real park"),
- # ---- `sync`: GROUP SYNC AND NO BLEED. v22. Operator: "you never talk
- # about the cool, like, features I mentioned earlier, how we are going to
- # make it so if you're in a group, your stuff will sync. If you're not in
- # a group, when you walk past another group, your stuff will not overlap
- # and it won't sound weird."
- # He is right that the film never says this, and my previous answer --
- # that no clip in the 34 shows two wearers, so the beat could not be
- # built -- was the wrong answer to the right complaint. The feature is a
- # statement about what the SOFTWARE does with two groups in one park. It
- # does not need a photograph of two people; it needs a diagram, which is
- # one/sync_overlay.py. Same real aerial plate as `map`, pushed in on the
- # middle of the park, so the two beats read as one information section
- # over the same ground.
- ("sync", "MAP2",  0.0, 24.5, 5.7, "group sync, and the boundary another group's audio does not cross"),
- # ---- `reach`: walking is the trigger, not a drawn control. v18, timing
- # only compressed in v19. IMG_6797@40.0, gated clean at every duration
- # tried (see rounds/r106): mid 1.87 tail 1.76 ratio 0.94 drift 7.8% peak
- # 4.0 at 2.5s, no flags. Start moved 17.0 -> 21.5, v21, to make room for
- # `map`.
- ("reach", "6797", 40.0, 30.2, 2.5, "he walks, and the past is where he arrives"),
- # ---- THE ERAS ARE BACK. v22, on direct operator instruction: "we took
- # out the AI cuts of the settlers and the natives, which is bad because
- # those were supposed to stay in."
- # THE DAKOTA REMOVAL WAS HIS OWN RULING (v20) and he has now reversed it.
- # For the record, because a reversal should be recorded rather than
- # quietly executed: the reason it came out was that there is no Dakota
- # cultural advisor or tribal contact attached to this project who has
- # reviewed the reconstruction, and NOTHING ABOUT THAT HAS CHANGED between
- # v20 and v22. It is his company and his call; the film is his. The
- # standing note stays in the round record so the gap is not lost.
- # WHAT IS DIFFERENT FROM THE ASSETS THAT CAME OUT. `dak` returns with
- # its v15 placement intact (dak_s17.jpg, foot 1150/745, 385px -- the
- # scale the operator himself signed off after "the mammoth size is
- # shit"), so this is a restore, not a re-tune. `settle` is NEW rather
- # than the v8 settlers beat: that asset failed for measurable reasons
- # (floor-length dresses, so no feet to land on the ground, and the two
- # children nearly the mother's height). fam3_s17.jpg has visible feet on
- # three of four figures and correct adult/child proportion, which is the
- # defect fixed rather than re-shipped.
- # v29: dak/settle MOVED FROM A COMPOSITE TO A PLATE. ChatGPT's
- # dak_family_chatgpt.jpg / settler_family_chatgpt.jpg (r117) bake the
- # family AND a Falls-Park-like background into one flat photograph, not
- # a transparent cutout -- running that through ai/place.py's rembg/matte/
- # shadow pipeline onto the REAL IMG_6804/6805 footage would mean cutting
- # a person-shaped hole out of a generated photo and pasting it onto real
- # rock underneath: two different rock textures fighting in one frame.
- # So both beats now work exactly like `ice` -- a fully generated PLATE
- # (see ai/dak/build_dak_plate.py, ai/settle/build_settle_plate.py), not a
- # figure standing on real footage. `mam`/`now` deliberately still keep
- # the real ground; that tradeoff is unchanged.
- ("dak",  "DAK1",  0.0, 32.7, 4.0, "before the mill, the family answers where he has stopped"),
- ("settle", "SETTLE1", 0.0, 36.7, 3.8, "the settlement era, further up the same bank"),
- # ---- ACT 3: THE DEMO. `dak` AND `more` ARE GONE. v20, on direct
- # operator instruction, and this is a REMOVAL, not a taste note.
- # Operator, asked directly whether there is a Dakota cultural advisor or
- # tribal contact attached to this project: "There is not currently a
- # Dakota cultural advisor or tribal partner attached to the project that
- # I can point to as having reviewed and approved the reconstruction...
- # I would remove any detailed or authoritative-looking Dakota
- # reconstruction from the core demo for now... pull the specific Dakota
- # reconstruction. Once we have cultural involvement, put it back
- # correctly and make it stronger." A VISUALISATION disclaimer does not
- # answer that; he said so himself, and he is right -- a disclosure tag
- # is a label on the frame, not a review of what the frame depicts. Both
- # generated Dakota figures (dak_s17.jpg, dak_s3.jpg) and both beats that
- # carried them are removed from this cut. No substitute reconstruction
- # was invented in their place -- see FIGURES and LABELS below, and the
- # (unchanged) mam41f.jpg mammoth is the only composited figure left in
- # the film, because it depicts an animal, not a culture.
- # This SHRINKS the demo section right after v19 lengthened it in
- # response to "we don't breakdown what makes our product special" --
- # that tension is real and is not resolved by pretending otherwise. The
- # breakdown v19 added (the two capability lines on `lock`/`open`) stays
- # and does the explaining; the remaining ice/mammoth beat is the one
- # demonstration this cut can make honestly today.
- # ---- `ice` IS A GENERATED PLATE NOW. v22. Operator: "you did not fix
- # the ice age at all. It still looks like shit." The cause was
- # structural, not tuning: every prior version was the SUMMER plate under
- # a procedural cold grade, and a grade cannot turn a mown lawn, a car
- # park and full deciduous canopy into an ice age. IMG_ICE1 is generated
- # (ai/ice/build_ice_plate.py) and carries the VISUALISATION tag.
- # `mam` and `now` DELIBERATELY KEEP THE REAL PLATE -- the moment the
- # wearer is on screen, the ground under him is the actual ground, which
- # is the one claim this whole film rests on.
- ("ice",  "ICE1",  0.0, 40.5, 4.5, "it runs further back and the whole valley freezes"),
- ("mam",  "6804", 26.0, 45.0, 5.0, "the payoff — the same shelf under ice, and a mammoth on it"),
- ("now",  "6804", 34.0, 50.0, 4.5, "back to NOW, the thaw, the closing line — no marker, just the dissolve"),
- # ---- ACT 4: THE CLOSE. The HUD is gone and the park is just the park
- # again, which is the only honest way to end a film about a device that
- # is not on your face right now.
- # NOT IMG_6798. r101: "the foreground railing and large no-climbing sign
- # dominate the frame, while the wearer's pointing gesture reads more like
- # a tourist snapshot than the quiet product payoff." All three are true
- # of that plate. 6803 is the overlook: him at the rail, the whole park
- # and the falls in front of him, no signage, no gesture -- a man simply
- # looking at a place, which is the entire closing claim.
- # DURATION 4.5 -> 3.0, v21. Operator: "cut it a little sooner because it
- # starts to wobble." IMG_6803 is only 7.1s long and this beat's old
- # window (2.5-7.0) ran to within 0.1s of the clip's own end -- exactly
- # where a handheld shot drifts as the recording stops. Confirmed both
- # ways: shotqc's tail motion at 4.5s is 0.58 (ratio 3.89, accelerating
- # hard); frame-by-frame from 6.2-7.0s shows the framing visibly sliding
- # right. At 3.0s (in-point unchanged) tail drops to 0.11, ratio 0.76 --
- # stops before the drift starts. Checked every other beat's tail the
- # same way (measurement + frames, not just the flag): none of the rest
- # show it. `reach` and `ice` have real absolute tail motion too (1.76,
- # 1.01) but it is the WALKING SUBJECT and a legitimate pan respectively,
- # confirmed by looking at the frames -- not a settle-down artifact.
- ("off",  "6803",  2.5, 54.5, 3.0, "glasses off the story, the real place, nothing drawn on it"),
- ("walk", "6807", 12.0, 57.5, 4.0, "the closing line over the park as it actually is"),
- ("end",   None,   0.0, 61.5, 3.5, "held from walk's last frame — which is PRESENT DAY"),
+ # ---- ACT 1: THE PROBLEM. Two beats. The location card (TITLES, below)
+ # carries the "where" in text; VO stays silent on `sign` so it isn't
+ # saying what's already on screen.
+ ("sign", "6796", 29.0, 0.0, 5.0, "the story as it's told today: a man reading a plaque, held"),
+ ("past", "6808", 22.0, 5.0, 4.0, "the park going by around it, nobody stopping"),
+ # ---- ACT 2: THE PRODUCT. `prod` capped at 3.0s -- see the footage note
+ # above, this is not a pacing choice, IMG_6799 runs out of clean frame.
+ ("prod", "6799",  7.0, 9.0, 3.0, "the wearer, the glasses on him, the whole park in front"),
+ # `hero`: the product itself, alone, held twice as long as it used to be.
+ # ai/hero/build_hero_plate.py's default `dur` now matches this beat.
+ ("hero", "HERO1", 0.0, 12.0, 5.0, "the product itself, nothing else on screen, no rush"),
+ # ---- ONE CONTINUOUS TAKE, THREE BEATS, IN-POINTS DERIVED FROM EACH
+ # OTHER'S END so there is no jump cut inside a single take.
+ ("on",   "6806",  8.4, 17.0, 3.0, "he raises a hand to the temple — switching it on"),
+ ("lock", "6806", 11.4, 20.0, 3.5, "recognises the falls, and (in VO) who he's with"),
+ ("open", "6806", 14.9, 23.5, 4.0, "anchored to the real place, and (in VO) how you get a pair"),
+ ("reach", "6797", 40.0, 27.5, 4.0, "he walks, and the past is where he arrives"),
+ # ---- ACT 3: THE ERAS. The emotional core of the film, and the reason
+ # this restart exists: these four beats used to get 3.8-5.0s each. They
+ # now get 7-8. ai/dak/build_dak_plate.py and ai/settle/
+ # build_settle_plate.py's default `dur` are updated to match.
+ ("dak",  "DAK1",  0.0, 31.5, 8.0, "before the mill, the family answers where he has stopped"),
+ ("settle", "SETTLE1", 0.0, 39.5, 7.0, "the settlement era, further up the same bank"),
+ ("ice",  "ICE1",  0.0, 46.5, 7.0, "it runs further back and the whole valley freezes"),
+ ("mam",  "6804", 26.0, 53.5, 7.0, "the payoff — the same shelf under ice, and a mammoth on it"),
+ # `now`: no VO. The title card says "ONE PLACE / EVERY TIME"; a voice
+ # saying the same words under it would be redundant, not emphatic.
+ ("now",  "6804", 34.0, 60.5, 5.5, "back to NOW, the thaw, no marker, just the dissolve"),
+ # ---- ACT 4: THE CLOSE.
+ ("off",  "6803",  2.5, 66.0, 3.5, "glasses off the story, the real place, nothing drawn on it"),
+ ("walk", "6807", 12.0, 69.5, 5.0, "the closing line over the park as it actually is"),
+ ("end",   None,   0.0, 74.5, 4.5, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # Beats with a present-day person close enough to hold OUT of the ice
 # grade. The wide valley has nobody near camera, and on that plate the
-# depth threshold grabs 22% of the frame -- the foreground rock -- and
-# would have left a raw summer-coloured slab across the bottom of an ice
-# age. A mask built for one plate is not a mask for every plate.
+# depth threshold grabs the foreground rock; a mask built for one plate
+# is not a mask for every plate.
 WEARER_BEATS = {"mam", "now"}
 
-# v6 ran the opening montage without the viewfinder because it was
-# documentary B-roll claiming nothing. v7 had no montage: every beat was
-# the device looking at something, so the UI belonged on all of them.
-# v16 HAS A MONTAGE AGAIN, and the rule is back with it — sharper.
-# The first act is the world BEFORE the product: a man reading a plaque,
-# a park going by, a sign on a railing. Drawing the device's HUD over
-# those frames would say the glasses are already on and quietly destroy
-# the only thing act one is for, which is showing what it is like without
-# them. The last act is the same in reverse: he has looked, the film is
-# over, and a HUD on the closing frames would claim the device is still
-# running when the point is that you just look.
+# The first act is the world BEFORE the product -- drawing a HUD over it
+# would claim the glasses are already on. The last act is the same in
+# reverse: he has looked, the film is over, a HUD on the closing frames
+# would claim the device is still running when the point is that you just
+# look.
 UI_OFF = {"sign", "past", "prod", "hero", "reach", "off", "walk"}
 
 # beat: (title, subtitle, appear_t[, scale]) — the film's own voice, drawn
 # bottom-left with a scrim, no reticle and no leader line.
 TITLES = {
- # The location card moves to the FIRST frame of the film, not to `open`.
- # With an act in front of it, a viewer who is told where they are only
- # 25 seconds in has spent 25 seconds not knowing.
  "sign": ("FALLS PARK", "SIOUX FALLS, SOUTH DAKOTA", 0.6),
  "now":  ("ONE PLACE", "EVERY TIME", 2.2, 1.3),
 }
 
 # beat: (image, foot_xy, height_px, appear_t, build, subj_depth, match
 #        [, out_t][, shadow][, contact])
-# Heights stay in the 300-390 band on the two figure plates. The mammoth
-# is smaller because it stands on the FAR ledge across the water, and at
-# that distance an animal reads by silhouette.
+# See spec_one.py's git history (v22-v29) for the full measurement record
+# behind these numbers (560px scale, 0.34 shadow, 0.22 match, 0.72
+# contact) -- unchanged by this restart, only the beat's ON-SCREEN TIME
+# changed (5.0s -> 7.0s), not the figure itself.
 FIGURES = {
- # ---- `dak` and `settle` NO LONGER HAVE FIGURES ENTRIES, v29. Both
- # beats moved to fully generated PLATES (see the BEATS note above and
- # ai/dak/build_dak_plate.py) because ChatGPT's replacement assets bake
- # the family and background into one flat photo, not a transparent
- # cutout this dict's compositing pipeline could place. The cultural-
- # review gap that caused the v20 Dakota removal is STILL UNCHANGED --
- # restoring Dakota content at v22 and improving the asset at v29 are
- # both the operator's calls, made knowingly, and neither one is a
- # substitute for an actual cultural review. That review has not
- # happened. Recorded here so it is not lost the next time this file
- # is touched.
- # "dak" and "more" (dak_s17.jpg, dak_s3.jpg) were REMOVED at v20. Operator,
- # asked directly whether a Dakota cultural advisor or tribal contact is
- # attached to this project: "There is not currently a Dakota cultural
- # advisor or tribal partner attached to the project that I can point to
- # as having reviewed and approved the reconstruction... I would remove
- # any detailed or authoritative-looking Dakota reconstruction from the
- # core demo for now... Once we have cultural involvement, put it back
- # correctly and make it stronger." Removed, not disabled -- everything
- # this block used to say about their placement (the mill-ruin ground
- # plane, the 529px/44%-of-human-size measurement, the era-rail scrim
- # collision) is now dead weight and has been deleted with the entries.
- # If those assets return, they return with a cultural review attached,
- # not by uncommenting this.
- # 560px, not 320. OPERATOR: "the mammoth size is shit" -- and it was,
- # measurably. The scale is a HISTORICAL record now, not a live
- # dependency: the calibration figure (the Dakota family that used to
- # stand on this same plate at 385px/y=745, operator-approved as human
- # scale) is gone, per the removal note above, but the arithmetic it
- # produced does not need it anymore -- at y=690 a person is ~308px, and
- # a mammoth stands about twice a person, so ~600px. 320 was half the
- # size of the animal it claimed to be, which is why it read as a large
- # dog on a rock shelf.
- # The 9th field is SHADOW STRENGTH, and it is here because scale broke
- # it: the cast shadow is projected from the figure's own alpha, so at
- # 560px it grew into a 240px black slick lying across white ice. 0.34
- # keeps the ground contact and loses the bar. Snow takes a far softer
- # shadow than sunlit quartzite does.
- # feet at 730, not 690. At 560px tall its head reached y=130 and the
- # active picture starts at 138 -- the mammoth has been decapitated by the
- # top bar since scope came in, and it also collided with the disclosure
- # band. r92 is explicit that the SCALE is right and must not go back, so
- # the animal moves down the shelf instead of shrinking.
- # match 0.22, not 0.45. r94: the animal "is uniformly soft and milky
- # compared with the rock plane". That was arithmetic, not taste. The
- # light match pulls the cutout toward the mean and spread of the plate it
- # lands on, and this plate is SNOW: subject mean ~75, plate mean ~191. At
- # 0.45 the animal's mean was lifted to ~127 and its contrast scaled by
- # ~0.86 -- a milky veil and a flattening, applied on purpose by a
- # function whose whole job is to stop the sticker look. Matching a dark
- # heavy animal to a white background is the one case where the cure is
- # the disease: in snow a mammoth genuinely IS much darker than
- # everything around it, and that contrast is the realism. 0.22 keeps the
- # cool bounce a real animal would take from the snow and nothing else.
- # The 10th field is CONTACT, split out from shadow strength because the
- # two wanted opposite things here. See ai/place.py: at 560px the cast
- # projection becomes a slick across white ice at any density that would
- # read under the feet, so shadow strength stays at the 0.34 that keeps
- # the slick soft, and contact carries the ground patch at 0.72.
  "mam": [("ai/era/mam41f.jpg",  (1330, 730), 560, 2.2, 1.0, 0.30, 0.22, None, 0.34, 0.72)],
 }
 
 LABELS = {
- # `hero`, v28: labelled the same way as the era figures below -- a
- # generated image, subtitled VISUALISATION, no leader line and no anchor
- # ring (labelkit.recon_block, not the tracked-AR block() -- nothing
- # recognised this, it is a still of the product, not a live detection).
  "hero": ((150, 900), "THE HARDWARE", "VISUALISATION", 0.35, (0, 0)),
- # RESTORED v22, RE-ANCHORED v29 when both moved to the new ChatGPT
- # plates (new composition, so the old figure-tied anchor coordinates no
- # longer land anywhere meaningful) -- same bottom-left placement as
- # `hero`, since both new photos put the family right-of-centre with open
- # ground lower-left, same as the glasses plate. Both subtitled
- # VISUALISATION for the same reason the ice label is: something drawn is
- # on screen. No date, no attribution, no claim about who specifically
- # stood here.
  "dak": ((150, 850), "BEFORE THE MILL", "VISUALISATION", 1.0, (0, 0)),
  "settle": ((150, 850), "THE SETTLEMENT", "VISUALISATION", 1.0, (0, 0)),
  "ice": ((520, 760),  "THE LAST ICE",    "VISUALISATION", 2.4, (40, -300)),
- # RECOGNITION, and it is a different KIND of label from the one above.
- # That one names a generated era and is subtitled VISUALISATION because
- # something drawn is on screen. This one names a real waterfall in an
- # unmodified frame: it is the device identifying what the wearer is
- # actually looking at, which is the step the film was missing. A viewer
- # who has never seen this product needs to be shown that the glasses
- # know WHERE HE IS before being shown that they can move him through
- # time, or the era rail arrives as a magic trick.
- # No date, no history, no claim — a place name and a river name, both
- # plain geography, both visible in the frame.
- # r101: "oversized and crowded against the wearer's head and upper-right
- # frame". Correct on both counts. The 6th field is a label SCALE and this
- # is the only label that uses it: 0.80, and the card lifts and moves left
- # so there is clear sky between it and his head. The era labels keep
- # their full weight -- announcing an era has earned it, naming the
- # waterfall you are already looking at has not.
+ # RECOGNITION -- names a real waterfall in an unmodified frame; the
+ # device identifying where the wearer is, before the film shows it can
+ # move him through time. No date, no history, no claim beyond a place
+ # name and a river name, both visible in the frame.
  "lock": ((880, 560), "THE FALLS", "BIG SIOUX RIVER", 0.9, (250, -330), 0.80),
 }
 
 # beat -> (in_start, in_end, out_start, out_end); out may be None.
-# The ice arrives on `ice`, is simply PRESENT on `mam` (it did not thaw
-# between two shots of the same era), and leaves on `now` so the film
-# returns to the present on screen rather than on a cut.
 ICE = {
- # r88: 13 of 33.5 seconds were ice, "38.8% of the film in two
- # consecutive, visually similar blue-white beats". Now 10 of 30.5 --
- # 4s for the transformation, 6s for the payoff.
- # The freeze also STARTS LATE (0.5s in) so the scrub marker reaches THE
- # LAST ICE before the world answers, not after.
- # `ice` NO LONGER TAKES THE PROCEDURAL GRADE. v22: its plate is already
- # an ice age (IMG_ICE1, generated), so running ice_grade over it would
- # be grading a frozen valley to look frozen -- double-processing that
- # only crushes it. It gets SNOWFALL instead, via GEN_ICE in
- # render_one.py, so the still plate still has weather moving in it.
- # `mam` and `now` are unchanged: they are the REAL plate and they need
- # the grade to be in the same era as the beat before them.
  "mam": (-1.0, 0.0, None, None),
  "now": (-1.0, 0.0, 0.8, 2.4),
 }
 
 # Beats whose plate is ALREADY an ice age and must not be graded into one
 # again, but which still want falling snow so a generated still has
-# weather in it. See ai/ice/build_ice_plate.py.
+# weather in it.
 GEN_ICE = {"ice"}
 
-# ---- THE ERA RAIL IS GONE. v18, on the operator's ruling.
-# The rail (SCRUB_STOPS/SCRUB_KEYS/SCRUB_FADE, draw_rail() in
-# render_one.py) drew a scrubbable timeline -- three labelled stops and a
-# marker the wearer appeared to operate. It answered r88's real note ("the
-# overlays arrive as demonstrations instead of consequences of an
-# action") but it answered it with a WIDGET, and the operator's own
-# concept document says the opposite of a widget:
-#   SS5  "Instead of: Tap 'Chapter 2.' It's more like: Walk to Chapter 2."
-#   SS14 "ORI is not a floating museum touchscreen. Don't fill the
-#        person's vision with cards, menus, buttons and dashboards."
-# draw_rail's own docstring already said the quiet part: "Anything more
-# decorative would read as a video-editor timeline pasted over a park."
-# It was a timeline pasted over a park. Removed entirely -- no rail is
-# drawn on any beat now.
-#
-# The causal fix r88 was actually asking for -- action BEFORE consequence
-# -- is now WALKING, not a control widget, because that is what the
-# operator's own footage can show without inventing anything. See `reach`
-# below.
-#
-# The per-era captions (LABELS: "BEFORE THE MILL", "SAME DAY", "THE LAST
-# ICE") are UNCHANGED and stay. Those are placards naming what is on
-# screen, the same kind of information a museum wall card carries; the
-# thing removed is the OPERABLE part, not the informational part.
-#
-# ---- THE WALK, NOT THE RAIL: `reach`.
-# One new beat, inserted between `open` and `dak`, on THREE static plates
-# gated the same way every other cut in this film is gated (shotqc.py,
-# unmodified; see rounds/r106__claude__walk_footage_gate.txt for the full
-# table). IMG_6797@40.0 is a clean 4.0s window (mid 1.76 tail 1.35 ratio
-# 0.77 drift 11.1% peak 4.0, no flags) of him walking, never used
-# elsewhere in this film. UI is off across it, same rule as the rest of
-# act 1/2 -- he has not switched anything on again, he is simply walking,
-# and the past resolves on his arrival rather than on a marker settling.
-# This is ONE walk beat, not a rebuild of every era-to-era jump: the four
-# internal jumps (dak->more->ice->mam->now) stay dissolve-only, carried by
-# VO and the per-era captions, which is an honest, smaller claim than
-# restaging "walk to chapter 2" four more times on footage that does not
-# exist for it (no plate shows him walking BETWEEN two distinct era
-# locations -- these are all separate short takes, not one continuous
-# walk-and-arrive traverse). Overstating this beyond the one clean cut
-# would be exactly the kind of invented capability rule zero forbids.
-
 SCORE = {
- # v16: "start" is the FIRST FRAME OF THE FILM, not the first frame of the
- # demo. It pointed at `open`, which is now 28 seconds in, so the whole
- # first act sat below the montage floor while the score waited for a beat
- # that had three other acts in front of it. The roles are looked up, so
- # this one edit re-times the entire arc.
  "start":  "sign",
- # v20: "arrive"/"lift"/"hold" pointed at "dak"/"dak"/"more", both gone
- # (see FIGURES). `reach` is now where the swell happens -- he arrives,
- # the score lifts, in the same beat, matching the score's own v7 note
- # that arrive and lift were once the same beat by design. The swell
- # completes inside `reach`'s own short runtime (ramp() clips past its
- # target, so a beat shorter than the ramp's 2.0s just means the plateau
- # is reached a little early, not that anything breaks), and "hold" is
- # `ice` itself: since ice_st == the hold beat's own start, the plateau
- # segment is zero-width by construction and the swell hands off directly
- # into the cold descent with no gap and no double-write. Checked by
- # running score_one.py and reading the printed arc, not by inspection.
- # v22: the eras are back, so the arc has room to work the way it did
- # before v20 flattened it -- arrive on the walk, lift into the first
- # era, hold across the settlement, cold on the ice, warm on the return.
- # Chronological and non-overlapping, which is what score_one's envelope
- # requires (arr <= e1 <= e2 <= ice_st <= ret_st).
  "arrive": "reach",
  "lift":   "dak",
  "hold":   "settle",
@@ -509,12 +173,7 @@ def figures(beat):
     out_t is when the figure leaves; None means it stays to the end of the
     beat. shadow is the ground-shadow strength, default 0.62. contact is
     the density of the patch directly under the feet, and None means "tie
-    it to shadow", which is what every figure did before the mammoth
-    needed the two separated. All three are OPTIONAL trailing fields so
-    shorter rows keep working untouched -- FOUR modules unpack these
-    tuples (render_one twice, assemble_one, timeline_one) and widening
-    them all at once is how a positional-argument bug renders fine and
-    means something else.
+    it to shadow".
     """
     out = []
     for f in FIGURES.get(beat, []):

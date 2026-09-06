@@ -23,6 +23,14 @@ screen, the ground under him is real; the wide/era establishing shots are
 allowed to be a generated whole.
 
 Same push-in pattern as every other generated plate here.
+
+DURATION DOUBLED, v31 restart: 4.0s -> 8.0s (the operator's "burn down and
+restart, Apple promo video" instruction -- every era beat gets real time
+to register instead of a glance). The zoom RATE is now derived from dur,
+not hardcoded, so the push-in still covers roughly the first half of the
+beat and holds for the second half -- the old fixed rate (0.0035/frame)
+would have hit its cap in the first 0.4s of an 8s beat and sat frozen for
+the remaining 7.6, which reads as a stuck frame, not a held one.
 """
 import os
 import subprocess
@@ -35,10 +43,12 @@ SRC = os.path.join(_HERE, "dak_family_chatgpt.jpg")
 DST = os.path.join(RAW, "IMG_DAK1.MOV")
 
 
-def build(dur=4.0, fps=30):
+def build(dur=8.0, fps=30):
     n = int(dur * fps)
+    cap = 1.06
+    rate = (cap - 1.0) / (n * 0.5)  # cap reached at ~50% of the beat
     vf = (f"scale=2688:1512:flags=lanczos,"
-          f"zoompan=z='min(1.0+0.0035*on,1.045)':d={n}:x='iw/2-(iw/zoom/2)':"
+          f"zoompan=z='min(1.0+{rate}*on,{cap})':d={n}:x='iw/2-(iw/zoom/2)':"
           f"y='ih/2-(ih/zoom/2)':s=1920x1080:fps={fps}")
     subprocess.run(
         ["ffmpeg", "-y", "-v", "error", "-loop", "1", "-i", SRC, "-t", str(dur),

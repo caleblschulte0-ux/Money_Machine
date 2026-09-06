@@ -56,16 +56,21 @@ SRC = os.path.join(_HERE, "glasses_hero_chatgpt.jpg")
 DST = os.path.join(RAW, "IMG_HERO1.MOV")
 
 
-def build(dur=2.5, fps=30):
+def build(dur=5.0, fps=30):
     # 1024x576 source -> 1920x1080 with a slow 1.0 -> 1.045 push, same
-    # zoompan pattern as ai/map/build_map_plate.py and
-    # ai/ice/build_ice_plate.py: lanczos upscale first so the zoom does not
-    # compound the resampling softness, subtle enough over 2.5s that the
-    # label (fixed screen-space, not tracked to content beyond the anchor
-    # point) does not visibly drift off its mark.
+    # zoompan pattern as ai/ice/build_ice_plate.py: lanczos upscale first
+    # so the zoom does not compound the resampling softness. Cap held at
+    # 1.045 (not raised for the longer v31 hold) on purpose -- this source
+    # is only 1024x576 upscaled 2.6x already; pushing further would show
+    # that softness on the one shot in the film meant to look like real
+    # product photography. Rate is derived from dur so the push still
+    # spans roughly the first half of the (now 5.0s, was 2.5s) beat
+    # instead of capping out in a quarter second and sitting frozen.
     n = int(dur * fps)
+    cap = 1.045
+    rate = (cap - 1.0) / (n * 0.5)
     vf = (f"scale=2688:1512:flags=lanczos,"
-          f"zoompan=z='min(1.0+0.006*on,1.045)':d={n}:x='iw/2-(iw/zoom/2)':"
+          f"zoompan=z='min(1.0+{rate}*on,{cap})':d={n}:x='iw/2-(iw/zoom/2)':"
           f"y='ih/2-(ih/zoom/2)':s=1920x1080:fps={fps}")
     subprocess.run(
         ["ffmpeg", "-y", "-v", "error", "-loop", "1", "-i", SRC, "-t", str(dur),

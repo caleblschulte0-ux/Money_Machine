@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
 """Narration, synthesized offline, cut to the beats.
 
-OPERATOR: "add a little narration and completely cut the sound out of the
-videos because there's a lot of me talking in the background because there
-wasn't meant to be sound in the videos."
+v31 FULL RESTART. Operator: "Completely burn down what you have.
+Completely restart with the whole thing in mind that this needs to look
+like an Apple promo video." The structural change here is not shorter
+lines, it's FEWER OF THEM. Apple spots do not narrate every second --
+four beats now carry NO voice at all (`sign`, `hero`, `now`, `end`): the
+location card, the product shot, the "ONE PLACE / EVERY TIME" title and
+the closing wordmark all say what they need to say without a voice
+under them, because a location card that ALSO gets read aloud, or a
+title card that ALSO gets read aloud, is saying the same thing twice --
+which reads as nervous, not confident. Silence over a beautiful held
+frame, with just score under it, is the point in this genre, not a gap
+to fill.
 
-Both halves matter and the second one is the reason this file is short.
+THE OPERATOR: "add a little narration and completely cut the sound out of
+the videos because there's a lot of me talking in the background because
+there wasn't meant to be sound in the videos."
+
 The location bed is GONE from the master -- not ducked, not gated, gone --
 so narration is not competing with a river and a voice off-camera. That
 also means every word here has to carry, because there is nothing else in
@@ -71,134 +83,51 @@ SR = 48000
 VOICE = "../vo/voices/en_US-lessac-high.onnx"
 
 # (beat, seconds into that beat, line)
-# THE WORDING IS THE OPERATOR'S, NOT MINE. v16 has to explain the product
-# to someone who has never heard of it, and the claim lines below are
-# lifted from the cut he approved and documented in ori_promo/README.md --
-# "AR glasses made for travel", "the place starts talking", "No tour
-# group. No phone in your face. You just look.", "See the story where you
-# stand." Writing fresh marketing copy here would have meant inventing
-# positioning for a company on its behalf, which is the one thing this
-# project has said all along that neither agent may do. Reusing his own
-# approved sentences is not laziness; it is the only source of claim
-# language on this project that has actually been signed off.
-# Still no date, no measurement, no attribution, no traction, no raise,
-# no partnership, no deployment claim and no call to action.
+# THE WORDING IS THE OPERATOR'S FACTS, NOT MY INVENTION -- restructured
+# for v31, not rewritten from nothing. Every claim below already existed
+# somewhere in the pre-restart script and was already vetted: "we build
+# what runs on them" (the corrected software-not-hardware business model),
+# "they know where you're standing, and what you're looking at"
+# (recognition), "anchors what you see to the real place around you"
+# (his own corrected anchoring language, not the over-precise "GPS pins
+# it" claim), the rental-pickup model ("you pick them up where you're
+# going," previously the `map` beat's whole reason to exist), the
+# group-sync behaviour (previously `sync`'s whole reason to exist), and
+# the era lines and closing lines, unchanged. WHAT'S NEW is which beat
+# each fact is attached to and how many words carry it -- the map/sync
+# beats are gone as VISUALS (see spec_one.py), so the rental-pickup fact
+# now rides as a second clause on `open`'s line and the group-sync fact
+# rides as a second clause on `lock`'s, instead of each getting its own
+# menu-card beat. Nothing here states a date, a measurement, an
+# attribution, traction, a partnership, a deployment claim or a CTA.
 LINES = [
-    # --- v19: OFFSETS RECOMPUTED FROM MEASURED PIPER DURATIONS, not
-    # estimated. Operator, on v18: "way too much b roll on the front end
-    # ... we don't breakdown what makes our product special." Fixing the
-    # PICTURE (shorter beats, see spec_one.py) is only half of it -- the
-    # ORIGINAL v18 sentences, spoken at their natural length, would have
-    # run the narration further and further behind the faster cuts and
-    # eventually decoupled the words from what they describe. Every line
-    # below was synthesized once to measure its real duration, then
-    # placed so line N+1 starts only after line N's audio actually ends
-    # (0.05-0.1s margin) -- not after N's BEAT ends, which is a different
-    # number now that beats are this short. Two lines were cut outright
-    # (`rail`'s, and the "plaques and little signs" second sentence on
-    # `sign`) rather than compressed into something that no longer scans;
-    # the picture still shows the plaque, so the point survives on screen
-    # even though the VO no longer spells it out.
-    #
-    # mam/now/off/walk KEEP their v18 text and relative offsets unchanged
-    # -- `ice` was rewritten (below) so its own line still clears with
-    # margin before mam's existing 1.6s offset lands, verified by
-    # measurement, not assumption.
-    ("sign", 0.10, "This is Falls Park, in Sioux Falls."),
-    ("past", 0.10, "And most people walk right past."),
-    # --- ACT 2: what it is, and the act of using it. `rail` and its line
-    # are GONE (v19) -- see spec_one.py's note; the plaque is still on
-    # screen during `sign`, so the "unseen story" point is not lost, only
-    # unspoken a third time.
-    # --- THE PRODUCT CLAIM WAS WRONG. Corrected v22, and this is the most
-    # important line in the film to get right. It read "Open Range
-    # Interactive is building AR glasses made for travel," which came from
-    # the operator's own originally-approved 34s cut and had survived six
-    # versions on that authority. He corrected it directly: "We're not
-    # building AR glasses. We are going to get AR glasses from somebody and
-    # implement our own software onto them and rent them out."
-    # So the company is a SOFTWARE company with a rental distribution
-    # model, and the film had been describing it as a hardware startup --
-    # which is not a nuance, it is the wrong business. Two lines now: what
-    # the company actually makes, and how a visitor actually gets it.
-    # Neither states that this is running anywhere today; the end card's
-    # PROPOSED FIRST BETA and VISUAL INTENTION ONLY still govern.
-    ("prod", 0.15, "Open Range Interactive doesn't build the glasses. We build what runs on them."),
-    ("on",   1.13, "You put them on, and the place starts talking."),
-    ("lock", 1.42, "They know where you're standing, and what you're looking at."),
-    # --- THE BREAKDOWN, CORRECTED v20. v19 used "The history, pinned to
-    # the exact spot where it happened" -- the operator's own line from
-    # the originally approved cut, but asked directly how recognition
-    # actually works, he corrected the CLAIM behind it: "I would avoid
-    # saying 'GPS pins it to the exact spot.' GPS alone is not precise
-    # enough for that." GPS gets the wearer into the right zone; compass/
-    # IMU/head-tracking and AR spatial tracking (SLAM) hold the overlay
-    # steady against the real environment; only some experiences layer
-    # computer-vision alignment on top. "Pinned to the exact spot" claims
-    # more precision than that chain delivers. His own replacement
-    # language, shortened to fit the beat: "anchors what you see to the
-    # real place around you" -- paired with `lock`'s unchanged line, this
-    # is still two consecutive capability statements (recognises you,
-    # then anchors to the real world), just accurate ones now.
-    ("open", 1.64, "And anchors what you see to the real place around you."),
-    # `map`, v21. Operator's own legend concept (visual / audio / ambient /
-    # lookout zones), stated in plain terms -- no zone count, no distance,
-    # no claim this exact map is deployed today.
-    # The rental half of the model, placed at the top of the map beat: you
-    # get them AT the destination, and here is what the destination has in
-    # it. "Where you're going" rather than "at Falls Park" keeps it a
-    # statement about the model rather than a deployment claim.
-    # SECOND LINE CUT, v24. "Some places show you something..." said in
-    # words exactly what the on-screen legend already says in text --
-    # VISUAL SCENES / AUDIO NARRATION / AMBIENT SOUND / LOOKOUT POINTS is
-    # right there on screen the whole beat. Cutting the redundant line
-    # also does real work on the operator's brutal read of v23 ("it
-    # stinks"): map+sync back to back were the single longest stretch of
-    # the film with no camera motion and no new information arriving, and
-    # every second of narration that just re-reads on-screen text is a
-    # second that stretch didn't need.
-    ("map", 1.29, "You don't buy a pair. You pick them up where you're going."),
-    # --- GROUP SYNC AND NO BLEED, v22. Operator: "you never talk about the
-    # cool, like, features I mentioned earlier, how we are going to make it
-    # so if you're in a group, your stuff will sync. If you're not in a
-    # group, when you walk past another group, your stuff will not overlap
-    # and it won't sound weird." Both halves, in his own terms, over the
-    # diagram that shows them (one/sync_overlay.py). No user count, no
-    # range, no latency figure -- only the behaviour he described.
-    # SHORTENED v24 ("everyone hears" -> "you hear"; dropped the leading
-    # "And") to fit the tightened beat with real margin, not a squeeze --
-    # measured via piper, not estimated.
-    ("sync", 0.30, "In a group, you hear the same thing at the same time."),
-    ("sync", 3.45, "Walk past another group, and theirs stays theirs."),
-    # `reach`, v18, retimed for v19/v20. No rail, no menu -- he walks, and
-    # the past is where he stops. This is the one sentence in the whole
-    # script that states the operator's own line from the concept
-    # document in different words: "walk to chapter 2," not "tap chapter
-    # 2."
-    ("reach", 0.82, "He walks. And the place answers where he stops."),
-    # --- THE ERAS ARE BACK, v22, on the operator's reversal ("we took out
-    # the AI cuts of the settlers and the natives, which is bad because
-    # those were supposed to stay in"). `dak`'s line is the v19 wording
-    # restored verbatim. `settle` is a NEW line for a NEW beat -- the v8
-    # settlers beat never had one, because it was cut before the film had
-    # narration at all. Same standard as everything else here: no date, no
-    # measurement, no attribution, no named people.
-    # Offsets moved earlier, v24 -- both beats shortened (5.0->4.0, 4.5->3.8)
-    # to help kill the "dead middle" stretch; earlier offsets keep both
-    # lines finishing well inside their own beat instead of bleeding
-    # further into the next one.
-    ("dak", 1.37, "Before the mill, people lived along this water."),
-    ("settle", 0.70, "Then the mill came, and the town grew around it."),
-    # `dak` and `more` LINES REMOVED, v20, with their beats -- see
-    # spec_one.py's FIGURES note. `ice` now follows `reach` DIRECTLY, so
-    # its line can no longer lean on "Same day, further up the bank" for
-    # its own "further" to mean anything; rewritten to be self-contained.
-    ("ice",  0.30, "Go back further, and the whole valley freezes."),
-    ("mam",  1.50, "The whole valley under ice, and the animals that crossed it."),
-    ("now",  1.80, "Then back. One place. Every time."),
-    # --- ACT 4: the close.
+    # `sign` carries NO VO -- the location card (TITLES, spec_one.py) says
+    # where this is in text; a voice repeating "This is Falls Park" under
+    # a card that already says FALLS PARK is the kind of redundancy this
+    # restart is specifically cutting.
+    ("past", 0.20, "Most people walk right past."),
+    ("prod", 0.20, "Open Range Interactive doesn't build the glasses. We build what runs on them."),
+    # `hero` carries NO VO -- 5.0s held on the product alone, with the
+    # ON-SCREEN LABEL already reading "THE HARDWARE." Let it be looked at.
+    ("on",   0.30, "You put them on."),
+    # RECOGNITION *and* GROUP-SYNC, one sentence: this used to be `lock`'s
+    # line alone plus a whole separate `sync` beat with a circle diagram
+    # ("you hear the same thing... theirs stays theirs"). The CAPABILITY
+    # survives as a single trailing clause; the diagram does not.
+    ("lock", 0.30, "They know where you're standing, what you're looking at — and who you're with."),
+    # ANCHORING *and* the RENTAL MODEL, same move: `open`'s line plus what
+    # used to be the entire `map` beat's opening line ("you don't buy a
+    # pair, you pick them up where you're going").
+    ("open", 0.30, "Anchored to the real place around you. Picked up where you're going, not owned."),
+    ("reach", 0.30, "He walks. The place answers where he stops."),
+    ("dak", 0.50, "Before the mill, people lived along this water."),
+    ("settle", 0.40, "Then the mill came, and the town grew around it."),
+    ("ice",  0.30, "Go back further — the whole valley freezes."),
+    ("mam",  1.00, "The same valley — under ice, and the animals that crossed it."),
+    # `now` carries NO VO -- the title card already says "ONE PLACE /
+    # EVERY TIME"; this beat is picture and music only.
     ("off",  0.30, "No tour group. No phone in your face. You just look."),
-    ("walk", 0.82, "Open Range Interactive. See the story where you stand."),
+    ("walk", 0.50, "Open Range Interactive. See the story where you stand."),
 ]
 
 
