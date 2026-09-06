@@ -51,6 +51,16 @@ const MIME = {
   // a published artifact can sound like him at all — there is no proxy for a
   // web page to reach. See scripts/voice-bank.mjs.
   '.mp3': 'audio/mpeg',
+  /*
+   * The world's sound effects. A separate line from the mp3 above because it
+   * was a separate bug: the SFX system shipped complete -- generated clips,
+   * a mixer, a rate limit, eleven passing tests -- and every one of them was
+   * silent in the published build, because this map had never heard of a wav
+   * and `if (!mime) continue` skipped all nine without a word. Exactly the
+   * failure `voice-check.mjs` exists for, one file over. See
+   * scripts/make-sfx.py.
+   */
+  '.wav': 'audio/wav',
 };
 
 function walk(dir, out = []) {
@@ -87,12 +97,42 @@ try {
   const assets = new Map();
   const assetRoot = join(exportDir, 'assets');
   if (existsSync(assetRoot)) {
+    /*
+     * A TYPE THIS MAP HAS NEVER HEARD OF IS A BUILD FAILURE, NOT A `continue`.
+     *
+     * The sound effects shipped complete -- generated clips, a mixer, a rate
+     * limit, eleven passing tests, wired at six call sites -- and every one was
+     * silent in the published build, because `.wav` was not in MIME and this
+     * line skipped all nine without a word. Nothing downstream could tell: the
+     * page was valid, the code was right, and `require('...wav')` resolved to a
+     * URL pointing at a file the single-file build does not contain.
+     *
+     * Bundlers only ever grow asset types, so the honest default is to stop.
+     * `SKIP` lists what genuinely does not belong in the page and says why.
+     */
+    const SKIP = new Set([
+      '.json', // metadata the bundle reads at build time, never fetched at runtime
+      '.md',   // notes that live beside the art
+    ]);
+    const unknown = new Map();
     for (const file of walk(assetRoot)) {
       const ext = extname(file).toLowerCase();
       const mime = MIME[ext];
-      if (!mime) continue;
+      if (!mime) {
+        if (!SKIP.has(ext)) unknown.set(ext, (unknown.get(ext) ?? 0) + 1);
+        continue;
+      }
       const url = '/' + relative(exportDir, file).split('\\').join('/');
       assets.set(url, `data:${mime};base64,${readFileSync(file).toString('base64')}`);
+    }
+    if (unknown.size > 0) {
+      const list = [...unknown].map(([ext, n]) => `${n} x ${ext}`).join(', ');
+      throw new Error(
+        `the bundle contains asset types this build cannot inline: ${list}.\n` +
+        `They would resolve to URLs that a single-file page does not contain, and\n` +
+        `nothing downstream would notice. Add each to MIME in this file, or to\n` +
+        `SKIP above with a reason it does not belong in the page.`,
+      );
     }
   }
   console.log(`inlining ${assets.size} asset${assets.size === 1 ? '' : 's'}…`);

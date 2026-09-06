@@ -49,6 +49,7 @@ import { playtestAllowed } from '../dev/playtest';
 import { useAttention } from './useAttention';
 import { rivalInSight } from './attention';
 import { feel, setFeelMuted } from './feel';
+import { playSfx } from '../audio/sfx';
 import {
   BeachScene,
   DogBedBack,
@@ -527,12 +528,20 @@ export default function BarklyRoom() {
    * sheet, an encounter behind the food picker — and the one underneath still
    * caught taps through the backdrop. One at a time, always.
    */
+  /*
+   * Chrome gets a SOUND but no haptic. `ui/feel.ts` is explicit that a phone
+   * ticking every time you press a button stops meaning anything -- opening a
+   * panel is not a physical event. A soft pop is a different matter: it is how
+   * every toy console in the reference games acknowledges a panel, and it is
+   * the difference between a sheet appearing and a sheet arriving.
+   */
   const openOnly = (open: (v: boolean) => void) => {
     setStoreOpen(false);
     setSettingsOpen(false);
     setPackOpen(false);
     setPlanOpen(false);
     setFoodOpen(false);
+    playSfx('pop');
     open(true);
   };
   const [packOpen, setPackOpen] = useState(false);
@@ -628,6 +637,20 @@ export default function BarklyRoom() {
               ? Boolean(barkly.promotion)
               : Boolean(barkly.reward),
       ) ?? null);
+  /*
+   * THE TWO MOMENTS WORTH A SOUND OF THEIR OWN.
+   *
+   * A relationship crossing a rung and a reward landing are the only things in
+   * this app that are unambiguously GOOD, and both already have a notice. They
+   * fire on the notice appearing rather than at the call site, so a promotion
+   * the player never saw never plays -- and the effect is keyed on the notice
+   * so it cannot re-fire while the same one is still up.
+   */
+  useEffect(() => {
+    if (notice === 'promotion') playSfx('levelup');
+    else if (notice === 'reward') playSfx('coin');
+  }, [notice]);
+
   const hour = new Date().getHours();
   // The same band the scenes grade themselves from, so the dog and the room
   // can never disagree about what time it is.
@@ -905,7 +928,17 @@ export default function BarklyRoom() {
   useEffect(() => { setWorldPaused(sheetOpen); }, [sheetOpen, setWorldPaused]);
 
   const [beat, setBeat] = useState<{ kind: 'pet' | 'refuse' | 'arrive' | 'delight'; at: number } | null>(null);
-  const react = (kind: 'pet' | 'refuse' | 'arrive' | 'delight') => setBeat({ kind, at: Date.now() });
+  /*
+   * A beat, and the sound that goes with it. `arrive` and `refuse` are already
+   * two of the five feelings, so they get their feeling's sound; `pet` and
+   * `delight` are visual beats that happen alongside a `feel()` the caller has
+   * already made, and doubling up would be two clicks for one tap.
+   */
+  const react = (kind: 'pet' | 'refuse' | 'arrive' | 'delight') => {
+    if (kind === 'arrive') playSfx('arrive');
+    if (kind === 'refuse') playSfx('nope');
+    setBeat({ kind, at: Date.now() });
+  };
 
   const onKit = (action: KitAction) => {
     if (action === 'feed') {
@@ -979,7 +1012,9 @@ export default function BarklyRoom() {
   const digRotate = useRef(new Animated.Value(0)).current;
   const runDig = () => {
     if (digging || fetching || locked) return;
-    feel('act');
+    // Paws in earth, not a generic tap. `feel` takes the override; the haptic
+    // is unchanged.
+    feel('act', 'dig');
     setDigging(true);
     Animated.loop(
       Animated.sequence([
@@ -1429,7 +1464,7 @@ export default function BarklyRoom() {
       </KeyboardAvoidingView>
 
       <ContestSheet visible={barkly.pendingContest !== null} rules={barkly.pendingContest} onDone={(result) => void barkly.finishContest(result)} onClose={() => void barkly.finishContest(null)} />
-      <FoodSheet visible={foodOpen} onClose={() => setFoodOpen(false)} onOpenShop={() => openOnly(setStoreOpen)} wallet={barkly.wallet} hungry={snapshot.stats.hunger > 45} onFeed={(itemId) => void barkly.feed(itemId)} />
+      <FoodSheet visible={foodOpen} onClose={() => setFoodOpen(false)} onOpenShop={() => openOnly(setStoreOpen)} wallet={barkly.wallet} hungry={snapshot.stats.hunger > 45} onFeed={(itemId) => { feel('act', 'eat'); void barkly.feed(itemId); }} />
       {playtest && <PlaytestSheet visible={playtestOpen} onClose={() => setPlaytestOpen(false)} />}
       <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={(id) => { const r = barkly.buy(id); if (r?.ok) react('delight'); return r; }} onEquip={barkly.equip} devMode={barkly.devMode} />
       <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} stash={barkly.stashItems} story={barkly.storyState} />

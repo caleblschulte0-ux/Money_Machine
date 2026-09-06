@@ -25,8 +25,25 @@
  */
 
 import * as Haptics from 'expo-haptics';
+import { playSfx, setSfxMuted, SfxName } from '../audio/sfx';
 
 export type Feel = 'touch' | 'act' | 'arrive' | 'refuse' | 'thump';
+
+/**
+ * The sound each feeling makes, unless the caller names a better one.
+ *
+ * Sound follows this vocabulary rather than having its own, so the places
+ * already correctly calling `feel()` became audible without being touched, and
+ * the two can never disagree about what counts as an event. `thump` is silent
+ * on purpose: this file's own definition calls it "felt rather than heard".
+ */
+const SOUND: Record<Feel, SfxName | null> = {
+  touch: 'tap',
+  act: 'tap',
+  arrive: 'coin',
+  refuse: 'nope',
+  thump: null,
+};
 
 /**
  * True once the user has asked for silence. Muting the dog mutes his body too
@@ -35,10 +52,17 @@ export type Feel = 'touch' | 'act' | 'arrive' | 'refuse' | 'thump';
 let muted = false;
 export function setFeelMuted(next: boolean): void {
   muted = next;
+  setSfxMuted(next);
 }
 
-export function feel(kind: Feel): void {
+/**
+ * @param sound overrides the feeling's default -- an `act` that is a bite
+ *   rather than a throw, for instance. The haptic is unchanged either way.
+ */
+export function feel(kind: Feel, sound?: SfxName): void {
   if (muted) return;
+  const clip = sound ?? SOUND[kind];
+  if (clip) playSfx(clip);
   try {
     switch (kind) {
       case 'touch':
