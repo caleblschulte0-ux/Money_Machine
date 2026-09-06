@@ -42,8 +42,47 @@ interface Props {
  * glance at this and see a weird friendship, not reverse-engineer our scoring.
  */
 
+/*
+ * `tapeRight` used to be `{ left: undefined, right: 24 }` layered over a base
+ * that set `left: 26`. React Native flattens that to an override; react-native-
+ * web drops the undefined and keeps the 26, so on the published build -- the
+ * only build anyone can currently play -- every piece of tape in the Pack Book
+ * sat on the left however it was asked for. Neither variant overrides the
+ * other now; each states its own edge.
+ *
+ * The same `x: undefined` shape appears on the scene wall gradients and is
+ * harmless there: those also set `height`, and an over-constrained CSS box
+ * with top, bottom AND height ignores `bottom`, so the wall lands where it
+ * was asked to. This one was over-constrained on left/right/width instead,
+ * where the rule keeps LEFT. Do not "fix" the others.
+ */
 function Tape({ side = 'left' }: { side?: 'left' | 'right' }) {
-  return <View style={[styles.tape, side === 'right' && styles.tapeRight]} pointerEvents="none" />;
+  return <View style={[styles.tape, side === 'right' ? styles.tapeRight : styles.tapeLeft]} pointerEvents="none" />;
+}
+
+/**
+ * AN EMPTY PAGE OF THE BOOK, NOT AN EMPTY FORM FIELD.
+ *
+ * Both empty states were a grey `color.line` dashed rectangle, square to the
+ * page, with nothing else on them -- and on a fresh save that is most of what
+ * the Pack Book IS, because a new player has no traits and no bits yet. Four
+ * grey boxes of prose is the screen that is supposed to prove he becomes
+ * uniquely yours.
+ *
+ * Dashed is not the problem: it is this file's stamp language, and the FILLED
+ * trait cards below are dashed too. The problem was that the empty one spoke
+ * none of the rest of it. A blank stamp still gets the warm ink, the tilt off
+ * square and the piece of tape holding it in, so an empty book reads as a book
+ * waiting to be filled rather than as a form nobody completed.
+ */
+function EmptySlot({ title, body, side = 'left' }: { title: string; body: string; side?: 'left' | 'right' }) {
+  return (
+    <View style={[styles.emptyCard, side === 'right' ? styles.emptyCardRight : styles.emptyCardLeft]}>
+      <Tape side={side} />
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyText}>{body}</Text>
+    </View>
+  );
 }
 
 /**
@@ -220,10 +259,10 @@ export default function PackBookSheet({ visible, onClose, profile, stash, story 
 
             <Text style={styles.section}>What you've turned him into</Text>
             {profile.traits.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>Still becoming a problem.</Text>
-                <Text style={styles.emptyText}>Keep talking, training, wandering around and making choices. The labels show up after they become true.</Text>
-              </View>
+              <EmptySlot
+                title="Still becoming a problem."
+                body="Keep talking, training, wandering around and making choices. The labels show up after they become true."
+              />
             ) : (
               <View style={styles.stampPile}>
                 {profile.traits.map((trait, index) => (
@@ -234,10 +273,11 @@ export default function PackBookSheet({ visible, onClose, profile, stash, story 
 
             <Text style={styles.section}>Our bits</Text>
             {profile.rituals.length === 0 ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No running bit yet.</Text>
-                <Text style={styles.emptyText}>Teach Barkly something dumb and keep doing it. Repetition is how a command turns into lore.</Text>
-              </View>
+              <EmptySlot
+                side="right"
+                title="No running bit yet."
+                body="Teach Barkly something dumb and keep doing it. Repetition is how a command turns into lore."
+              />
             ) : (
               profile.rituals.map((ritual, index) => (
                 <View key={ritual.id} style={[styles.ritualCard, index % 2 === 0 ? styles.tiltLeft : styles.tiltRight]}>
@@ -365,13 +405,12 @@ const styles = StyleSheet.create({
     width: 76,
     height: 18,
     top: -8,
-    left: 26,
     borderRadius: radius.xs,
     backgroundColor: color.goldSoft,
     opacity: 0.75,
-    transform: [{ rotate: '-5deg' }],
   },
-  tapeRight: { left: undefined, right: 24, transform: [{ rotate: '6deg' }] },
+  tapeLeft: { left: 26, transform: [{ rotate: '-5deg' }] },
+  tapeRight: { right: 24, transform: [{ rotate: '6deg' }] },
   coverTop: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
   coverWords: { flex: 1, minWidth: 0 },
   portraitFrame: {
@@ -435,7 +474,19 @@ const styles = StyleSheet.create({
   stampLabel: { ...type.title, color: color.ink, marginTop: space.xs },
   stampDetail: { ...type.small, color: color.inkSoft, marginTop: space.sm },
 
-  emptyCard: { borderRadius: radius.md, borderWidth: 1.5, borderStyle: 'dashed', borderColor: color.line, padding: space.lg },
+  // Same recipe as `stamp` below -- warm dashed ink, a tilt off square, cream
+  // fill, room at the top for the tape.
+  emptyCard: {
+    borderRadius: radius.sm,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    backgroundColor: color.card,
+    padding: space.lg,
+    paddingTop: space.lg + 6,
+    ...elevation.low,
+  },
+  emptyCardLeft: { borderColor: color.gold, transform: [{ rotate: '-0.7deg' }] },
+  emptyCardRight: { borderColor: color.goodLine, transform: [{ rotate: '0.7deg' }] },
   emptyTitle: { ...type.strong, color: color.ink },
   emptyText: { ...type.small, color: color.inkSoft, marginTop: space.xs },
   emptyLine: { ...type.small, color: color.inkSoft, fontStyle: 'italic' },

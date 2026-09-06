@@ -57,7 +57,21 @@ const RENDER_H = 520;
  * a card is just a fifth collar swatch rather than the dog wearing one.
  */
 const CROPS = {
-  collar: { x: 74, y: 132, w: 268, h: 268 },
+  /*
+   * MEASURED OFF THE RENDER, not chosen: ears y80-104, eyes y148-175, nose
+   * y192-264, collar y293-371.
+   *
+   * At y=132 the window opened 16 render pixels above his eyes -- about nine
+   * on the card -- so the eyes sat hard against the top edge with no forehead
+   * over them. Not a slice, but it reads as one, and a face with no headroom
+   * is the crop every photographer is taught not to take.
+   *
+   * The tension the note above describes is real: a SQUARE window cannot hold
+   * both a brow and the bottom of the collar. So the window stops being
+   * square. Portrait, 268x296, opening at the ear line and closing below the
+   * collar -- the card sells the collar AND he is wearing it.
+   */
+  collar: { x: 74, y: 104, w: 268, h: 296 },
   face: { x: 74, y: 84, w: 268, h: 268 },
 } as const;
 
@@ -74,7 +88,8 @@ export default function CollarPreview({
 }: { id: string | null; size: number; framing?: Framing }) {
   const art = id ? COLLAR[id] : undefined;
   const CROP = CROPS[framing];
-  // Fit the window's WIDTH; the height follows, and overflow is clipped.
+  // Fit the window's WIDTH; the height follows the crop's own aspect, which is
+  // no longer assumed to be square.
   const scale = size / CROP.w;
   const frame = {
     position: 'absolute' as const,
@@ -85,7 +100,7 @@ export default function CollarPreview({
   };
   return (
     <View
-      style={{ width: size, height: Math.min(size, CROP.h * scale), overflow: 'hidden' }}
+      style={{ width: size, height: CROP.h * scale, overflow: 'hidden' }}
       pointerEvents="none"
     >
       <Image source={FRONT} style={frame} resizeMode="contain" />
