@@ -65,7 +65,10 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
               <Text style={styles.name}>Regular dinner</Text>
               <Text style={styles.detail}>The dependable option. He will survive the indignity.</Text>
             </View>
-            <View style={styles.goPod}><Text style={styles.go}>›</Text></View>
+            <View style={styles.feedPod}>
+              <View style={styles.feedGloss} pointerEvents="none" />
+              <Text style={styles.feedWord}>FEED</Text>
+            </View>
           </Pressable>
 
           <View style={styles.sectionTab}><Text style={styles.section}>THE GOOD STUFF</Text></View>
@@ -188,8 +191,33 @@ const styles = StyleSheet.create({
   copy: { flex: 1, marginLeft: space.md },
   name: { ...type.strong, fontWeight: '900', color: color.ink },
   detail: { marginTop: space.xs, ...type.caption, color: color.inkMid },
-  goPod: { width: 34, height: 34, borderRadius: radius.pill, backgroundColor: color.fill, alignItems: 'center', justifyContent: 'center' },
-  go: { fontSize: glyph.arrow, lineHeight: 30, color: color.ink },
+  /*
+   * A CHEVRON IS A PROMISE OF ANOTHER SCREEN.
+   *
+   * This row does not navigate anywhere -- tapping it FEEDS HIM, immediately
+   * and irreversibly, and then the sheet closes. A pale `›` in a circle is the
+   * iOS list disclosure affordance and it was telling a child the opposite of
+   * what the control does. It is also exactly the "large dead white card" and
+   * the flat-fill-plus-radius that docs/VISUAL_DIRECTION_KIDS_GAME.md rules
+   * out in the same breath.
+   *
+   * A word and a body with a lower edge instead: it says what happens, and it
+   * has the highlight/body/darker-edge depth the same doc asks of every tap
+   * target that matters.
+   */
+  feedPod: {
+    minWidth: 62,
+    height: 34,
+    borderRadius: radius.pill,
+    backgroundColor: color.pop,
+    borderBottomWidth: 3,
+    borderBottomColor: color.popDeep,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  feedGloss: { position: 'absolute', top: 3, left: 8, right: 8, height: 8, borderRadius: radius.pill, backgroundColor: color.paper, opacity: 0.4 },
+  feedWord: { ...type.micro, fontWeight: '900', color: color.ink },
   countPod: { minWidth: 38, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: space.sm, backgroundColor: color.lemon, alignItems: 'center' },
   count: { ...type.caption, fontWeight: '900', color: color.ink },
 

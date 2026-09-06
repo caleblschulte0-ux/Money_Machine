@@ -211,7 +211,6 @@ export default function EncounterSheet({ moment, busy, onChoose, onClose }: Prop
                     <Text style={styles.choiceLabel}>{choice.label}</Text>
                     <Text style={styles.choiceHint}>{choice.hint}</Text>
                   </View>
-                  <Text style={styles.arrow}>›</Text>
                 </Pressable>
               );
             })}
@@ -258,6 +257,15 @@ const styles = StyleSheet.create({
   choiceCopy: { flex: 1, marginLeft: space.md },
   choiceLabel: { ...type.strong, color: color.ink, fontWeight: '900' },
   choiceHint: { ...type.caption, color: color.inkMid, marginTop: space.xs },
-  arrow: { fontSize: glyph.arrow, lineHeight: 30, color: color.ink, marginLeft: space.sm },
+  /*
+   * The `›` that used to close this row is gone.
+   *
+   * These are the most consequential taps in the game -- ratifying a name
+   * forever, taking a fork that ends a saga, siding with a dog against another
+   * -- and a chevron is the affordance for "this opens another screen". It
+   * promised a next step to a control that commits immediately. The button
+   * already has a gloss, a coloured lower edge, a numbered badge and its own
+   * label; the label IS the action, so nothing replaced it.
+   */
   disabled: { opacity: 0.48 },
 });
