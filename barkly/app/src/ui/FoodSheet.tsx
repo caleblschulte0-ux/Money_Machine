@@ -1,9 +1,10 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import ItemIcon, { BowlIcon } from './ItemIcon';
 import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import { STORE, Wallet } from '../game/progression';
+import { useAmbientLoop, useReduceMotion } from './motion';
 
 interface Props {
   visible: boolean;
@@ -20,7 +21,40 @@ function treatSurface(index: number): string {
   return color.violet;
 }
 
+/**
+ * The food is ALIVE in the tray before you pick it.
+ *
+ * Every row of this sheet was a still icon in a coloured well, which reads as a
+ * spreadsheet of things you own rather than as dinner. The bob is small on
+ * purpose -- three pixels and a couple of degrees -- and each row is offset so
+ * they never swing in unison, which is what makes a row of moving things look
+ * mechanical.
+ *
+ * The loop comes from ui/motion so this honours the device's reduce-motion
+ * setting through the same code the world does, rather than a second copy of it
+ * that someone forgets to keep in step. The SETTING is read once by the sheet
+ * and passed down -- read per icon it would register one accessibility listener
+ * per row, which is four subscriptions to answer the same question.
+ */
+function FloatingIcon({ index, still, children }: { index: number; still: boolean; children: React.ReactNode }) {
+  const bob = useAmbientLoop(2200 + index * 180, index * 320, still);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        transform: [
+          { translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [2, -3] }) },
+          { rotate: bob.interpolate({ inputRange: [0, 1], outputRange: ['-2.4deg', '2.4deg'] }) },
+        ],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
 export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, onOpenShop }: Props) {
+  const reduceMotion = useReduceMotion();
   const treats = STORE.filter((item) => item.slot === 'treat')
     .map((item) => ({ item, count: wallet.pantry[item.id] ?? 0 }))
     .filter((row) => row.count > 0);
@@ -59,7 +93,7 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
             <View style={[styles.itemRail, { backgroundColor: color.pop }]} pointerEvents="none" />
             <View style={[styles.iconWell, { backgroundColor: color.fill }]}>
               <View style={styles.iconGloss} pointerEvents="none" />
-              <BowlIcon />
+              <FloatingIcon index={0} still={reduceMotion}><BowlIcon /></FloatingIcon>
             </View>
             <View style={styles.copy}>
               <Text style={styles.name}>Regular dinner</Text>
@@ -104,7 +138,7 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
                     <View style={[styles.itemRail, { backgroundColor: accent }]} pointerEvents="none" />
                     <View style={[styles.iconWell, { backgroundColor: accent }]}>
                       <View style={styles.iconGloss} pointerEvents="none" />
-                      <ItemIcon id={item.id} tint={item.color} />
+                      <FloatingIcon index={index + 1} still={reduceMotion}><ItemIcon id={item.id} tint={item.color} /></FloatingIcon>
                     </View>
                     <View style={styles.copy}>
                       <Text style={styles.name}>{item.name}</Text>

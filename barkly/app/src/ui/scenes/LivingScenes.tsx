@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { Animated, StyleSheet, View } from 'react-native';
+
+import { useAmbientLoop, useReduceMotion } from '../motion';
 
 import {
   BeachScene as BaseBeachScene,
@@ -24,53 +26,6 @@ export { DogBedBack, DogBedFront, NightOverlay, RoomBed, skyBand };
  * light from a window, leaves, a butterfly, shop reflections, waves and gulls.
  * Barkly and the authored scenery stay sharp.
  */
-function useReduceMotion() {
-  const [reduceMotion, setReduceMotion] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((enabled) => alive && setReduceMotion(enabled))
-      .catch(() => {});
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      alive = false;
-      sub.remove();
-    };
-  }, []);
-  return reduceMotion;
-}
-
-function useAmbientLoop(duration: number, delay = 0, reduceMotion = false) {
-  const value = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (reduceMotion) {
-      value.stopAnimation();
-      value.setValue(0.38);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(value, {
-          toValue: 1,
-          duration,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(value, {
-          toValue: 0,
-          duration,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [delay, duration, reduceMotion, value]);
-  return value;
-}
-
 function HomeLife() {
   const reduceMotion = useReduceMotion();
   const glow = useAmbientLoop(2600, 0, reduceMotion);
