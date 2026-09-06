@@ -40,11 +40,15 @@
 #    piece of v31's DNA nobody would have caught. New score is a single
 #    rise-and-release arc timed to the glasses turning on, not a four-act
 #    historical journey.
-#  - Runtime drops from 79.0s to 35.0s. Not a pacing accident -- cutting
+#  - Runtime drops from 79.0s to 41.1s. Not a pacing accident -- cutting
 #    four 7-8s era beats and not replacing them with anything of
-#    equivalent length IS the concept. A tight, confident, done-in-35-
-#    seconds spot is closer to an actual Apple product film (most run
-#    30-45s) than anything this project has cut before.
+#    equivalent length IS the concept. (A first pass landed at 35.0s
+#    before real narration lengths pushed several beats back out --
+#    `hero`, `lock` and `anchor` all grew once the first render showed
+#    VO running 1.2-2.2s past a too-tight beat; see those beats' own
+#    notes below. Still barely half of v31's runtime.) A tight, confident
+#    spot in the low 40s is closer to an actual Apple product film (most
+#    run 30-45s) than anything this project has cut before.
 #
 # WHAT DID NOT CHANGE, and should not have: same real footage (no reshoot
 # exists), same approved facts (software not hardware, recognition,
@@ -156,8 +160,8 @@ LABELS = {
  # here to strip it of "chapter" weight; recon_block() still reserves a
  # full title-line of vertical space for an empty string, which just left
  # a dead gap above VISUALISATION -- worse, not more minimal. The beat's
- # own brevity, 3.0s and no leader line, already does the "glance not a
- # chapter" work.)
+ # own brevity -- still under half of v31's 5.0s hold -- and no leader
+ # line already does the "glance not a chapter" work.)
  "hero": ((150, 900), "THE HARDWARE", "VISUALISATION", 0.35, (0, 0)),
  # RECOGNITION -- names a real waterfall in an unmodified frame; the
  # device identifying where the wearer is. No date, no history, no claim
