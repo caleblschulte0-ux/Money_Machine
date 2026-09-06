@@ -1,0 +1,31 @@
+# Timeline for r124__claude__v32__ORI_What_This_Place_Was_master.mp4 (41.1s)
+# v32 -- ACTUAL restart: no historical eras anywhere. See r124 DONE for the summary.
+
+   0.0-   1.5  sign    boy reading FALLS PARK plaque                              [sign beat starts]; on-screen: FALLS PARK, SIOUX FALLS, SOUTH DAKOTA (location card)
+   1.5-   3.0  sign    boy reading FALLS PARK plaque                              
+   3.0-   4.5  sign    boy reading FALLS PARK plaque                              VO: Most people walk right past.
+   4.5-   6.0  past    park going by, nobody stopping                             [past beat starts]; VO: Most people walk right past.
+   6.0-   7.5  prod    wearer, glasses on, park behind him                        [prod beat starts]; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+   7.5-   9.0  prod    wearer, glasses on, park behind him                        VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+   9.0-  10.5  hero    glasses alone on dark table (generated plate)              [hero beat starts]; on-screen: THE HARDWARE / VISUALISATION; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  10.5-  12.0  hero    glasses alone on dark table (generated plate)              VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  12.0-  13.5  hero    glasses alone on dark table (generated plate)              VO: You put them on.
+  13.5-  15.0  on      hand raised to temple -- switching on (start of one unbroken shot) [on beat starts]; VO: You put them on.
+  15.0-  16.5  on      hand raised to temple -- switching on (start of one unbroken shot) VO: They know where you're standing, what you're looking at -- and who you're with.
+  16.5-  18.0  lock    same unbroken shot continues -- recognises the falls       [lock beat starts]; on-screen: THE FALLS / BIG SIOUX RIVER; VO: They know where you're standing, what you're looking at -- and who you're with.
+  18.0-  19.5  lock    same unbroken shot continues -- recognises the falls       VO: They know where you're standing, what you're looking at -- and who you're with.
+  19.5-  21.0  anchor  same unbroken shot continues -- anchored to the place      [anchor beat starts]; VO: They know where you're standing, what you're looking at -- and who you're with.; VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  21.0-  22.5  anchor  same unbroken shot continues -- anchored to the place      VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  22.5-  24.0  anchor  same unbroken shot continues -- anchored to the place      VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  24.0-  25.5  anchor  same unbroken shot continues -- anchored to the place      VO: Anchored to the real place around you. Picked up where you're going, not owned.; VO: He keeps walking. It keeps working.
+  25.5-  27.0  reach   walking the park path                                      [reach beat starts]; VO: He keeps walking. It keeps working.
+  27.0-  28.5  reach   walking the park path                                      
+  28.5-  30.0  off     glasses off, elevated wide view, nothing drawn on it       [off beat starts]; VO: No tour group. No phone in your face. You just look.
+  30.0-  31.5  off     glasses off, elevated wide view, nothing drawn on it       VO: No tour group. No phone in your face. You just look.
+  31.5-  33.0  off     glasses off, elevated wide view, nothing drawn on it       VO: No tour group. No phone in your face. You just look.; VO: Open Range Interactive. Look closer at where you already are.
+  33.0-  34.5  walk    wide ground-level path shot, closing line                  [walk beat starts]; VO: Open Range Interactive. Look closer at where you already are.
+  34.5-  36.0  walk    wide ground-level path shot, closing line                  VO: Open Range Interactive. Look closer at where you already are.
+  36.0-  37.5  walk    wide ground-level path shot, closing line                  VO: Open Range Interactive. Look closer at where you already are.
+  37.5-  39.0  end     held last frame, wordmark card                             [end beat starts]; on-screen: OPEN RANGE INTERACTIVE (wordmark) + VISUAL INTENTION ONLY
+  39.0-  40.5  end     held last frame, wordmark card                             
+  40.5-  41.1  end     held last frame, wordmark card                             
