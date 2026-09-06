@@ -1,20 +1,34 @@
 #!/usr/bin/env python3
-"""Score for "WHAT THIS PLACE WAS". Built to the beats, not looped under them.
+"""Score for the v32 "one continuous experience" cut. Built to the beats,
+not looped under them.
 
-Adapted from synth_music.py, which produced one flat 46s loop. A flat bed
-is worse than none here: the film's whole shape is four eras arriving and
-leaving, and a pad that ignores them tells the viewer nothing is happening.
+REWRITTEN FOR v32, not retimed from v31. v31's score (see git history)
+followed a four-era arc on purpose: a lift, a hold, a THINNING under `ice`
+that dropped the low end out entirely (the score's own words: "cold is an
+ABSENCE of low end, not an added effect"), then a return. That shape is
+correct for a film that actually goes to an ice age and comes back. This
+film does not -- v32 has no eras at all (spec_one.py) -- so keeping a
+score that still mimics one, just retimed to new beat boundaries, would
+have been the one piece of the old concept's DNA nobody thought to check,
+because nobody was listening for it.
 
-This follows the cut, and every boundary is read out of spec_one so the
-score cannot drift from the edit:
+The new arc is ONE rise and ONE release, matched to the only real event
+in this cut: the glasses turning on. Every boundary is still read out of
+spec_one so the score cannot drift from the edit:
 
-  open        almost nothing. the falls carry it
-  arrive      the first era arrives (v7: same beat as the lift)
-  first era   the lift. this is the one full AR reveal and it earns it
-  second era  held, warm, no new event -- the era swapped on the cut
-  ice         the pad thins to its top two voices and the sub drops out.
-              cold is an ABSENCE of low end, not an added effect
-  return      the low end comes back with the colour, then resolves
+  quiet     the world before the product. Real footage, real place,
+            the score stays out of the way (same reasoning v31 kept:
+            a score coming in hot over an ordinary park tells the viewer
+            what to feel before anything has happened).
+  lift      `on` -- the glasses go on, the pad rises to meet it.
+  peak      `lock`, held through `anchor` -- the recognition/anchoring
+            capability is the one thing this film is actually about, and
+            it is one continuous shot, so the score holds its high point
+            for the same continuous stretch rather than re-arriving twice.
+  release   `reach` -- he keeps walking, the pad eases back down. No
+            "thinning" gimmick, no absence-of-bass effect: this is a
+            resolution, not a temperature change, because nothing cold
+            happens in this film.
 
 Everything is synthesized here -- no sample is loaded, nothing is licensed,
 and it can be regenerated from source at any length.
@@ -71,48 +85,37 @@ def main():
     t = np.arange(n) / SR
     out = np.zeros(n, np.float32)
 
-    # EVERY MILESTONE IS LOOKED UP BY ROLE, not by beat name. v3 read
-    # "b1".."b4" directly; v4 renamed the beats and cut a montage in front
-    # of them, and a score that hardcodes names either raises (fine) or --
-    # worse, if a name happens to survive -- keeps playing the old edit
-    # under the new one. spec_one.SCORE maps role -> beat and asserts the
-    # beat exists at import.
+    # EVERY MILESTONE IS LOOKED UP BY ROLE, not by beat name -- same
+    # discipline as before: spec_one.SCORE maps role -> beat and asserts
+    # the beat exists at import, so a future spec rewrite either keeps
+    # this in sync or fails loudly, never silently plays the old arc under
+    # a new edit.
     m_st, _ = beat_at(SCORE["start"])
-    arr, _ = beat_at(SCORE["arrive"])
-    e1, _ = beat_at(SCORE["lift"])
-    e2, _ = beat_at(SCORE["hold"])
-    ice_st, ice_d = beat_at(SCORE["cold"])
-    ret_st, ret_d = beat_at(SCORE["warm"])
+    lift_st, _ = beat_at(SCORE["lift"])
+    peak_st, _ = beat_at(SCORE["peak"])
+    rel_st, _ = beat_at(SCORE["release"])
 
-    # ---- the arc, as one gain curve read off the cut
-    # The montage is the quietest thing in the film ON PURPOSE. It is real
-    # footage of a real park and the location audio (falls, wind, footsteps)
-    # carries it; a score that comes in over the waterfall at full weight
-    # is the score telling you what to feel before anything has happened.
-    # FLOOR RAISED 0.07 -> 0.12 for v16. The note above says the montage
-    # leans on location audio to carry it -- and location audio has been
-    # gone from this master since v8, on the operator's instruction. A
-    # floor set for a mix that still had a waterfall in it leaves the new
-    # first act as narration over near-silence for six seconds at a time.
-    # Still the quietest thing in the film, still well under the reveal.
-    gain = np.full(n, 0.22, np.float32)
-    gain = np.where(t < arr, ramp(t, m_st, arr, 0.12, 0.26), gain)
-    gain = np.where((t >= arr) & (t < e1), ramp(t, arr, e1, 0.26, 0.34), gain)
-    gain = np.where((t >= e1) & (t < e2), ramp(t, e1, e1 + 2.0, 0.34, 0.80), gain)
-    gain = np.where((t >= e2) & (t < ice_st), 0.80, gain)
-    gain = np.where((t >= ice_st) & (t < ret_st),
-                    ramp(t, ice_st, ice_st + 1.6, 0.80, 0.52), gain)
-    gain = np.where(t >= ret_st, ramp(t, ret_st, ret_st + 2.0, 0.52, 0.86), gain)
+    # ---- the arc, as one gain curve read off the cut. ONE rise, ONE
+    # release -- no four-act structure, because there is no four-act film
+    # underneath it any more.
+    # The montage is the quietest thing in the film ON PURPOSE, same
+    # reasoning kept from every version before this one: it is real
+    # footage of a real park, there is no location audio under this master
+    # (gone since v8, on the operator's instruction), and a score that
+    # comes in hot over an ordinary park tells the viewer what to feel
+    # before anything has happened.
+    gain = np.full(n, 0.55, np.float32)
+    gain = np.where(t < lift_st, ramp(t, m_st, lift_st, 0.12, 0.20), gain)
+    gain = np.where((t >= lift_st) & (t < peak_st),
+                    ramp(t, lift_st, peak_st, 0.20, 0.58), gain)
+    gain = np.where((t >= peak_st) & (t < rel_st), 0.58, gain)
+    gain = np.where(t >= rel_st, ramp(t, rel_st, rel_st + 2.2, 0.58, 0.30), gain)
     # let it go at the very end
     gain *= np.clip((TOTAL - 0.6 - t) / 2.4, 0.0, 1.0)
 
-    # COLD = the low voices leaving. Under the ice the chord keeps only its
-    # top two notes, which is what makes it read as thin rather than dark.
-    cold = np.clip((t - ice_st) / 1.4, 0, 1) * (t < ret_st) \
-        + np.clip(1.0 - (t - ret_st) / 1.6, 0, 1) * (t >= ret_st)
-    cold = np.clip(cold, 0, 1)
-
-    # ---- pads
+    # ---- pads. Every voice plays throughout -- there is no "cold" state
+    # to thin them out for any more, so the chord simply carries the arc
+    # via `gain` above rather than losing its own low end partway through.
     pos, bar_i = 0.0, 0
     rng = np.random.default_rng(7)
     while pos < TOTAL:
@@ -122,23 +125,18 @@ def main():
             break
         tt = np.arange(ln) / SR
         i0 = int(pos * SR)
-        c_here = float(np.mean(cold[i0:i0 + ln])) if i0 < n else 0.0
         seg = np.zeros(ln)
-        for vi, f in enumerate(sorted(chord)):
-            # lowest voices fade out as `cold` rises
-            voice = 1.0 if vi >= len(chord) - 2 else (1.0 - c_here)
-            if voice <= 0.01:
-                continue
+        for f in sorted(chord):
             for det in (-0.16, 0.0, 0.16):
                 for h in range(1, 6):
-                    seg += voice * (0.9 ** h / h) * np.sin(
+                    seg += (0.9 ** h / h) * np.sin(
                         2 * np.pi * (f + det) * h * tt + rng.random() * 6.28)
         seg *= adsr(ln, 0.9, 1.3) * 0.026
         out[i0:i0 + ln] += seg[:n - i0]
         pos += BAR
         bar_i += 1
 
-    # ---- sub pulse, absent under the ice
+    # ---- sub pulse, steady throughout -- same reasoning as the pads.
     pos = 0.0
     while pos < TOTAL - 0.5:
         ln = int(0.44 * SR)
@@ -147,16 +145,15 @@ def main():
             break
         root = CHORDS[int(pos / BAR) % len(CHORDS)][0] / 4
         tt = np.arange(ln) / SR
-        amt = 1.0 - float(np.mean(cold[i0:i0 + ln]))
-        if amt > 0.02:
-            out[i0:i0 + ln] += (np.sin(2 * np.pi * root * tt)
-                                * adsr(ln, 0.012, 0.32) * 0.15 * amt)
+        out[i0:i0 + ln] += (np.sin(2 * np.pi * root * tt)
+                            * adsr(ln, 0.012, 0.32) * 0.15)
         pos += BEAT * 2
 
-    # ---- air, and it gets BRIGHTER under the ice: wind, not warmth
+    # ---- air: a constant, gentle breathing noise bed, not a weather
+    # effect tied to a temperature that no longer exists in this film.
     noise = np.convolve(rng.standard_normal(n), np.ones(200) / 200, mode="same")
     breathe = 0.5 + 0.5 * np.sin(2 * np.pi * t / 9.0)
-    out += noise * breathe * (0.016 + 0.030 * cold)
+    out += noise * breathe * 0.018
 
     out *= gain
     peak = float(np.abs(out).max())
@@ -170,8 +167,8 @@ def main():
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes(np.stack([pcm, pcm], 1).tobytes())
-    print(f"  score: {TOTAL:.1f}s, montage under {m_st:.1f}-{arr:.1f}s, "
-          f"lift at {e1:.1f}s, thin at {ice_st:.1f}s, resolve at {ret_st:.1f}s")
+    print(f"  score: {TOTAL:.1f}s, quiet under {m_st:.1f}-{lift_st:.1f}s, "
+          f"lift at {lift_st:.1f}s, peak at {peak_st:.1f}s, release at {rel_st:.1f}s")
 
 
 if __name__ == "__main__":

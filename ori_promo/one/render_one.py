@@ -358,54 +358,33 @@ FIGURE_MAX_DRIFT = 0.03  # a plate carrying a figure must be this static
 # neighbouring shots share a framing scale (every plate in this film drifts
 # 0.0-0.6% over its own duration -- see the comment at the dissolve site).
 # It is NOT invisible when the two shots disagree on scale: a wide
-# environmental POV dissolving against a tight portrait crop produces a
-# giant translucent face floating disconnected over the wrong background,
-# because for half a second the renderer is genuinely averaging two
-# pictures shot at completely different distances from their subject.
-# Confirmed by direct frame extraction across reach->dak (v29): the new
-# ChatGPT dak/settle plates are tight family-portrait crops, unlike the
-# wide-shot-with-distant-figure assets they replaced, so the beats either
-# side of that scale jump now ghost. `dak` picks it up from `reach` (wide
-# park POV); `ice` picks it up from `settle` (tight portrait) since ice is
-# a wide valley landscape. `dak` and `settle` are the same portrait scale
-# as each other, so that one boundary keeps its cross-dissolve.
-# `mam` picks up the same mismatch from `ice` -- confirmed the same way,
-# by extracting frames across that boundary too: mam is a tight
-# over-the-shoulder POV of the wearer's head against snow, dissolving off
-# ice's wide landscape produces the same translucent-head-over-background
-# ghost. This one predates v29 (ice was already a generated plate and mam
-# already real footage before the asset swap) -- it was simply never
-# caught until this pass looked at every boundary instead of stopping at
-# the one the operator's feedback pointed at directly.
-# `hero` (v28's glasses product shot) sits on BOTH sides of the same
-# problem: it is a tight macro of glasses on a dark table dropped between
-# two wide real-POV park shots (`prod` before, `on` after), so both of its
-# neighbours ghost -- a giant translucent park landscape over the glasses
-# macro going in, a giant translucent pair of glasses over the waterfall
-# coming out. Confirmed by frame extraction on both boundaries. Both sides
-# need the override: `hero`'s own incoming dissolve (from prod) and
-# `on`'s own incoming dissolve (from hero).
-# The fix is not to disable the transition, it is to change what it
-# dissolves FROM: these beats fade in from black instead of from the
-# mismatched previous frame. Nothing incompatible is blended, it stays a
-# soft transition rather than a hard cut (the operator's v6 complaint was
-# never "too many cuts", it was "too FAST" -- see the note at the dissolve
-# site), and a brief dip to black reads as a deliberate chapter break --
-# apt for hero/on too, since that is the moment the device switches on.
+# environmental POV dissolving against a tight portrait/macro crop
+# produces a giant translucent object floating disconnected over the
+# wrong background, because for half a second the renderer is genuinely
+# averaging two pictures shot at completely different distances from
+# their subject. The fix is not to disable the transition, it is to
+# change what it dissolves FROM: the beat fades in from black instead of
+# from the mismatched previous frame. Nothing incompatible is blended, it
+# stays a soft transition rather than a hard cut, and a brief dip to
+# black reads as a deliberate beat -- apt for `hero`/`on` especially,
+# since that is the moment the device switches on.
 #
-# TWO MORE FOUND, v31 restart. Removing `map`/`sync` created a brand new
-# adjacency, open->reach, never checked before because it never existed
-# before; and off->walk existed before but was never in this list either
-# -- both went unchecked because nothing flagged them, not because they
-# were verified fine. Direct frame extraction at both (out/v31_check/) on
-# the freshly rendered v31 master shows the same translucent-ghost pattern
-# as every other case above: open (tight two-person shot at the falls) vs
-# reach (wide path POV) at 27.65s, and off (medium shot, boy looking out)
-# vs walk (wide ground-level POV) at 69.55s -- a visible double-exposure
-# of the wrong-scale previous frame bleeding through the new one. Same
-# fix, same reasoning: `reach` and `walk` fade in from black instead of
-# dissolving from their mismatched predecessor.
-DIP_TO_BLACK = {"hero", "on", "dak", "ice", "mam", "reach", "walk"}
+# CARRIED FORWARD FROM v31, RE-VERIFIED FOR v32'S BEAT LIST BY DIRECT
+# FRAME EXTRACTION (out/v32_check/), NOT ASSUMED SAFE JUST BECAUSE A BEAT
+# NAME CARRIED OVER. `hero` sits between two wide real-POV park shots
+# (`prod` before, `on` after) and is a tight macro, so both its own
+# incoming dissolve (from prod) and `on`'s incoming dissolve (from hero)
+# ghost -- confirmed clean at t=9.15/13.15 once fixed. `anchor`->`reach`
+# ghosts the same way `open`->`reach` did in v31 (same two source clips,
+# nearly the same in-points) -- confirmed clean at t=24.45.
+#
+# ONE MORE FOUND, v32. `reach`->`off` is a BRAND NEW adjacency (v31 went
+# reach->dak; there was no `off` beat immediately after `reach` before).
+# Direct frame extraction at 28.55-28.65s on the freshly rendered v32
+# master shows the same translucent-ghost pattern as every case above: a
+# faint double-exposure of `reach`'s lamppost-lined path bleeding through
+# `off`'s elevated wide-valley view. Same fix: `off` fades in from black.
+DIP_TO_BLACK = {"hero", "on", "reach", "off", "walk"}
 
 
 SAFE_T, SAFE_B = FL.safe_area(H, W)
@@ -700,25 +679,12 @@ def main(only=None):
         spec.loader.exec_module(bhp)
         bhp.build()
 
-    # `dak`/`settle` moved from figure-on-real-footage to fully generated
-    # PLATES, v29 (same reasoning as `hero`/`ice`) -- build if missing.
-    dak_clip = os.path.join(RAW, "IMG_DAK1.MOV")
-    if not os.path.exists(dak_clip):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "build_dak_plate", asset("ai/dak/build_dak_plate.py"))
-        bdp = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(bdp)
-        bdp.build()
-
-    settle_clip = os.path.join(RAW, "IMG_SETTLE1.MOV")
-    if not os.path.exists(settle_clip):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "build_settle_plate", asset("ai/settle/build_settle_plate.py"))
-        bsp = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(bsp)
-        bsp.build()
+    # dak/settle auto-build blocks REMOVED, v32 -- `dak` and `settle` are
+    # no longer beats (spec_one.py's no-eras restart), so raw/IMG_DAK1.MOV
+    # and IMG_SETTLE1.MOV are no longer read by anything. Building them
+    # here would have been dead work with nothing downstream to consume
+    # it. ai/dak/build_dak_plate.py and ai/settle/build_settle_plate.py
+    # are retired along with the beats they fed, not deleted.
 
     rows = [(b, c, t, d) for b, c, t, d, _n in
             [(x[0], x[1], x[2], x[4], x[5]) for x in BEATS] if c]

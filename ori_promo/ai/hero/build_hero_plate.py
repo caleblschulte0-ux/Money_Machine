@@ -56,16 +56,23 @@ SRC = os.path.join(_HERE, "glasses_hero_chatgpt.jpg")
 DST = os.path.join(RAW, "IMG_HERO1.MOV")
 
 
-def build(dur=5.0, fps=30):
+def build(dur=4.0, fps=30):
     # 1024x576 source -> 1920x1080 with a slow 1.0 -> 1.045 push, same
     # zoompan pattern as ai/ice/build_ice_plate.py: lanczos upscale first
     # so the zoom does not compound the resampling softness. Cap held at
-    # 1.045 (not raised for the longer v31 hold) on purpose -- this source
-    # is only 1024x576 upscaled 2.6x already; pushing further would show
-    # that softness on the one shot in the film meant to look like real
-    # product photography. Rate is derived from dur so the push still
-    # spans roughly the first half of the (now 5.0s, was 2.5s) beat
-    # instead of capping out in a quarter second and sitting frozen.
+    # 1.045 on purpose -- this source is only 1024x576 upscaled 2.6x
+    # already; pushing further would show that softness on the one shot
+    # in the film meant to look like real product photography. Rate is
+    # derived from dur so the push still spans roughly the first half of
+    # the beat instead of capping out early and sitting frozen.
+    # DURATION, v32: shrunk 5.0s -> 3.0s on the first pass (v31 doubled
+    # this beat into its own long chapter; the operator rejected that
+    # whole restart as not different enough, and this concept's idea is "a
+    # glance inside the flow, not a chapter"), then nudged back up to 4.0s
+    # once the first v32 render showed `prod`'s VO tail eating most of a
+    # 3.0s hero beat (see spec_one.py's note on the `hero` beat) -- still
+    # meaningfully shorter than v31's chapter-length hold, just long
+    # enough to leave real silence after the tail clears.
     n = int(dur * fps)
     cap = 1.045
     rate = (cap - 1.0) / (n * 0.5)
