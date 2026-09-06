@@ -30,9 +30,32 @@ OUT.mkdir(parents=True, exist_ok=True)
 CAMERA_LOCATION = (3.0, -10.8, 4.5)
 
 
+def _srgb_to_linear(channel: float) -> float:
+    """
+    THE REASON EVERY PROP SHIPPED PASTEL.
+
+    Blender's Base Color input is LINEAR. A hex colour off a palette is sRGB.
+    Handing `int(hex) / 255` straight to the shader tells Blender that #E14B45's
+    0.29 green is a linear 0.29, and the render then encodes it back out through
+    sRGB on the way to the PNG -- which lifts mid-tones hard. Under a perfectly
+    neutral unit light and with no other change, #E14B45 comes back as #F1948E,
+    #37B4CD as #80DBE8, #8A3FD6 as #C288EC. Three dusty pastels, from three
+    candy colours, with nothing in the lighting or the view transform at fault.
+
+    This is what the AgX fix could not reach. Dropping AgX stopped the highlight
+    shoulder from rolling saturated pixels toward white and it measurably helped,
+    but the base colours were already wrong before a single light hit them, so
+    Town stayed washed and the doc that recorded that pass said so plainly:
+    "it did not fix everything".
+    """
+    if channel <= 0.04045:
+        return channel / 12.92
+    return ((channel + 0.055) / 1.055) ** 2.4
+
+
 def rgb(value: str):
     value = value.lstrip("#")
-    return tuple(int(value[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return tuple(_srgb_to_linear(int(value[i:i + 2], 16) / 255) for i in (0, 2, 4))
 
 
 def clean_scene():
@@ -194,7 +217,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(-4.8, -5.0, 8.4))
     key = bpy.context.object
     key.name = "Barkly warm key"
-    key.data.energy = 820
+    key.data.energy = 880
     key.data.size = 5.0
     key.data.color = (1.0, 0.77, 0.58)
     look_at(key, target)
@@ -202,7 +225,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(5.0, -2.2, 4.0))
     fill = bpy.context.object
     fill.name = "Barkly cool fill"
-    fill.data.energy = 280
+    fill.data.energy = 300
     fill.data.size = 5.5
     fill.data.color = (0.58, 0.78, 1.0)
     look_at(fill, target)
@@ -210,7 +233,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(1.8, 4.0, 6.8))
     rim = bpy.context.object
     rim.name = "Barkly warm rim"
-    rim.data.energy = 380
+    rim.data.energy = 408
     rim.data.size = 4.2
     rim.data.color = (1.0, 0.84, 0.63)
     look_at(rim, target)
@@ -491,16 +514,19 @@ def home_care_tray():
        floor, the back rim -- and the fix stays inside this one builder instead
        of forking the shared camera every other prop depends on.
 
-    Colours are darker than the flat version's because the key light lifts a
-    base substantially -- the bench renders as honey from #BD601C -- so these
-    are chosen to LAND on the palette values, not to match them in the file.
+    Colours are now written as the colour they should BE. They used to be
+    written several stops darker, to compensate for a render pipeline that was
+    handing sRGB hex to a linear shader input and washing everything out; with
+    that fixed (see `_srgb_to_linear`) the compensation became a second bug and
+    the tray rendered nearly black. If a prop's material list looks like it is
+    apologising for the lighting, check the colour space before tuning it.
     """
-    wood = material("Tray wood", "#6A2F0C", roughness=0.58, coat=0.05)
-    floor = material("Tray floor", "#4A1D06", roughness=0.66, coat=0.03)
-    front = material("Tray front", "#3E1705", roughness=0.62, coat=0.04)
-    rim = material("Tray rim", "#A85A18", roughness=0.50, coat=0.08)
-    shine = material("Tray shine", "#D89A56", roughness=0.40, coat=0.12)
-    brass = material("Tray brass", "#C9922F", roughness=0.30, metallic=0.72)
+    wood = material("Tray wood", "#C0762A", roughness=0.58, coat=0.05)
+    floor = material("Tray floor", "#9B531A", roughness=0.66, coat=0.03)
+    front = material("Tray front", "#7E3D12", roughness=0.62, coat=0.04)
+    rim = material("Tray rim", "#DE9740", roughness=0.50, coat=0.08)
+    shine = material("Tray shine", "#F3C078", roughness=0.40, coat=0.12)
+    brass = material("Tray brass", "#EFBA4A", roughness=0.30, metallic=0.72)
 
     # The camera's own yaw, cancelled. atan(3.0 / 10.8) from CAMERA_LOCATION --
     # derived, never typed as a number, so moving the camera moves the tray with

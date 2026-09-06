@@ -166,6 +166,30 @@ describe('world scenery stays modular', () => {
     }
   });
 
+  /*
+   * The pastel that survived the AgX fix.
+   *
+   * Blender's Base Color input is LINEAR; a hex off a palette is sRGB. Handing
+   * `int(hex) / 255` straight to the shader tells Blender that #E14B45's 0.29
+   * green is a linear 0.29, and the render encodes it back out through sRGB on
+   * the way to the PNG, which lifts mid-tones hard. Under a perfectly neutral
+   * unit light and with nothing else wrong, #E14B45 comes back #F1948E and
+   * #37B4CD comes back #80DBE8. Measured over all twenty props, correcting it
+   * moved mean saturation 0.444 -> 0.641 and colourless pixels 2.7% -> 1.3%.
+   *
+   * Dropping AgX was a real fix and it could not reach this one: the base
+   * colours were already wrong before a single light hit them.
+   */
+  it('converts authored sRGB hex to linear before handing it to a shader', () => {
+    for (const factory of [worldFactory, homeFactory, architectureFactory]) {
+      expect(factory).toContain('def _srgb_to_linear');
+      expect(factory).toMatch(/\(\(channel \+ 0\.055\) \/ 1\.055\) \*\* 2\.4/);
+      // The raw division must not survive anywhere as the value handed to a material.
+      expect(factory).not.toMatch(/return tuple\(int\(value\[[^\]]+\], 16\) \/ 255/);
+      expect(factory).toMatch(/_srgb_to_linear\(int\(/);
+    }
+  });
+
   it('uses composition lanes instead of arbitrary per-prop tilts', () => {
     expect(outdoorScenes).toContain('const COMPOSITION =');
     expect(outdoorScenes).not.toMatch(/<WorldObject[^>]*\srotate=/);

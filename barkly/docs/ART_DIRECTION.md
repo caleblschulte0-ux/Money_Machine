@@ -527,3 +527,57 @@ brighten when Barkly wants that thing; a baked copy underneath them simply drew
 everything twice. The app also keeps the dark border — wood on a wooden floor
 has no edge of its own, and losing that silhouette was what made the first
 in-app version read as a stain rather than an object.
+
+## The pastel that survived the AgX fix
+
+Dropping AgX was a real fix and the section above measures it honestly, right
+down to the sentence admitting it "did not fix everything". This is the rest of
+it, and it was never in the lighting at all.
+
+**Blender's Base Color input is LINEAR. A hex colour off a palette is sRGB.**
+All three rigs did this:
+
+```python
+return tuple(int(value[i:i + 2], 16) / 255 for i in (0, 2, 4))
+```
+
+which tells Blender that `#E14B45`'s 0.29 green *is* a linear 0.29. The render
+then encodes back out through sRGB on the way to the PNG, and that lifts
+mid-tones hard. Under a perfectly neutral unit light, with no rig, no shading,
+and nothing else wrong:
+
+| authored | comes back as |
+|---|---|
+| `#E14B45` coral | `#F1948E` |
+| `#37B4CD` aqua | `#80DBE8` |
+| `#8A3FD6` violet | `#C288EC` |
+
+Three dusty pastels from three candy colours. The prediction checks out on the
+shipped art: the coral storefront's dominant body pixel measured `#E08070`
+against a predicted `#F1948E`, the gap being the light falloff. That is why
+Town stayed the worst location on the contact sheet — 0.334 mean saturation
+against a 0.42 floor — after the palette, the road, the compositing *and* the
+view transform had all been fixed. Nothing downstream of an already-washed base
+colour can put the chroma back.
+
+Fixed in `_srgb_to_linear`, in all three packs, guarded by a test that also
+refuses the raw division coming back. Measured over all twenty props:
+
+| | before | after |
+|---|---|---|
+| mean saturation | 0.444 | **0.641** |
+| mean colourless | 2.7% | **1.3%** |
+| mean value | 0.683 | 0.617 |
+
+The value drop is the honest half of the trade and it is not a loss: those
+brighter numbers were the inflation, not the art. Every prop is darker and far
+more colourful, which is the direction this document has asked for from the
+top — Barkly is the most saturated thing on screen, and the world now rises to
+meet him instead of sitting pastel underneath him.
+
+**One consequence to watch for.** Materials authored *while* the bug was live
+were picked to land correctly through it, so they are several stops too dark
+once it is fixed. The care tray was written at `#6A2F0C`/`#4A1D06` and rendered
+nearly black; it is `#C0762A`/`#9B531A` now — the colour it should actually be.
+If a prop's material list looks like it is apologising for the lighting, check
+the colour space before tuning anything.

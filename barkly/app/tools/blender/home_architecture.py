@@ -15,9 +15,32 @@ OUT.mkdir(parents=True, exist_ok=True)
 CAMERA_LOCATION = (3.0, -10.8, 4.5)
 
 
+def _srgb_to_linear(channel: float) -> float:
+    """
+    THE REASON EVERY PROP SHIPPED PASTEL.
+
+    Blender's Base Color input is LINEAR. A hex colour off a palette is sRGB.
+    Handing `int(hex) / 255` straight to the shader tells Blender that #E14B45's
+    0.29 green is a linear 0.29, and the render then encodes it back out through
+    sRGB on the way to the PNG -- which lifts mid-tones hard. Under a perfectly
+    neutral unit light and with no other change, #E14B45 comes back as #F1948E,
+    #37B4CD as #80DBE8, #8A3FD6 as #C288EC. Three dusty pastels, from three
+    candy colours, with nothing in the lighting or the view transform at fault.
+
+    This is what the AgX fix could not reach. Dropping AgX stopped the highlight
+    shoulder from rolling saturated pixels toward white and it measurably helped,
+    but the base colours were already wrong before a single light hit them, so
+    Town stayed washed and the doc that recorded that pass said so plainly:
+    "it did not fix everything".
+    """
+    if channel <= 0.04045:
+        return channel / 12.92
+    return ((channel + 0.055) / 1.055) ** 2.4
+
+
 def rgb(value: str):
     value = value.lstrip('#')
-    return tuple(int(value[i:i+2], 16) / 255 for i in (0, 2, 4))
+    return tuple(_srgb_to_linear(int(value[i:i+2], 16) / 255) for i in (0, 2, 4))
 
 
 def look_at(obj, target=(0.0, 0.0, 0.25)):
