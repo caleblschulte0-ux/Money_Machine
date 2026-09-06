@@ -1352,8 +1352,22 @@ export default function BarklyRoom() {
               <Text style={styles.waitingText}>Barkly's thinking…</Text>
             </View>
           ) : conversationMode === 'type' ? (
+            /*
+              THE FIELD GETS ITS OWN LINE.
+              Measured on a 390px phone: the dock row is 330px, and with a
+              44px close and an 85px send beside it the input was 181px --
+              149px of text after padding, about TWENTY characters at 15px.
+              A child typing "who is your best friend" could not see the start
+              of their own sentence in the field where you talk to the dog.
+              Neither button may shrink; 44 is the accessibility floor and the
+              a11y gate enforces it. So they stop sharing a line with the text.
+              Full width above, controls below: ~40 characters, twice as many.
+              Both rows are 44 with an 8px gap, which is exactly the 96 of
+              DIALOGUE_HEIGHT -- the dock box does not move, and the
+              hero-layout tests still hold the stage identical while composing.
+            */
             <View style={styles.controls}>
-              <View style={styles.typeRow}>
+              <View style={styles.typeStack}>
                 <TextInput
                   style={styles.input}
                   value={typed}
@@ -1367,6 +1381,7 @@ export default function BarklyRoom() {
                   accessibilityLabel="Say something to Barkly"
                   accessibilityHint="Type a message, then press send."
                 />
+                <View style={styles.typeButtons}>
                 <Pressable
                   style={styles.swap}
                   onPress={() => { setTyped(''); setConversationMode('idle'); }}
@@ -1386,6 +1401,7 @@ export default function BarklyRoom() {
                   {!(locked || !typed.trim()) && <View style={styles.gloss} pointerEvents="none" />}
                   <Text style={[styles.sendText, (locked || !typed.trim()) && styles.sendTextIdle]}>send</Text>
                 </Pressable>
+                </View>
               </View>
             </View>
           ) : conversationMode === 'voice' || listening ? (
@@ -1756,6 +1772,13 @@ const styles = StyleSheet.create({
   micDotLive: { backgroundColor: color.dangerWell },
   talkText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
   typeRow: { flexDirection: 'row', gap: 10 },
+  /*
+   * Two rows of TAP_MIN with an 8px gap = 96, which is DIALOGUE_HEIGHT
+   * exactly. See the note at the call site for why the field stopped sharing
+   * a line with its buttons.
+   */
+  typeStack: { gap: 8 },
+  typeButtons: { flexDirection: 'row', gap: 10 },
   swap: {
     width: TAP_MIN,
     minHeight: TAP_MIN,
@@ -1791,7 +1814,9 @@ const styles = StyleSheet.create({
     color: color.ink,
     ...elevation.low,
   },
-  send: { minHeight: TAP_MIN, flexShrink: 0, backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 24, justifyContent: 'center', overflow: 'hidden', ...elevation.card },
+  // On its own row it takes the space the field used to steal: the loudest
+  // control on screen, which is what the visual direction asks talk to be.
+  send: { flex: 1, minHeight: TAP_MIN, backgroundColor: color.pop, borderRadius: 999, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', ...elevation.card },
   sendText: { color: color.ink, fontWeight: '800', fontSize: 15, letterSpacing: 0.4 },
   sendIdle: { backgroundColor: color.fill, ...elevation.flat },
   sendTextIdle: { color: color.inkSoft },
