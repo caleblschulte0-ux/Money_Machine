@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 import { color, elevation, radius, space, type } from './theme';
 import { CARE_DOCK_HEIGHT, INTERACTION_GUTTER, TAP_MIN } from './layout';
 import { BALL, BRASS, DIORAMA, ITEM } from './scenes/artPalette';
+
+const CARE_TRAY = require('../../assets/world/home/props/care_tray.png');
 
 export type KitAction = 'feed' | 'play' | 'sleep';
 
@@ -152,12 +154,27 @@ export default function BarklyKit({ toyId, playLabel, asleep, wants, disabled, o
         : 'Whatever he can find. It is usually a stick.';
 
   return <View style={[styles.kit, { bottom: dockBottom }]}>
+    {/*
+      A RENDERED TRAY, not five stacked Views.
+
+      Every piece of furniture around this thing is a Blender render -- his
+      bed, the chair, the lamp, the shelf, the rug, and the window frame he
+      stands in front of -- and the tray directly beneath him was a rounded
+      rectangle with a gloss bar and two dots on it, on screen in all four
+      locations at all times. That was the real material mismatch in the app.
+
+      It is still a TRAY and not a control panel: the visual direction asks for
+      his in-world bowl and bed rather than a dock, so the three items keep
+      being drawn live on top of it and can still light up, count and animate.
+      `resizeMode="stretch"` because a tray is a tray at any phone width; the
+      wells are placed to sit under the three slots.
+
+      Rendered by tools/blender/world_prop_pack.py like every other prop, so it
+      shares the one camera and the one light rig and cannot drift from them.
+    */}
     <View style={styles.dockShadow} pointerEvents="none" />
     <View style={styles.dock} pointerEvents="none">
-      <View style={styles.dockGloss} />
-      <View style={styles.dockFront} />
-      <View style={[styles.rivet, styles.rivetLeft]} />
-      <View style={[styles.rivet, styles.rivetRight]} />
+      <Image source={CARE_TRAY} style={styles.dockWood} resizeMode="stretch" />
     </View>
     <Slot action="feed" label="food" hint="His bowl. Tap it to choose what he eats." wanted={wants === 'feed'} disabled={disabled} onPress={onPress}><Bowl /></Slot>
     <Slot action="play" label={playLabel} hint={hint} wanted={wants === 'play'} disabled={disabled} onPress={onPress}>
@@ -180,12 +197,12 @@ const styles = StyleSheet.create({
     zIndex: 8,
   },
   dockShadow: { position: 'absolute', left: 13, right: 13, bottom: -2, height: 20, borderRadius: radius.xl, backgroundColor: DIORAMA.shadow, opacity: 0.26 },
-  dock: { position: 'absolute', left: 4, right: 4, bottom: 2, height: 42, borderRadius: radius.md, backgroundColor: DIORAMA.woodMid, borderWidth: 2.5, borderColor: DIORAMA.woodDeep, overflow: 'hidden', ...elevation.low },
-  dockGloss: { position: 'absolute', left: 18, right: 18, top: 5, height: 5, borderRadius: radius.pill, backgroundColor: DIORAMA.woodShine, opacity: 0.76 },
-  dockFront: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 10, borderTopWidth: 2, borderTopColor: DIORAMA.woodWarm, backgroundColor: DIORAMA.woodDeep },
-  rivet: { position: 'absolute', bottom: 3, width: 6, height: 6, borderRadius: radius.xs, backgroundColor: BRASS.mid, borderWidth: 1, borderColor: BRASS.edge },
-  rivetLeft: { left: 12 },
-  rivetRight: { right: 12 },
+  // The render supplies the MATERIAL; this View supplies the SILHOUETTE. Wood
+  // on a wooden floor has no edge of its own, and the first in-app pass of the
+  // rendered tray lost the dark outline that made the flat one read as an
+  // object sitting on the floor rather than a stain in it.
+  dock: { position: 'absolute', left: 4, right: 4, bottom: 2, height: 42, borderRadius: radius.md, borderWidth: 2.5, borderColor: DIORAMA.woodDeep, backgroundColor: DIORAMA.woodMid, overflow: 'hidden', ...elevation.low },
+  dockWood: { position: 'absolute', left: -2.5, right: -2.5, top: -2.5, bottom: -2.5 },
   slot: { minWidth: TAP_MIN + 26, minHeight: TAP_MIN + 10, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 2 },
   off: { opacity: 0.4 },
   wellShadow: { position: 'absolute', bottom: 5, width: 82, height: 29, borderRadius: radius.lg, backgroundColor: DIORAMA.shadow, opacity: 0.28 },

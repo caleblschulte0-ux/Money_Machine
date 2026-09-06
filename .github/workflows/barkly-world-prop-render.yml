@@ -57,7 +57,7 @@ jobs:
             park/tree park/bench park/hedge \
             town/store_coral town/store_aqua town/store_violet town/fountain town/lamp town/planter \
             beach/umbrella beach/lifeguard beach/dune beach/castle beach/palm \
-            home/rug; do
+            home/rug home/care_tray; do
             test -s "art-review/world-props/${file}.png"
           done
           test -s art-review/world-props/manifest.json
@@ -71,7 +71,10 @@ jobs:
           cp art-review/world-props/park/*.png assets/world/park/props/
           cp art-review/world-props/town/*.png assets/world/town/props/
           cp art-review/world-props/beach/*.png assets/world/beach/props/
-          cp art-review/world-props/home/rug.png assets/world/home/props/rug.png
+          # Every home prop, not a hand-listed one. The tray shipped once as a
+          # file this step did not name, so CI rendered it and promoted nothing --
+          # the builder and the asset in the app would have drifted apart silently.
+          cp art-review/world-props/home/*.png assets/world/home/props/
           cp art-review/world-props/manifest.json assets/world/manifest.json
 
       - name: Commit generated modules to branch

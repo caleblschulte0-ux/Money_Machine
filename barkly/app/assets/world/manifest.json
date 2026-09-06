@@ -77,6 +77,11 @@
       "file": "home/rug.png",
       "displayWidth": 188,
       "anchor": "bottom"
+    },
+    "home/care_tray": {
+      "file": "home/care_tray.png",
+      "displayWidth": 330,
+      "anchor": "bottom"
     }
   }
 }

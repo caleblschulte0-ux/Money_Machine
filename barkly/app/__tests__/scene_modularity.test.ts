@@ -12,6 +12,12 @@ function source(...parts: string[]): string {
     .replace(/(^|[^:])\/\/.*$/gm, '$1 ');
 }
 
+// Shell globs contain `/*`, which the comment-stripping above eats. Anything
+// that has to be read literally -- a workflow, a manifest -- comes through here.
+function raw(...parts: string[]): string {
+  return readFileSync(join(__dirname, '..', ...parts), 'utf8');
+}
+
 describe('world scenery stays modular', () => {
   const outdoorScenes = source('src', 'ui', 'scenes', 'OutdoorRenderedScenes.tsx');
   const homeScene = source('src', 'ui', 'scenes', 'HomeRenderedScene.tsx');
@@ -120,6 +126,43 @@ describe('world scenery stays modular', () => {
       // not use it; what must never come back is the assignment.
       expect(factory).not.toMatch(/view_settings\.look\s*=\s*['"]AgX/);
       expect(factory).toMatch(/view_transform\s*=\s*['"]Standard['"]/);
+    }
+  });
+
+  /*
+   * The care tray. It is the one rendered prop that is UI rather than
+   * scenery -- it sits under Barkly in all four locations -- and it was drawn
+   * with Views long after everything around it had become a render.
+   *
+   * Two things here, both of which bit:
+   *
+   * The rotation is DERIVED from the shared camera, never typed. The camera
+   * sits 15.5 degrees off-axis, which is invisible on a compact prop and
+   * catastrophic on one five units long: the tray's first render came out as a
+   * diagonal plank, because the long axis picks up sin(pitch)*sin(yaw) of drop
+   * per unit. Cancelling the camera's own yaw fixes it inside the builder
+   * instead of forking the camera every other prop shares -- but only while the
+   * angle is read from CAMERA_LOCATION, so a camera move takes the tray with it.
+   *
+   * And it has to be PROMOTED. The workflow copied home/rug.png by name, so a
+   * second home prop rendered in CI and reached the app never; the builder and
+   * the shipped asset would have drifted apart with everything green.
+   */
+  it('renders the care tray Barkly stands over, from the shared camera', () => {
+    const kit = source('src', 'ui', 'BarklyKit.tsx');
+    expect(worldFactory).toContain('def home_care_tray');
+    expect(worldFactory).toContain('"home/care_tray"');
+    expect(worldFactory).toContain('math.atan2(CAMERA_LOCATION[0], -CAMERA_LOCATION[1])');
+    expect(kit).toContain('care_tray.png');
+    // The render owns the wood; the app owns anything that changes. A baked
+    // copy of the three dishes underneath the live ones drew everything twice.
+    expect(worldFactory).not.toMatch(/def home_care_tray[\s\S]*?\bwell_/);
+  });
+
+  it('promotes every rendered prop family into the app by glob, not by hand', () => {
+    const workflow = raw('..', '..', '.github', 'workflows', 'barkly-world-prop-render.yml');
+    for (const family of ['park', 'town', 'beach', 'home']) {
+      expect(workflow).toContain(`cp art-review/world-props/${family}/*.png assets/world/${family}/props/`);
     }
   });
 

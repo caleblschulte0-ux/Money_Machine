@@ -64,3 +64,6 @@ world-artifact.html
 art-review/world-props/
 art-review/home-props/
 art-review/home-architecture/
+
+# Blender driver imports leave these behind when a prop is re-rendered locally.
+tools/blender/__pycache__/

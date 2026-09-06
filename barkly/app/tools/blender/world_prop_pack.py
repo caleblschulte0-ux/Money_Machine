@@ -457,6 +457,99 @@ def home_rug():
     sphere("rug_glint", (-0.48, -0.60, 0.34), (0.66, 0.11, 0.045), gold_light)
 
 
+def home_care_tray():
+    """
+    The tray Barkly's bowl, toy and bed sit in.
+
+    THE LAST BIG CODE-DRAWN OBJECT IN THE GAME. Every piece of furniture around
+    it is a render -- his bed, the chair, the lamp, the shelf, the rug, and the
+    window frame he stands in front of -- and the tray directly beneath him was
+    a rounded rectangle with a gloss bar and two dots on it, on screen in all
+    four locations at all times.
+
+    THREE THINGS THIS LEARNED THE HARD WAY, all by looking at it in the app
+    rather than in isolation:
+
+    1. IT IS DRAWN AT 330x42, an aspect of 7.9:1. A first pass modelled a
+       normal-looking tray, rendered 3.6:1, and `resizeMode="stretch"` squashed
+       it to half its height in place. The model is built at the aspect it is
+       DISPLAYED at, and the render is measured against that number.
+    2. IT HAS NO WELLS. The three cream dishes are live Views: they brighten
+       when Barkly wants that thing, and a baked copy underneath them drew
+       everything twice. The render owns the wood; the app owns anything that
+       changes.
+    3. IT IS TURNED SQUARE TO THE CAMERA, and this is the one that cost the
+       most. The shared camera sits 15.5 degrees off-axis, which reads as a
+       pleasant side plane on a bed or a chair and is invisible on anything
+       compact. On an object five units long it is a catastrophe: the long axis
+       picks up sin(pitch)*sin(yaw) of vertical drop per unit, so the tray
+       rendered as a DIAGONAL, and almost the entire alpha height of the image
+       was tilt rather than tray. Stretched into a 42px slot that became a thin
+       plank with three items floating over it. Rotating the model by the
+       camera's own yaw puts the long axis dead horizontal, so the height in
+       the image is the tray's real height -- the front wall, the interior
+       floor, the back rim -- and the fix stays inside this one builder instead
+       of forking the shared camera every other prop depends on.
+
+    Colours are darker than the flat version's because the key light lifts a
+    base substantially -- the bench renders as honey from #BD601C -- so these
+    are chosen to LAND on the palette values, not to match them in the file.
+    """
+    wood = material("Tray wood", "#6A2F0C", roughness=0.58, coat=0.05)
+    floor = material("Tray floor", "#4A1D06", roughness=0.66, coat=0.03)
+    front = material("Tray front", "#3E1705", roughness=0.62, coat=0.04)
+    rim = material("Tray rim", "#A85A18", roughness=0.50, coat=0.08)
+    shine = material("Tray shine", "#D89A56", roughness=0.40, coat=0.12)
+    brass = material("Tray brass", "#C9922F", roughness=0.30, metallic=0.72)
+
+    # The camera's own yaw, cancelled. atan(3.0 / 10.8) from CAMERA_LOCATION --
+    # derived, never typed as a number, so moving the camera moves the tray with
+    # it instead of leaving a stale literal behind.
+    theta = math.atan2(CAMERA_LOCATION[0], -CAMERA_LOCATION[1])
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+
+    def place(name, loc, scale, mat, bevel_width=0.10):
+        x, y, z = loc
+        return cube(
+            name,
+            (x * cos_t - y * sin_t, x * sin_t + y * cos_t, z),
+            scale,
+            mat,
+            bevel_width,
+            rotation=(0, 0, theta),
+        )
+
+    def stud(name, loc, scale, mat):
+        x, y, z = loc
+        return sphere(name, (x * cos_t - y * sin_t, x * sin_t + y * cos_t, z), scale, mat)
+
+    # No contact shadow: the app draws its own behind this (styles.dockShadow).
+    #
+    # Local frame: +X runs along the tray (screen-horizontal once rotated), -Y
+    # is toward the camera, +Z is up. A real open box -- floor, front wall, back
+    # wall, two end caps -- because the thing that made the flat version work
+    # was CONTAINMENT, and a slab has none.
+    # `cube` scales a two-unit default cube, so every tuple below is a HALF
+    # extent. The first square-to-camera pass read them as full sizes, built the
+    # tray at double scale, and it overflowed the frame with its ends sheared
+    # off at the image edge -- which the alpha bbox reports as a clean full-width
+    # render, so it has to be checked against the ortho box, not just measured.
+    place("tray_floor", (0, 0, 0.19), (2.80, 0.48, 0.05), floor, 0.04)
+    place("tray_back", (0, 0.43, 0.32), (2.80, 0.05, 0.20), wood, 0.04)
+    place("tray_front", (0, -0.43, 0.27), (2.80, 0.05, 0.17), front, 0.04)
+    place("tray_front_lip", (0, -0.43, 0.45), (2.80, 0.065, 0.025), rim, 0.02)
+    place("tray_end_l", (-2.75, 0, 0.30), (0.05, 0.48, 0.18), wood, 0.04)
+    place("tray_end_r", (2.75, 0, 0.30), (0.05, 0.48, 0.18), wood, 0.04)
+    place("tray_back_lip", (0, 0.43, 0.53), (2.80, 0.065, 0.02), rim, 0.02)
+    # The long highlight down the front wall: the one detail that says "sealed
+    # wood" instead of "brown rectangle".
+    place("tray_gloss", (0, -0.49, 0.34), (2.55, 0.01, 0.015), shine, 0.008)
+    # The two rivets the flat version had at its ends -- the one detail that
+    # said "made object" rather than "rectangle".
+    for i, x in enumerate((-2.55, 2.55)):
+        stud(f"rivet_{i}", (x, -0.49, 0.23), (0.05, 0.035, 0.05), brass)
+
+
 BUILDERS = {
     "park/tree": (park_tree, 6.4, (0, 0, 2.15), {"displayWidth": 190, "anchor": "bottom"}),
     "park/bench": (park_bench, 4.7, (0, 0, 1.0), {"displayWidth": 136, "anchor": "bottom"}),
@@ -476,6 +569,9 @@ BUILDERS = {
     "beach/castle": (beach_castle, 4.5, (0, 0, 1.30), {"displayWidth": 112, "anchor": "bottom"}),
     "beach/palm": (beach_palm, 6.0, (0, 0, 2.20), {"displayWidth": 142, "anchor": "bottom"}),
     "home/rug": (home_rug, 4.5, (0, 0, 0.42), {"displayWidth": 188, "anchor": "bottom"}),
+    # Wide and shallow, so the ortho box is sized to the long axis rather than
+    # to a tall prop's height, or the tray renders as a sliver in a big canvas.
+    "home/care_tray": (home_care_tray, 6.1, (0, 0, 0.30), {"displayWidth": 330, "anchor": "bottom"}),
 }
 
 

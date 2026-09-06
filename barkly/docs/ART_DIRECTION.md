@@ -481,3 +481,49 @@ npm run build:pages
 node scripts/art-lab.mjs --html dist/playtest/index.html --out art-lab
 python3 scripts/art-lab-sheet.py art-lab/frames art-lab   # positional args
 ```
+
+## One shared camera, and the one prop that has to defy it
+
+Every Blender rig in this app renders through the same camera —
+`CAMERA_LOCATION = (3.0, -10.8, 4.5)`, checked by
+`__tests__/scene_modularity.test.ts` in all three packs — because the first
+pack let each prop pick its own angle and a room of them looked like a shelf
+of product renders facing different vanishing points. That camera sits about
+15.5° off-axis horizontally and about 20° above the horizon.
+
+That off-axis yaw is what gives a bed or a chair its readable side plane, and
+it is invisible on anything compact. On a **long** object it is a disaster,
+and the reason is arithmetic rather than taste: a horizontal axis picks up
+`sin(pitch)·sin(yaw)` of *vertical* screen travel per unit of length. At this
+camera that is 0.093 per unit. Over the care tray's 5.6 units it is 0.52 —
+more than the entire height of the tray itself.
+
+So the tray's first render was a **diagonal plank**. Almost all of the 87px
+alpha height of that image was tilt; the wood was about twelve. Stretched into
+its 330×42 slot it became a stick with three bowls floating over it, and the
+in-app capture is the only place that showed it — in isolation, on a
+transparent canvas, it looked like a perfectly nice piece of wood.
+
+The fix is in the builder, not the camera: rotate the model about Z by the
+camera's own yaw so its long axis lands dead horizontal, and derive that angle
+from `CAMERA_LOCATION` rather than typing 15.5 anywhere, so moving the camera
+moves the tray with it. Nothing else in the pack changes.
+
+Two smaller things that same prop taught, both worth knowing before adding
+another wide one:
+
+- **`cube()` takes HALF extents.** It scales a two-unit default cube. A pass
+  that read the tuples as full sizes built the tray at double scale and sheared
+  its ends off at the frame edge — and an alpha bbox reports that as a clean
+  full-width render, so it has to be checked against the ortho box too.
+- **Model at the aspect it is DISPLAYED at.** A tray that looks right on its
+  own is 3.6:1; the slot is 7.86:1; `resizeMode="stretch"` does not care which
+  one you liked. The render is measured against that number before it is
+  promoted.
+
+And the division that made it ship: **the render owns the wood, the app owns
+anything that changes.** The three dishes stay live Views so they can still
+brighten when Barkly wants that thing; a baked copy underneath them simply drew
+everything twice. The app also keeps the dark border — wood on a wooden floor
+has no edge of its own, and losing that silhouette was what made the first
+in-app version read as a stain rather than an object.
