@@ -19,8 +19,44 @@ about what is deployed today. "Before the mill" and "the ice" are the same
 level of assertion the on-screen labels already carry, and the film keeps
 its VISUALISATION — NOT A PHOTOGRAPH tag while any of it is on screen.
 
-Piper (en_US-ryan-high), CPU, offline, no licence attached to the output.
+Piper (en_US-lessac-high), CPU, offline, no licence attached to the output.
 Nothing here is a stock read or a cloned voice.
+
+VOICE MODEL FILES ARE NOT COMMITTED (same as ryan-high never was -- both
+are 100MB+ binaries, this project's own storage rule). Fetch on a fresh
+checkout:
+    curl -L -o vo/voices/en_US-lessac-high.onnx \
+      https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/en_US-lessac-high.onnx
+    curl -L -o vo/voices/en_US-lessac-high.onnx.json \
+      https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/en_US-lessac-high.onnx.json
+
+VOICE SWAPPED v30.2, en_US-ryan-high -> en_US-lessac-high. Not a diagnosed
+complaint -- an experiment, run because every visible-frame defect found
+across two harsh review passes had been fixed and "the video is ass" still
+stood, and voice was the one film-wide element never checked. Measured,
+not assumed: lessac's pitch standard deviation across three sample lines
+ran 49-58 Hz against ryan's 24-36 Hz on the same text -- roughly double
+the pitch variance, the direction that reads as less flat/monotone, not
+just different. Ryan is still on disk (vo/voices/en_US-ryan-high.onnx);
+reverting is a one-line change back plus re-running this file, nothing
+destructive.
+
+THE OFFSETS BELOW ARE RETIMED FOR LESSAC, NOT REUSED FROM RYAN. Piper
+voices do not share a clock -- lessac runs 7-9% longer per line on this
+script. Re-synthesizing with the old ryan-tuned offsets verified FIVE
+genuine overlaps (lock, open, the second sync line, reach, walk -- each
+would have started 0.03-0.42s before the previous line's audio actually
+finished). Fixed by walking the lines in order and pushing only a line
+that would truly overlap its immediate predecessor forward by just enough
+margin (0.08s) to clear it -- never trimming or rewording a line, since
+the wording is the operator's, not mine to edit. That local rule alone
+resolved every case, including the tightest stretch in the film (on ->
+lock -> open, three long lines back to back with almost no slack in
+their own beats to begin with): the tail absorbs into map's own beat,
+which has 5.0s of room for a ~2.8s line and needed it. Verified after the
+fact, not assumed: every consecutive line gap below is >= +0.07s, zero
+overlaps, checked programmatically against the real synthesized durations
+before this was ever rendered into the master.
 """
 import os
 import sys
@@ -32,7 +68,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from spec_one import BEATS, TOTAL
 
 SR = 48000
-VOICE = "../vo/voices/en_US-ryan-high.onnx"
+VOICE = "../vo/voices/en_US-lessac-high.onnx"
 
 # (beat, seconds into that beat, line)
 # THE WORDING IS THE OPERATOR'S, NOT MINE. v16 has to explain the product
@@ -89,7 +125,7 @@ LINES = [
     # PROPOSED FIRST BETA and VISUAL INTENTION ONLY still govern.
     ("prod", 0.15, "Open Range Interactive doesn't build the glasses. We build what runs on them."),
     ("on",   1.13, "You put them on, and the place starts talking."),
-    ("lock", 0.95, "They know where you're standing, and what you're looking at."),
+    ("lock", 1.42, "They know where you're standing, and what you're looking at."),
     # --- THE BREAKDOWN, CORRECTED v20. v19 used "The history, pinned to
     # the exact spot where it happened" -- the operator's own line from
     # the originally approved cut, but asked directly how recognition
@@ -104,7 +140,7 @@ LINES = [
     # real place around you" -- paired with `lock`'s unchanged line, this
     # is still two consecutive capability statements (recognises you,
     # then anchors to the real world), just accurate ones now.
-    ("open", 0.90, "And anchors what you see to the real place around you."),
+    ("open", 1.64, "And anchors what you see to the real place around you."),
     # `map`, v21. Operator's own legend concept (visual / audio / ambient /
     # lookout zones), stated in plain terms -- no zone count, no distance,
     # no claim this exact map is deployed today.
@@ -121,7 +157,7 @@ LINES = [
     # the film with no camera motion and no new information arriving, and
     # every second of narration that just re-reads on-screen text is a
     # second that stretch didn't need.
-    ("map", 0.30, "You don't buy a pair. You pick them up where you're going."),
+    ("map", 1.29, "You don't buy a pair. You pick them up where you're going."),
     # --- GROUP SYNC AND NO BLEED, v22. Operator: "you never talk about the
     # cool, like, features I mentioned earlier, how we are going to make it
     # so if you're in a group, your stuff will sync. If you're not in a
@@ -133,13 +169,13 @@ LINES = [
     # "And") to fit the tightened beat with real margin, not a squeeze --
     # measured via piper, not estimated.
     ("sync", 0.30, "In a group, you hear the same thing at the same time."),
-    ("sync", 2.95, "Walk past another group, and theirs stays theirs."),
+    ("sync", 3.45, "Walk past another group, and theirs stays theirs."),
     # `reach`, v18, retimed for v19/v20. No rail, no menu -- he walks, and
     # the past is where he stops. This is the one sentence in the whole
     # script that states the operator's own line from the concept
     # document in different words: "walk to chapter 2," not "tap chapter
     # 2."
-    ("reach", 0.22, "He walks. And the place answers where he stops."),
+    ("reach", 0.82, "He walks. And the place answers where he stops."),
     # --- THE ERAS ARE BACK, v22, on the operator's reversal ("we took out
     # the AI cuts of the settlers and the natives, which is bad because
     # those were supposed to stay in"). `dak`'s line is the v19 wording
@@ -151,7 +187,7 @@ LINES = [
     # to help kill the "dead middle" stretch; earlier offsets keep both
     # lines finishing well inside their own beat instead of bleeding
     # further into the next one.
-    ("dak", 0.90, "Before the mill, people lived along this water."),
+    ("dak", 1.37, "Before the mill, people lived along this water."),
     ("settle", 0.70, "Then the mill came, and the town grew around it."),
     # `dak` and `more` LINES REMOVED, v20, with their beats -- see
     # spec_one.py's FIGURES note. `ice` now follows `reach` DIRECTLY, so
@@ -162,7 +198,7 @@ LINES = [
     ("now",  1.80, "Then back. One place. Every time."),
     # --- ACT 4: the close.
     ("off",  0.30, "No tour group. No phone in your face. You just look."),
-    ("walk", 0.60, "Open Range Interactive. See the story where you stand."),
+    ("walk", 0.82, "Open Range Interactive. See the story where you stand."),
 ]
 
 
@@ -189,6 +225,20 @@ def main():
     n = int(TOTAL * SR)
     bus = np.zeros(n, np.float32)
     placed = []
+    # PLACEMENT IS COMPUTED FROM THE ACTUAL SYNTHESIZED DURATION, not just
+    # measured against it. Piper's duration prediction carries its own
+    # noise term (noise_w_scale) -- re-synthesizing the SAME text with the
+    # SAME model is not byte-identical run to run; measured swings of
+    # ~0.3s on a single line during the v30.2 voice swap. A LINES offset
+    # is therefore a REQUEST for where a line would ideally start (kept,
+    # because several lines are anchored to a visual beat), not a
+    # guarantee -- min_start below is the actual guarantee: no line may
+    # start before the previous one's real audio, from THIS run, has
+    # finished plus a fixed margin. This makes the whole file
+    # self-correcting against synthesis variance for any voice, not just
+    # the one it happened to be tuned against.
+    MARGIN = 0.08
+    min_start = None
     for idx, (beat, offset, text) in enumerate(LINES):
         st, dur = _beat_start(beat)
         # INDEXED, because a beat may now carry more than one line and the
@@ -201,6 +251,8 @@ def main():
             a = np.interp(np.linspace(0, len(a) - 1, m), np.arange(len(a)), a).astype(np.float32)
         # a breath of room either side so it does not start on the cut
         at = st + offset
+        if min_start is not None:
+            at = max(at, min_start)
         i0 = int(at * SR)
         seg = a * 0.92
         k = int(0.04 * SR)
@@ -208,6 +260,7 @@ def main():
         seg[-k:] *= np.linspace(1, 0, k)
         end = min(n, i0 + len(seg))
         bus[i0:end] += seg[:end - i0]
+        min_start = at + len(a) / SR + MARGIN
         placed.append((beat, at, len(a) / SR, text))
         if at + len(a) / SR > st + dur:
             print(f"  ! {beat}: line runs {at + len(a)/SR - (st+dur):.2f}s past the beat")
