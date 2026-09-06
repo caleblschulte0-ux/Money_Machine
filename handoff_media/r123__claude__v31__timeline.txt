@@ -1,0 +1,56 @@
+# Timeline for r123__claude__v31__ORI_What_This_Place_Was_master.mp4 (79.0s)
+# v31 -- full creative restart to an Apple-promo-video structure. See r123 DONE for the summary.
+
+   0.0-   1.5  sign   boy reading FALLS PARK plaque                    [sign beat starts]; on-screen: FALLS PARK, SIOUX FALLS, SOUTH DAKOTA (location card)
+   1.5-   3.0  sign   boy reading FALLS PARK plaque                    
+   3.0-   4.5  sign   boy reading FALLS PARK plaque                    
+   4.5-   6.0  sign   boy reading FALLS PARK plaque                    VO: Most people walk right past.
+   6.0-   7.5  past   park empty, no one stops                         [past beat starts]; VO: Most people walk right past.
+   7.5-   9.0  past   park empty, no one stops                         
+   9.0-  10.5  prod   wearer, glasses on, park behind him              [prod beat starts]; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  10.5-  12.0  prod   wearer, glasses on, park behind him              VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  12.0-  13.5  hero   glasses alone on dark table (generated plate)    [hero beat starts]; on-screen: THE HARDWARE / VISUALISATION; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  13.5-  15.0  hero   glasses alone on dark table (generated plate)    VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  15.0-  16.5  hero   glasses alone on dark table (generated plate)    
+  16.5-  18.0  hero   glasses alone on dark table (generated plate)    VO: You put them on.
+  18.0-  19.5  on     hand raised to temple -- switching on            [on beat starts]; VO: You put them on.
+  19.5-  21.0  on     hand raised to temple -- switching on            VO: They know where you're standing, what you're looking at -- and who you're with.
+  21.0-  22.5  lock   looking at the falls                             [lock beat starts]; on-screen: THE FALLS / BIG SIOUX RIVER; VO: They know where you're standing, what you're looking at -- and who you're with.
+  22.5-  24.0  lock   looking at the falls                             VO: They know where you're standing, what you're looking at -- and who you're with.
+  24.0-  25.5  open   still at the falls                               [open beat starts]; VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  25.5-  27.0  open   still at the falls                               VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  27.0-  28.5  open   still at the falls                               VO: Anchored to the real place around you. Picked up where you're going, not owned.; VO: He walks. The place answers where he stops.
+  28.5-  30.0  reach  walking the park path                            [reach beat starts]; VO: He walks. The place answers where he stops.
+  30.0-  31.5  reach  walking the park path                            VO: He walks. The place answers where he stops.
+  31.5-  33.0  dak    Dakota family by the water (generated plate)     [dak beat starts]; on-screen: BEFORE THE MILL / VISUALISATION; VO: Before the mill, people lived along this water.
+  33.0-  34.5  dak    Dakota family by the water (generated plate)     VO: Before the mill, people lived along this water.
+  34.5-  36.0  dak    Dakota family by the water (generated plate)     VO: Before the mill, people lived along this water.
+  36.0-  37.5  dak    Dakota family by the water (generated plate)     
+  37.5-  39.0  dak    Dakota family by the water (generated plate)     
+  39.0-  40.5  dak    Dakota family by the water (generated plate)     VO: Then the mill came, and the town grew around it.
+  40.5-  42.0  settle settler family by the mill (generated plate)     [settle beat starts]; on-screen: THE SETTLEMENT / VISUALISATION; VO: Then the mill came, and the town grew around it.
+  42.0-  43.5  settle settler family by the mill (generated plate)     VO: Then the mill came, and the town grew around it.
+  43.5-  45.0  settle settler family by the mill (generated plate)     
+  45.0-  46.5  settle settler family by the mill (generated plate)     
+  46.5-  48.0  ice    frozen valley (generated plate)                  [ice beat starts]; on-screen: THE LAST ICE / VISUALISATION; VO: Go back further -- the whole valley freezes.
+  48.0-  49.5  ice    frozen valley (generated plate)                  VO: Go back further -- the whole valley freezes.
+  49.5-  51.0  ice    frozen valley (generated plate)                  
+  51.0-  52.5  ice    frozen valley (generated plate)                  
+  52.5-  54.0  ice    frozen valley (generated plate)                  
+  54.0-  55.5  mam    wearer + mammoth on the ice shelf (composited)   [mam beat starts]; VO: The same valley -- under ice, and the animals that crossed it.
+  55.5-  57.0  mam    wearer + mammoth on the ice shelf (composited)   VO: The same valley -- under ice, and the animals that crossed it.
+  57.0-  58.5  mam    wearer + mammoth on the ice shelf (composited)   VO: The same valley -- under ice, and the animals that crossed it.
+  58.5-  60.0  mam    wearer + mammoth on the ice shelf (composited)   
+  60.0-  61.5  mam    wearer + mammoth on the ice shelf (composited)   
+  61.5-  63.0  now    wearer looking at the real river, present day    [now beat starts]; on-screen: ONE PLACE / EVERY TIME (title card)
+  63.0-  64.5  now    wearer looking at the real river, present day    
+  64.5-  66.0  now    wearer looking at the real river, present day    
+  66.0-  67.5  off    glasses off, wide park/falls view                [off beat starts]; VO: No tour group. No phone in your face. You just look.
+  67.5-  69.0  off    glasses off, wide park/falls view                VO: No tour group. No phone in your face. You just look.
+  69.0-  70.5  off    glasses off, wide park/falls view                VO: No tour group. No phone in your face. You just look.; VO: Open Range Interactive. See the story where you stand.
+  70.5-  72.0  walk   wide path shot, boy walking away                 [walk beat starts]; VO: Open Range Interactive. See the story where you stand.
+  72.0-  73.5  walk   wide path shot, boy walking away                 VO: Open Range Interactive. See the story where you stand.
+  73.5-  75.0  walk   wide path shot, boy walking away                 
+  75.0-  76.5  end    held last frame, wordmark card                   [end beat starts]; on-screen: OPEN RANGE INTERACTIVE (wordmark) + VISUAL INTENTION ONLY
+  76.5-  78.0  end    held last frame, wordmark card                   
+  78.0-  79.0  end    held last frame, wordmark card                   
