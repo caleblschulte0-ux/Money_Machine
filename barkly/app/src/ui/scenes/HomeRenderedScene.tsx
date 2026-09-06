@@ -640,6 +640,40 @@ export function HomeScene({
       <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
         <Rect x={0} y={floorTop} width={420} height={760 - floorTop} fill={floorFar} />
         <Rect x={0} y={floorTop + 78} width={420} height={682 - floorTop} fill={floorNear} opacity={0.72} />
+        {/*
+          STRONG WINDOW LIGHT -- the first line of this scene's own target in
+          docs/VISUAL_DIRECTION_KIDS_GAME.md ("Warm toy-diorama living room.
+          Chunky furniture. Strong window light."), and the room had none. The
+          window was a picture on the wall; nothing it let in reached the floor.
+
+          The shape is not invented, it is the floor's own perspective. The
+          planks below run from `x` at the wall to `210 + (x - 210) * 1.85` at
+          the bottom edge, so a window spanning the wall from x1 to x2 lays
+          down exactly that trapezoid. Reusing the projection is what stops
+          this reading as a pasted gradient: the light lies in the floor rather
+          than on top of it.
+
+          Day only, and gently. After dark the lamp is the source -- there is
+          already a halo and a floor pool for it -- and a second sun coming
+          through the window at midnight is the kind of detail that makes a
+          room look wrong without anyone being able to say why.
+        */}
+        {!night && (() => {
+          // The window is positioned in real pixels; this canvas is a fixed
+          // 420-wide viewBox stretched to fit. Convert, or the light lands
+          // somewhere the window is not.
+          const toCanvas = (px: number) => (px / Math.max(1, width)) * 420;
+          const x1 = toCanvas(wallInset);
+          const x2 = toCanvas(wallInset + windowW);
+          const far = (x: number) => 210 + (x - 210) * 1.85;
+          return (
+            <Path
+              d={`M${x1} ${floorTop} L${x2} ${floorTop} L${far(x2)} 760 L${far(x1)} 760 Z`}
+              fill={DIORAMA.goldGlowSoft}
+              opacity={band === 'evening' ? 0.38 : band === 'morning' ? 0.30 : 0.26}
+            />
+          );
+        })()}
         {[34, 106, 178, 250, 322, 394].map((x) => (
           <Path
             key={x}
