@@ -30,6 +30,72 @@ const PARK_HEDGE = require('../../../assets/world/park/props/hedge.png');
  */
 const CHROME_CLEAR = 118;
 
+/**
+ * STREET BUNTING — the loudest thing in Town, on purpose.
+ *
+ * Town measured the palest of the four locations by a distance (mean_sat 0.340
+ * against a 0.42-0.55 target) and it was evenly pale rather than having one bad
+ * element: sky 0.322, storefronts 0.336, pavement 0.388. Raising the ground
+ * ramp's chroma moved the whole frame only 0.340 -> 0.363, because the
+ * storefronts are authored PNGs in pastel and nothing in the frame was
+ * saturated enough to anchor it. Park reads rich at 0.504 because it has a big
+ * confident green mass; Town had no equivalent.
+ *
+ * So Town gets what docs/VISUAL_DIRECTION_KIDS_GAME.md already asks it for --
+ * "signs/awnings", "more vertical city rhythm than Park" -- as a line of flags
+ * strung over the street in the candy family. It is high chroma in the part of
+ * the frame that had least (the sky band), it crosses the whole width so the
+ * street reads as continuing past both edges, and it gives the eye something
+ * at the top of a scene whose interest was all in the lower half.
+ */
+function TownBunting({ top, night }: { top: number; night: boolean }) {
+  const FLAGS = [
+    DIORAMA.coral, DIORAMA.lemon, DIORAMA.aqua, DIORAMA.violet, DIORAMA.mint,
+    DIORAMA.coral, DIORAMA.lemon, DIORAMA.aqua, DIORAMA.violet, DIORAMA.mint,
+    DIORAMA.coral, DIORAMA.lemon,
+  ];
+  const W = 420;
+  const SAG = 26;
+  const H = SAG + 34;
+  const step = W / (FLAGS.length - 1);
+  // Its own box, at its own height. Drawing this into a `styles.fill` SVG
+  // stretched the viewBox over the whole scene and put the flags somewhere
+  // nobody asked for -- with preserveAspectRatio="none" a 204-unit box mapped
+  // onto 844px moves every coordinate by a factor of four.
+  return (
+    <View style={{ position: 'absolute', left: 0, right: 0, top, height: H }} pointerEvents="none">
+      <Svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+        <Path
+          d={`M 0 2 Q ${W / 2} ${2 + SAG * 1.9} ${W} 2`}
+          stroke={night ? DIORAMA.woodDeep : DIORAMA.woodWarm}
+          strokeWidth={2.4}
+          fill="none"
+          opacity={night ? 0.5 : 0.85}
+        />
+        {FLAGS.map((fill, i) => {
+          const t = i / (FLAGS.length - 1);
+          // The point on that same curve, so each flag hangs from the string
+          // rather than from a straight line pretending to be one.
+          const y = 2 + 4 * (SAG * 0.95) * t * (1 - t);
+          const x = i * step;
+          const w = 13;
+          const h = 19;
+          const lean = (t - 0.5) * 13;
+          return (
+            <Path
+              key={i}
+              d={`M ${x - w / 2} ${y} L ${x + w / 2} ${y} L ${x + lean * 0.35} ${y + h} Z`}
+              fill={fill}
+              opacity={night ? 0.44 : 0.95}
+            />
+          );
+        })}
+      </Svg>
+    </View>
+  );
+}
+
+
 const TOWN_STORE_CORAL = require('../../../assets/world/town/props/store_coral.png');
 const TOWN_STORE_AQUA = require('../../../assets/world/town/props/store_aqua.png');
 const TOWN_STORE_VIOLET = require('../../../assets/world/town/props/store_violet.png');
@@ -563,6 +629,10 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <View style={[styles.shopSign, { left: centerStoreLeft + shopW * 0.17, top: horizon + 58, width: shopW * 0.62 }]}>
           <Text style={[styles.shopSignText, { fontSize: Math.max(9, 11 * scale) }]}>BARKLY'S</Text>
         </View>
+      </WorldLayer>
+      {/* Strung in front of the shopfronts, clear of the chrome above. */}
+      <WorldLayer name="distant">
+        <TownBunting top={Math.max(CHROME_CLEAR + 14, horizon - 62)} night={night} />
       </WorldLayer>
       {/*
         THE PAVEMENT IS PAVED.

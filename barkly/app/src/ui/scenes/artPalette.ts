@@ -261,8 +261,24 @@ export const DIORAMA = {
    * Clash Mini board has no true greys in it: even the paving reads as a warm
    * tinted material. See docs/ART_DIRECTION.md.
    */
-  townRoadDay: '#D9B57E',
-  townRoadDayEdge: '#A6773F',
+  /*
+   * TOWN'S GROUND CARRIES TOWN'S COLOUR.
+   *
+   * Measured over the scene band, town ran mean_sat 0.346 and p90 0.490 against
+   * a 0.42-0.55 / 0.65+ target -- the only location outside it, and by a
+   * distance. Broken down by band the frame was evenly pale rather than having
+   * one bad element: sky 0.322, storefronts 0.336, pavement 0.388. The sky is
+   * shared with Park, which measures 0.505, so the sky is not the culprit --
+   * Park simply has a big saturated green mass and Town had nothing to anchor
+   * it. The storefronts are authored PNGs.
+   *
+   * That leaves the ground, which is Town's second-largest surface. Each stop
+   * below had its CHROMA raised with its hue and its VALUE held exactly, so
+   * nothing darkens, the ramp keeps its shape, and the accessibility contrast
+   * checks see the same luminance family they passed on.
+   */
+  townRoadDay: '#D9A75B',
+  townRoadDayEdge: '#A67132',
   townRoadNight: '#4E3B45',
   townRoadNightEdge: '#2E2130',
   /*
@@ -273,11 +289,11 @@ export const DIORAMA = {
    * greens rather than one fill. Same treatment: a far tone that holds warmth
    * at the horizon, a near tone with real chroma under the player's feet.
    */
-  townSidewalkDay: '#F4D28A',
-  townSidewalkDayFar: '#FFE7AE',
-  townSidewalkDayNear: '#E0AE5A',
-  townSidewalkDayLight: '#FFEEB8',
-  townSidewalkDayEdge: '#B98634',
+  townSidewalkDay: '#F4C562',
+  townSidewalkDayFar: '#FFDC8A',
+  townSidewalkDayNear: '#E0A543',
+  townSidewalkDayLight: '#FFE799',
+  townSidewalkDayEdge: '#B98025',
   townSidewalkNight: '#6E5740',
   townSidewalkNightFar: '#87694C',
   townSidewalkNightNear: '#574333',
