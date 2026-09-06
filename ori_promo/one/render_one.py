@@ -384,7 +384,20 @@ FIGURE_MAX_DRIFT = 0.03  # a plate carrying a figure must be this static
 # master shows the same translucent-ghost pattern as every case above: a
 # faint double-exposure of `reach`'s lamppost-lined path bleeding through
 # `off`'s elevated wide-valley view. Same fix: `off` fades in from black.
-DIP_TO_BLACK = {"hero", "on", "reach", "off", "walk"}
+#
+# TWO MORE FOUND ON A FULL RE-CHECK, v32. `sign`->`past` and `past`->
+# `prod` are the OLDEST adjacencies in this film -- present, unchanged,
+# since long before this restart -- and had genuinely never been checked
+# by direct frame extraction; every prior "checked every boundary" pass
+# (v29's comment above, the v31 restart's own pass) happened to stop once
+# the boundaries THAT round touched were clear, not literally every cut
+# in the film. Extracting the actual dissolve midpoints on the v32 master
+# (out/v32_check/signpast_3.65.jpg, pastprod_6.15.jpg) shows the same
+# ghost: `sign` is a tight fenced-in portrait crop (the plaque, up close)
+# ghosting into `past`'s wide valley, and `past`'s wide valley ghosts into
+# `prod`'s medium wearer shot the same way. Long-standing does not mean
+# verified -- these get the same fix as every other case here.
+DIP_TO_BLACK = {"past", "prod", "hero", "on", "reach", "off", "walk"}
 
 
 SAFE_T, SAFE_B = FL.safe_area(H, W)
