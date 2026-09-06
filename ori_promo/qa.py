@@ -11,9 +11,35 @@ Checks the things that have actually gone wrong on this project:
   blackdetect / freezedetect / silencedetect over the whole thing
 """
 import json
+import os
 import re
 import subprocess
 import sys
+
+
+def end_card_start(default=None):
+    """Where the deliberate held end-card frame begins, read from the spec
+    itself rather than guessed as a fixed offset from the total duration.
+
+    v31 grew `end` from 3.5s to 4.5s (spec_one.py's BEATS) and that alone
+    flipped this check from PASS to a false FAIL: freezedetect's onset
+    inside a still hold depends on how long the moving grain takes to drop
+    below its noise floor, not on the hold's length, so a longer hold can
+    report an EARLIER freeze_start timestamp while remaining exactly as
+    intentional. The old check excused anything in the last 3.0s
+    (`dur - 3.0`) -- tuned against whatever `end` was worth when that
+    number was written, silently wrong the moment `end` grew past 3.0s.
+    Reading the beat's real start removes the guess.
+    """
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "one"))
+        from spec_one import BEATS
+        for name, _clip, _tin, start, _dur, _note in BEATS:
+            if name == "end":
+                return start
+    except Exception:
+        pass
+    return default
 
 
 def probe(p):
@@ -54,10 +80,14 @@ def main(path, want_dur=None):
                         "blackdetect=d=0.25:pic_th=0.98,"
                         "freezedetect=n=0.001:d=0.7", "-af", "silencedetect=n=-52dB:d=0.7",
                         "-f", "null", "-"], capture_output=True, text=True)
+    # the held end card is a deliberate freeze; ignore anything inside it.
+    # Read from spec_one.py's actual `end` beat start where possible, since
+    # a fixed "last N seconds" guess goes stale the moment that beat's
+    # duration changes (see end_card_start's docstring).
+    excuse_from = end_card_start(default=dur - 3.0)
     for tag in ("black_start", "freeze_start", "silence_start"):
         hits = re.findall(tag + r":\s*([0-9.]+)", r.stderr)
-        # the held end card is a deliberate freeze; ignore anything inside it
-        hits = [h for h in hits if float(h) < dur - 3.0]
+        hits = [h for h in hits if float(h) < excuse_from]
         print(f"  {tag:14s} {len(hits)}  {hits[:4]}")
         if hits:
             bad.append(f"{tag} at {hits[:3]}")
