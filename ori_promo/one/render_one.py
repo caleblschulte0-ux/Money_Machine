@@ -587,7 +587,13 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                 # goes where nothing else is rather than where the frame
                 # happens to be symmetric.
                 fn = mono(28)
-                s = "VISUALISATION — NOT A PHOTOGRAPH"
+                # US spelling, r134 -- same fix as spec_one.py's hero
+                # label, kept consistent here even though this banner
+                # never renders in v32b (FIGURES is empty): it only ever
+                # fires when a future round reintroduces a composited
+                # figure, and it should read correctly for this
+                # audience the day it does.
+                s = "VISUALIZATION — NOT A PHOTOGRAPH"
                 tw = d.textlength(s, font=fn)
                 x0 = 96
                 d.rectangle([x0 - 18, SAFE_T + 26, x0 + tw + 18, SAFE_T + 70],

@@ -117,7 +117,13 @@ LINES = [
     # follow it -- there is no reveal to set up any more. This says what's
     # actually true of THIS cut: the capability doesn't stop at one
     # recognised spot, it keeps up with him.
-    ("reach", 0.25, "He keeps walking. It keeps working."),
+    # PRONOUN FIXED, r134 (ChatGPT's active fresh-look review): every
+    # other line in this film is second person ("you put them on",
+    # "where you're standing", "who you're with") and this one alone
+    # dropped to third ("He keeps walking"), an unexplained viewpoint
+    # shift nobody had caught. "You keep walking" is the same claim in
+    # the voice the rest of the film already uses.
+    ("reach", 0.25, "You keep walking. It keeps working."),
     ("off",  0.20, "No tour group. No phone in your face. You just look."),
     # REWRITTEN. "See the story where you stand" promised a narrative
     # payoff (the eras) that this cut doesn't have. The new line closes on

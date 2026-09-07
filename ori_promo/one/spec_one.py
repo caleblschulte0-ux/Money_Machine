@@ -210,14 +210,18 @@ FIGURES = {}
 
 LABELS = {
  # The one generated plate left in the film -- still gets the standing
- # VISUALISATION disclosure, same as every generated image in this
- # project's history. (An earlier draft of this file tried a blank title
+ # VISUALIZATION disclosure, same as every generated image in this
+ # project's history. SPELLING FIXED TO US, r134 (ChatGPT's active
+ # fresh-look review): this is a Sioux Falls / US-audience film, and the
+ # on-screen tag had been carrying the British spelling since it was
+ # first written -- nobody had checked it against the intended audience
+ # until this pass. (An earlier draft of this file tried a blank title
  # here to strip it of "chapter" weight; recon_block() still reserves a
  # full title-line of vertical space for an empty string, which just left
- # a dead gap above VISUALISATION -- worse, not more minimal. The beat's
- # own brevity -- still under half of v31's 5.0s hold -- and no leader
- # line already does the "glance not a chapter" work.)
- "hero": ((150, 900), "THE HARDWARE", "VISUALISATION", 0.35, (0, 0)),
+ # a dead gap above the tag -- worse, not more minimal. The beat's own
+ # brevity -- still under half of v31's 5.0s hold -- and no leader line
+ # already does the "glance not a chapter" work.)
+ "hero": ((150, 900), "THE HARDWARE", "VISUALIZATION", 0.35, (0, 0)),
  # RECOGNITION -- names a real waterfall in an unmodified frame; the
  # device identifying where the wearer is. No date, no history, no claim
  # beyond a place name and a river name, both visible in the frame. This
