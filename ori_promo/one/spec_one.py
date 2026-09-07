@@ -67,11 +67,47 @@
 # picked back up as its own project; it is not silently dropped, it is
 # just not part of what this file describes.
 #
-# FOOTAGE SAFETY FACTS, CARRIED FORWARD UNCHANGED (measured across v18-
-# v31; render_one.py's footage gate re-checks all of this at render time
-# regardless):
-#  - IMG_6799 (`prod`) is 12.37s long; in-point 7.0 for MORE than ~3.0s
-#    visibly picks up hand-shake in the shot's last second. Left at 3.0s.
+# v32b -- REAL-FOOTAGE REFRESH, same concept, different source clips.
+# ChatGPT's r126 review (asked for by the operator's own "nothing similar"
+# bar) made a sharp, evidenced point this file had missed: cutting the
+# eras is a real conceptual break, but `sign`/`past`/`prod`/`walk` were
+# still the EXACT SAME real clips at the EXACT SAME in-points every prior
+# version had used, because this project has reused the same ~7 clips out
+# of a much larger raw/ library since v18 and never actually looked at
+# what else was shot that day. There are 27 other clips in raw/, most
+# never opened. Surveyed them (thumbnails + full-res spot checks) and
+# swapped four beats to footage that has never appeared in this film
+# before:
+#  - `sign`: IMG_6796 (the "FALLS PARK" info sign) -> IMG_6709, a
+#    DIFFERENT plaque with different text (a poem, not the park-history
+#    panel), shot close enough that no person is in frame at all --
+#    changes the whole opening image, not just its pacing.
+#  - `past`: IMG_6808 (static wide valley) -> IMG_6791, a slow panning
+#    wide shot of the same empty riverbed from a different vantage --
+#    same idea (nobody stopping), visibly different shot, and the pan
+#    gives it motion the old static frame never had.
+#  - `prod`: IMG_6799 (wearer, back to camera, static) -> IMG_6794, the
+#    wearer at a completely different location (a round stone overlook
+#    platform, not the falls' edge) who TURNS and gestures mid-clip --
+#    same sunglasses prop as every other real shot in this project (
+#    checked directly against IMG_6799 and IMG_6806's profile views,
+#    same dark frame -- swapping the location does not introduce a
+#    second, different-looking "product" by accident), but a dynamic
+#    shot instead of a static one.
+#  - `walk`: IMG_6807 (tight path shot) -> IMG_6805, a much wider plaza/
+#    path composition from the same park, 93.7s long, with the falls
+#    visible as a background element instead of the sole subject.
+# `hero`, `on`/`lock`/`anchor` and `off` are UNCHANGED. `hero` has no real
+# alternative (it is the one ChatGPT-generated product asset that exists,
+# not a real-footage selection); `on`/`lock`/`anchor` is ChatGPT's own
+# read of what's working ("keep the successful 0:13.5-0:25.5 continuous-
+# interaction idea, because that is v32b's clearest new identity"); `off`
+# was not specifically flagged and still does real narrative work (the
+# "no phone in your face" beat needs the wide, uncluttered, UI-free frame
+# it already has).
+#
+# FOOTAGE SAFETY FACTS (measured across v18-v32b; render_one.py's footage
+# gate re-checks all of this at render time regardless):
 #  - IMG_6803 (`off`) is 7.10s long; in-point 2.5 for MORE than ~3.5-4.0s
 #    runs into the handheld drift as the original recording stops.
 #  - IMG_6806 (`on`/`lock`/`anchor`) is one continuous 59.5s take; the
@@ -80,20 +116,37 @@
 #    `anchor` now pick up exactly where the beat before them left off on
 #    THIS SAME CLIP'S CLOCK (10.9 = 8.4+2.5, 13.9 = 10.9+3.0) so the take
 #    never repeats or skips a frame across the three beat names.
-#  - IMG_6797 (`reach`), IMG_6807 (`walk`), IMG_6796 (`sign`) and IMG_6808
-#    (`past`) all have room to spare at their existing in-points.
+#  - IMG_6797 (`reach`) has room to spare at its existing in-point.
+#  - The four v32b clips (IMG_6709, 6791, 6794, 6805) are new to this
+#    film and were never covered by the old footage-safety notes. All
+#    four are visually stable (checked by direct frame sampling across
+#    their full length before use, not just at the chosen in-point) --
+#    IMG_6709 and IMG_6791 barely move at all, IMG_6794's turn-and-
+#    gesture is deliberate motion, not shake, and IMG_6805 has 93.7s of
+#    runway at in-point 48.0. render_one.py's footage gate re-confirms
+#    this numerically at every render regardless of this note.
 W, H, FPS = 1920, 1080, 30
 TOTAL = 41.1
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
  # ---- COLD OPEN. The location card carries the "where" in text; VO stays
- # silent on `sign` so it isn't saying what's already on screen.
- ("sign", "6796", 29.0, 0.0, 3.5, "the story as it's told today: a man reading a plaque, held briefly"),
- ("past", "6808", 22.0, 3.5, 2.5, "the park going by around it, nobody stopping"),
- # `prod` capped at 3.0s -- see the footage note above, IMG_6799 runs out
- # of clean frame past that, not a pacing choice.
- ("prod", "6799",  7.0, 6.0, 3.0, "the wearer, the glasses on him, the whole park in front"),
+ # silent on `sign` so it isn't saying what's already on screen. v32b:
+ # IMG_6709, a different plaque (a poem, not the park-history panel used
+ # every prior version), close enough that no person is in frame.
+ ("sign", "6709", 2.0, 0.0, 3.5, "a different plaque this time, read close -- the story as it's told today"),
+ # v32b: IMG_6791, a slow pan across the same empty riverbed from a
+ # different vantage -- same idea (nobody stopping), different shot,
+ # actual camera motion instead of a static frame.
+ ("past", "6791", 3.0, 3.5, 2.5, "the park going by around it, nobody stopping -- panning wide, not static"),
+ # `prod` v32b: IMG_6794, a different location (a round stone overlook,
+ # not the falls' edge) where he turns and gestures mid-clip -- dynamic
+ # instead of static. Same dark-sunglasses prop as every other real shot
+ # in this project (checked against IMG_6799/IMG_6806's profile views),
+ # so this does not introduce a second, different-looking "product."
+ # Capped at 3.0s to match the beat's VO/timing budget below, not a
+ # footage limit this time -- IMG_6794 runs 54.4s, room to spare.
+ ("prod", "6794", 20.0, 6.0, 3.0, "the wearer, at a different overlook, turning toward the water"),
  # `hero`: a brief, unlabelled-title glance at the product alone. EXTENDED
  # 3.0 -> 4.0 after the first render (below): `prod`'s VO genuinely runs
  # ~4.6s, longer than `prod`'s own footage-capped 3.0s beat, and it has to
@@ -122,11 +175,13 @@ BEATS = [
  # `off` EXTENDED 3.0 -> 3.8 (still inside the ~3.5-4.0s footage-safety cap
  # noted above) to give its own well-liked, unedited line more room.
  ("off",  "6803",  2.5, 28.3, 3.8, "glasses off, the real place, nothing drawn on it"),
- # `walk` EXTENDED 4.0 -> 5.0 -- IMG_6807 has plenty of runway at this
- # in-point (24.865s total, in 12.0), and the closing line was running
- # 1.4s into the silent end card on the first pass, cutting the wordmark's
- # quiet hold nearly in half.
- ("walk", "6807", 12.0, 32.1, 5.0, "the closing line over the park as it actually is"),
+ # `walk` v32b: IMG_6805, a much wider plaza/path composition (93.7s
+ # long -- picked in-point 48.0 for a clean, unpopulated frame with the
+ # falls visible in the background) instead of IMG_6807's tighter path
+ # shot every prior version used. Duration held at 5.0s (grew from 4.0s
+ # on the first v32 pass for the same reason as before -- the closing
+ # line was running into the silent end card at 4.0s).
+ ("walk", "6805", 48.0, 32.1, 5.0, "a wider path/plaza, the falls in the background -- the closing line"),
  ("end",   None,   0.0, 37.1, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
