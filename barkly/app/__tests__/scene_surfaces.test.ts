@@ -54,6 +54,7 @@ describe('scene surface renders', () => {
     ['CLUMP_ASPECT', 'park', 'grass_clump.png'],
     ['ROOFTOPS_ASPECT', 'town', 'rooftops.png'],
     ['KERB_ASPECT', 'town', 'kerb.png'],
+    ['PAVING_ASPECT', 'town', 'paving.png'],
   ];
 
   for (const [name, place, file] of cases) {
@@ -102,10 +103,55 @@ describe('scene surface renders', () => {
     }
   });
 
-  it('SKIRTING_ASPECT is what skirting.png actually is', () => {
-    expect(Math.abs(declaredAspect('SKIRTING_ASPECT', homeSource()) - pngAspect('home', 'skirting.png')))
-      .toBeLessThan(0.02);
+  it('keeps every paving course above the name-plate band', () => {
+    /*
+     * MEASURED, NOT REASONED FROM THE CLAMP.
+     *
+     * The first version of this test computed the courses' position from
+     * `Math.max(372, ground - 116)` by taking the 372, and passed a placement
+     * that `scripts/blocking.mjs` then failed: a course landed at y 624..642,
+     * which is PEPPER's plate exactly. On a 390x844 frame the real value is
+     * 529 -- read straight off that gate's own output, where the kerb (which
+     * hangs off `sidewalk`) measures y 509..533.
+     *
+     * So this uses the measurement, with margin, like every other box here.
+     */
+    const src = source();
+    const table = src.slice(
+      src.indexOf('const TOWN_PAVING_COURSES'),
+      src.indexOf('];', src.indexOf('const TOWN_PAVING_COURSES')),
+    );
+    const courses = [...table.matchAll(/\{ dy: (\d+), w: ([\d.]+)/g)].map((m) => ({
+      dy: Number(m[1]),
+      w: Number(m[2]),
+    }));
+    expect(courses.length).toBeGreaterThan(1);
+
+    const WIDTH = 390;
+    const SIDEWALK = 529;
+    const PEPPER_TOP = 624;
+    const MARGIN = 10;
+    const aspect = declaredAspect('PAVING_ASPECT');
+    const low: string[] = [];
+    for (const c of courses) {
+      // worldScale is a little over 1 on a 390pt frame; 1.1 is a safe bound.
+      const bottom = SIDEWALK + c.dy * 1.1 + (WIDTH * c.w) / aspect;
+      if (bottom > PEPPER_TOP - MARGIN) {
+        low.push(`course dy ${c.dy} ends at y ${Math.round(bottom)}, into the plate band`);
+      }
+    }
+    expect(low).toEqual([]);
   });
+
+  // The home scene declares its own; same rule, different file.
+  for (const [name, file] of [
+    ['SKIRTING_ASPECT', 'skirting.png'],
+    ['PANELLING_ASPECT', 'panelling.png'],
+  ] as [string, string][]) {
+    it(`${name} is what ${file} actually is`, () => {
+      expect(Math.abs(declaredAspect(name, homeSource()) - pngAspect('home', file))).toBeLessThan(0.02);
+    });
+  }
 
   it('keeps every piece of cover clear of the labels the blocking gate protects', () => {
     const src = source();
@@ -180,17 +226,29 @@ describe('scene surface renders', () => {
       { at: 390, face: { x0: 162, x1: 226, y0: 419, y1: 497 }, dogTop: 387 },
       { at: 430, face: { x0: 184, x1: 250, y0: 462, y1: 547 }, dogTop: 427 },
     ];
+    /*
+     * MARGIN, AND EVERY HORIZON IN BETWEEN.
+     *
+     * Both of those were learned from a failure this test had already passed.
+     * The wildflowers at fx 0.36 came out at 118.94..161.86 against a face
+     * column starting at 162 -- clear by fourteen hundredths of a pixel -- and
+     * the gate failed anyway, because the sprite's measured column had moved
+     * four pixels between builds. And it only failed at ONE horizon: 179, an
+     * interior value this test was not sampling, because checking the two ends
+     * of a clamp only finds the worst case when the worst case is at an end.
+     */
+    const MARGIN = 12;
     const onHisFace: string[] = [];
     for (const frame of FRAMES) {
       const k = frame.at / 390;
-      for (const horizon of [148, 184]) {
+      for (let horizon = 148; horizon <= 184; horizon += 3) {
         for (const c of cover) {
           const w = (c.flower ? 74 : 92) * c.s * k;
           const h = w / (c.flower ? declaredAspect('FLOWERS_ASPECT') : declaredAspect('TUFT_ASPECT'));
           const left = frame.at * c.fx - w / 2;
           const bottom = (horizon + c.dy) * k;
           const top = bottom - h;
-          const crossesX = left + w > frame.face.x0 && left < frame.face.x1;
+          const crossesX = left + w > frame.face.x0 - MARGIN && left < frame.face.x1 + MARGIN;
           const reachesFace = bottom > frame.face.y0 && top < frame.face.y1;
           const risesAboveHim = top < frame.dogTop;
           if (crossesX && reachesFace && risesAboveHim) {

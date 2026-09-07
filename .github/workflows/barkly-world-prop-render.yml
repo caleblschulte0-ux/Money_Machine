@@ -57,9 +57,9 @@ jobs:
             park/tree park/bench park/hedge park/dig_mound \
             park/treeline park/grass_tuft park/grass_clump park/wildflowers \
             town/store_coral town/store_aqua town/store_violet town/fountain town/lamp town/planter \
-            town/rooftops town/kerb \
+            town/rooftops town/kerb town/paving \
             beach/umbrella beach/lifeguard beach/dune beach/castle beach/palm beach/sand_mound \
-            home/rug home/care_tray home/skirting \
+            home/rug home/care_tray home/skirting home/panelling \
             item/treat_biscuit item/treat_cheese item/treat_steak \
             item/toy_ball item/toy_rope \
             item/collar_red item/collar_blue item/collar_green item/collar_gold \

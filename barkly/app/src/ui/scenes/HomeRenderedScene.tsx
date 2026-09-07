@@ -16,8 +16,10 @@ const RUG = require('../../../assets/world/home/props/rug.png');
 const SHELF = require('../../../assets/world/home/props/shelf.png');
 const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_frame.png');
 const SKIRTING = require('../../../assets/world/home/props/skirting.png');
-/** The trimmed render's own aspect. __tests__/home_surfaces.test.ts holds it. */
+const PANELLING = require('../../../assets/world/home/props/panelling.png');
+/** The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds them. */
 const SKIRTING_ASPECT = 633 / 35;
+const PANELLING_ASPECT = 635 / 119;
 
 /**
  * Window sun/moon geometry, as FRACTIONS of the aperture.
@@ -845,15 +847,40 @@ export function HomeScene({
           dead band. Rendered from the same pack as the tray in front of it,
           and in the same camera-facing frame, so it comes out level.
         */}
-        <WorldObject
-          source={SKIRTING}
-          left={-24}
-          top={floorTop - (width + 48) / SKIRTING_ASPECT}
-          width={width + 48}
-          height={(width + 48) / SKIRTING_ASPECT}
-          night={night}
-          depth={0.30}
-        />
+        {(() => {
+          const run = width + 48;
+          const skirtingH = run / SKIRTING_ASPECT;
+          const panelH = run / PANELLING_ASPECT;
+          return (
+            <>
+              {/*
+                And PANELLING above it, standing on the skirting. The wall is
+                the flattest surface in the game -- one vertical gradient --
+                and a dado is the piece of architecture that breaks it: a rail
+                for the horizontal line, stiles so the field is not one
+                unbroken sheet behind every piece of furniture in the room.
+              */}
+              <WorldObject
+                source={PANELLING}
+                left={-24}
+                top={floorTop - skirtingH - panelH}
+                width={run}
+                height={panelH}
+                night={night}
+                depth={0.26}
+              />
+              <WorldObject
+                source={SKIRTING}
+                left={-24}
+                top={floorTop - skirtingH}
+                width={run}
+                height={skirtingH}
+                night={night}
+                depth={0.30}
+              />
+            </>
+          );
+        })()}
       </WorldLayer>
 
       <WorldLayer name="landmark">

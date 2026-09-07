@@ -528,6 +528,49 @@ def town_rooftops():
     cone("tower_cap", (tx, ty, 1.44), 0.22, 0.02, 0.18, trim)
 
 
+def town_paving():
+    """A course of paving slabs, for the pavement itself.
+
+    The kerb gave the pavement an edge; this gives it a surface. Measured, the
+    whole slab below that edge was one fill at a standard deviation of 4.6,
+    with three drawn hairlines on it standing in for joints.
+
+    Built as slabs on a DARK BASE that shows through the gaps, so the joints
+    read as grout rather than as a raised tile pattern -- pavement is a surface
+    with lines in it, not a mosaic sitting on top of one. Very low profile for
+    the same reason: at this camera a 0.03 slab has just enough edge to catch
+    the key light and no more. Camera-facing frame, like every other wide band
+    in this pack, or it renders as a slope.
+    """
+    turn = facing(camera_yaw())
+    theta = camera_yaw()
+    grout = material("Paving grout", "#8A7448", roughness=0.90)
+    slab_a = material("Paving slab", "#E4CFA2", roughness=0.82)
+    slab_b = material("Paving slab b", "#D8C091", roughness=0.82)
+    slab_c = material("Paving slab c", "#EDDBB1", roughness=0.80)
+
+    # ONE course, deliberately. Two rows was the first attempt and the camera
+    # ate it: looking down at 22 degrees, a 0.6-deep band projects to about a
+    # fifth of its depth, so the second row landed inside the first. The app
+    # places several of these down the pavement at increasing width instead,
+    # which is also how the courses get to recede.
+    for i in range(16):
+        gx, gy = turn(-3.15 + i * 0.42, 0.0)
+        cube(f"grout_{i}", (gx, gy, 0.010), (0.215, 0.26, 0.010), grout, 0.004,
+             rotation=(0, 0, theta))
+
+    tones = (slab_a, slab_b, slab_c, slab_b, slab_a, slab_c)
+    # NEARLY FLUSH. At 0.034 the slabs caught a bright bevel along their top
+    # edge and four courses of them read as decking -- raised sleepers laid
+    # across the pavement rather than joints in it. A pavement is a surface
+    # with dark lines in it, so the slabs sit just proud enough to separate
+    # and the grout underneath does all the drawing.
+    for i in range(11):
+        sx, sy = turn(-3.0 + i * 0.62, 0.0)
+        cube(f"slab_{i}", (sx, sy, 0.014), (0.268, 0.228, 0.014),
+             tones[i % len(tones)], 0.004, rotation=(0, 0, theta))
+
+
 def town_kerb():
     """Where the pavement stops.
 
@@ -700,6 +743,57 @@ def beach_palm():
     sphere("palm_crown", crown, (0.34, 0.30, 0.28), trunk)
     for i, angle in enumerate((-70, -35, 0, 35, 70, 145)):
         cube(f"frond_{i}", (crown[0] + math.sin(math.radians(angle)) * 0.76, -0.02, crown[2] + math.cos(math.radians(angle)) * 0.24), (0.92, 0.11, 0.16), leaf_light if i % 2 else leaf, 0.12, (0, math.radians(angle * 0.18), math.radians(angle)))
+
+
+def home_panelling():
+    """Panelling for the flattest surface in the game.
+
+    The home wall is one vertical gradient. It now has a skirting board at the
+    bottom, which draws the corner; this is what goes above it. A dado is
+    stiles and a rail -- the rail is the horizontal line, and the stiles are
+    what stop the wall being a single unbroken field behind every piece of
+    furniture in the room.
+
+    Kept close to the wall's own colour on purpose: the point is the LIGHT
+    catching a few edges, not a second pattern competing with the window, the
+    shelf and the pictures. Camera-facing frame, like the skirting it sits on.
+    """
+    turn = facing(camera_yaw())
+    theta = camera_yaw()
+    # Lighter than they look here: these are VERTICAL faces under a key light
+    # that comes from above, so every one of them renders a good step darker
+    # than its own hex. The first pass picked colours that matched the wall on
+    # paper and rendered as a grey-brown slab against it.
+    field = material("Panel field", "#F2D8B2", roughness=0.74)
+    stile = material("Panel stile", "#F8E3C6", roughness=0.68, coat=0.02)
+    rail = material("Panel rail", "#FAE8D0", roughness=0.66, coat=0.02)
+    shade = material("Panel shade", "#C4915A", roughness=0.80)
+
+    top = 1.28
+    for i in range(16):
+        fx, fy = turn(-3.20 + i * 0.42, 0.03)
+        cube(f"field_{i}", (fx, fy, top * 0.5), (0.212, 0.02, top * 0.5), field, 0.01,
+             rotation=(0, 0, theta))
+
+    # The stiles: the vertical divisions. Wide spacing -- a room this size
+    # reads as panelled with seven of them and as a fence with eleven, which
+    # is what the first pass rendered.
+    for i in range(8):
+        sx, sy = turn(-3.15 + i * 0.92, 0.0)
+        cube(f"stile_{i}", (sx, sy, top * 0.5), (0.045, 0.028, top * 0.48), stile, 0.012,
+             rotation=(0, 0, theta))
+        dx, dy = turn(-3.15 + i * 0.92 + 0.02, 0.052)
+        cube(f"stile_shade_{i}", (dx, dy, top * 0.5), (0.030, 0.012, top * 0.46), shade, 0.008,
+             rotation=(0, 0, theta))
+
+    # The rail along the top, which is the line the whole thing is for.
+    for i in range(16):
+        rx, ry = turn(-3.20 + i * 0.42, -0.012)
+        cube(f"rail_{i}", (rx, ry, top + 0.022), (0.212, 0.040, 0.022), rail, 0.010,
+             rotation=(0, 0, theta))
+        ux, uy = turn(-3.20 + i * 0.42, 0.030)
+        cube(f"rail_under_{i}", (ux, uy, top - 0.020), (0.212, 0.020, 0.020), shade, 0.008,
+             rotation=(0, 0, theta))
 
 
 def home_skirting():
@@ -1113,6 +1207,7 @@ BUILDERS = {
     # Wide horizon bands: the ortho box is sized to the run, and both are built
     # in the camera-facing frame so they render level rather than sloped.
     "town/rooftops": (town_rooftops, 6.8, (0, 0, 0.62), {"displayWidth": 440, "anchor": "bottom"}),
+    "town/paving": (town_paving, 6.8, (0, 0, 0.06), {"displayWidth": 440, "anchor": "bottom"}),
     "town/kerb": (town_kerb, 6.8, (0, 0, 0.18), {"displayWidth": 440, "anchor": "bottom"}),
     "town/fountain": (town_fountain, 4.4, (0, 0, 1.05), {"displayWidth": 114, "anchor": "bottom"}),
     "town/lamp": (town_lamp, 5.4, (0, 0, 2.05), {"displayWidth": 70, "anchor": "bottom"}),
@@ -1124,6 +1219,7 @@ BUILDERS = {
     "beach/palm": (beach_palm, 6.0, (0, 0, 2.20), {"displayWidth": 142, "anchor": "bottom"}),
     "park/dig_mound": (park_dig_mound, 4.2, (0, 0, 0.36), {"displayWidth": 118, "anchor": "bottom"}),
     "beach/sand_mound": (beach_sand_mound, 4.2, (0, 0, 0.36), {"displayWidth": 118, "anchor": "bottom"}),
+    "home/panelling": (home_panelling, 6.8, (0, 0, 0.46), {"displayWidth": 440, "anchor": "bottom"}),
     "home/skirting": (home_skirting, 6.8, (0, 0, 0.18), {"displayWidth": 440, "anchor": "bottom"}),
     "home/rug": (home_rug, 4.5, (0, 0, 0.42), {"displayWidth": 188, "anchor": "bottom"}),
     # Wide and shallow, so the ortho box is sized to the long axis rather than

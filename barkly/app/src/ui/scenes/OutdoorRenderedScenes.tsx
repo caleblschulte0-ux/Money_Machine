@@ -64,7 +64,7 @@ const PARK_COVER: readonly Cover[] = [
   // Mid: level with the far tree's foot and the bench.
   { fx: 0.10, dy: 226, s: 0.62, depth: 0.48 },
   { fx: 0.82, dy: 214, s: 0.66, depth: 0.48, flip: true },
-  { fx: 0.36, dy: 250, s: 0.58, depth: 0.52, flower: true },
+  { fx: 0.26, dy: 250, s: 0.58, depth: 0.52, flower: true },
   { fx: 0.94, dy: 262, s: 0.62, depth: 0.54 },
   { fx: 0.68, dy: 236, s: 0.54, depth: 0.50, flip: true },
   // Lower mid: the last tier before the frame's bottom band, which belongs to
@@ -166,9 +166,42 @@ const TOWN_LAMP = require('../../../assets/world/town/props/lamp.png');
 const TOWN_PLANTER = require('../../../assets/world/town/props/planter.png');
 const TOWN_ROOFTOPS = require('../../../assets/world/town/props/rooftops.png');
 const TOWN_KERB = require('../../../assets/world/town/props/kerb.png');
+const TOWN_PAVING = require('../../../assets/world/town/props/paving.png');
 /* Trimmed renders' own aspects; __tests__/scene_surfaces.test.ts holds them. */
 const ROOFTOPS_ASPECT = 640 / 144;
 const KERB_ASPECT = 605 / 33;
+const PAVING_ASPECT = 638 / 21;
+
+/**
+ * COURSES OF PAVING, RECEDING.
+ *
+ * The pavement below the kerb measured a standard deviation of 4.6 across the
+ * whole band -- one fill, with three drawn hairlines standing in for joints.
+ * Each entry is one rendered course: how far below the kerb line it sits, how
+ * wide it runs (wider means nearer, and it crops off both frame edges, which
+ * is the perspective), and a phase shift so the joints do not stack into
+ * columns down the picture.
+ *
+ * They all stay ABOVE the name-plate band. A first pass ran four of them down
+ * to dy 136 and `scripts/blocking.mjs` failed it: the third landed at y
+ * 624..642, which is PEPPER's plate to the pixel. The mistake underneath was
+ * arithmetic, not taste -- `sidewalk` is `Math.max(372, ground - 116)` and I
+ * had reasoned about the 372, when the real value on a 390x844 frame is 529.
+ * A clamp's floor is not the number the scene uses.
+ *
+ * Three courses, all in the upper part of the pavement, which is also where
+ * they belong: joints compress with distance, so a course near the camera
+ * would show one seam, not a run of them.
+ *
+ * The opacities are LOW on purpose. At better than half they stopped being
+ * joints and became four sleepers laid across the pavement; a course you can
+ * pick out individually is a course that has become an object.
+ */
+const TOWN_PAVING_COURSES: readonly { dy: number; w: number; phase: number; opacity: number }[] = [
+  { dy: 4, w: 1.06, phase: 0.0, opacity: 0.30 },
+  { dy: 26, w: 1.22, phase: 0.34, opacity: 0.38 },
+  { dy: 56, w: 1.44, phase: 0.08, opacity: 0.46 },
+];
 
 const BEACH_UMBRELLA = require('../../../assets/world/beach/props/umbrella.png');
 const BEACH_LIFEGUARD = require('../../../assets/world/beach/props/lifeguard.png');
@@ -985,6 +1018,24 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <Path d={`M20 ${ground + 128}H112M166 ${ground + 128}H258M312 ${ground + 128}H402`} stroke={DIORAMA.cream} strokeWidth={7} strokeLinecap="round" opacity={night ? 0.10 : 0.38} />
       </Svg></WorldLayer>
       <WorldLayer name="props">
+        {/* The pavement's own surface. See TOWN_PAVING_COURSES. */}
+        {TOWN_PAVING_COURSES.map((c) => {
+          const w = width * c.w;
+          const h = w / PAVING_ASPECT;
+          return (
+            <WorldObject
+              key={`paving-${c.dy}`}
+              source={TOWN_PAVING}
+              left={(width - w) / 2 - w * c.phase * 0.06}
+              top={sidewalk + c.dy * scale}
+              width={w}
+              height={h}
+              night={night}
+              depth={0.42 + c.dy / 400}
+              opacity={c.opacity}
+            />
+          );
+        })}
         {/*
           WHERE THE PAVEMENT STOPS. It measured sd 4.6 -- one fill with three
           drawn hairlines on it pretending to be slab joints -- and it met the
