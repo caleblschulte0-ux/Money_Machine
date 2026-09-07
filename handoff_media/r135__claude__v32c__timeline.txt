@@ -1,0 +1,34 @@
+# Timeline for r135__claude__v32c__ORI_What_This_Place_Was_master.mp4 (41.1s)
+# v32c -- two copy fixes over v32b (r134 ChatGPT review, applied r135):
+#  hero label VISUALISATION -> VISUALIZATION (US spelling)
+#  reach VO "He keeps walking" -> "You keep walking" (second-person consistency)
+# Structure, footage, and every other line UNCHANGED from r127/r129.
+
+   0.0-   1.5  sign    a different plaque (a poem), read close -- no person in frame [IMG_6709] [sign beat starts]; on-screen: FALLS PARK, SIOUX FALLS, SOUTH DAKOTA (location card)
+   1.5-   3.0  sign    a different plaque (a poem), read close -- no person in frame [IMG_6709] 
+   3.0-   4.5  sign    a different plaque (a poem), read close -- no person in frame [IMG_6709] VO: Most people walk right past.
+   4.5-   6.0  past    the empty riverbed, panning wide -- nobody stopping [IMG_6791]         [past beat starts]; VO: Most people walk right past.
+   6.0-   7.5  prod    the wearer at a different overlook, turning toward the water [IMG_6794] [prod beat starts]; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+   7.5-   9.0  prod    the wearer at a different overlook, turning toward the water [IMG_6794] VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+   9.0-  10.5  hero    glasses alone on dark table (generated plate)                          [hero beat starts]; on-screen: THE HARDWARE / VISUALIZATION (US spelling, r134/r135); VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  10.5-  12.0  hero    glasses alone on dark table (generated plate)                          VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  12.0-  13.5  hero    glasses alone on dark table (generated plate)                          VO: You put them on.
+  13.5-  15.0  on      hand raised to temple -- switching on (start of one unbroken shot)     [on beat starts]; VO: You put them on.
+  15.0-  16.5  on      hand raised to temple -- switching on (start of one unbroken shot)     VO: They know where you're standing, what you're looking at -- and who you're with.
+  16.5-  18.0  lock    same unbroken shot continues -- recognises the falls                   [lock beat starts]; on-screen: THE FALLS / BIG SIOUX RIVER; VO: They know where you're standing, what you're looking at -- and who you're with.
+  18.0-  19.5  lock    same unbroken shot continues -- recognises the falls                   VO: They know where you're standing, what you're looking at -- and who you're with.
+  19.5-  21.0  anchor  same unbroken shot continues -- anchored to the place                  [anchor beat starts]; VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  21.0-  22.5  anchor  same unbroken shot continues -- anchored to the place                  VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  22.5-  24.0  anchor  same unbroken shot continues -- anchored to the place                  VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  24.0-  25.5  anchor  same unbroken shot continues -- anchored to the place                  VO: You keep walking. It keeps working.
+  25.5-  27.0  reach   walking the park path                                                  [reach beat starts]; VO: You keep walking. It keeps working.
+  27.0-  28.5  reach   walking the park path                                                  
+  28.5-  30.0  off     glasses off, elevated wide view, nothing drawn on it                   [off beat starts]; VO: No tour group. No phone in your face. You just look.
+  30.0-  31.5  off     glasses off, elevated wide view, nothing drawn on it                   VO: No tour group. No phone in your face. You just look.
+  31.5-  33.0  off     glasses off, elevated wide view, nothing drawn on it                   VO: No tour group. No phone in your face. You just look.; VO: Open Range Interactive. Look closer at where you already are.
+  33.0-  34.5  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805] [walk beat starts]; VO: Open Range Interactive. Look closer at where you already are.
+  34.5-  36.0  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805] VO: Open Range Interactive. Look closer at where you already are.
+  36.0-  37.5  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805] 
+  37.5-  39.0  end     held last frame, wordmark card                                         [end beat starts]; on-screen: OPEN RANGE INTERACTIVE (wordmark) + VISUAL INTENTION ONLY
+  39.0-  40.5  end     held last frame, wordmark card                                         
+  40.5-  41.1  end     held last frame, wordmark card                                         
