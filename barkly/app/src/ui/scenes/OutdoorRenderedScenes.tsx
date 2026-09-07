@@ -122,7 +122,7 @@ const SKY_BODY = SUN_R * 2 * 3.4;
 const COMPOSITION = {
   park: { treeLeft: -42, treeRight: -26, benchLeft: 214, hedgeLeft: 104, hedgeRight: 72, brushLeft: -64, brushRight: -37 },
   town: { sideStore: -154, centerStoreLeft: 94, lampLeft: 22, lampRight: 20, planterLeft: 2, planterRight: 4 },
-  beach: { palmLeft: -30, towerLeft: 14, umbrellaRight: -12, duneLeft: -38, duneRight: -42, castleRight: 14 },
+  beach: { palmLeft: -30, towerLeft: 14, umbrellaRight: -12, duneLeft: -100, duneRight: -42, castleRight: 14 },
 } as const;
 
 const SKY: Record<SkyBand, readonly [ColorValue, ColorValue]> = {
@@ -874,17 +874,53 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
   const horizon = clamp(ground - 386, 172, 210);
   const tide = horizon + 120;
   const sandTop = tide + 15;
+  const oceanDeep = night ? DIORAMA.oceanNightDeep : DIORAMA.oceanDayDeep;
+  const sandWet = night ? DIORAMA.sandNightWet : DIORAMA.sandDayWet;
+  const sandNearDeep = night ? DIORAMA.sandNightNearDeep : DIORAMA.sandDayNearDeep;
   const oceanA = night ? DIORAMA.oceanNightA : DIORAMA.oceanDayA;
   const oceanB = night ? DIORAMA.oceanNightB : DIORAMA.oceanDayB;
   const oceanEdge = night ? DIORAMA.oceanNightEdge : DIORAMA.oceanDayEdge;
   const sandA = night ? DIORAMA.sandNightFar : DIORAMA.sandDayFar;
   const sandB = night ? DIORAMA.sandNightNear : DIORAMA.sandDayNear;
-  const sandEdge = night ? DIORAMA.sandNightEdge : DIORAMA.sandDayEdge;
+  // sandEdge is gone with the dead View it fed; see the sand gradient below.
 
   const lifeguardW = 148 * scale;
   const lifeguardH = 230 * scale;
   const umbrellaW = 142 * scale;
   const umbrellaH = 194 * scale;
+  /*
+   * The palm was 67% inside the lifeguard tower -- the same defect as the park
+   * bench in the tree, found by scripts/blocking.mjs the first time it was
+   * pointed at this scene. Two objects at nearly the same distance occupying
+   * the same place, so the eye has nowhere to put either of them.
+   *
+   * It took three tries to accept that the palm and the tower cannot share that
+   * corner at ANY size. Made NEAR -- bigger, cropped by the left edge -- the
+   * frame ate it: 170px wide with its trunk at the right of its own bounding
+   * box left a sliver of frond, and the dune then measured 92% inside it. Made
+   * FAR and pushed further left, it became a green smudge against the frame
+   * edge. Moving the tower right instead puts a 147px landmark 75% inside
+   * Barkly's silhouette, rising past his head, which prop-clear-check refuses
+   * and should.
+   *
+   * A fourth try put it small on the far shore, between the tower and the
+   * umbrella, where the frame is genuinely empty. It grew out of the sea: the
+   * far shore here is the ~15px between the tide line and the near sand, and
+   * nothing stands on that convincingly. A fifth, near and at the left edge,
+   * laid its canopy horizontally through the tower's roof.
+   *
+   * So the honest answer, after five: A 390px BEACH HAS NO ROOM FOR IT. The
+   * frame already carries a lifeguard tower, an umbrella, a sandcastle, a dune,
+   * two dogs and the SIFT control's badge, and every position left either
+   * collides with one of those or falls off the edge. It renders on wide
+   * screens, where `wideInset` gives it somewhere real to stand, and the phone
+   * gets the scene without it -- which measured and looked better than any of
+   * the five placements did.
+   *
+   * Not a limitation to work around later: a 390px frame is a fixed budget and
+   * this prop is the one that does not fit in it.
+   */
+  const showPalm = width >= 600;
   const palmW = 126 * scale;
   const palmH = 264 * scale;
   const duneW = 146 * scale;
@@ -903,7 +939,17 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
     <WorldScene motion={motion} testID="world-scene-beach">
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="distant">
-        <LinearGradient colors={[oceanA, oceanB]} style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: tide - horizon + 28 }} />
+        {/*
+          Deep at the horizon, shallow at your feet -- which is both how water
+          works and where this scene's missing darks live. It was two bright
+          cyans, so the sea contributed nothing below 0.56 value and the whole
+          location had no anchor for the eye.
+        */}
+        <LinearGradient
+          colors={[oceanDeep, oceanA, oceanB]}
+          locations={[0, 0.42, 1]}
+          style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: tide - horizon + 28 }}
+        />
         <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Path d={`M-20 ${horizon + 24}Q32 ${horizon - 22} 84 ${horizon + 19}Q112 ${horizon - 2} 148 ${horizon + 27}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.64} />
         <Path d={`M440 ${horizon + 28}Q398 ${horizon - 18} 350 ${horizon + 17}Q320 ${horizon - 3} 286 ${horizon + 27}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.58} />
@@ -913,20 +959,57 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
         </Svg>
       </WorldLayer>
       <WorldLayer name="ground">
-        <View style={{ position: 'absolute', left: 0, right: 0, top: sandTop + 8, bottom: 0, backgroundColor: sandEdge }} />
-        <LinearGradient colors={[sandA, sandB]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, bottom: 0 }} />
-        <LinearGradient colors={[oceanEdge, sandA]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, height: 54, opacity: night ? 0.12 : 0.24 }} />
+        {/*
+          THE SAND IS 55% OF THIS PICTURE AND IT WAS ONE TONE.
+          
+          It ran #EFC56F to #FFDC93 -- 0.94 value to 1.00, two near-whites --
+          so more than half the frame carried no tonal information at all. That,
+          not the sea, is why the Beach measured 6.6% of its pixels darker than
+          mid-value against the Park's 22.9%, and had the lowest tonal spread of
+          any location at every hour of the day. Thin bands at the tide line
+          cannot fix a flat majority; the majority has to stop being flat.
+          
+          Bright where the light is, deepening toward the camera, which is both
+          how a beach looks and what gives the ground plane somewhere to go.
+          
+          (The opaque `sandEdge` View that used to sit under this gradient
+          covered exactly the same box and was painted over completely -- a
+          layer that had not been visible in any build. Its tone is the third
+          stop now, doing the job it was presumably added for.)
+        */}
+        <LinearGradient
+          colors={[sandA, sandB, sandNearDeep]}
+          locations={[0, 0.28, 0.72]}
+          style={{ position: 'absolute', left: 0, right: 0, top: sandTop, bottom: 0 }}
+        />
+        {/*
+          WET SAND. The strip the last wave soaked, and the darkest thing on the
+          beach. It was a 24%-opacity wash of ocean-edge over sand, which is to
+          say almost nothing; at full strength it does the job a shadow does in
+          every other location -- separates the water from the land and gives
+          the ground plane somewhere to start.
+        */}
+        <LinearGradient
+          colors={[sandWet, sandA]}
+          style={{ position: 'absolute', left: 0, right: 0, top: sandTop, height: 46, opacity: night ? 0.42 : 0.72 }}
+        />
+        <LinearGradient colors={[oceanEdge, sandA]} style={{ position: 'absolute', left: 0, right: 0, top: sandTop, height: 26, opacity: night ? 0.20 : 0.38 }} />
         <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
           <Path d={`M44 ${sandTop + 92}q24 -8 48 0M306 ${sandTop + 82}q30 -10 58 1M122 ${sandTop + 186}q28 -7 54 2`} stroke={night ? DIORAMA.sandNightLight : DIORAMA.sandDayLight} strokeWidth={4} strokeLinecap="round" fill="none" opacity={0.34} />
           <Path d={`M74 ${sandTop + 128}l7 4 6 -5M344 ${sandTop + 166}l8 4 5 -6`} stroke={night ? DIORAMA.sandNightEdge : DIORAMA.sandDayEdge} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.34} />
         </Svg>
       </WorldLayer>
       <WorldLayer name="landmark">
-        <WorldObject source={BEACH_PALM} left={palmLeft} top={horizon - 82} width={palmW} height={palmH} night={night} depth={0.44} opacity={0.86} ambient="sway" contactShadow />
+        {showPalm && <WorldObject source={BEACH_PALM} left={palmLeft} top={horizon - 82} width={palmW} height={palmH} night={night} depth={0.44} opacity={0.86} ambient="sway" contactShadow />}
         <WorldObject source={BEACH_LIFEGUARD} left={towerLeft} top={horizon + 16} width={lifeguardW * 0.94} height={lifeguardH * 0.94} night={night} depth={0.50} opacity={0.92} contactShadow />
         <WorldObject source={BEACH_UMBRELLA} right={umbrellaRight} top={horizon + 38} width={umbrellaW} height={umbrellaH} night={night} depth={0.56} ambient="sway" motionDelay={500} contactShadow />
       </WorldLayer>
       <WorldLayer name="foreground">
+        {/*
+          Pushed left, clear of the SIFT control's badge. It used to sit right
+          behind it: scripts/blocking.mjs reported SIFT covered, and a mound of
+          sand behind a mound-shaped control is unreadable anyway.
+        */}
         <WorldObject source={BEACH_DUNE} left={duneLeft} top={sandTop + 98} width={duneW} height={duneH} night={night} depth={0.90} opacity={0.88} contactShadow />
         <WorldObject source={BEACH_DUNE} right={duneRight} top={sandTop + 138} width={duneW * 0.90} height={duneH * 0.90} night={night} depth={0.94} opacity={0.78} flip contactShadow />
         <WorldObject source={BEACH_CASTLE} right={castleRight} top={sandTop + 124} width={castleW} height={castleH * 1.50} night={night} depth={0.92} contactShadow />

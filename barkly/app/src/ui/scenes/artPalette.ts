@@ -299,6 +299,23 @@ export const DIORAMA = {
   townSidewalkNightNear: '#574333',
   townSidewalkNightEdge: '#40331F',
 
+  /*
+   * The Beach had no dark in it. Measured over the scene band, pixels darker
+   * than 0.45 value: Park 22.9%, Town 16.4%, Home 12.7%, Beach 6.6% -- and its
+   * 5th-percentile value was 0.408 against roughly 0.28 everywhere else. There
+   * was literally no shadow in the picture, which is why it read flat at every
+   * hour and had the lowest tonal spread of any location in the game.
+   *
+   * Deep water at the horizon and wet sand at the tide line are where a beach
+   * keeps its darks, and both were missing: the sea was two bright cyans and
+   * the damp strip was a 24%-opacity wash.
+   */
+  oceanDayDeep: '#0C5877',
+  oceanNightDeep: '#08202F',
+  sandDayWet: '#9C6229',
+  sandDayNearDeep: '#BC7B33',
+  sandNightNearDeep: '#3A2F20',
+  sandNightWet: '#33291C',
   oceanDayA: '#23ADD6',
   oceanDayB: '#67D3E3',
   oceanDayLight: '#C4EEEE',

@@ -29,8 +29,44 @@ const page = await browser.newPage({ viewport: { width: w, height: h } });
 await page.addInitScript(() => localStorage.setItem('barkly/profile/default/onboarding-v1', 'done'));
 await page.goto(`file://${process.cwd()}/dist/playtest/index.html`);
 await page.waitForTimeout(6500);
+
+/*
+ * Load the developed save first, or the Beach is not there to measure.
+ *
+ * A fresh profile has it level-locked, and the first version of this tool
+ * simply reported "no scene for beach" -- which reads as a broken selector
+ * rather than as a locked tab, and is exactly how an earlier session ended up
+ * photographing the Park twice under two different names. Same route the art
+ * lab takes: the playtest menu, which only exists in a build made with
+ * EXPO_PUBLIC_BARKLY_PLAYTEST=always, i.e. `npm run build:pages`.
+ */
+try {
+  const gear = page.getByLabel('Settings').first();
+  if (await gear.count()) {
+    await gear.click({ timeout: 6000 });
+    await page.waitForTimeout(520);
+    const entry = page.locator('[data-testid="playtest-settings"]').first();
+    if (await entry.count()) {
+      await entry.click({ timeout: 6000 });
+      await page.waitForTimeout(650);
+      const slot = page.locator('[data-testid="playtest-longterm"]').first();
+      if (await slot.count()) {
+        await slot.click({ force: true, timeout: 6000 });
+        await page.waitForSelector('[data-testid="dialogue-panel"]', { timeout: 20000 }).catch(() => {});
+      }
+    }
+  }
+} catch { /* a locked place is reported below, not thrown */ }
+await page.keyboard.press('Escape').catch(() => {});
+await page.waitForTimeout(900);
+
 if (place !== 'home') {
-  await page.getByRole('tab', { name: new RegExp(place, 'i') }).first().click().catch(() => {});
+  const tab = page.getByRole('tab', { name: new RegExp(place, 'i') }).first();
+  if (!(await tab.count())) {
+    console.error(`no "${place}" tab -- is it still locked on this save?`);
+    process.exit(1);
+  }
+  await tab.click({ timeout: 6000 }).catch(() => {});
   await page.waitForTimeout(2600);
 }
 
