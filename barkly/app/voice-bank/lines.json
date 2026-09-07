@@ -20,6 +20,12 @@
       "tag": "offline"
     },
     {
+      "key": "00f7a659ba4feb7b",
+      "spoken": "Let go and I win. Don't let go and I still win.",
+      "source": "Let go and I win. Do not let go and I still win.",
+      "tag": "reactions"
+    },
+    {
       "key": "02d88ee7906c46c1",
       "spoken": "Look at me. Does dis look like a dog with room?",
       "source": "Look at me. Does this look like a dog with room?",
@@ -102,6 +108,12 @@
       "spoken": "Ask me somethin'. Or feed me. Ya call, honestly.",
       "source": "Ask me something. Or feed me. Your call, honestly.",
       "tag": "onboarding"
+    },
+    {
+      "key": "07e8ca5088b62f5c",
+      "spoken": "I have never lost this. I don't count da times I lost this.",
+      "source": "I have never lost this. I do not count the times I lost this.",
+      "tag": "reactions"
     },
     {
       "key": "084e303c15a8184a",
@@ -254,6 +266,12 @@
       "tag": "mishaps"
     },
     {
+      "key": "12ed8b81dc47e180",
+      "spoken": "This is da good one. Don't ask me why. It just is.",
+      "source": "This is the good one. Do not ask me why. It just is.",
+      "tag": "reactions"
+    },
+    {
       "key": "12f803cb66712f19",
       "spoken": "No idea. Start smellin' dirt. Capisce?",
       "source": "No idea. Start smelling dirt.",
@@ -330,6 +348,12 @@
       "spoken": "Ay. Now you're speakin' my language. Wake me if dere's cheese.",
       "source": "Now you're speaking my language. Wake me if there's cheese.",
       "tag": "offline"
+    },
+    {
+      "key": "1787e7c3dd5df34c",
+      "spoken": "Ask my mornin' self. He was thrilled about everythin'.",
+      "source": "Ask my morning self. He was thrilled about everything.",
+      "tag": "reactions"
     },
     {
       "key": "179f25cc2d520477",
@@ -414,6 +438,12 @@
       "spoken": "Dat's the spirit. Whatever that was.",
       "source": "That's the spirit. Whatever that was.",
       "tag": "talk"
+    },
+    {
+      "key": "1d6b269f568818f6",
+      "spoken": "Ay. I have located the ball. Obviously. Now do ya part.",
+      "source": "I have located the ball. Obviously. Now do your part.",
+      "tag": "reactions"
     },
     {
       "key": "1dd6682b4a70270e",
@@ -506,6 +536,18 @@
       "tag": "training"
     },
     {
+      "key": "2966886c7b19c5b3",
+      "spoken": "I was not beggin'. I was standin' hopefully. Different thing.",
+      "source": "I was not begging. I was standing hopefully. Different thing.",
+      "tag": "reactions"
+    },
+    {
+      "key": "2989905cdc3d98fe",
+      "spoken": "Ay, yo. I have energy and no plan. My favorite combination.",
+      "source": "I have energy and no plan. My favorite combination.",
+      "tag": "reactions"
+    },
+    {
       "key": "29ef1784cb48967a",
       "spoken": "Whatever it is, we'll be scared of it together. Dat's basically bravery.",
       "source": "Whatever it is, we'll be scared of it together. That's basically bravery.",
@@ -516,6 +558,12 @@
       "spoken": "Food. Now. I have cleared my schedule.",
       "source": "Food. Now. I have cleared my schedule.",
       "tag": "offline"
+    },
+    {
+      "key": "2b1aad80137a7ec0",
+      "spoken": "I will chase anythin'. Standards are for later. Capisce?",
+      "source": "I will chase anything. Standards are for later.",
+      "tag": "reactions"
     },
     {
       "key": "2b2423688fb77a31",
@@ -588,6 +636,12 @@
       "spoken": "Hey. I was busy starin' at a wall. You're marginally better.",
       "source": "Hey. I was busy staring at a wall. You are marginally better.",
       "tag": "talk"
+    },
+    {
+      "key": "30c15f89cbad0c39",
+      "spoken": "My legs have filed for time off. I approved it.",
+      "source": "My legs have filed for time off. I approved it.",
+      "tag": "reactions"
     },
     {
       "key": "30da206bac6b6c7b",
@@ -678,6 +732,12 @@
       "spoken": "Dat settles it. He is official now. I will be keepin' records.",
       "source": "That settles it. He is official now. I will be keeping records.",
       "tag": "escalation"
+    },
+    {
+      "key": "3cccaa7d0d76fcab",
+      "spoken": "Gimme a second. I gotta remember what a dog is.",
+      "source": "Give me a second. I have to remember what a dog is.",
+      "tag": "reactions"
     },
     {
       "key": "3dd0e4787ef9c53e",
@@ -938,6 +998,18 @@
       "tag": "npcs"
     },
     {
+      "key": "55377e0e08da43c6",
+      "spoken": "Harder. Yo. I am insulted. Harder.",
+      "source": "Harder. I am insulted. Harder.",
+      "tag": "reactions"
+    },
+    {
+      "key": "555aee93e60b13a9",
+      "spoken": "You're officially my favorite. Dis is bindin'.",
+      "source": "You are officially my favorite. This is binding.",
+      "tag": "reactions"
+    },
+    {
       "key": "556f567bb7a9f7e0",
       "spoken": "Then why did ya say “lap,” Pepper?",
       "source": "Then why did you say “lap,” Pepper?",
@@ -1070,10 +1142,22 @@
       "tag": "reactions"
     },
     {
+      "key": "63014e3dc0f2ebdf",
+      "spoken": "Not now. I am still digestin' da last one. Emotionally. awright?",
+      "source": "Not now. I am still digesting the last one. Emotionally.",
+      "tag": "reactions"
+    },
+    {
       "key": "6352919e127cee10",
       "spoken": "Oh, hey. I did absolutely nuttin' productive while you were gone. It was great.",
       "source": "Oh, hey. I did absolutely nothing productive while you were gone. It was great.",
       "tag": "greetings"
+    },
+    {
+      "key": "635b9241fb1784b1",
+      "spoken": "I'm not gonna lie to ya. Put it down. I will get to it. It is on my list.",
+      "source": "Put it down. I will get to it. It is on my list.",
+      "tag": "reactions"
     },
     {
       "key": "638a31b779248134",
@@ -1088,10 +1172,22 @@
       "tag": "npcs"
     },
     {
+      "key": "64639385bd11488f",
+      "spoken": "Both ends of dis rope are mine. That is just geometry. Capisce?",
+      "source": "Both ends of this rope are mine. That is just geometry.",
+      "tag": "reactions"
+    },
+    {
       "key": "65d05615bf39bf0a",
       "spoken": "Shade privileges. Noted, logged, and I'm sittin' extremely respectfully.",
       "source": "Shade privileges. Noted, logged, and I'm sitting extremely respectfully.",
       "tag": "npcs"
+    },
+    {
+      "key": "67993fc3dff7d383",
+      "spoken": "I have the low center of gravity here. Think about dat.",
+      "source": "I have the low center of gravity here. Think about that.",
+      "tag": "reactions"
     },
     {
       "key": "68d357120c219884",
@@ -1154,10 +1250,22 @@
       "tag": "greetings"
     },
     {
+      "key": "70f5ec34b30621e6",
+      "spoken": "Move over. I need somewhere to point all of dis.",
+      "source": "Move over. I need somewhere to point all of this.",
+      "tag": "reactions"
+    },
+    {
       "key": "711cc2840787527e",
       "spoken": "Duke. Still doin' da eyebrow thing, I see. Bold, for a guy who's scared of the sprinkler.",
       "source": "Duke. Still doing the eyebrow thing, I see. Bold, for a guy who's scared of the sprinkler.",
       "tag": "npcs"
+    },
+    {
+      "key": "72106d520dd53d07",
+      "spoken": "I would like the record to show dat I waited. Briefly.",
+      "source": "I would like the record to show that I waited. Briefly.",
+      "tag": "reactions"
     },
     {
       "key": "721decf70cb3f265",
@@ -1238,6 +1346,12 @@
       "tag": "npcs"
     },
     {
+      "key": "7de1619931317b2e",
+      "spoken": "Ay, yo. Don't watch me eat. ...Okay. Watch a little.",
+      "source": "Do not watch me eat. ...Okay. Watch a little.",
+      "tag": "reactions"
+    },
+    {
       "key": "806cd46714b9b3fa",
       "spoken": "Lemme tell ya. Property law remains my greatest enemy.",
       "source": "Property law remains my greatest enemy.",
@@ -1290,6 +1404,12 @@
       "spoken": "Dat's the most Biscuit sentence anyone has ever said. I'm framin' it.",
       "source": "That's the most Biscuit sentence anyone has ever said. I'm framing it.",
       "tag": "npcs"
+    },
+    {
+      "key": "88e7aa3932d65df2",
+      "spoken": "Yo. Save it. I like havin' somethin' to look forward to.",
+      "source": "Save it. I like having something to look forward to.",
+      "tag": "reactions"
     },
     {
       "key": "88fbd78a5b3c44b5",
@@ -1346,6 +1466,24 @@
       "tag": "saga"
     },
     {
+      "key": "8ec39d0ac3092127",
+      "spoken": "I have been up for hours. In dreams. Which count.",
+      "source": "I have been up for hours. In dreams. Which count.",
+      "tag": "reactions"
+    },
+    {
+      "key": "907d721593cdb776",
+      "spoken": "I am gonna lie here and be extremely good at it.",
+      "source": "I am going to lie here and be extremely good at it.",
+      "tag": "reactions"
+    },
+    {
+      "key": "90f9c9a795ff7b3d",
+      "spoken": "Ah. Da good bowl. I can tell. I have a system.",
+      "source": "Ah. The good bowl. I can tell. I have a system.",
+      "tag": "reactions"
+    },
+    {
       "key": "930aadbbd047e7f0",
       "spoken": "Ya saved me the good half? Biscuit, that's the nicest dumb thing anyone's done for me.",
       "source": "You saved me the good half? Biscuit, that's the nicest dumb thing anyone's done for me.",
@@ -1362,6 +1500,12 @@
       "spoken": "Finally. I have been extremely brave about it. Capisce?",
       "source": "Finally. I have been extremely brave about it.",
       "tag": "greetings"
+    },
+    {
+      "key": "93cf8bcae26bbdc3",
+      "spoken": "I'm not gonna lie to ya. I am pacin' myself. It is a new thing I am tryin'.",
+      "source": "I am pacing myself. It is a new thing I am trying.",
+      "tag": "reactions"
     },
     {
       "key": "95061acaa3d7b46f",
@@ -1409,6 +1553,12 @@
       "key": "98eb3cd4c64f15c1",
       "spoken": "It's my rope. Pull. Go on. See what happens.",
       "source": "It's my rope. Pull. Go on. See what happens.",
+      "tag": "reactions"
+    },
+    {
+      "key": "993327861a799515",
+      "spoken": "I was awake da entire time. Ask my eyes. Don't ask my eyes. I'm just sayin'.",
+      "source": "I was awake the entire time. Ask my eyes. Do not ask my eyes.",
       "tag": "reactions"
     },
     {
@@ -1538,16 +1688,40 @@
       "tag": "incidents"
     },
     {
+      "key": "abba99521df5e93c",
+      "spoken": "Somethin' happened. Was it important? Was it food?",
+      "source": "Something happened. Was it important? Was it food?",
+      "tag": "reactions"
+    },
+    {
       "key": "abfb0bba2b1f4e75",
       "spoken": "Just checkin' you're still dere.",
       "source": "Just checking you're still there.",
       "tag": "initiative"
     },
     {
+      "key": "ac0f48a0aa388ec5",
+      "spoken": "Dat is a tomorrow activity. Tomorrow me is real fast.",
+      "source": "That is a tomorrow activity. Tomorrow me is very fast.",
+      "tag": "reactions"
+    },
+    {
+      "key": "ac3579336e4d4b04",
+      "spoken": "I had given up hope. Two minutes ago. It was a dark time.",
+      "source": "I had given up hope. Two minutes ago. It was a dark time.",
+      "tag": "reactions"
+    },
+    {
       "key": "ac7265013a608ed5",
       "spoken": "Blink. Nailed it.",
       "source": "Blink. Nailed it.",
       "tag": "training"
+    },
+    {
+      "key": "ad5ba283e524a163",
+      "spoken": "Right. Yeah. I am here. Where is here.",
+      "source": "Right. Yes. I am here. Where is here.",
+      "tag": "reactions"
     },
     {
       "key": "ad69a70a3e325055",
@@ -1652,6 +1826,12 @@
       "tag": "npcs"
     },
     {
+      "key": "b625102298d41f46",
+      "spoken": "Watch dis. I have not decided what yet. Watch anyway.",
+      "source": "Watch this. I have not decided what yet. Watch anyway.",
+      "tag": "reactions"
+    },
+    {
       "key": "b63c6748339a52f5",
       "spoken": "Ball. Air. Me. In dat order. Go. I'm just sayin'.",
       "source": "Ball. Air. Me. In that order. Go.",
@@ -1706,6 +1886,12 @@
       "tag": "progression"
     },
     {
+      "key": "c1c05097477b2f1a",
+      "spoken": "Nuttin' in my mouth and still ready. Dat is professionalism.",
+      "source": "Nothing in my mouth and still ready. That is professionalism.",
+      "tag": "reactions"
+    },
+    {
       "key": "c1c700d4da9e690c",
       "spoken": "Ay. Somethin's gone from my head. Remind me — who are ya?",
       "source": "Something's gone from my head. Remind me — who are you?",
@@ -1728,6 +1914,12 @@
       "spoken": "Learned it. Now say it, and watch what happens.",
       "source": "Learned it. Now say it, and watch what happens.",
       "tag": "onboarding"
+    },
+    {
+      "key": "c6998ebb7abbd195",
+      "spoken": "Fake me out and I will remember it forever. Try me.",
+      "source": "Fake me out and I will remember it forever. Try me.",
+      "tag": "reactions"
     },
     {
       "key": "c6e79177ef2463f7",
@@ -1772,10 +1964,28 @@
       "tag": "greetings"
     },
     {
+      "key": "d141a4b7a2db1845",
+      "spoken": "Fine. But I am gonna be real good at dis.",
+      "source": "Fine. But I am going to be very good at this.",
+      "tag": "reactions"
+    },
+    {
       "key": "d16183d8d1ce8f31",
       "spoken": "See? Teamwork. Horrible. Effective.",
       "source": "See? Teamwork. Horrible. Effective.",
       "tag": "encounters"
+    },
+    {
+      "key": "d170ff113ecc4e7c",
+      "spoken": "One throw. Dat is all I am askin'. Then one more.",
+      "source": "One throw. That is all I am asking. Then one more.",
+      "tag": "reactions"
+    },
+    {
+      "key": "d1849fdc679e7dcd",
+      "spoken": "One more nap and I am a completely different animal.",
+      "source": "One more nap and I am a completely different animal.",
+      "tag": "reactions"
     },
     {
       "key": "d278ccb4648bf142",
@@ -1788,6 +1998,12 @@
       "spoken": "You were gone so long I forgot what ya smelled like. Then I remembered instantly.",
       "source": "You were gone so long I forgot what you smelled like. Then I remembered instantly.",
       "tag": "greetings"
+    },
+    {
+      "key": "d321c494fc89e5ba",
+      "spoken": "A pass. Write dat down, nobody will believe you. I'm just sayin'.",
+      "source": "A pass. Write that down, nobody will believe you.",
+      "tag": "reactions"
     },
     {
       "key": "d40eb65a71d71d6d",
@@ -1880,6 +2096,12 @@
       "tag": "npcs"
     },
     {
+      "key": "db7ba820ea14b20a",
+      "spoken": "I have done enough today. Ask anyone. Don't ask anyone.",
+      "source": "I have done enough today. Ask anyone. Do not ask anyone.",
+      "tag": "reactions"
+    },
+    {
       "key": "dbff39183ba7cced",
       "spoken": "'He's with me.' Pepper, I'm gettin' dat engraved somewhere. awright?",
       "source": "'He's with me.' Pepper, I'm getting that engraved somewhere.",
@@ -1926,6 +2148,12 @@
       "spoken": "Almost. I'm not gonna lie to ya. Say it like dis: when I say bedtime, play dead. Then it's mine forever.",
       "source": "Almost. Say it like this: when I say bedtime, play dead. Then it's mine forever.",
       "tag": "offline"
+    },
+    {
+      "key": "e39075cd036f3166",
+      "spoken": "Send it into orbit. I will be back before ya miss me.",
+      "source": "Send it into orbit. I will be back before you miss me.",
+      "tag": "reactions"
     },
     {
       "key": "e544b92d83fe4c89",
@@ -1976,6 +2204,12 @@
       "tag": "hook"
     },
     {
+      "key": "ec97af5af36ef580",
+      "spoken": "I will eat dis in one motion and then act shocked that it is gone.",
+      "source": "I will eat this in one motion and then act shocked that it is gone.",
+      "tag": "reactions"
+    },
+    {
       "key": "eda1ddc00f112820",
       "spoken": "I'm not gonna lie to ya. Ya remembered! I mean — obviously you remembered. Anyway.",
       "source": "You remembered! I mean — obviously you remembered. Anyway.",
@@ -2024,6 +2258,12 @@
       "tag": "canon"
     },
     {
+      "key": "f41c7ecf404ceaf5",
+      "spoken": "Dis ain't a game. This is a dispute over property.",
+      "source": "This is not a game. This is a dispute over property.",
+      "tag": "reactions"
+    },
+    {
       "key": "f55614b265155b15",
       "spoken": "Good. Classified again.",
       "source": "Good. Classified again.",
@@ -2048,10 +2288,22 @@
       "tag": "talk"
     },
     {
+      "key": "f8e4a477b2d2b8e4",
+      "spoken": "Further than dat. I can go further than that.",
+      "source": "Further than that. I can go further than that.",
+      "tag": "reactions"
+    },
+    {
       "key": "f8f04062ca8a06dc",
       "spoken": "Tired. Structurally tired.",
       "source": "Tired. Structurally tired.",
       "tag": "offline"
+    },
+    {
+      "key": "f91a76c08ef7aedb",
+      "spoken": "Say da word and I become a problem. Say the word.",
+      "source": "Say the word and I become a problem. Say the word.",
+      "tag": "reactions"
     },
     {
       "key": "f9857ecb71c12b9b",
@@ -2094,6 +2346,18 @@
       "spoken": "One time I found a sock that wasn't mine. It's mine now. That's da whole arc. Capisce?",
       "source": "One time I found a sock that wasn't mine. It's mine now. That's the whole arc.",
       "tag": "talk"
+    },
+    {
+      "key": "fd97dea50e034764",
+      "spoken": "Straight down. No notes. Do it again.",
+      "source": "Straight down. No notes. Do it again.",
+      "tag": "reactions"
+    },
+    {
+      "key": "fd9c85487d53af05",
+      "spoken": "I was guardin' da inside of my eyelids. Nuttin' got through.",
+      "source": "I was guarding the inside of my eyelids. Nothing got through.",
+      "tag": "reactions"
     },
     {
       "key": "fdfc7f8ef6372a0c",
