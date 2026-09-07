@@ -7,6 +7,7 @@ import { skyBand, SkyBand } from './CandyScenesV2';
 import { elevation, radius } from '../theme';
 import { CHROME_BOTTOM } from '../layout';
 import {
+  baselineZ,
   crescentPath,
   RadialGlow,
   WorldLayer,
@@ -716,8 +717,26 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const planterH = 92 * scale;
   const centerStoreLeft = width / 2 - shopW * 0.48;
   const sideStoreInset = centerStoreLeft - shopW * 0.78;
+  /*
+   * THREE PROPS WERE STACKED IN ONE CORNER.
+   *
+   * These insets are all derived from half the width, and on a phone they all
+   * hit the same clamp: measured at 390x844 the fountain sat at x16..135, the
+   * left planter at x57..134 and the left lamp at x13..79 -- three objects
+   * inside 120px of the bottom-left, while Barkly took 56% of the frame in the
+   * middle. scripts/blocking.mjs called both overlaps.
+   *
+   * Town is not short of things (it measures the highest detail of any location
+   * at 79%); it was short of PLACES to put them. A 390px frame with a 219px dog
+   * in it has room for two props a side, so the left lamp moves out to the
+   * frame edge, clear of the fountain, and the left planter renders only where
+   * there is somewhere for it to stand. The right pair already had lanes of
+   * their own and are untouched.
+   */
   const plazaInset = Math.max(18, width / 2 - 235 * scale);
+  const lampInsetLeft = width >= 600 ? plazaInset : plazaInset - 30;
   const planterInset = plazaInset + 42 * scale;
+  const showLeftPlanter = width >= 600;
   const fountainLeft = width / 2 - fountainW / 2 - 108 * scale;
 
   return (
@@ -727,7 +746,35 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <WorldObject source={TOWN_STORE_CORAL} left={sideStoreInset} top={horizon + 34} width={shopW * 0.90} height={shopH * 0.90} night={night} depth={0.32} />
         <WorldObject source={TOWN_STORE_AQUA} left={centerStoreLeft} top={horizon + 8} width={shopW * 0.96} height={shopH * 0.96} night={night} depth={0.38} />
         <WorldObject source={TOWN_STORE_VIOLET} right={sideStoreInset} top={horizon + 28} width={shopW * 0.91} height={shopH * 0.91} night={night} depth={0.34} />
-        <View style={[styles.shopSign, { left: centerStoreLeft + shopW * 0.17, top: horizon + 58, width: shopW * 0.62 }]}>
+        {/*
+          THE SIGN HAS TO STATE ITS DEPTH NOW.
+
+          Giving WorldObject a baseline-derived zIndex fixed the bench in the
+          tree and quietly broke this: a plain View has no zIndex, and among
+          siblings anything with one beats it, so the shop's name went BEHIND
+          the shopfront it names. It showed as "BARKLY'S" in dark teal against a
+          teal wall, above the painted plaque instead of on it -- which reads as
+          a font or position bug rather than a stacking one, and was only caught
+          by zooming into a capture.
+
+          This is the one place in any scene where a code-drawn element shares a
+          layer with a prop (__tests__/layer_stacking.test.ts keeps it the only
+          one), and the fix is for it to say where it stands like everything
+          else. The plaque is measured from the asset rather than guessed: in
+          store_aqua.png the cream board runs y 0.187..0.311 and x 0.154..0.778
+          of the trimmed art, with the accent bar crossing it at 0.26.
+        */}
+        <View
+          style={[
+            styles.shopSign,
+            {
+              left: centerStoreLeft + shopW * 0.96 * 0.16,
+              top: horizon + 8 + shopH * 0.96 * 0.195,
+              width: shopW * 0.96 * 0.62,
+              zIndex: baselineZ(horizon + 8, shopH * 0.96) + 1,
+            },
+          ]}
+        >
           <Text style={[styles.shopSignText, { fontSize: Math.max(9, 11 * scale) }]}>BARKLY'S</Text>
         </View>
       </WorldLayer>
@@ -786,9 +833,9 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <Path d={`M20 ${ground + 128}H112M166 ${ground + 128}H258M312 ${ground + 128}H402`} stroke={DIORAMA.cream} strokeWidth={7} strokeLinecap="round" opacity={night ? 0.10 : 0.38} />
       </Svg></WorldLayer>
       <WorldLayer name="props">
-        <WorldObject source={TOWN_PLANTER} left={planterInset} top={sidewalk - planterH + 11} width={planterW} height={planterH} night={night} depth={0.72} ambient="sway" contactShadow />
+        {showLeftPlanter && <WorldObject source={TOWN_PLANTER} left={planterInset} top={sidewalk - planterH + 11} width={planterW} height={planterH} night={night} depth={0.72} ambient="sway" contactShadow />}
         <WorldObject source={TOWN_PLANTER} right={planterInset} top={sidewalk - planterH + 12} width={planterW} height={planterH} night={night} depth={0.72} ambient="sway" motionDelay={600} flip contactShadow />
-        <WorldObject source={TOWN_LAMP} left={plazaInset} top={lampSpriteTop} width={lampW} height={lampH} night={night} depth={0.64} contactShadow />
+        <WorldObject source={TOWN_LAMP} left={lampInsetLeft} top={lampSpriteTop} width={lampW} height={lampH} night={night} depth={0.64} contactShadow />
         <WorldObject source={TOWN_LAMP} right={plazaInset} top={lampSpriteTop} width={lampW} height={lampH} night={night} depth={0.64} flip contactShadow />
         <WorldObject source={TOWN_FOUNTAIN} left={fountainLeft} top={sidewalk - fountainH + 30} width={fountainW} height={fountainH} night={night} depth={0.76} contactShadow />
       </WorldLayer>

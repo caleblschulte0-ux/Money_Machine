@@ -137,11 +137,29 @@ for (const r of out.rows) {
  */
 const CONTAINED = 0.6;
 const SAME_DISTANCE = 0.25;
+/*
+ * ...AND BOTH HAVE TO BE PROPS.
+ *
+ * A planter standing in front of a storefront is not the defect -- it is the
+ * whole point of a storefront. Pointed at Town, a first version flagged three
+ * of those (a planter and two lamps against 310px shopfronts) alongside the two
+ * real ones, and a check that cries about correct composition gets ignored on
+ * the day it is right. Same distinction prop-clear-check draws with
+ * PROP_MAX_WIDTH: past a certain size difference the big one is SCENERY, and
+ * things stand in front of scenery.
+ *
+ * 2.5 is measured, not picked: it clears Town's planter-on-shopfront at 3.3 and
+ * its lamp-on-shopfront at 3.6, and keeps the two cases that are real -- the
+ * park bench in the tree at 1.8 and the beach palm in the lifeguard tower
+ * at 1.1.
+ */
+const SCENERY_RATIO = 2.5;
 for (let i = 0; i < out.rows.length; i += 1) {
   for (let j = i + 1; j < out.rows.length; j += 1) {
     const [small, big] = out.rows[i].w <= out.rows[j].w ? [out.rows[i], out.rows[j]] : [out.rows[j], out.rows[i]];
     const ox = Math.min(small.x + small.w, big.x + big.w) - Math.max(small.x, big.x);
     if (ox < small.w * CONTAINED) continue;
+    if (big.w > small.w * SCENERY_RATIO) continue;
     if (Math.abs(small.base - big.base) >= big.h * SAME_DISTANCE) continue;
     console.log(`  ! ${small.w}x${small.h} at base ${small.base} sits ${Math.round((ox / small.w) * 100)}% inside ${big.w}x${big.h} at base ${big.base} -- same distance, same place`);
   }
