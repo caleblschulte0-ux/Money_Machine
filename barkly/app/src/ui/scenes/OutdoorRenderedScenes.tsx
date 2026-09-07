@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, ColorValue, Easing, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, ColorValue, Easing, Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useAmbientLoop, useReduceMotion } from '../motion';
@@ -91,6 +91,28 @@ const PARK_COVER: readonly Cover[] = [
  * from y 0. Nine pixels of air above that.
  */
 const CHROME_CLEAR = 118;
+
+/*
+ * The sky's own props. They belong to no location -- park, town and beach all
+ * render one `SceneSky` -- so they live in `assets/world/sky/` rather than
+ * being promoted three times.
+ *
+ * Widths in points; heights derived from the trimmed renders' own aspects,
+ * which `__tests__/scene_surfaces.test.ts` holds against the files on disk.
+ */
+const CLOUD = require('../../../assets/world/sky/cloud.png');
+const CLOUD_FAR = require('../../../assets/world/sky/cloud_far.png');
+const CLOUD_ASPECT = 536 / 137;
+const CLOUD_FAR_ASPECT = 361 / 93;
+/*
+ * Widths as a FRACTION of the viewport, capped. A flat 168 is 43% of a 390pt
+ * phone and 39% of a 430pt one, which is a cloud that dominates the sky on the
+ * small device and looks about right on the large one -- the same class of bug
+ * as the window sun that was authored in pixels inside a pane derived from the
+ * screen.
+ */
+const CLOUD_W = (width: number) => Math.min(150, width * 0.36);
+const CLOUD_FAR_W = (width: number) => Math.min(94, width * 0.23);
 
 /**
  * STREET BUNTING — the loudest thing in Town, on purpose.
@@ -210,8 +232,10 @@ const BEACH_CASTLE = require('../../../assets/world/beach/props/castle.png');
 const BEACH_PALM = require('../../../assets/world/beach/props/palm.png');
 const BEACH_HEADLAND = require('../../../assets/world/beach/props/headland.png');
 const BEACH_SHELLS = require('../../../assets/world/beach/props/shells.png');
+const BEACH_SURF = require('../../../assets/world/beach/props/surf.png');
 const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png');
 const HEADLAND_ASPECT = 640 / 67;
+const SURF_ASPECT = 640 / 55;
 const SHELLS_ASPECT = 272 / 142;
 const MARRAM_ASPECT = 212 / 249;
 
@@ -253,6 +277,18 @@ const BEACH_COVER: readonly Cover[] = [
 const SUN_R = 25;
 const SUN_INSET = 34;
 const SKY_BODY = SUN_R * 2 * 3.4;
+
+/*
+ * AND THEY HAVE TO STAY OFF THE SUN.
+ *
+ * The far cloud shipped for one build at `right: 34` -- which is SUN_INSET,
+ * the sun's own inset -- so it landed exactly on the disc. Measured on a 2x
+ * beach capture: the sun went from 6,927 lit pixels to 160. The brightest
+ * landmark in the sky, gone, and nothing failed. The sun's box is SKY_BODY
+ * wide at SUN_INSET from the right, so the clouds get the space to the LEFT
+ * of it and the disc keeps its corner.
+ */
+const SUN_ZONE = SUN_INSET + SKY_BODY;
 
 /**
  * Canonical stage blocking. These are deliberate silhouette lanes, not a pile
@@ -345,64 +381,78 @@ function SceneSky({ band, horizon, chromeBottom }: { band: SkyBand; horizon: num
   const night = band === 'night';
   const still = useReduceMotion();
   const drift = useAmbientLoop(15000, 0, still);
+  const { width } = useWindowDimensions();
+  const cloudW = CLOUD_W(width);
+  const cloudFarW = CLOUD_FAR_W(width);
+  // The far cloud's right edge, kept clear of the sun's box by construction
+  // rather than by a literal that happened to look right on one phone.
+  const cloudFarRight = Math.max(cloudW * 0.4, SUN_ZONE - SKY_BODY * 0.32);
   return (
     <View style={styles.fill}>
       <LinearGradient colors={SKY[band]} style={styles.fill} />
       <SkyBody night={night} discTop={Math.max(chromeBottom + 26, horizon - 96)} />
       {/*
-        A CLOUD, not a capsule.
+        THE CLOUDS ARE RENDERS NOW.
 
-        This was three white pills at 54% opacity, and 54% white over the day
-        sky is grey -- on the contact sheet it read as an empty grey UI slab
-        parked under the tab bar, which is exactly the "very HTML" note. Two
-        things fix it: it has to be WHITE (a cloud is the brightest thing in a
-        Supercell sky, not a translucent one), and its silhouette has to be
-        lumpy rather than a rounded rectangle. Five puffs of different sizes on
-        two rows give it a real edge, a soft tinted underside sells the volume,
-        and a second smaller cloud further back gives the sky depth.
+        They were five white `borderRadius` Views stacked into a lumpy
+        outline, and a comment here explained at length how to arrange pills
+        so they stop reading as a UI panel. On a 2x capture of the beach at
+        2pm the near one still read as a pale grey rounded slab under the tab
+        bar, because the problem was never the arrangement: a capsule has one
+        silhouette and one flat fill, and the sky was the largest surface in
+        the frame still drawn that way while everything below the horizon is a
+        Blender render. `tools/blender/world_prop_pack.py:sky_cloud`.
+
+        Sized by WIDTH and the render's own aspect, like every other prop in
+        this app since the dig mound shipped 22% squashed off a typed height.
       */}
       {/*
-        AND IT HAS TO CLEAR THE TAB BAR.
+        AND THEY HAVE TO CLEAR THE TAB BAR.
 
-        The floor of that clamp was 94, and the destination tabs end at 109 on
-        every tested viewport (they overlay the scene, which starts at y 0). So
-        whenever the horizon sat low enough for the clamp to bite -- town on a
-        phone, every time -- the cloud's whole lumpy top was hidden behind the
-        chrome and the only part left showing was its bottom puff: a 118x18
-        rounded pill under the tab tray. The exact "empty grey UI slab parked
-        under the tab bar" the note above was written to kill, reintroduced by
-        the clamp that was supposed to keep the cloud on screen.
+        The old floor was 94 and the destination tabs end at 109 on every
+        tested viewport, so whenever the horizon sat low enough for the clamp
+        to bite -- town on a phone, every time -- the cloud's whole lumpy top
+        hid behind the chrome and all that showed was its flat bottom edge.
+        CHROME_CLEAR keeps the silhouette, which is the only part that reads.
       */}
       <Animated.View
         style={[
           styles.cloud,
           {
             top: Math.max(CHROME_CLEAR, horizon - 104),
-            opacity: night ? 0.14 : 0.94,
+            width: cloudW,
+            height: cloudW / CLOUD_ASPECT,
+            opacity: night ? 0.16 : 0.98,
             transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-18, 22] }) }],
           },
         ]}
       >
-        <View style={[styles.cloudShade, { left: 6, top: 26, width: 140, height: 20 }]} />
-        <View style={[styles.cloudPuff, { left: 0, top: 20, width: 58, height: 26 }]} />
-        <View style={[styles.cloudPuff, { left: 30, top: 6, width: 56, height: 40 }]} />
-        <View style={[styles.cloudPuff, { left: 62, top: 0, width: 50, height: 46 }]} />
-        <View style={[styles.cloudPuff, { left: 96, top: 12, width: 44, height: 34 }]} />
-        <View style={[styles.cloudPuff, { left: 22, top: 30, width: 118, height: 18 }]} />
+        {/*
+          The size lives on the IMAGE, not only on the wrapper.
+
+          `styles.fill` is `position:absolute` with all four insets and no
+          width -- which constrains a View, but not an Image: react-native-web
+          renders one as a div carrying the PNG's own intrinsic size, and it
+          wins. Measured off the live DOM: the wrapper was a correct 140x36
+          and the image inside it 536x137, the file's pixel dimensions, spilling
+          across the whole sky and swallowing the sun.
+        */}
+        <Image source={CLOUD} resizeMode="contain" style={{ width: cloudW, height: cloudW / CLOUD_ASPECT }} />
       </Animated.View>
       <Animated.View
         style={[
           styles.cloudFar,
           {
-            top: Math.max(CHROME_CLEAR - 4, horizon - 148),
-            opacity: night ? 0.08 : 0.62,
+            top: Math.max(CHROME_CLEAR - 4, horizon - 152),
+            right: cloudFarRight,
+            width: cloudFarW,
+            height: cloudFarW / CLOUD_FAR_ASPECT,
+            opacity: night ? 0.09 : 0.70,
             transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [14, -12] }) }],
           },
         ]}
       >
-        <View style={[styles.cloudPuff, { left: 0, top: 10, width: 40, height: 17 }]} />
-        <View style={[styles.cloudPuff, { left: 22, top: 2, width: 38, height: 25 }]} />
-        <View style={[styles.cloudPuff, { left: 46, top: 9, width: 34, height: 18 }]} />
+        <Image source={CLOUD_FAR} resizeMode="contain" style={{ width: cloudFarW, height: cloudFarW / CLOUD_FAR_ASPECT }} />
       </Animated.View>
     </View>
   );
@@ -1276,10 +1326,33 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
           depth={0.08}
           opacity={0.82}
         />
+        {/*
+          THE SHORELINE WAS A SQUIGGLE.
+
+          Two SVG strokes -- a 20-wide shade and a 10-wide highlight -- carried
+          the whole idea of "water arriving at a shore", stretched through a
+          `preserveAspectRatio="none"` viewBox so they were anamorphic on every
+          viewport but one. At phone size that reads as a scratch in the paint.
+
+          Surf is foam, so it is built as a fused metaball field rather than
+          spheres, and it BREAKS: three tall crests carry a line that is thin
+          between them, over one continuous spent wash.
+          `tools/blender/world_prop_pack.py:beach_surf`.
+
+          Overscanned past both frame edges like the headland above it -- a
+          shoreline that stops inside the frame is a puddle.
+        */}
+        <WorldObject
+          source={BEACH_SURF}
+          left={-26}
+          top={tide - ((width + 52) / SURF_ASPECT) * 0.58}
+          width={width + 52}
+          height={(width + 52) / SURF_ASPECT}
+          night={night}
+          depth={0.10}
+        />
         <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={[styles.fill, { zIndex: 2 }]}>
         <Path d={`M0 ${horizon + 36}Q82 ${horizon + 18} 164 ${horizon + 34}T316 ${horizon + 32}T430 ${horizon + 35}`} stroke={night ? DIORAMA.oceanNightLight : DIORAMA.oceanDayLight} strokeWidth={7} fill="none" opacity={night ? 0.08 : 0.30} />
-        <Path d={`M-18 ${tide + 7}Q50 ${tide - 12} 118 ${tide + 4}T244 ${tide + 2}T362 ${tide + 1}T440 ${tide + 3}`} stroke={night ? DIORAMA.foamNightShade : DIORAMA.foamDayShade} strokeWidth={20} fill="none" />
-        <Path d={`M-18 ${tide}Q50 ${tide - 19} 118 ${tide}T244 ${tide - 3}T362 ${tide - 4}T440 ${tide - 2}`} stroke={night ? DIORAMA.foamNight : DIORAMA.foamDay} strokeWidth={10} fill="none" />
         </Svg>
       </WorldLayer>
       <WorldLayer name="ground">
@@ -1371,10 +1444,8 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
 const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   skyBody: { position: 'absolute', right: SUN_INSET - (SKY_BODY / 2 - SUN_R), width: SKY_BODY, height: SKY_BODY },
-  cloud: { position: 'absolute', left: 23, width: 150, height: 48 },
-  cloudFar: { position: 'absolute', right: 34, width: 82, height: 28 },
-  cloudShade: { position: 'absolute', borderRadius: radius.pill, backgroundColor: DIORAMA.aquaLight },
-  cloudPuff: { position: 'absolute', borderRadius: radius.pill, backgroundColor: DIORAMA.white },
+  cloud: { position: 'absolute', left: 23 },
+  cloudFar: { position: 'absolute' },
   fallingLeaf: { position: 'absolute', left: 34, width: 17, height: 9, borderTopLeftRadius: radius.md, borderBottomRightRadius: radius.md, backgroundColor: DIORAMA.parkTreeDayLight },
   fallingLeafSmall: { left: 0, width: 12, height: 7, backgroundColor: DIORAMA.parkTreeDay },
   butterfly: { position: 'absolute', left: 0, width: 22, height: 14 },

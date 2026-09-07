@@ -17,9 +17,11 @@ const SHELF = require('../../../assets/world/home/props/shelf.png');
 const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_frame.png');
 const SKIRTING = require('../../../assets/world/home/props/skirting.png');
 const PANELLING = require('../../../assets/world/home/props/panelling.png');
+const VISTA = require('../../../assets/world/home/props/vista.png');
 /** The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds them. */
 const SKIRTING_ASPECT = 633 / 35;
 const PANELLING_ASPECT = 635 / 119;
+const VISTA_ASPECT = 640 / 263;
 
 /**
  * Window sun/moon geometry, as FRACTIONS of the aperture.
@@ -123,62 +125,51 @@ function RenderedWindow({
               <Circle cx={bodyX - bodyR * 0.22} cy={bodyY - bodyR * 0.24} r={bodyR * 0.52} fill={DIORAMA.butter} opacity={0.7} />
             </>
           )}
-          {/*
-            THE VIEW, in three bands rather than two.
-
-            This was a pair of rotated pills positioned at fixed pixel offsets
-            (-24, 32, -30, 82) inside a pane about 85pt wide, so on a phone the
-            two "hills" were 82pt tall in an 85pt view: two flat green blobs
-            filling the bottom half, which is what a window looks like when
-            nobody has looked at it since the layout changed around it. Every
-            number below is a fraction of the pane, and there is a far ridge
-            behind the hills and a treeline on them, so the view has depth of
-            its own instead of being the last flat thing in the room.
-          */}
-          <Path
-            d={`M0 ${horizon + apertureH * 0.05}
-                Q ${apertureW * 0.26} ${horizon - apertureH * 0.09}
-                  ${apertureW * 0.54} ${horizon + apertureH * 0.02}
-                Q ${apertureW * 0.82} ${horizon + apertureH * 0.1}
-                  ${apertureW} ${horizon - apertureH * 0.02}
-                L ${apertureW} ${apertureH} L 0 ${apertureH} Z`}
-            fill={night ? DIORAMA.hillNight : DIORAMA.parkHillDayLight}
-            opacity={night ? 1 : 0.72}
-          />
-          {[0.16, 0.3, 0.44, 0.72].map((t, i) => {
-            const treeX = apertureW * t;
-            const baseY = horizon + apertureH * (i % 2 === 0 ? 0.07 : 0.11);
-            const treeH = apertureH * (i % 2 === 0 ? 0.19 : 0.15);
-            return (
-              <Ellipse
-                key={t}
-                cx={treeX}
-                cy={baseY - treeH * 0.5}
-                rx={treeH * 0.42}
-                ry={treeH * 0.55}
-                fill={night ? DIORAMA.hillNight : DIORAMA.parkHillDay}
-                opacity={night ? 1 : 0.82}
-              />
-            );
-          })}
-          <Path
-            d={`M0 ${horizon + apertureH * 0.17}
-                Q ${apertureW * 0.34} ${horizon + apertureH * 0.05}
-                  ${apertureW * 0.68} ${horizon + apertureH * 0.19}
-                Q ${apertureW * 0.86} ${horizon + apertureH * 0.26}
-                  ${apertureW} ${horizon + apertureH * 0.16}
-                L ${apertureW} ${apertureH} L 0 ${apertureH} Z`}
-            fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay}
-          />
-          <Path
-            d={`M0 ${horizon + apertureH * 0.3}
-                Q ${apertureW * 0.5} ${horizon + apertureH * 0.2}
-                  ${apertureW} ${horizon + apertureH * 0.33}
-                L ${apertureW} ${apertureH} L 0 ${apertureH} Z`}
-            fill={night ? DIORAMA.hillNight : DIORAMA.parkHillDayLight}
-            opacity={night ? 0.9 : 1}
-          />
         </Svg>
+        {/*
+          THE VIEW IS A RENDER.
+
+          This was the worst object in the game and it sat inside one of the
+          best: the frame below is a full Blender render -- mitred timber, a
+          bevelled sill, a real cast shadow -- and behind its glass were three
+          flat SVG bands with four ellipses on them for trees. A child's
+          drawing taped inside a photograph, and the one place in Home a new
+          player looks first, because onboarding happens in this room.
+
+          `tools/blender/world_prop_pack.py:home_vista` builds three ridges
+          that differ in height AND colour, with the far one hazed toward the
+          sky's blue, plus two trees at a size that survives a 127pt pane.
+          Anchored to the same `horizon` fraction the bands used, so the sun
+          above it does not move.
+        */}
+        <Image
+          source={VISTA}
+          resizeMode="contain"
+          style={{
+            position: 'absolute',
+            left: 0,
+            width: apertureW,
+            // WIDTH AND ASPECT, never a typed height. A first pass stretched
+            // the render to the leftover pane below the old SVG horizon, and
+            // the aperture is nearly square while the vista is 2.43:1 -- so it
+            // came out squashed flat, the two trees smeared into the ridge and
+            // every lump the hills had went with them. The same defect the dig
+            // mound shipped with, reintroduced from the opposite direction.
+            height: apertureW / VISTA_ASPECT,
+            // Six percent of it hangs below the aperture, which is clipped
+            // (`skyAperture` sets overflow hidden). That buries the dark
+            // underside of the nearest hills, which otherwise draws a hard
+            // black line along the bottom of the glass.
+            top: apertureH - (apertureW / VISTA_ASPECT) * 0.94,
+            // Night keeps most of it. At 0.55 under a 0.42 blue wash the three
+            // ridges dissolved and the pane went back to being a flat dark
+            // rectangle with two smudges in it -- the defect this render was
+            // built to remove, reappearing for half of every day. Captured at
+            // 23h to check, because 14h is not the only hour the game runs.
+            opacity: night ? 0.78 : 1,
+          }}
+        />
+        {night && <View style={[styles.fill, { backgroundColor: DIORAMA.skyNightA, opacity: 0.30 }]} />}
         {!night && <View style={styles.windowGlint} />}
       </View>
       <Image source={WINDOW_FRAME} resizeMode="contain" style={[styles.windowImage, { width, height }]} />

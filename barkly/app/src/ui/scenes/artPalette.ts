@@ -303,10 +303,6 @@ export const DIORAMA = {
   sandNightNear: '#5B4A32',
   sandNightLight: '#9E8361',
   sandNightEdge: '#3E3324',
-  foamDay: '#D8FAFF',
-  foamDayShade: '#CDF7FC',
-  foamNight: '#A6C6D9',
-  foamNightShade: '#5B88A6',
   starfish: '#FF8567',
 
 

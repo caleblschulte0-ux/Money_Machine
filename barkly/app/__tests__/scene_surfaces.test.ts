@@ -58,6 +58,7 @@ describe('scene surface renders', () => {
     ['HEADLAND_ASPECT', 'beach', 'headland.png'],
     ['SHELLS_ASPECT', 'beach', 'shells.png'],
     ['MARRAM_ASPECT', 'beach', 'dune_grass.png'],
+    ['SURF_ASPECT', 'beach', 'surf.png'],
   ];
 
   for (const [name, place, file] of cases) {
@@ -144,6 +145,78 @@ describe('scene surface renders', () => {
       }
     }
     expect(low).toEqual([]);
+  });
+
+  /*
+   * The clouds are not a location's props -- park, town and beach share one
+   * `SceneSky` -- so they live in `assets/world/sky/` and need their own
+   * reader. Same rule: the declared aspect is a claim about a file on disk.
+   */
+  for (const [name, file] of [
+    ['CLOUD_ASPECT', 'cloud.png'],
+    ['CLOUD_FAR_ASPECT', 'cloud_far.png'],
+  ] as [string, string][]) {
+    it(`${name} is what sky/${file} actually is`, () => {
+      const real = pngAspectAt('assets', 'world', 'sky', file);
+      expect(Math.abs(declaredAspect(name) - real)).toBeLessThan(0.02);
+    });
+  }
+
+  /*
+   * The window vista, same rule as every other render: its height is derived
+   * from its width and this aspect. It shipped for one build drawn with
+   * `resizeMode="stretch"` into the leftover pane, which squashed a 2.43:1
+   * landscape into a nearly square hole and smeared its two trees into the
+   * ridge -- the dig mound's bug from the other direction.
+   */
+  it('VISTA_ASPECT is what home/vista.png actually is', () => {
+    const real = pngAspectAt('assets', 'world', 'home', 'props', 'vista.png');
+    expect(Math.abs(declaredAspect('VISTA_ASPECT', homeSource()) - real)).toBeLessThan(0.02);
+  });
+
+  it('draws no hand-drawn landscape behind the window glass any more', () => {
+    const src = homeSource();
+    const pane = src.slice(src.indexOf('<Svg width={apertureW}'), src.indexOf('windowGlint'));
+    // The three SVG bands and four ellipse "trees" the vista replaced. The sun
+    // and moon stay -- they are lights with a RadialGlow behind them, not a
+    // landscape.
+    expect(pane).not.toContain('<Ellipse');
+    expect(pane.match(/<Path/g) ?? []).toHaveLength(1);
+    expect(pane).toContain('source={VISTA}');
+  });
+
+  /*
+   * NO IMAGE MAY BE SIZED BY AN INSET STYLE ALONE.
+   *
+   * `styles.fill` is `position: absolute` with all four insets and no width.
+   * That constrains a View. It does NOT constrain an Image:
+   * react-native-web renders one as a div carrying the PNG's own intrinsic
+   * dimensions, and those win over the insets. The two clouds shipped that way
+   * for one build -- wrappers a correct 140x36 and 90x23, the images inside
+   * them 536x137 and 361x93, the files' pixel sizes -- so the sky filled with
+   * cloud and the sun went from 6,927 lit pixels to 160. Nothing failed: the
+   * wrapper measured right, the asset was right, and the aspect locks passed
+   * because the aspect WAS correct. It was four times too big.
+   *
+   * The rule that catches it: an Image's own style must carry a width. Not a
+   * substitute for looking at the render, but this one is invisible in a
+   * diff, which is exactly what a test is for.
+   */
+  it('never sizes an Image by insets alone', () => {
+    const files = [
+      ['src', 'ui', 'scenes', 'OutdoorRenderedScenes.tsx'],
+      ['src', 'ui', 'scenes', 'HomeRenderedScene.tsx'],
+    ];
+    const offenders: string[] = [];
+    for (const parts of files) {
+      const src = readFileSync(join(ROOT, ...parts)).toString();
+      // Every <Image ...> tag, however it is broken across lines.
+      for (const m of src.matchAll(/<Image\b[\s\S]*?\/>/g)) {
+        const tag = m[0];
+        if (!/\bwidth\b/.test(tag)) offenders.push(`${parts[parts.length - 1]}: ${tag.slice(0, 90)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 
   // The home scene declares its own; same rule, different file.

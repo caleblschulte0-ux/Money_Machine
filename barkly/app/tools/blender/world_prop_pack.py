@@ -168,6 +168,48 @@ def torus(name, loc, major_radius, minor_radius, mat, scale=(1, 1, 1), rotation=
     return obj
 
 
+def metablob(name, parts, mat, resolution=0.026, stiffness=2.0, threshold=0.25):
+    """Fuse a set of ellipsoids into ONE surface.
+
+    A cloud built as overlapping spheres renders as a bunch of grapes: each
+    lobe keeps its own terminator, so the interior fills with crescent seams
+    and the eye counts eight balls instead of reading one mass. A cloud is
+    lumpy on its SILHOUETTE and smooth inside it, which is precisely what a
+    metaball field gives -- the lobes blend where they overlap and only the
+    outer boundary keeps the bumps.
+
+    `parts` is a sequence of ((x, y, z), (sx, sy, sz)); every element lives on
+    one metaball datablock, so there is no dependence on Blender's name-prefix
+    family rules. Converted to a mesh immediately, so downstream code can treat
+    the result like any other object in this pack.
+    """
+    bpy.ops.object.metaball_add(type="BALL", location=(0.0, 0.0, 0.0))
+    obj = bpy.context.object
+    obj.name = name
+    obj.data.resolution = resolution
+    obj.data.render_resolution = resolution
+    # The field threshold is what decides whether neighbouring lobes MERGE.
+    # At Blender's default 0.6 they do not: the first pass rendered as seven
+    # separate eggs floating in a row, which is a worse cloud than the pills
+    # it was replacing. Low threshold, wide influence radius, and the lobes
+    # become one mass whose only lumps are on the outside.
+    obj.data.threshold = threshold
+    elements = obj.data.elements
+    elements.remove(elements[0])
+    for (x, y, z), (sx, sy, sz) in parts:
+        element = elements.new(type="ELLIPSOID")
+        element.co = (x, y, z)
+        element.size_x, element.size_y, element.size_z = sx, sy, sz
+        element.radius = 1.7
+        element.stiffness = stiffness
+    bpy.ops.object.convert(target="MESH")
+    obj = bpy.context.object
+    obj.name = name
+    obj.data.materials.append(mat)
+    bpy.ops.object.shade_smooth()
+    return obj
+
+
 def camera_yaw():
     """The camera's own yaw, so a WIDE prop can cancel it.
 
@@ -1265,6 +1307,205 @@ def collar(name, hex_body, hex_edge):
     return build
 
 
+def sky_cloud():
+    """A CLOUD, not five white pills.
+
+    The sky is the largest surface in every outdoor scene and it held two
+    objects: a flat SVG sun and a stack of `borderRadius` Views. On a 2x
+    capture at 2pm the near one reads as a pale grey rounded slab -- the exact
+    "empty grey UI panel" note a comment in `OutdoorRenderedScenes.tsx` was
+    written to kill, still true, because the fix that comment describes was to
+    the ARRANGEMENT of pills and the problem is that they are pills. A capsule
+    has one silhouette and one fill; nothing about it is a cloud.
+
+    So this is geometry, in two fused masses:
+
+    - The CROWN is lumpy on its silhouette and smooth inside it -- one
+      metaball surface, so lobes of clearly unequal radius bump the top edge
+      without filling the interior with the crescent seams that overlapping
+      spheres leave. A first pass built it from plain spheres and rendered a
+      bunch of grapes.
+    - The UNDERSIDE is a second, flatter, wider mass in cool blue-grey,
+      showing beneath the crown. The two-tone is authored rather than left to
+      the lights, because at 140pt on a phone a soft gradient reads as dirt on
+      the glass. The seam between the two masses IS the shadow line.
+
+    White at the top, non-negotiable: a cloud is the brightest thing in this
+    sky, and the old pills were 94% white over pale blue, which is grey. The
+    base colour is a COOL white rather than #FFFFFF, because the pack's shared
+    key is (1.0, 0.77, 0.58) and a neutral white under it renders peach -- fine
+    on a wooden bench, wrong on the one object in the frame the eye reads as
+    "white". Measured against the sky it sits on, not judged on paper.
+
+    Built in the camera-facing frame like every other wide prop, or a cloud
+    two metres long comes out banked like a paper aeroplane.
+    """
+    turn = facing(camera_yaw())
+    crown_mat = material("Cloud crown", "#E9F1FF", roughness=0.96, coat=0.0)
+    under_mat = material("Cloud under", "#C6D9EF", roughness=0.98, coat=0.0)
+
+    under = []
+    for dx, sx, sz in ((-1.66, 0.44, 0.15), (-0.84, 0.56, 0.17),
+                       (0.02, 0.62, 0.18), (0.86, 0.54, 0.17), (1.62, 0.46, 0.15)):
+        x, y = turn(dx, 0.16)
+        under.append(((x, y, 0.24), (sx, 0.34, sz)))
+    metablob("cloud_under", under, under_mat)
+
+    # Radii deliberately unequal and unsorted -- a run of lobes that grows and
+    # then shrinks is a hill, and a hill in the sky is a blob.
+    crown = []
+    for dx, dz, r in ((-1.44, 0.40, 0.30), (-0.76, 0.60, 0.44), (0.04, 0.70, 0.50),
+                      (0.70, 0.54, 0.38), (1.34, 0.40, 0.28), (-0.24, 0.44, 0.34),
+                      (0.92, 0.36, 0.26)):
+        x, y = turn(dx, -0.02)
+        crown.append(((x, y, dz), (r, 0.36, r * 0.80)))
+    metablob("cloud_crown", crown, crown_mat)
+
+
+def sky_cloud_far():
+    """The same cloud, further away and thinner.
+
+    A second cloud at a different size is what gives a flat gradient a sense
+    of distance, so this is not the near one scaled down: it is flatter (a
+    distant cumulus is seen closer to edge-on) and its underside is weaker,
+    because haze eats contrast with distance before it eats anything else.
+    """
+    turn = facing(camera_yaw())
+    crown_mat = material("Far cloud crown", "#E9F1FF", roughness=0.96, coat=0.0)
+    under_mat = material("Far cloud under", "#D9E6F5", roughness=0.98, coat=0.0)
+
+    under = []
+    for dx, sx in ((-0.66, 0.30), (-0.02, 0.36), (0.62, 0.28)):
+        x, y = turn(dx, 0.14)
+        under.append(((x, y, 0.20), (sx, 0.26, 0.08)))
+    metablob("far_under", under, under_mat, threshold=0.16)
+
+    # Tighter spacing and a lower threshold than the near cloud. Distance
+    # SIMPLIFIES a silhouette -- at this size three legible lobes read as one
+    # far cloud, where three separable ones read as three small near ones.
+    crown = []
+    for dx, dz, r in ((-0.48, 0.28, 0.22), (0.00, 0.36, 0.28), (0.46, 0.26, 0.20)):
+        x, y = turn(dx, -0.01)
+        crown.append(((x, y, dz), (r, 0.26, r * 0.60)))
+    metablob("far_crown", crown, crown_mat, threshold=0.16)
+
+
+def home_vista():
+    """What the living-room window actually looks out on.
+
+    This was the worst object in the game and it sat inside one of the best.
+    The window FRAME is a full render -- mitred timber, a bevelled sill, a real
+    cast shadow -- and behind its glass were a flat blue rectangle, a flat
+    yellow disc, three flat green SVG bands and four ellipses for trees. A
+    child's drawing taped inside a photograph.
+
+    The constraint that shapes everything here is SIZE. The aperture is about
+    127pt across on a phone and this occupies the bottom two fifths of it, so
+    the whole landscape is roughly 127x48pt. A first pass put four trees on it
+    and they came out six points tall: invisible, and they took the ridge's
+    silhouette with them. What survives at 48pt is tonal separation between a
+    small number of bands, plus one or two shapes big enough to have an
+    outline.
+
+    So: three ridges that differ in HEIGHT and in COLOUR, not just in y. Far is
+    hazed toward the sky's own blue -- distance is a colour problem before it
+    is a size problem, and a first pass hazed it so far it read as snow. Two
+    trees, on the nearest ridge where they are biggest, and only two.
+    """
+    turn = facing(camera_yaw())
+    # Blue, not grey, and MORE blue than looks right on paper. #8FB6BE rendered
+    # as a neutral and the far ridge read as a heap of boulders behind the
+    # fields; #A3C4DA, an honest distant-hill blue, rendered grey too. The warm
+    # key is (1.0, 0.77, 0.58) at 880W, and it eats low-chroma blue -- the same
+    # effect this file already records for the violet storefront, which carries
+    # more chroma than its neighbours need for exactly this reason. Measured
+    # off the render, not eyeballed: the saturation of the far band has to come
+    # back above the grass's before it reads as distance.
+    far = material("Vista far", "#6FAEE0", roughness=0.95)
+    far_b = material("Vista far b", "#83BDE9", roughness=0.95)
+    mid = material("Vista mid", "#79B274", roughness=0.92)
+    mid_b = material("Vista mid b", "#88BE7E", roughness=0.92)
+    near = material("Vista near", "#5FA352", roughness=0.90)
+    near_b = material("Vista near b", "#6DAF5C", roughness=0.90)
+    trunk = material("Vista trunk", "#6B4830", roughness=0.88)
+    leaf = material("Vista leaf", "#3F8440", roughness=0.90)
+
+    # Far: the TALLEST band, and the one furthest back. Hills read as distant
+    # because they are pale and high, not because they are small.
+    for i in range(6):
+        h = 0.92 + 0.62 * ((i * 0.6180) % 1.0)
+        x, y = turn(-1.85 + i * 0.74, 0.85)
+        sphere(f"far_{i}", (x, y, h * 0.26), (0.78, 0.36, h * 0.54), far if i % 2 else far_b)
+    for i in range(7):
+        h = 0.52 + 0.26 * ((i * 0.3820) % 1.0)
+        x, y = turn(-1.85 + i * 0.62, 0.30)
+        sphere(f"mid_{i}", (x, y, h * 0.18), (0.62, 0.36, h * 0.50), mid if i % 2 else mid_b)
+    for i in range(6):
+        h = 0.34 + 0.20 * ((i * 0.7236) % 1.0)
+        x, y = turn(-1.95 + i * 0.78, -0.35)
+        sphere(f"near_{i}", (x, y, h * 0.04), (0.80, 0.42, h * 0.56), near if i % 2 else near_b)
+    # Two trees, on the nearest ridge, at a size that survives the pane.
+    for i, (dx, sc) in enumerate(((-1.16, 0.62), (1.06, 0.54))):
+        x, y = turn(dx, -0.42)
+        cylinder(f"trunk_{i}", (x, y, 0.18 + sc * 0.34), sc * 0.10, sc * 0.80, trunk)
+        sphere(f"leaf_{i}", (x, y, 0.18 + sc * 1.02), (sc * 0.66, sc * 0.52, sc * 0.72), leaf)
+
+
+def beach_surf():
+    """Where the sea meets the sand, which was one wavy white line.
+
+    The beach sea is a flat teal band about a sixth of the frame, and the only
+    thing happening on it is a single SVG squiggle of white doing the whole job
+    of "water arriving at a shore". At phone size that reads as a scratch in
+    the paint.
+
+    Surf is FOAM, and foam is the one thing in this world with genuinely no
+    hard edges, so it is a metaball field like the clouds. Two rules learned
+    from the first pass, which rendered a fat white sausage -- a kerb, which is
+    exactly what its own docstring said to avoid:
+
+    - It must BREAK. Evenly spaced lobes fuse into a rope no matter how their
+      heights vary. The gaps between groups are wider than the metaball field
+      can bridge, so the surf is a broken chain of scallops.
+    - Its crests must differ by a LOT, not a little. Two or three tall breaks
+      carry the whole line; everything between them is thin.
+
+    Camera-facing like every wide band in this pack, and overscanned past both
+    ends so the app can hang it off the frame edges.
+    """
+    turn = facing(camera_yaw())
+    foam = material("Surf foam", "#F4F9FF", roughness=0.94, coat=0.0)
+    wash = material("Surf wash", "#CBE4EE", roughness=0.96, coat=0.0)
+
+    # The spent wash: what is left after a wave has broken, low and continuous,
+    # so the broken crest above it still has a waterline to sit on.
+    spent = []
+    for i in range(15):
+        dx = -3.40 + i * 0.49
+        sx = 0.22 + 0.12 * ((i * 0.6180) % 1.0)
+        x, y = turn(dx, 0.26)
+        spent.append(((x, y, 0.035), (sx, 0.18, 0.028)))
+    metablob("surf_wash", spent, wash, threshold=0.18)
+
+    # Groups, with gaps between them the field cannot bridge. Hand-authored
+    # rather than generated, because WHERE it breaks is the whole read.
+    groups = (
+        ((-3.36, 0.15, 0.028), (-3.10, 0.19, 0.038)),
+        ((-2.50, 0.30, 0.150), (-2.12, 0.36, 0.230), (-1.74, 0.26, 0.120), (-1.46, 0.17, 0.055)),
+        ((-0.86, 0.16, 0.032),),
+        ((-0.26, 0.28, 0.130), (0.10, 0.34, 0.200), (0.44, 0.22, 0.085)),
+        ((1.06, 0.17, 0.036), (1.32, 0.15, 0.028)),
+        ((1.92, 0.26, 0.115), (2.26, 0.30, 0.165), (2.58, 0.20, 0.070)),
+        ((3.18, 0.16, 0.030),),
+    )
+    for gi, group in enumerate(groups):
+        lobes = []
+        for dx, w, h in group:
+            x, y = turn(dx, 0.0)
+            lobes.append(((x, y, h * 0.62), (w, 0.15, h)))
+        metablob(f"surf_crest_{gi}", lobes, foam, threshold=0.20)
+
+
 BUILDERS = {
     "park/tree": (park_tree, 6.4, (0, 0, 2.15), {"displayWidth": 190, "anchor": "bottom"}),
     "park/bench": (park_bench, 4.7, (0, 0, 1.0), {"displayWidth": 136, "anchor": "bottom"}),
@@ -1290,7 +1531,12 @@ BUILDERS = {
     "town/planter": (town_planter, 3.8, (0, 0, 0.9), {"displayWidth": 74, "anchor": "bottom"}),
     "beach/umbrella": (beach_umbrella, 5.5, (0, 0, 1.95), {"displayWidth": 152, "anchor": "bottom"}),
     "beach/lifeguard": (beach_lifeguard, 6.4, (0, 0, 2.15), {"displayWidth": 170, "anchor": "bottom"}),
+    # The sky, at last. Wide and shallow like every other horizon band.
+    "sky/cloud": (sky_cloud, 5.2, (0, 0, 0.56), {"displayWidth": 168, "anchor": "bottom"}),
+    "sky/cloud_far": (sky_cloud_far, 3.6, (0, 0, 0.34), {"displayWidth": 96, "anchor": "bottom"}),
+    "home/vista": (home_vista, 4.4, (0, 0, 0.52), {"displayWidth": 200, "anchor": "bottom"}),
     "beach/headland": (beach_headland, 6.6, (0, 0, 0.34), {"displayWidth": 420, "anchor": "bottom"}),
+    "beach/surf": (beach_surf, 6.6, (0, 0, 0.16), {"displayWidth": 440, "anchor": "bottom"}),
     "beach/shells": (beach_shells, 1.7, (0, 0, 0.10), {"displayWidth": 58, "anchor": "bottom"}),
     "beach/dune_grass": (beach_dune_grass, 2.6, (0, 0, 0.46), {"displayWidth": 54, "anchor": "bottom"}),
     "beach/dune": (beach_dune, 4.5, (0, 0, 0.72), {"displayWidth": 158, "anchor": "bottom"}),

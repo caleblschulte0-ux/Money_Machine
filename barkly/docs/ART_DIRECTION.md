@@ -581,3 +581,88 @@ once it is fixed. The care tray was written at `#6A2F0C`/`#4A1D06` and rendered
 nearly black; it is `#C0762A`/`#9B531A` now — the colour it should actually be.
 If a prop's material list looks like it is apologising for the lighting, check
 the colour space before tuning anything.
+
+---
+
+## The sky, and the view through the window (2026-09-07)
+
+Four scenes were photographed at 2pm on a 390x844 at 2x and read cold. The
+surfaces below the horizon had all been rebuilt by then — park grass, town
+pavement, home's wall, beach sand — so what was left standing out was
+everything ABOVE it, plus the one place a scene is framed inside another.
+
+### Three things were still drawn
+
+**The clouds were `borderRadius` Views.** Five white pills per cloud, stacked
+into a lumpy outline, with a long comment above them explaining how to arrange
+pills so they stop reading as a UI panel. On the beach capture the near one
+still read as a pale grey rounded slab tucked under the tab bar. The comment
+was right about the symptom and wrong about the cause: the arrangement was
+never the problem. A capsule has one silhouette and one flat fill, and the sky
+is the largest single surface in an outdoor frame — the last one still drawn
+that way while everything under the horizon was a render.
+
+**The window in Home was the worst object in the game, and it sat inside one
+of the best.** The frame is a full render: mitred timber, a bevelled sill, a
+real cast shadow. Behind its glass were three flat SVG bands and four ellipses
+for trees. A child's drawing taped inside a photograph — in the room where
+onboarding happens, which is the first thing a new player looks at.
+
+**The beach's shoreline was a squiggle.** Two SVG strokes, a 20-wide shade and
+a 10-wide highlight, stretched anamorphically through a `preserveAspectRatio
+="none"` viewBox, doing the whole job of "water arriving at a shore".
+
+### What the fix needed that the props did not
+
+Clouds and surf are the two things in this world with genuinely no hard edges,
+and overlapping spheres cannot make them: every lobe keeps its own terminator,
+so the interior fills with crescent seams and the eye counts eight balls. The
+first cloud pass rendered a bunch of grapes.
+
+`metablob()` fuses a set of ellipsoids into one metaball surface — lumpy on
+the silhouette, smooth inside it. Blender's default field threshold of 0.6 does
+NOT merge neighbouring lobes; at 0.6 the first attempt rendered seven separate
+eggs in a row, which is a worse cloud than the pills it replaced. Threshold
+0.25 with a wide influence radius is what makes one mass.
+
+The surf then taught the opposite lesson. Evenly spaced lobes fuse into a rope
+however much their heights vary, and the first pass was a fat white sausage —
+a kerb, exactly what its own docstring said to avoid. Surf reads because it
+BREAKS: the gaps between groups have to be wider than the field can bridge, and
+two or three tall crests have to carry a line that is thin everywhere else.
+
+### Two colour findings, both measured rather than judged
+
+**A warm key eats low-chroma blue.** The vista's far ridge was authored
+`#8FB6BE` and rendered a neutral grey — a heap of boulders behind the fields.
+`#A3C4DA`, an honest distant-hill blue, rendered grey too. The pack's key is
+`(1.0, 0.77, 0.58)` at 880W, and it neutralises anything that is not already
+saturated. `#6FAEE0` is what brings the far band back to hue 200 at saturation
+0.34, above the grass's 0.30 — which is the actual test, because distance reads
+when the far band is MORE chromatic than the near one, not less. This is the
+same effect this document already records for the violet storefront.
+
+**Neutral white renders peach.** For the same reason, a `#FFFFFF` cloud comes
+out cream. Fine on a wooden bench; wrong on the one object in a frame the eye
+reads as "white". The clouds are authored `#E9F1FF` so the key brings them back
+to a warm bias of +13 (r−b), against the old pills' +18, at a lit value of 210.
+
+### The bug that had no symptom in the code
+
+The clouds shipped for one build with their wrappers a correct 140x36 and 90x23
+and the images inside them 536x137 and 361x93 — the PNG files' own pixel
+dimensions. `styles.fill` is `position: absolute` with all four insets and no
+width, which constrains a View and does NOT constrain an Image:
+react-native-web renders one as a div carrying its intrinsic size, and that
+wins. Four times too big, so the sky filled with cloud.
+
+Nothing failed. The wrapper measured right, the asset was right, and the aspect
+locks passed because the aspect WAS correct. What caught it was measuring the
+sun: **6,927 lit pixels before, 160 after**. `scene_surfaces.test.ts` now
+refuses any Image in a scene file whose own style carries no width.
+
+The general rule, third time it has bitten this app: **size renders by width
+and the file's own aspect.** The dig mound shipped 22% squashed off a typed
+height; the vista shipped squashed the other way off `resizeMode="stretch"`
+into a nearly square pane; the clouds shipped at intrinsic size off an inset
+style. Same defect, three different disguises.
