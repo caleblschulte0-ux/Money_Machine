@@ -22,6 +22,66 @@ import {
 const PARK_TREE = require('../../../assets/world/park/props/tree.png');
 const PARK_BENCH = require('../../../assets/world/park/props/bench.png');
 const PARK_HEDGE = require('../../../assets/world/park/props/hedge.png');
+const PARK_TREELINE = require('../../../assets/world/park/props/treeline.png');
+const PARK_TUFT = require('../../../assets/world/park/props/grass_tuft.png');
+const PARK_FLOWERS = require('../../../assets/world/park/props/wildflowers.png');
+const PARK_CLUMP = require('../../../assets/world/park/props/grass_clump.png');
+
+/**
+ * GROUND COVER, PLACED BY HAND.
+ *
+ * The grass was one flat fill. Measured off a screenshot, a clean band of it
+ * varied by a standard deviation of 28 -- and the town pavement by 4.6, and
+ * the town sky by 4.3 -- which is what "painted, not built" looks like in a
+ * number, and why a hand-modelled dog read as standing on green paper.
+ *
+ * Scatter rather than a texture: an orthographic camera at this yaw cannot be
+ * made to tile seamlessly without fighting it, and scatter has the advantage
+ * that it can be placed AROUND things. These positions are authored, not
+ * generated, for exactly that reason -- the park's bottom band is committed to
+ * the DIG badge and two NPC name plates, and `scripts/blocking.mjs` fails the
+ * build if decoration lands on any of them. Decoration yields.
+ *
+ * `fx` is a fraction of the frame width and `dy` an offset down from the
+ * horizon, so the scatter breathes with the viewport instead of clustering.
+ */
+/* The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds these
+   against the real PNGs, the same way the shop's item art is held. */
+const TREELINE_ASPECT = 640 / 119;
+const TUFT_ASPECT = 295 / 296;
+const FLOWERS_ASPECT = 238 / 280;
+const CLUMP_ASPECT = 403 / 295;
+
+type Cover = { fx: number; dy: number; s: number; depth: number; flip?: boolean; flower?: boolean };
+const PARK_COVER: readonly Cover[] = [
+  // Far: small, just under the treeline, low contrast.
+  { fx: 0.07, dy: 118, s: 0.40, depth: 0.26 },
+  { fx: 0.30, dy: 132, s: 0.36, depth: 0.26, flip: true },
+  { fx: 0.63, dy: 114, s: 0.42, depth: 0.26 },
+  { fx: 0.88, dy: 136, s: 0.38, depth: 0.26, flip: true },
+  { fx: 0.46, dy: 150, s: 0.44, depth: 0.30, flower: true },
+  { fx: 0.18, dy: 158, s: 0.44, depth: 0.30 },
+  // Mid: level with the far tree's foot and the bench.
+  { fx: 0.10, dy: 226, s: 0.62, depth: 0.48 },
+  { fx: 0.82, dy: 214, s: 0.66, depth: 0.48, flip: true },
+  { fx: 0.36, dy: 250, s: 0.58, depth: 0.52, flower: true },
+  { fx: 0.94, dy: 262, s: 0.62, depth: 0.54 },
+  { fx: 0.68, dy: 236, s: 0.54, depth: 0.50, flip: true },
+  // Lower mid: the last tier before the frame's bottom band, which belongs to
+  // the DIG badge and two name plates. The NEAR tier is the two clumps in the
+  // foreground layer -- cover this size at that distance stopped reading as
+  // grass and started reading as spiky plants standing at the dog's chest.
+  //
+  // And there is nothing in the MIDDLE of this tier, because the middle of
+  // that band is the dog. A tuft at fx 0.44 covered 65% of his face column at
+  // 430x932 -- `scripts/prop-clear-check.mjs` caught it, and the answer is
+  // never to move him. Between the badge on the left, the name plates and his
+  // own silhouette, the lowest tier of cover only has the frame edges, which
+  // is what depth costs.
+  { fx: 0.04, dy: 352, s: 0.86, depth: 0.72 },
+  { fx: 0.72, dy: 344, s: 0.82, depth: 0.72 },
+  { fx: 0.97, dy: 380, s: 0.90, depth: 0.76, flip: true },
+];
 
 /**
  * The lowest a sky object may sit and still be seen.
@@ -104,6 +164,11 @@ const TOWN_STORE_VIOLET = require('../../../assets/world/town/props/store_violet
 const TOWN_FOUNTAIN = require('../../../assets/world/town/props/fountain.png');
 const TOWN_LAMP = require('../../../assets/world/town/props/lamp.png');
 const TOWN_PLANTER = require('../../../assets/world/town/props/planter.png');
+const TOWN_ROOFTOPS = require('../../../assets/world/town/props/rooftops.png');
+const TOWN_KERB = require('../../../assets/world/town/props/kerb.png');
+/* Trimmed renders' own aspects; __tests__/scene_surfaces.test.ts holds them. */
+const ROOFTOPS_ASPECT = 640 / 144;
+const KERB_ASPECT = 605 / 33;
 
 const BEACH_UMBRELLA = require('../../../assets/world/beach/props/umbrella.png');
 const BEACH_LIFEGUARD = require('../../../assets/world/beach/props/lifeguard.png');
@@ -485,6 +550,22 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         </Svg>
       </WorldLayer>
       <WorldLayer name="distant">
+        {/*
+          THE HORIZON. Sky met grass at a hard colour change with nothing
+          between them, so the field had no far edge and the sky had nothing to
+          sit behind. Overscanned past both frame edges: a horizon that stops
+          inside the frame is a hedge.
+        */}
+        <WorldObject
+          source={PARK_TREELINE}
+          left={-24}
+          top={horizon + 6}
+          width={width + 48}
+          height={(width + 48) / TREELINE_ASPECT}
+          night={night}
+          depth={0.14}
+          opacity={0.92}
+        />
         <WorldObject source={PARK_HEDGE} left={hedgeLeft} top={horizon + 43} width={hedgeW * 0.62} height={hedgeH * 0.62} night={night} depth={0.25} opacity={0.70} ambient="sway" />
         <WorldObject source={PARK_HEDGE} right={hedgeRight} top={horizon + 57} width={hedgeW * 0.55} height={hedgeH * 0.55} night={night} depth={0.22} opacity={0.62} ambient="sway" motionDelay={700} />
       </WorldLayer>
@@ -495,13 +576,44 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         them under -- which is the mistake that put a bench through a trunk.
       */}
       <WorldLayer name="landmark">
+        {/* The grass, as grass. See PARK_COVER -- and it sits in this layer,
+            not one of its own, so a tuft in front of the bench is a fact about
+            where its roots are like everything else here. */}
+          {PARK_COVER.map((c, i) => {
+            const w = (c.flower ? 74 : 92) * c.s * scale;
+            const h = w / (c.flower ? FLOWERS_ASPECT : TUFT_ASPECT);
+            return (
+              <WorldObject
+                key={`cover-${c.fx}-${c.dy}`}
+                source={c.flower ? PARK_FLOWERS : PARK_TUFT}
+                left={width * c.fx - w / 2}
+                top={horizon + c.dy - h}
+                width={w}
+                height={h}
+                night={night}
+                depth={c.depth}
+                opacity={0.55 + 0.45 * c.depth}
+                ambient="sway"
+                motionDelay={220 * i}
+                flip={c.flip}
+              />
+            );
+          })}
         <WorldObject source={PARK_TREE} right={treeRight} top={horizon - 46} width={treeW * farTree} height={treeH * farTree} night={night} depth={0.42} ambient="sway" motionDelay={900} flip contactShadow />
         <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 190} width={benchW} height={benchH} night={night} depth={0.70} contactShadow />
         <WorldObject source={PARK_TREE} left={treeLeft} top={horizon - 88} width={treeW} height={treeH} night={night} depth={0.55} ambient="sway" contactShadow />
       </WorldLayer>
+      {/*
+        The foreground was TWO SHRUNKEN COPIES OF THE TREE. That bought the
+        cropping, which is the point of a foreground tier and was the thing
+        actually missing -- but what a player sees in the bottom corners of a
+        field is not a small tree, it is the grass they are standing in. Same
+        placement, same crop, real ground cover, and bigger, because foreground
+        earns its distance by being nearer than everything else.
+      */}
       <WorldLayer name="foreground">
-        <WorldObject source={PARK_TREE} left={brushLeft} top={brushTop} width={brushW} height={brushH} night={night} depth={0.97} ambient="sway" motionDelay={1500} />
-        <WorldObject source={PARK_TREE} right={brushRight} top={brushTop + 18} width={brushW * 0.94} height={brushH * 0.94} night={night} depth={1} ambient="sway" motionDelay={2100} flip />
+        <WorldObject source={PARK_CLUMP} left={brushLeft - 22} top={brushTop + 48} width={brushW * 1.5} height={(brushW * 1.5) / CLUMP_ASPECT} night={night} depth={0.97} ambient="sway" motionDelay={1500} />
+        <WorldObject source={PARK_CLUMP} right={brushRight - 26} top={brushTop + 62} width={brushW * 1.4} height={(brushW * 1.4) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={2100} flip />
       </WorldLayer>
       <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
       <WorldLighting ground={ground} night={night} band={band} />
@@ -752,6 +864,25 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
     <WorldScene motion={motion} testID="world-scene-town">
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon + 30} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="distant">
+        {/*
+          THE NEXT STREET OVER.
+
+          The town sky measured a standard deviation of 4.3 across a whole
+          band -- one fill, with three shopfronts standing in front of nothing.
+          This is the roofline behind them: overscanned past both frame edges,
+          low in the frame so only the roofs clear the shops, and graded hard
+          by depth so it reads as distance rather than as more town.
+        */}
+        <WorldObject
+          source={TOWN_ROOFTOPS}
+          left={-28}
+          top={horizon - 34}
+          width={width + 56}
+          height={(width + 56) / ROOFTOPS_ASPECT}
+          night={night}
+          depth={0.10}
+          opacity={0.86}
+        />
         <WorldObject source={TOWN_STORE_CORAL} left={sideStoreInset} top={horizon + 34} width={shopW * 0.90} height={shopH * 0.90} night={night} depth={0.32} />
         <WorldObject source={TOWN_STORE_AQUA} left={centerStoreLeft} top={horizon + 8} width={shopW * 0.96} height={shopH * 0.96} night={night} depth={0.38} />
         <WorldObject source={TOWN_STORE_VIOLET} right={sideStoreInset} top={horizon + 28} width={shopW * 0.91} height={shopH * 0.91} night={night} depth={0.34} />
@@ -854,6 +985,20 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <Path d={`M20 ${ground + 128}H112M166 ${ground + 128}H258M312 ${ground + 128}H402`} stroke={DIORAMA.cream} strokeWidth={7} strokeLinecap="round" opacity={night ? 0.10 : 0.38} />
       </Svg></WorldLayer>
       <WorldLayer name="props">
+        {/*
+          WHERE THE PAVEMENT STOPS. It measured sd 4.6 -- one fill with three
+          drawn hairlines on it pretending to be slab joints -- and it met the
+          road at a colour change with no edge at all.
+        */}
+        <WorldObject
+          source={TOWN_KERB}
+          left={-24}
+          top={sidewalk - (width + 48) / KERB_ASPECT + 4}
+          width={width + 48}
+          height={(width + 48) / KERB_ASPECT}
+          night={night}
+          depth={0.46}
+        />
         {showLeftPlanter && <WorldObject source={TOWN_PLANTER} left={planterInset} top={sidewalk - planterH + 11} width={planterW} height={planterH} night={night} depth={0.72} ambient="sway" contactShadow />}
         <WorldObject source={TOWN_PLANTER} right={planterInset} top={sidewalk - planterH + 12} width={planterW} height={planterH} night={night} depth={0.72} ambient="sway" motionDelay={600} flip contactShadow />
         <WorldObject source={TOWN_LAMP} left={lampInsetLeft} top={lampSpriteTop} width={lampW} height={lampH} night={night} depth={0.64} contactShadow />

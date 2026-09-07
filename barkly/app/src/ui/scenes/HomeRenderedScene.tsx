@@ -15,6 +15,9 @@ const BED = require('../../../assets/world/home/props/bed.png');
 const RUG = require('../../../assets/world/home/props/rug.png');
 const SHELF = require('../../../assets/world/home/props/shelf.png');
 const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_frame.png');
+const SKIRTING = require('../../../assets/world/home/props/skirting.png');
+/** The trimmed render's own aspect. __tests__/home_surfaces.test.ts holds it. */
+const SKIRTING_ASPECT = 633 / 35;
 
 /**
  * Window sun/moon geometry, as FRACTIONS of the aperture.
@@ -196,7 +199,7 @@ function RenderedWindow({
  * ambient-occlusion falloff down the wall into it. That falloff is a gradient,
  * not an edge, so it adds depth without adding a line.
  */
-function WallMillwork({ floorTop, night }: { floorTop: number; night: boolean }) {
+function WallMillwork({ floorTop, night, zIndex }: { floorTop: number; night: boolean; zIndex: number }) {
   return (
     <LinearGradient
       colors={
@@ -204,7 +207,7 @@ function WallMillwork({ floorTop, night }: { floorTop: number; night: boolean })
           ? ['rgba(24,32,74,0)', 'rgba(16,22,58,0.34)']
           : ['rgba(197,139,78,0)', 'rgba(140,86,42,0.22)']
       }
-      style={[styles.wainscot, { top: floorTop - 178, height: 178 }]}
+      style={[styles.wainscot, { zIndex, top: floorTop - 178, height: 178 }]}
     />
   );
 }
@@ -787,12 +790,24 @@ export function HomeScene({
         {has('home_rug') && <Rug groundY={groundY} night={night} scale={propScale} />}
       </WorldLayer>
 
+      {/*
+        EVERYTHING IN THIS LAYER IS WALL, AND WALL HAS AN ORDER.
+
+        It went from all-code-drawn to holding a rendered skirting board, and a
+        WorldObject carries a baseline-derived zIndex while a plain View
+        carries none -- so every one of these would have lost to it, and the
+        wash, the ceiling trim and the falloff would have disappeared behind a
+        strip of moulding. That is the same defect that put Town's shop sign
+        behind its own shopfront, and layer_stacking caught this one before it
+        ever rendered. Back to front: wash, ceiling trim, falloff, skirting.
+      */}
       <WorldLayer name="distant">
         <Animated.View
           pointerEvents="none"
           style={[
             styles.lightPool,
             {
+              zIndex: 1,
               top: chromeBottom + 18,
               height: Math.max(270, groundY - chromeBottom + 28),
               // Daylight only. After dark the light source is the lamp, and a
@@ -816,14 +831,29 @@ export function HomeScene({
             style={styles.fill}
           />
         </Animated.View>
-        <View style={[styles.ceilingTrim, { top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodSoft, opacity: night ? 0.34 : 0.26 }]} />
-        <WallMillwork floorTop={floorTop} night={night} />
+        <View style={[styles.ceilingTrim, { zIndex: 2, top: chromeBottom + 20, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodSoft, opacity: night ? 0.34 : 0.26 }]} />
+        <WallMillwork floorTop={floorTop} night={night} zIndex={3} />
         {/*
-          The one line where wall meets floor. The white glint that used to sit
-          3px under it made the skirting read as two thin stripes rather than
-          one solid piece of trim, which is half of the barcode this wall was.
+          The one line where wall meets floor -- and it is a MOULDING now, not
+          a 14pt bar of flat colour at two thirds opacity.
+
+          The wall is the flattest surface in the game: measured off a clean
+          column it varies by almost nothing, and it met the floor at a colour
+          change. A skirting board is the cheapest fix available and the most
+          load-bearing one, because it draws the corner: it gives the floor an
+          edge to stop at and puts a lit horizontal line straight across the
+          dead band. Rendered from the same pack as the tray in front of it,
+          and in the same camera-facing frame, so it comes out level.
         */}
-        <View style={[styles.baseboard, { top: floorTop - 21, backgroundColor: night ? DIORAMA.woodNight : DIORAMA.woodDeep }]} />
+        <WorldObject
+          source={SKIRTING}
+          left={-24}
+          top={floorTop - (width + 48) / SKIRTING_ASPECT}
+          width={width + 48}
+          height={(width + 48) / SKIRTING_ASPECT}
+          night={night}
+          depth={0.30}
+        />
       </WorldLayer>
 
       <WorldLayer name="landmark">
@@ -933,7 +963,6 @@ const styles = StyleSheet.create({
    * bar edge to edge across the room, and with the ceiling line above it the
    * scene read as three stacked stripes rather than as a space.
    */
-  baseboard: { position: 'absolute', left: 0, right: 0, height: 14, opacity: 0.66 },
   wainscot: { position: 'absolute', left: 0, right: 0 },
   /*
    * Gradients, not filled shapes. The first cut of the lamp glow used solid

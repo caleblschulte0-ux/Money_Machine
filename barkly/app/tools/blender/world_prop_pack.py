@@ -168,6 +168,28 @@ def torus(name, loc, major_radius, minor_radius, mat, scale=(1, 1, 1), rotation=
     return obj
 
 
+def camera_yaw():
+    """The camera's own yaw, so a WIDE prop can cancel it.
+
+    An orthographic camera looking in from (3.0, -10.8, 4.5) is turned about
+    15.6 degrees off the X axis, so anything long and horizontal -- a tray, a
+    horizon -- projects as a slanted bar. Build it rotated by this and it comes
+    out level. Derived from CAMERA_LOCATION, never typed as a number, so moving
+    the camera moves these props with it instead of leaving a stale literal.
+    """
+    return math.atan2(CAMERA_LOCATION[0], -CAMERA_LOCATION[1])
+
+
+def facing(theta):
+    """(x, y) -> (x, y) rotated into the camera-facing frame."""
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+
+    def turn(x, y):
+        return (x * cos_t - y * sin_t, x * sin_t + y * cos_t)
+
+    return turn
+
+
 def contact_shadow(rx, ry, z=0.045):
     shadow = material("Contact shadow", "#311E18", roughness=1.0, coat=0.0)
     return sphere("contact_shadow", (0, 0.18, z), (rx, ry, 0.035), shadow)
@@ -286,6 +308,135 @@ def park_hedge():
         sphere(f"hedge_{i}", (x, 0, 0.72 + 0.07 * (i % 2)), (0.61, 0.50, 0.58), leaf if i % 2 else leaf_light)
 
 
+# ---------------------------------------------------------------------------
+# GROUND COVER.
+#
+# Every OBJECT in this game is a render and every SURFACE those objects stand
+# on was a colour fill. Measured off a screenshot: the town pavement varies by
+# a standard deviation of 4.6 across a whole band, the town sky by 4.3, the
+# home floor by 22, the park grass by 28 -- which is another way of saying they
+# are painted, and it is why a hand-modelled dog reads as standing on green
+# construction paper.
+#
+# The answer is the same one the props gave: model it. Not as a tiling texture
+# -- an orthographic camera at this yaw cannot be made to tile seamlessly
+# without fighting it -- but as SCATTER. Small pieces of ground cover placed at
+# several depths do the work a texture would, they cost almost nothing, and
+# they scale fluidly because the scene places them by fraction.
+# ---------------------------------------------------------------------------
+
+
+def _blades(count, seed, spread, height, mats, lean=0.30, thickness=0.030, flatten=0.34):
+    """A fan of tapered blades from one root.
+
+    A blade is a cone, not a cylinder: the taper is the whole read at this
+    size. It is also FLAT -- scaled to about a third across its lean axis --
+    because a cone of revolution renders as a spike, and the first pass came
+    out as a bed of little green traffic bollards. They lean away from centre
+    by an amount that grows with distance from it, which is what stops a tuft
+    looking like a shaving brush.
+    """
+    for i in range(count):
+        # Deterministic pseudo-scatter. Real randomness would make every
+        # re-render a different picture and every diff a lie.
+        t = (i * 2.39996 + seed) % 1.0
+        x = (t - 0.5) * 2 * spread
+        y = ((i * 0.7548 + seed * 3) % 1.0 - 0.5) * spread * 0.55
+        h = height * (0.55 + 0.45 * ((i * 0.4771 + seed) % 1.0))
+        tilt = lean * (x / max(spread, 1e-6)) + 0.12 * ((i % 3) - 1)
+        blade = cone(
+            f"blade_{seed}_{i}",
+            (x + math.sin(tilt) * h * 0.25, y, h * 0.5),
+            thickness * (0.85 + 0.3 * (i % 2)),
+            0.0035,
+            h,
+            mats[i % len(mats)],
+            rotation=(0, tilt, 0),
+            vertices=10,
+        )
+        blade.scale = (1.0, flatten, 1.0)
+
+
+def park_grass_tuft():
+    """A small tuft, for scattering across the mid-ground."""
+    mid = material("Grass mid", "#4FBE4A", roughness=0.86)
+    light = material("Grass light", "#7BDF5A", roughness=0.82)
+    deep = material("Grass deep", "#2E8C36", roughness=0.88)
+    _blades(13, 0.13, 0.36, 0.86, (mid, light, deep, mid), lean=0.34)
+
+
+def park_grass_clump():
+    """A big clump for the FOREGROUND, where it crosses the bottom edge.
+
+    Deliberately darker and coarser than the tuft: foreground cover is closer
+    to the camera than the key light's falloff, and a foreground that matches
+    the mid-ground in value is a foreground that does not read as one.
+    """
+    deep = material("Clump deep", "#2A7F33", roughness=0.88)
+    mid = material("Clump mid", "#3EA342", roughness=0.86)
+    dark = material("Clump dark", "#1E6128", roughness=0.90)
+    _blades(23, 0.41, 0.82, 1.60, (deep, mid, dark, deep, mid), lean=0.46, thickness=0.040)
+
+
+def park_wildflowers():
+    """A tuft with three heads on it, so the scatter is not all one object."""
+    mid = material("Flower stem", "#4FBE4A", roughness=0.86)
+    deep = material("Flower stem deep", "#2E8C36", roughness=0.88)
+    petal = material("Flower petal", "#FFD84D", roughness=0.74)
+    petal_b = material("Flower petal pale", "#FFF0B0", roughness=0.74)
+    _blades(11, 0.29, 0.32, 0.72, (mid, deep, mid), lean=0.34)
+    # Small FLAT heads on thin stems. Domes on thick stems are mushrooms, which
+    # is what the first pass grew.
+    for i, (x, z, mat) in enumerate(((-0.18, 0.70, petal), (0.08, 0.86, petal_b), (0.24, 0.60, petal))):
+        cylinder(f"stem_{i}", (x, 0.02, z * 0.5), 0.013, z, mid)
+        sphere(f"head_{i}", (x, 0.02, z), (0.085, 0.080, 0.030), mat)
+        sphere(f"eye_{i}", (x, -0.02, z + 0.018), (0.030, 0.028, 0.016), deep)
+
+
+def park_treeline():
+    """The distant edge of the park.
+
+    Sky met grass at a hard colour change with nothing between them, which is
+    the other half of why the field read flat: no horizon, no distance, just
+    two fills touching. This is a low mass of canopies to sit ON that line.
+
+    They OVERLAP heavily on purpose. A first pass spaced them so each canopy
+    kept its own outline and it rendered as a row of eggs -- a distant treeline
+    is one silhouette with a bumpy top, not a line of individual trees, and the
+    moment you can count them they stop being far away. A darker rank behind
+    the front one gives the mass some depth without giving it detail.
+    """
+    far = material("Treeline far", "#63A857", roughness=0.90)
+    far_b = material("Treeline far b", "#74B863", roughness=0.90)
+    far_c = material("Treeline far c", "#54964E", roughness=0.90)
+    back = material("Treeline back", "#4A8749", roughness=0.92)
+
+    # A horizon has to be LEVEL, and this camera is yawed, so a bar built along
+    # world X renders as a slope. Built in the camera-facing frame instead --
+    # the same cancellation the care tray uses.
+    turn = facing(camera_yaw())
+
+    # The rank behind: fewer, taller, darker, and set back so the light drops.
+    for i in range(9):
+        h = 0.62 + 0.20 * ((i * 0.6180) % 1.0)
+        x, y = turn(-2.85 + i * 0.72, 0.34)
+        sphere(f"back_{i}", (x, y, h * 0.72), (0.52, 0.30, h * 0.62), back)
+
+    mats = (far, far_b, far_c, far_b, far, far_c)
+    for i in range(17):
+        h = 0.46 + 0.24 * ((i * 0.6180) % 1.0)
+        x, y = turn(-3.05 + i * 0.38, 0.04 * ((i % 3) - 1))
+        sphere(f"canopy_{i}", (x, y, h * 0.66), (0.40, 0.28, h * 0.60), mats[i % len(mats)])
+
+    # Closes the bottom so the mass sits ON the ground rather than hovering
+    # over a gap between its own lobes. Eleven overlapping lobes rather than one
+    # long ellipsoid, because a single wide sphere cannot be turned -- scaling
+    # it on X and rotating it are not the same operation.
+    for i in range(13):
+        x, y = turn(-3.10 + i * 0.52, 0.06)
+        sphere(f"skirt_{i}", (x, y, 0.13), (0.34, 0.30, 0.19), far_c)
+
+
 def storefront(accent_name, body_hex, edge_hex, awning_hex):
     body = material(f"{accent_name} stucco", body_hex, roughness=0.62, coat=0.03)
     edge = material(f"{accent_name} edge", edge_hex, roughness=0.58, coat=0.03)
@@ -319,6 +470,88 @@ def storefront(accent_name, body_hex, edge_hex, awning_hex):
     for i in range(7):
         x = -1.56 + i * 0.52
         cube(f"awning_{i}", (x, -0.72, 3.10), (0.25, 0.58, 0.15), awning if i % 2 == 0 else cream, 0.10, (math.radians(7), 0, 0))
+
+
+def town_rooftops():
+    """The town behind the town.
+
+    Measured off a screenshot, the town sky varies by a standard deviation of
+    4.3 across a whole band -- it is one fill, and the shopfronts stand in front
+    of nothing. This is the next street over: a run of roofs, chimneys and a
+    water tower, built in the camera-facing frame so it comes out level, and
+    kept to a narrow value range so it reads as distance, not as more town.
+    """
+    turn = facing(camera_yaw())
+    # Distance desaturates toward the sky, but not to ONE hue. The first pass
+    # was five shades of the same blue-grey and rendered as a mountain range --
+    # pitched roofs on a monochrome run read as peaks. A little warm in the
+    # walls and a little terracotta in the roofs is all it takes to make the
+    # same silhouette read as buildings.
+    slate = material("Roof slate", "#8C7E96", roughness=0.86)
+    slate_b = material("Roof tile", "#A2818A", roughness=0.86)
+    wall = material("Far wall", "#9AAAC6", roughness=0.84)
+    wall_b = material("Far wall warm", "#BCAFB2", roughness=0.84)
+    trim = material("Far trim", "#6E82A2", roughness=0.86)
+
+    blocks = (
+        (-3.05, 0.62, 0.86, wall, slate),
+        (-2.30, 0.48, 0.62, wall_b, slate_b),
+        (-1.62, 0.74, 1.02, wall, slate_b),
+        (-0.92, 0.54, 0.70, wall_b, slate),
+        (-0.16, 0.66, 0.92, wall, slate),
+        (0.60, 0.46, 0.58, wall_b, slate_b),
+        (1.30, 0.72, 0.98, wall, slate_b),
+        (2.06, 0.52, 0.66, wall_b, slate),
+        (2.78, 0.62, 0.84, wall, slate),
+    )
+    theta = camera_yaw()
+    for i, (x, half, h, body, roof) in enumerate(blocks):
+        bx, by = turn(x, 0.0)
+        cube(f"block_{i}", (bx, by, h * 0.5), (half, 0.30, h * 0.5), body, 0.05, rotation=(0, 0, theta))
+        rx, ry = turn(x, -0.02)
+        cube(f"roof_{i}", (rx, ry, h + 0.055), (half * 1.06, 0.34, 0.06), roof, 0.03, rotation=(0, 0, theta))
+        # Half of them get a pitched roof. A run of nothing but flat slabs is a
+        # row of warehouses, and a run of nothing but gables is a toy village.
+        if i % 2 == 0:
+            px, py = turn(x, -0.01)
+            cone(f"gable_{i}", (px, py, h + 0.22), math.hypot(half * 1.06, 0.34), 0.0, 0.52, roof,
+                 rotation=(0, 0, theta + math.radians(45)), vertices=4)
+        if i % 3 == 1:
+            cx, cy = turn(x + half * 0.5, -0.04)
+            cube(f"chimney_{i}", (cx, cy, h + 0.20), (0.07, 0.07, 0.15), trim, 0.02, rotation=(0, 0, theta))
+
+    # One landmark, so the run is not nine of the same thing.
+    tx, ty = turn(1.86, -0.06)
+    cylinder("tower_leg_a", (tx - 0.10, ty, 0.52), 0.035, 1.04, trim)
+    cylinder("tower_leg_b", (tx + 0.10, ty, 0.52), 0.035, 1.04, trim)
+    cylinder("tower_tank", (tx, ty, 1.20), 0.20, 0.30, slate_b)
+    cone("tower_cap", (tx, ty, 1.44), 0.22, 0.02, 0.18, trim)
+
+
+def town_kerb():
+    """Where the pavement stops.
+
+    The pavement was one fill at sd 4.6 with three hairlines drawn on it
+    pretending to be joints, and it met the road at a colour change. A kerb is
+    the one piece of street furniture that says which surface you are on, and
+    it is a long horizontal object, so it is built in the camera-facing frame
+    like the treeline and the tray.
+    """
+    turn = facing(camera_yaw())
+    theta = camera_yaw()
+    stone = material("Kerb stone", "#D9C9A6", roughness=0.80)
+    stone_b = material("Kerb stone b", "#CBB994", roughness=0.82)
+    edge = material("Kerb edge", "#A48F6B", roughness=0.84)
+    for i in range(14):
+        x = -3.15 + i * 0.46
+        bx, by = turn(x, 0.0)
+        cube(f"slab_{i}", (bx, by, 0.11), (0.215, 0.20, 0.11), stone if i % 2 else stone_b, 0.03,
+             rotation=(0, 0, theta))
+    ex, ey = turn(0.0, 0.20)
+    for i in range(14):
+        x = -3.15 + i * 0.46
+        fx, fy = turn(x, 0.19)
+        cube(f"face_{i}", (fx, fy, 0.05), (0.215, 0.02, 0.055), edge, 0.01, rotation=(0, 0, theta))
 
 
 def town_fountain():
@@ -469,6 +702,35 @@ def beach_palm():
         cube(f"frond_{i}", (crown[0] + math.sin(math.radians(angle)) * 0.76, -0.02, crown[2] + math.cos(math.radians(angle)) * 0.24), (0.92, 0.11, 0.16), leaf_light if i % 2 else leaf, 0.12, (0, math.radians(angle * 0.18), math.radians(angle)))
 
 
+def home_skirting():
+    """The one thing every room has and this one did not.
+
+    The home wall is a single fill and it meets the floor at a colour change,
+    which is why the room reads as a backdrop with furniture in front of it
+    rather than as a room. A skirting board is the cheapest possible fix and
+    the most load-bearing: it draws the corner, it gives the floor an edge to
+    stop at, and it puts a lit horizontal line right across the flattest band
+    in the scene.
+
+    Camera-facing frame, like the tray it shares a room with, so it renders as
+    a level line instead of a slope.
+    """
+    turn = facing(camera_yaw())
+    theta = camera_yaw()
+    board = material("Skirting board", "#E7C79A", roughness=0.62, coat=0.04)
+    board_lit = material("Skirting lit", "#F6DDB6", roughness=0.56, coat=0.06)
+    shadow = material("Skirting shadow", "#A87642", roughness=0.74)
+
+    for i in range(16):
+        x = -3.20 + i * 0.42
+        bx, by = turn(x, 0.0)
+        cube(f"board_{i}", (bx, by, 0.16), (0.212, 0.05, 0.16), board, 0.02, rotation=(0, 0, theta))
+        cx, cy = turn(x, -0.012)
+        cube(f"cap_{i}", (cx, cy, 0.315), (0.212, 0.062, 0.028), board_lit, 0.018, rotation=(0, 0, theta))
+        sx, sy = turn(x, -0.055)
+        cube(f"scotia_{i}", (sx, sy, 0.028), (0.212, 0.022, 0.028), shadow, 0.012, rotation=(0, 0, theta))
+
+
 def home_rug():
     gold = material("Rug gold", "#FAB521", roughness=0.92)
     gold_light = material("Rug pile light", "#FFD973", roughness=0.94)
@@ -529,26 +791,19 @@ def home_care_tray():
     shine = material("Tray shine", "#F3C078", roughness=0.40, coat=0.12)
     brass = material("Tray brass", "#EFBA4A", roughness=0.30, metallic=0.72)
 
-    # The camera's own yaw, cancelled. atan(3.0 / 10.8) from CAMERA_LOCATION --
-    # derived, never typed as a number, so moving the camera moves the tray with
-    # it instead of leaving a stale literal behind.
-    theta = math.atan2(CAMERA_LOCATION[0], -CAMERA_LOCATION[1])
-    cos_t, sin_t = math.cos(theta), math.sin(theta)
+    # The camera's own yaw, cancelled. See camera_yaw().
+    theta = camera_yaw()
+    turn = facing(theta)
 
     def place(name, loc, scale, mat, bevel_width=0.10):
         x, y, z = loc
-        return cube(
-            name,
-            (x * cos_t - y * sin_t, x * sin_t + y * cos_t, z),
-            scale,
-            mat,
-            bevel_width,
-            rotation=(0, 0, theta),
-        )
+        tx, ty = turn(x, y)
+        return cube(name, (tx, ty, z), scale, mat, bevel_width, rotation=(0, 0, theta))
 
     def stud(name, loc, scale, mat):
         x, y, z = loc
-        return sphere(name, (x * cos_t - y * sin_t, x * sin_t + y * cos_t, z), scale, mat)
+        tx, ty = turn(x, y)
+        return sphere(name, (tx, ty, z), scale, mat)
 
     # No contact shadow: the app draws its own behind this (styles.dockShadow).
     #
@@ -843,6 +1098,11 @@ def collar(name, hex_body, hex_edge):
 BUILDERS = {
     "park/tree": (park_tree, 6.4, (0, 0, 2.15), {"displayWidth": 190, "anchor": "bottom"}),
     "park/bench": (park_bench, 4.7, (0, 0, 1.0), {"displayWidth": 136, "anchor": "bottom"}),
+    "park/grass_tuft": (park_grass_tuft, 1.9, (0, 0, 0.32), {"displayWidth": 46, "anchor": "bottom"}),
+    "park/grass_clump": (park_grass_clump, 3.6, (0, 0, 0.62), {"displayWidth": 130, "anchor": "bottom"}),
+    "park/wildflowers": (park_wildflowers, 2.0, (0, 0, 0.38), {"displayWidth": 50, "anchor": "bottom"}),
+    # Wide and shallow: it is a horizon, so the ortho box is sized to the run.
+    "park/treeline": (park_treeline, 6.6, (0, 0, 0.42), {"displayWidth": 420, "anchor": "bottom"}),
     "park/hedge": (park_hedge, 4.4, (0, 0, 0.72), {"displayWidth": 154, "anchor": "bottom"}),
     "town/store_coral": (lambda: storefront("Coral", "#E14B45", "#982D32", "#FF6349"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
     "town/store_aqua": (lambda: storefront("Aqua", "#37B4CD", "#216E84", "#3ED3EB"), 6.6, (0, 0, 2.30), {"displayWidth": 190, "anchor": "bottom"}),
@@ -850,6 +1110,10 @@ BUILDERS = {
     # coral's and aqua's 0.40) -- a warm key on a lilac washes it toward grey,
     # so the base carries more chroma than its neighbours need to.
     "town/store_violet": (lambda: storefront("Violet", "#8A3FD6", "#4F2189", "#B871F0"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
+    # Wide horizon bands: the ortho box is sized to the run, and both are built
+    # in the camera-facing frame so they render level rather than sloped.
+    "town/rooftops": (town_rooftops, 6.8, (0, 0, 0.62), {"displayWidth": 440, "anchor": "bottom"}),
+    "town/kerb": (town_kerb, 6.8, (0, 0, 0.18), {"displayWidth": 440, "anchor": "bottom"}),
     "town/fountain": (town_fountain, 4.4, (0, 0, 1.05), {"displayWidth": 114, "anchor": "bottom"}),
     "town/lamp": (town_lamp, 5.4, (0, 0, 2.05), {"displayWidth": 70, "anchor": "bottom"}),
     "town/planter": (town_planter, 3.8, (0, 0, 0.9), {"displayWidth": 74, "anchor": "bottom"}),
@@ -860,6 +1124,7 @@ BUILDERS = {
     "beach/palm": (beach_palm, 6.0, (0, 0, 2.20), {"displayWidth": 142, "anchor": "bottom"}),
     "park/dig_mound": (park_dig_mound, 4.2, (0, 0, 0.36), {"displayWidth": 118, "anchor": "bottom"}),
     "beach/sand_mound": (beach_sand_mound, 4.2, (0, 0, 0.36), {"displayWidth": 118, "anchor": "bottom"}),
+    "home/skirting": (home_skirting, 6.8, (0, 0, 0.18), {"displayWidth": 440, "anchor": "bottom"}),
     "home/rug": (home_rug, 4.5, (0, 0, 0.42), {"displayWidth": 188, "anchor": "bottom"}),
     # Wide and shallow, so the ortho box is sized to the long axis rather than
     # to a tall prop's height, or the tray renders as a sliver in a big canvas.
