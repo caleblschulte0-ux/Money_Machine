@@ -73,6 +73,16 @@
       "displayWidth": 142,
       "anchor": "bottom"
     },
+    "park/dig_mound": {
+      "file": "park/dig_mound.png",
+      "displayWidth": 118,
+      "anchor": "bottom"
+    },
+    "beach/sand_mound": {
+      "file": "beach/sand_mound.png",
+      "displayWidth": 118,
+      "anchor": "bottom"
+    },
     "home/rug": {
       "file": "home/rug.png",
       "displayWidth": 188,
@@ -106,6 +116,16 @@
     "item/toy_rope": {
       "file": "item/toy_rope.png",
       "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/kit_bowl": {
+      "file": "item/kit_bowl.png",
+      "displayWidth": 76,
+      "anchor": "center"
+    },
+    "item/kit_stick": {
+      "file": "item/kit_stick.png",
+      "displayWidth": 82,
       "anchor": "center"
     },
     "item/collar_red": {
