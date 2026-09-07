@@ -58,6 +58,11 @@
       "displayWidth": 440,
       "anchor": "bottom"
     },
+    "town/paving": {
+      "file": "town/paving.png",
+      "displayWidth": 440,
+      "anchor": "bottom"
+    },
     "town/kerb": {
       "file": "town/kerb.png",
       "displayWidth": 440,
@@ -111,6 +116,11 @@
     "beach/sand_mound": {
       "file": "beach/sand_mound.png",
       "displayWidth": 118,
+      "anchor": "bottom"
+    },
+    "home/panelling": {
+      "file": "home/panelling.png",
+      "displayWidth": 440,
       "anchor": "bottom"
     },
     "home/skirting": {
