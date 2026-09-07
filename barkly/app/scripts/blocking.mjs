@@ -119,8 +119,36 @@ for (const place of PLACES) {
     const sprite = document.querySelector('[data-testid="barkly-sprite"]');
     if (!scene) return null;
     const rows = [];
+    /*
+     * A COMPOSITE IS ONE PROP.
+     *
+     * Every image in the scene used to become its own candidate, and the rule
+     * below -- a prop wholly inside another at the same distance is clutter --
+     * is right about siblings and wrong about parts. Home's window is a frame
+     * image with a landscape behind its glass; the landscape IS inside the
+     * frame, deliberately, and the gate flagged it the moment that landscape
+     * stopped being SVG and became a render.
+     *
+     * So anything marked `world-composite` contributes ONE box: the union of
+     * its own images. The rule keeps all of its force between props, which is
+     * where the clutter it exists to catch actually happens, and a prop built
+     * out of several renders stops being read as several props.
+     */
+    const composites = [...scene.querySelectorAll('[data-testid="world-composite"]')];
+    for (const group of composites) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const img of group.querySelectorAll('img')) {
+        const r = img.getBoundingClientRect();
+        if (r.width < 8 || r.height < 8) continue;
+        x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y);
+        x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom);
+      }
+      if (x0 === Infinity) continue;
+      rows.push({ x: Math.round(x0), y: Math.round(y0), w: Math.round(x1 - x0), h: Math.round(y1 - y0), base: Math.round(y1) });
+    }
     for (const img of scene.querySelectorAll('img')) {
       if (sprite && sprite.contains(img)) continue;
+      if (composites.some((g) => g.contains(img))) continue;
       const r = img.getBoundingClientRect();
       if (r.width < 8 || r.height < 8) continue;
       rows.push({ x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), base: Math.round(r.bottom) });

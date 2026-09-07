@@ -666,3 +666,23 @@ and the file's own aspect.** The dig mound shipped 22% squashed off a typed
 height; the vista shipped squashed the other way off `resizeMode="stretch"`
 into a nearly square pane; the clouds shipped at intrinsic size off an inset
 style. Same defect, three different disguises.
+
+### A composite is one prop
+
+Wiring the vista made `scripts/blocking.mjs` fail Home, and it was right about
+the geometry: a 116x48 box sitting 100% inside a 190x200 box at the same
+distance. That is the rule which catches genuine clutter — the beach shell that
+landed wholly inside a dune — and it had never seen a window before, because
+until now the thing behind the glass was SVG and the gate only measures images.
+
+The rule is correct. Its model of a prop was not. A window is a frame *and*
+what is behind its glass, and the parts of one object are not rivals to each
+other. The collector now takes anything marked `world-composite` as a single
+union box, so the rule keeps all its force between props — which is where the
+clutter it exists to catch actually happens — and stops reading one prop's
+parts as several props.
+
+Fixed that way rather than by exempting the window by name: the next composite
+(a shopfront with its sign, a screen with a picture on it) says the same thing
+and gets the same treatment. Verified in both directions — the beach shell put
+back at `fx 0.94` is still caught, and Home passes.

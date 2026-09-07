@@ -74,7 +74,22 @@ function RenderedWindow({
   const horizon = apertureH * 0.62;
 
   return (
-    <View style={[styles.windowWrap, { top, left, width, height }]}>
+    /*
+      ONE PROP, several images.
+
+      `scripts/blocking.mjs` refuses a prop that stands wholly inside another
+      at the same distance -- correctly, because that is clutter rather than
+      depth. A window and the view through its glass are the exception: the
+      vista IS inside the frame, on purpose, and the gate flagged it the
+      moment the vista stopped being SVG and became a render.
+
+      The fix is not an exemption by name. `world-composite` tells the gate
+      that everything under here is one object, so it measures the union once
+      instead of treating a window's own parts as rivals. Any future composite
+      -- a shopfront with a sign, a screen with a picture on it -- says the
+      same thing and gets the same treatment.
+    */
+    <View testID="world-composite" style={[styles.windowWrap, { top, left, width, height }]}>
       <View
         style={[
           styles.windowCastShadow,
