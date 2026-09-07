@@ -48,10 +48,12 @@
     "voice:check": "node scripts/voice-bank.mjs check",
     "check:voice": "node scripts/voice-check.mjs",
     "check:nav": "npm run build:pages && node scripts/nav-state-check.mjs --artifact dist/playtest/index.html",
-    "build:pages": "node scripts/build-artifact.mjs --out dist/index.html && EXPO_PUBLIC_BARKLY_PLAYTEST=always node scripts/build-artifact.mjs --out dist/playtest/index.html",
+    "build:pages": "node scripts/build-pages.mjs --out dist",
     "check:gate": "node scripts/no-playtest-check.mjs dist/index.html dist/playtest/index.html",
     "check:playtest": "node scripts/playtest-acceptance.mjs http://localhost:8099/playtest/",
-    "check:speech": "node scripts/speech-fit-check.mjs"
+    "check:speech": "node scripts/speech-fit-check.mjs",
+    "build:pages:inline": "node scripts/build-artifact.mjs --out dist/index.html && EXPO_PUBLIC_BARKLY_PLAYTEST=always node scripts/build-artifact.mjs --out dist/playtest/index.html",
+    "perf": "node scripts/perf-review.mjs --site dist"
   },
   "private": true,
   "jest": {

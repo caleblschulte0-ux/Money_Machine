@@ -67,3 +67,7 @@ art-review/home-architecture/
 
 # Blender driver imports leave these behind when a prop is re-rendered locally.
 tools/blender/__pycache__/
+
+# perf-review writes its report here; the numbers belong in a commit message or
+# a pull request, not in the tree.
+art-review/performance/

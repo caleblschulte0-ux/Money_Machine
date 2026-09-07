@@ -67,21 +67,25 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      # The single-file build inlines every asset as a data: URI, including the
-      # ~180 recordings of his voice. That is why the deployed page sounds like
-      # Barkly with nothing running behind it.
-      - name: Build the player experience
-        run: node scripts/build-artifact.mjs --out dist/index.html
-
-      - name: Build the playtest experience
-        env:
-          EXPO_PUBLIC_BARKLY_PLAYTEST: always
-        run: node scripts/build-artifact.mjs --out dist/playtest/index.html
-
-      # Pages serves this repo at /Money_Machine/, and an underscore-prefixed
-      # path would be eaten by Jekyll. Nothing here needs Jekyll.
-      - name: Disable Jekyll
-        run: touch dist/.nojekyll
+      # A WEBSITE, NOT ONE 15MB LINE.
+      #
+      # This used to publish two single-file builds with every asset inlined as
+      # a data: URI. Self-contained and shareable, and the wrong shape for a
+      # URL: a browser cannot paint any of it until all of it has arrived.
+      # Measured over throttled connections, time until there is a dog on the
+      # screen was 7.2s on fast 4G, 25.8s on slow 4G and 79s on 3G -- a blank
+      # screen throughout, because there is nothing to show until the last byte.
+      #
+      # Split, the same numbers are 0.8s, 2.3s and 6.8s. It is not a rendering
+      # win (the app holds 60fps either way): 1.8MB gets a playable dog on
+      # screen and the other 13MB, nearly all of it his voice recordings,
+      # streams in behind him and caches.
+      #
+      # Still no proxy and still offline: the assets come from this origin.
+      # build-pages.mjs also writes .nojekyll, because Pages would otherwise
+      # hand the underscore-prefixed _expo/ directory to Jekyll.
+      - name: Build both experiences as a site
+        run: node scripts/build-pages.mjs --out dist
 
       - name: Confirm the root build has no playtest controls
         run: node scripts/no-playtest-check.mjs dist/index.html dist/playtest/index.html
@@ -91,11 +95,19 @@ jobs:
       # at him: every surface opens, every preset loads, a loaded save survives
       # a refresh. Served over HTTP because the app persists through
       # localStorage, which does not behave the same on a file:// origin.
+      #
+      # Served under /Money_Machine/ rather than at the root, because that is
+      # where Pages actually serves it and the difference is now load-bearing:
+      # a split build references its own assets, so a path mistake shows up as a
+      # 404 on every image instead of as nothing at all. Testing at the root
+      # would pass a build that is broken in production.
       - name: Play the build
         run: |
-          python3 -m http.server 8099 --directory dist &
-          for i in $(seq 1 20); do curl -sf http://localhost:8099/playtest/ >/dev/null && break; sleep 1; done
-          node scripts/playtest-acceptance.mjs http://localhost:8099/playtest/
+          mkdir -p site/Money_Machine
+          cp -r dist/. site/Money_Machine/
+          python3 -m http.server 8099 --directory site &
+          for i in $(seq 1 20); do curl -sf http://localhost:8099/Money_Machine/playtest/ >/dev/null && break; sleep 1; done
+          node scripts/playtest-acceptance.mjs http://localhost:8099/Money_Machine/playtest/
 
       - uses: actions/upload-pages-artifact@v3
         with:
