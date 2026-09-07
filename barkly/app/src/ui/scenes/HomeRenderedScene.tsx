@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, ColorValue, Easing, Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
+import { useReduceMotion } from '../motion';
 import { radius } from '../theme';
 import { BRASS, DIORAMA, ITEM } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
@@ -348,9 +349,14 @@ function HomeBiography({
  * which is what actually reads across a room as "outside is doing something".
  * Long and shallow on purpose; a fast or deep pulse reads as a screen fault.
  */
-function useSlowBreath(period: number): Animated.Value {
+function useSlowBreath(period: number, still = false): Animated.Value {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (still) {
+      v.stopAnimation();
+      v.setValue(0.4);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(v, { toValue: 1, duration: period, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
@@ -359,12 +365,12 @@ function useSlowBreath(period: number): Animated.Value {
     );
     loop.start();
     return () => loop.stop();
-  }, [v, period]);
+  }, [v, period, still]);
   return v;
 }
 
-function DustMotes({ left, top, width, height, night }: {
-  left: number; top: number; width: number; height: number; night: boolean;
+function DustMotes({ left, top, width, height, night, still }: {
+  left: number; top: number; width: number; height: number; night: boolean; still: boolean;
 }) {
   // Fixed, not random: a room that re-shuffles its dust on every re-render is
   // a room that flickers.
@@ -380,6 +386,7 @@ function DustMotes({ left, top, width, height, night }: {
     <>
       {MOTES.map((m) => (
         <Mote
+          still={still}
           key={`${m.x}-${m.y}`}
           left={left + width * m.x}
           top={top + height * m.y}
@@ -395,12 +402,13 @@ function DustMotes({ left, top, width, height, night }: {
   );
 }
 
-function Mote({ left, top, radius, rise, drift, duration, delay, night }: {
+function Mote({ left, top, radius, rise, drift, duration, delay, night, still }: {
   left: number; top: number; radius: number; rise: number; drift: number;
-  duration: number; delay: number; night: boolean;
+  duration: number; delay: number; night: boolean; still: boolean;
 }) {
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (still) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(delay),
@@ -521,7 +529,8 @@ export function HomeScene({
    * This is the same order as the 3.6s sway on the trees outdoors, so the room
    * now changes on the timescale a person actually looks at it for.
    */
-  const daylight = useSlowBreath(4200);
+  const still = useReduceMotion();
+  const daylight = useSlowBreath(4200, still);
   const band = skyBand(hour);
   const night = band === 'night' || asleep;
   const has = (id: string) => upgrades.includes(id);
@@ -792,6 +801,7 @@ export function HomeScene({
           width={Math.max(120, width - wallInset * 2)}
           height={Math.max(150, floorTop - wallTop)}
           night={night}
+          still={still}
         />
       </WorldLayer>
 

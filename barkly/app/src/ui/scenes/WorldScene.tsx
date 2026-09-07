@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { useReduceMotion } from '../motion';
 import { DIORAMA } from './artPalette';
 import type { SkyBand } from './CandyScenesV2';
 import { radius } from '../theme';
@@ -99,8 +100,21 @@ export function WorldScene({
   const scale = useRef(new Animated.Value(CAMERA.idle.scale)).current;
   const translateY = useRef(new Animated.Value(CAMERA.idle.y)).current;
   const target = CAMERA[motion];
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    /*
+     * The camera push is the one piece of this scene that is a textbook
+     * vestibular trigger -- the whole world scales and slides under a fixed
+     * HUD -- so it snaps rather than travels when the player has asked for
+     * less motion. Everything still ARRIVES at the same place, so nothing
+     * downstream has to know which mode it is in.
+     */
+    if (reduceMotion) {
+      scale.setValue(target.scale);
+      translateY.setValue(target.y);
+      return;
+    }
     const duration = motion === 'arrive' ? 420 : motion === 'sleep' ? 1200 : 360;
     Animated.parallel([
       Animated.timing(scale, {
@@ -116,7 +130,7 @@ export function WorldScene({
         useNativeDriver: true,
       }),
     ]).start();
-  }, [motion, scale, target.scale, target.y, translateY]);
+  }, [motion, reduceMotion, scale, target.scale, target.y, translateY]);
 
   // Values are deliberately restrained. This is a living camera, not a zoom
   // effect competing with Barkly or shifting the HUD.
@@ -196,9 +210,27 @@ export function WorldObject({
   if (flip) transforms.push({ scaleX: -1 });
   const position = { left, right, top, width, height } as const;
   const motion = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
 
+  /*
+   * REDUCE MOTION REACHED NOTHING THAT RENDERS.
+   *
+   * The app had a correct implementation of the setting -- and it lived in
+   * LivingScenes.tsx, which nothing had imported for a long time. Every loop
+   * that actually runs, this one included, started regardless. A player who
+   * asks their phone to stop moving things got a swaying world anyway.
+   *
+   * What stops is the WORLD: sway, bob, drifting light, the camera push. What
+   * does NOT stop is Barkly's own breathing and idle, because the setting is
+   * about vestibular triggers -- parallax, large scale moves -- and a pet
+   * frozen mid-breath reads as broken rather than as considerate.
+   */
   useEffect(() => {
-    if (!ambient) return;
+    if (!ambient || reduceMotion) {
+      motion.stopAnimation();
+      motion.setValue(0);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(motionDelay),
@@ -208,7 +240,7 @@ export function WorldObject({
     );
     loop.start();
     return () => loop.stop();
-  }, [ambient, motion, motionDelay]);
+  }, [ambient, motion, motionDelay, reduceMotion]);
 
   const ambientTransform = ambient === 'sway'
     ? [{ rotate: motion.interpolate({ inputRange: [0, 1], outputRange: ['-0.55deg', '0.55deg'] }) }]

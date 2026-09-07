@@ -103,7 +103,6 @@ export const DIORAMA = {
   ink: '#2B2119',
   inkSoft: '#574638',
   shadow: '#231A14',
-  shadowSoft: '#493526',
   cream: '#FFFBF0',
   paleCream: '#FFFBF0',
   butter: '#FFE97B',
@@ -112,10 +111,8 @@ export const DIORAMA = {
   coral: '#FF7D71',
   coralDeep: '#E52F23',
   coralLight: '#FFBBA4',
-  coralShine: '#FFEBE6',
   violet: '#B449DB',
   violetDeep: '#722497',
-  violetLight: '#E184F7',
   violetNight: '#67377C',
   aqua: '#47D3FF',
   aquaDeep: '#049AD0',
@@ -145,10 +142,8 @@ export const DIORAMA = {
 
   wallDayA: '#FFF9E8',
   wallDayB: '#FFD2A5',
-  wallDayEdge: '#E28D44',
   wallNightA: '#5650AC',
   wallNightB: '#6A5DA8',
-  wallNightEdge: '#3E3771',
 
   floorDayFar: '#EEC273',
   floorDayNear: '#BC6A31',
@@ -171,7 +166,6 @@ export const DIORAMA = {
   floorNightFar: '#5A4A8E',
   floorNightNear: '#3E3266',
   floorNightEdge: '#2A2145',
-  woodDay: '#8F5121',
   /*
    * The trim at night, moved into the same violet family as the wall and the
    * floor above.
@@ -220,7 +214,6 @@ export const DIORAMA = {
   parkHillDayLight: '#C2ED85',
   parkHillDayEdge: '#5C993D',
   parkHillNight: '#3E6335',
-  parkHillNightEdge: '#244123',
   parkGrassDay: '#5DCB3F',
   parkGrassDayLight: '#A9E873',
   parkGrassDayEdge: '#2F7C2E',
@@ -229,7 +222,6 @@ export const DIORAMA = {
   parkGrassNightEdge: '#19321F',
   parkTreeDay: '#43C22C',
   parkTreeDayLight: '#7EF447',
-  parkTreeDayShine: '#CDFFA4',
   parkTreeDayEdge: '#1D7F21',
   parkTreeNight: '#254B26',
   parkTreeNightLight: '#3E6940',
@@ -241,18 +233,7 @@ export const DIORAMA = {
   parkPathNightLight: '#AD9D6F',
   parkPathNightEdge: '#51442C',
 
-  townCoral: '#F47163',
-  townCoralLight: '#FFB7AC',
-  townCoralEdge: '#A23F38',
-  townBlue: '#42BEE2',
-  townBlueLight: '#B0E7F1',
   townBlueEdge: '#25829F',
-  townViolet: '#AC78C7',
-  townVioletLight: '#E0C2E6',
-  townVioletEdge: '#6A4780',
-  townCoralNight: '#774871',
-  townBlueNight: '#406193',
-  townVioletNight: '#6A4F8C',
   /*
    * The road is the single biggest surface in Town and it was a desaturated
    * warm grey (#BFB09F), which is why Town alone stayed at 34% dead-grey
@@ -292,7 +273,6 @@ export const DIORAMA = {
   townSidewalkDay: '#F4C562',
   townSidewalkDayFar: '#FFDC8A',
   townSidewalkDayNear: '#E0A543',
-  townSidewalkDayLight: '#FFE799',
   townSidewalkDayEdge: '#B98025',
   townSidewalkNight: '#6E5740',
   townSidewalkNightFar: '#87694C',
@@ -336,21 +316,13 @@ export const DIORAMA = {
   foamDayShade: '#CDF7FC',
   foamNight: '#A6C6D9',
   foamNightShade: '#5B88A6',
-  grassBeachDay: '#7EA846',
-  grassBeachLight: '#BEE06F',
-  grassBeachNight: '#374F31',
   starfish: '#FF8567',
 
-  pennantRed: '#FF706A',
-  pennantYellow: '#FFDB59',
-  pennantBlue: '#54D1FF',
-  pennantGreen: '#73ED86',
 
   glassNight: '#FFE189',
   glassNightEdge: '#AF7E19',
   glassDay: '#F0FBFF',
   glassDayEdge: '#79C2DD',
-  glassShine: '#F8F7F7',
 
   bedRim: '#7E42CD',
   bedWall: '#AE71F1',
@@ -358,13 +330,8 @@ export const DIORAMA = {
   bedEdge: '#502286',
 
   /** Small reusable accents used by scenery, never UI chrome. */
-  flowerPink: '#FF91BA',
-  flowerBlue: '#88DDFF',
-  flowerYellow: '#FFE57C',
   planter: '#FF8E54',
-  planterEdge: '#BA4118',
   signFace: '#FFF9DE',
-  signEdge: '#BC6E1C',
 } as const;
 
 /**

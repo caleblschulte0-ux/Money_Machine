@@ -20,9 +20,10 @@ import { chromium } from 'playwright';
 const place = process.argv[2] || 'home';
 const out = process.argv[3] || `/tmp/${place}.png`;
 const hour = Number(process.argv[4] || 14);
+const [vw, vh] = (process.argv[5] || '390x844').split('x').map(Number);
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: 2 });
 await page.addInitScript(`(() => {
   localStorage.setItem('barkly/profile/default/onboarding-v1', 'done');
   Date.prototype.getHours = function () { return ${hour}; };

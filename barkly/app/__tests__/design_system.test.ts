@@ -47,9 +47,10 @@ const ART = new Set([
   'StageProps.tsx',
   'Scenes.tsx',
   'PolishedScenes.tsx',
-  'LivingScenes.tsx',
-  'CandyScenes.tsx',
-  'depth.tsx',
+  // LivingScenes.tsx, CandyScenes.tsx and depth.tsx were exempted here until
+  // 2026-09-07, when it turned out nothing had imported any of them for a long
+  // time. An exemption for a file that does not exist is worse than none: it
+  // reads as a considered decision about live art.
 ]);
 
 function uiFiles(dir: string, out: string[] = []): string[] {

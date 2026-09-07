@@ -544,6 +544,20 @@ export default function BarklyRoom() {
     playSfx('pop');
     open(true);
   };
+  /*
+   * Sheets opened with a sound and closed in silence.
+   *
+   * `close.wav` was synthesised, bundled into every build and never played --
+   * the one clip of the nine with no call site. It is not decoration: an
+   * interaction that answers when you start it and says nothing when you finish
+   * it feels like it dropped the input, and this is a game a child taps at
+   * speed. Every sheet dismissal goes through here now, so it cannot be
+   * half-applied to some of them.
+   */
+  const closeSheet = (close: (v: boolean) => void) => {
+    playSfx('close');
+    close(false);
+  };
   const [packOpen, setPackOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [typed, setTyped] = useState('');
@@ -1480,11 +1494,11 @@ export default function BarklyRoom() {
       </KeyboardAvoidingView>
 
       <ContestSheet visible={barkly.pendingContest !== null} rules={barkly.pendingContest} onDone={(result) => void barkly.finishContest(result)} onClose={() => void barkly.finishContest(null)} />
-      <FoodSheet visible={foodOpen} onClose={() => setFoodOpen(false)} onOpenShop={() => openOnly(setStoreOpen)} wallet={barkly.wallet} hungry={snapshot.stats.hunger > 45} onFeed={(itemId) => { feel('act', 'eat'); void barkly.feed(itemId); }} />
-      {playtest && <PlaytestSheet visible={playtestOpen} onClose={() => setPlaytestOpen(false)} />}
-      <StoreSheet visible={storeOpen} onClose={() => setStoreOpen(false)} wallet={barkly.wallet} onBuy={(id) => { const r = barkly.buy(id); if (r?.ok) react('delight'); return r; }} onEquip={barkly.equip} devMode={barkly.devMode} />
-      <PackBookSheet visible={packOpen} onClose={() => setPackOpen(false)} profile={barkly.relationship} stash={barkly.stashItems} story={barkly.storyState} />
-      <AdventureSheet visible={planOpen} onClose={() => setPlanOpen(false)} adventure={barkly.adventure} />
+      <FoodSheet visible={foodOpen} onClose={() => closeSheet(setFoodOpen)} onOpenShop={() => openOnly(setStoreOpen)} wallet={barkly.wallet} hungry={snapshot.stats.hunger > 45} onFeed={(itemId) => { feel('act', 'eat'); void barkly.feed(itemId); }} />
+      {playtest && <PlaytestSheet visible={playtestOpen} onClose={() => closeSheet(setPlaytestOpen)} />}
+      <StoreSheet visible={storeOpen} onClose={() => closeSheet(setStoreOpen)} wallet={barkly.wallet} onBuy={(id) => { const r = barkly.buy(id); if (r?.ok) react('delight'); return r; }} onEquip={barkly.equip} devMode={barkly.devMode} />
+      <PackBookSheet visible={packOpen} onClose={() => closeSheet(setPackOpen)} profile={barkly.relationship} stash={barkly.stashItems} story={barkly.storyState} />
+      <AdventureSheet visible={planOpen} onClose={() => closeSheet(setPlanOpen)} adventure={barkly.adventure} />
       <EncounterSheet
         moment={barkly.activeEncounter ? momentFromEncounter(barkly.activeEncounter) : null}
         busy={busy}
@@ -1527,7 +1541,7 @@ export default function BarklyRoom() {
       />
       <SettingsSheet
         visible={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={() => closeSheet(setSettingsOpen)}
         memory={barkly.memorySnapshot()}
         stats={snapshot.stats}
         brain={{

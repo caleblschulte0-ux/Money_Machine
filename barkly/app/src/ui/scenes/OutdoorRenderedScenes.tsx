@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, ColorValue, Easing, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import { useAmbientLoop, useReduceMotion } from '../motion';
 import { DIORAMA } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
 import { elevation, radius } from '../theme';
@@ -137,21 +138,21 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function useAmbientLoop(duration: number, delay = 0) {
-  const value = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(value, { toValue: 1, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(value, { toValue: 0, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [delay, duration, value]);
-  return value;
-}
+/*
+ * The scene's ambient loops, all of them honouring reduce-motion.
+ *
+ * There were TWO copies of this hook in the app: one in ui/motion.ts that
+ * checks the accessibility setting, and this one, which did not. The one that
+ * checked lived in LivingScenes.tsx -- a file nothing had imported for a long
+ * time -- and this one is the copy that actually ran. So the app contained a
+ * correct implementation of "stop moving things" and every animation the player
+ * could see ignored it.
+ *
+ * One copy now, read once per scene and passed down, because reading the
+ * setting inside each of nine loops registers nine accessibility listeners to
+ * answer the same question.
+ */
+// (the shared hooks come from ui/motion; see the note above)
 
 /*
  * THE SUN IS A LIGHT, NOT A STICKER.
@@ -204,7 +205,8 @@ function SkyBody({ night, discTop }: { night: boolean; discTop: number }) {
  */
 function SceneSky({ band, horizon, chromeBottom }: { band: SkyBand; horizon: number; chromeBottom: number }) {
   const night = band === 'night';
-  const drift = useAmbientLoop(15000);
+  const still = useReduceMotion();
+  const drift = useAmbientLoop(15000, 0, still);
   return (
     <View style={styles.fill}>
       <LinearGradient colors={SKY[band]} style={styles.fill} />
@@ -269,9 +271,10 @@ function SceneSky({ band, horizon, chromeBottom }: { band: SkyBand; horizon: num
 }
 
 function ParkMotion({ night, horizon }: { night: boolean; horizon: number }) {
-  const leaf = useAmbientLoop(6200);
-  const leafTwo = useAmbientLoop(7600, 1800);
-  const butterfly = useAmbientLoop(5200, 900);
+  const still = useReduceMotion();
+  const leaf = useAmbientLoop(6200, 0, still);
+  const leafTwo = useAmbientLoop(7600, 1800, still);
+  const butterfly = useAmbientLoop(5200, 900, still);
   return (
     <View style={styles.fill}>
       <Animated.View
@@ -414,67 +417,71 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <Path d={`M84 ${ground + 92}l4 -6 4 6 4 -6 4 6M222 ${ground + 116}l4 -6 4 6 4 -6 4 6`} stroke={night ? DIORAMA.gold : DIORAMA.lemon} strokeWidth={2.5} fill="none" opacity={night ? 0.24 : 0.68} />
       </Svg>
         {/*
-          THE TRAIL IS BACK, WITH THE RIGHT SHAPE.
+          THE TRAIL, IN PIXELS, BECAUSE 420-SPACE LIED AT WIDE ASPECTS.
 
-          It was removed, correctly, and the note explaining why said the real
-          thing: "Dropping its opacity twice only turned a strong glitch into a
-          faint one; the SHAPE was wrong." It rendered as a roughly
-          constant-width vertical ribbon running from the right tree's canopy
-          through its trunk to the bottom of the frame.
+          It was removed once for being "a roughly constant-width vertical
+          ribbon", brought back with a proper taper, and measured -- at ONE
+          viewport. At 390x844 the ground SVG's viewBox stretches 0.929 in x and
+          0.929 in y, near enough uniform that an authored taper survives, which
+          is exactly what I checked and exactly what generalises worst. At
+          1024x768 the same viewBox stretches 2.44 in x against 0.94 in y: a
+          2.6:1 anamorphic squash that flattens the taper back into a strip and
+          reproduces the original defect on every wide screen.
 
-          The shape is why it is worth having. A path narrowing toward the
-          horizon is the one device that describes the GROUND PLANE itself, and
-          without it the park was a flat green wall with things standing on it:
-          measured, the emptiest location in the game at 50.4% detail against
-          Town's 79.0%, with a dead band right across the middle.
+          ChatGPT's world pass had already found this from the other end, and
+          its note is the better description of the symptom: "the earlier path
+          used the strongest warm value in the scene and read like a slide
+          attached to the hero tree on every wide viewport." Both halves were
+          true -- too wide AND too loud.
 
-          The stretch is measured rather than assumed this time. The SVG box is
-          the full scene and the viewBox is 420 x canvasHeight, which on a
-          390x844 handset works out at 0.929 in x and 0.929 in y -- near
-          uniform, so a taper authored here survives to the screen. It is drawn
-          from the crest of the far hill, not from the horizon, so it starts
-          BEHIND the hill's edge instead of floating above it.
-
-          Warm rather than a lighter green on purpose: what the scene lacked was
-          contrast, not more grass. A second pass that added big green shapes to
-          a green field measured WORSE -- 56.9% detail down to 53.2% -- because
-          flat mass has no internal contrast to find.
+          So the trail gets its own SVG in REAL PIXELS (x is 1:1, y within ~6%),
+          it narrows as the frame widens instead of spreading with it, and it is
+          drawn a full stop softer. A path is a worn place in the grass, not a
+          feature competing with the dog standing on it.
         */}
-        <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
+        <Svg
+          width="100%"
+          height="100%"
+          viewBox={`0 0 ${Math.max(1, width)} ${canvasHeight}`}
+          preserveAspectRatio="none"
+          style={styles.fill}
+        >
           <Defs>
-            <SvgLinearGradient id="parkTrailV4" x1="0" y1="0" x2="0" y2="1">
-              {/*
-                DARKER at night, not a dimmer version of the daytime path.
-                Lifting the same warm sand to 20% opacity under the night grade
-                read as a spotlight down the middle of the park -- and measured
-                it: night's largest empty rectangle went from 20.1% of the
-                scene to 38.2%, because a big pale wedge IS a big flat area.
-                Bare ground under moonlight is the cool, dark thing in a field,
-                so it is drawn that way.
-              */}
-              <Stop offset="0" stopColor={night ? DIORAMA.parkGrassNightEdge : DIORAMA.sandDayFar} stopOpacity={night ? 0.42 : 0.52} />
-              <Stop offset="1" stopColor={night ? DIORAMA.parkHillNightEdge : DIORAMA.sandDayNear} stopOpacity={night ? 0.30 : 0.30} />
+            <SvgLinearGradient id="parkTrailV5" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={night ? DIORAMA.parkPathNightEdge : DIORAMA.parkPathDay} stopOpacity={night ? 0.34 : 0.34} />
+              <Stop offset="1" stopColor={night ? DIORAMA.parkPathNight : DIORAMA.parkPathDayLight} stopOpacity={night ? 0.20 : 0.16} />
             </SvgLinearGradient>
           </Defs>
-          <Path
-            d={`M198 ${horizon + 72}Q186 ${horizon + 250} 44 ${canvasHeight}L382 ${canvasHeight}Q244 ${horizon + 250} 224 ${horizon + 72}Z`}
-            fill="url(#parkTrailV4)"
-          />
-          {/* Worn edges: the line where the grass gives up. */}
-          <Path
-            d={`M198 ${horizon + 72}Q186 ${horizon + 250} 44 ${canvasHeight}`}
-            stroke={night ? DIORAMA.parkGrassNightLight : DIORAMA.sandDayEdge}
-            strokeWidth={2.5}
-            fill="none"
-            opacity={night ? 0.18 : 0.30}
-          />
-          <Path
-            d={`M224 ${horizon + 72}Q244 ${horizon + 250} 382 ${canvasHeight}`}
-            stroke={night ? DIORAMA.parkGrassNightLight : DIORAMA.sandDayEdge}
-            strokeWidth={2.5}
-            fill="none"
-            opacity={night ? 0.18 : 0.30}
-          />
+          {(() => {
+            const mid = width / 2;
+            const top = horizon + 72;
+            // Narrower as the frame widens: at 390 it is a path, and at 1024 a
+            // proportional one would be a runway.
+            const near = Math.min(width * 0.30, 128);
+            const far = 11;
+            return (
+              <>
+                <Path
+                  d={`M${mid - far} ${top}Q${mid - far * 1.6} ${top + 190} ${mid - near} ${canvasHeight}L${mid + near} ${canvasHeight}Q${mid + far * 1.6} ${top + 190} ${mid + far} ${top}Z`}
+                  fill="url(#parkTrailV5)"
+                />
+                <Path
+                  d={`M${mid - far} ${top}Q${mid - far * 1.6} ${top + 190} ${mid - near} ${canvasHeight}`}
+                  stroke={night ? DIORAMA.parkPathNightLight : DIORAMA.parkPathDayEdge}
+                  strokeWidth={2}
+                  fill="none"
+                  opacity={night ? 0.14 : 0.20}
+                />
+                <Path
+                  d={`M${mid + far} ${top}Q${mid + far * 1.6} ${top + 190} ${mid + near} ${canvasHeight}`}
+                  stroke={night ? DIORAMA.parkPathNightLight : DIORAMA.parkPathDayEdge}
+                  strokeWidth={2}
+                  fill="none"
+                  opacity={night ? 0.14 : 0.20}
+                />
+              </>
+            );
+          })()}
         </Svg>
       </WorldLayer>
       <WorldLayer name="distant">
@@ -503,8 +510,9 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
 }
 
 function TownGlint({ night, top, fountainLeft }: { night: boolean; top: number; fountainLeft: number }) {
-  const glint = useAmbientLoop(4200, 400);
-  const water = useAmbientLoop(1900, 250);
+  const still = useReduceMotion();
+  const glint = useAmbientLoop(4200, 400, still);
+  const water = useAmbientLoop(1900, 250, still);
   return (
     <View style={styles.fill}>
       <Animated.View
@@ -594,7 +602,8 @@ function TownNightLights({
    */
   afterDark?: boolean;
 }) {
-  const pulse = useAmbientLoop(3400);
+  const still = useReduceMotion();
+  const pulse = useAmbientLoop(3400, 0, still);
   return (
     <View style={styles.fill} pointerEvents="none">
       {/*
@@ -876,8 +885,9 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
 }
 
 function BeachMotion({ night, tide }: { night: boolean; tide: number }) {
-  const wave = useAmbientLoop(3000);
-  const gull = useAmbientLoop(9000, 700);
+  const still = useReduceMotion();
+  const wave = useAmbientLoop(3000, 0, still);
+  const gull = useAmbientLoop(9000, 700, still);
   return (
     <View style={styles.fill}>
       <Animated.View
