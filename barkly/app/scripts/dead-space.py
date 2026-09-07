@@ -25,6 +25,19 @@ So this measures structure instead, two ways:
 
 Both are deliberately crude and neither is a gate. They exist so a composition
 change can be argued with evidence instead of taste.
+
+A WARNING ABOUT NIGHT, because I nearly acted on it. Night frames score
+terribly here -- the Park reads 38% dead and 27% detail against 59% by day --
+and that is the metric being wrong, not the art. A night sky is a large, smooth,
+deliberately empty gradient, and "large smooth region" is precisely what this
+measures. Chasing the number would mean lighting the sky until night stopped
+looking like night. Dark frames are labelled below so the next person does not
+spend an afternoon fixing a picture that is already correct.
+
+(Checked before concluding it: the sharpest column-to-column step across the
+Park's night sky is 2.0 of 255 against a median of 0.66. It is a clean gradient.
+What looked like a hard compositing seam in a scaled-down contact sheet was
+banding in the preview.)
 """
 import sys, pathlib
 from PIL import Image
@@ -91,7 +104,11 @@ def main(frames):
             sl = [v for line in grid[a:b] for v in line]
             frac = sum(1 for v in sl if v >= FLAT) / max(1, len(sl))
             bars += " .:-=+*#%@"[min(9, int(frac * 10))]
-        print(f"{path.stem:16} {dead:6.1%} {detail:7.1%}  {bars}")
+        # A dark frame's numbers are about the hour, not the composition.
+        small = Image.open(path).convert("L").resize((40, 40))
+        mean = sum(small.tobytes()) / (40 * 40 * 255)
+        note = "   night: a smooth dark sky is not dead space" if mean < 0.42 else ""
+        print(f"{path.stem:16} {dead:6.1%} {detail:7.1%}  {bars}{note}")
 
 
 if __name__ == "__main__":
