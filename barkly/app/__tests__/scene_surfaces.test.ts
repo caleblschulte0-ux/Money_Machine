@@ -174,6 +174,27 @@ describe('scene surface renders', () => {
     expect(Math.abs(declaredAspect('VISTA_ASPECT', homeSource()) - real)).toBeLessThan(0.02);
   });
 
+  /*
+   * THE FLOOR IS DRAWN, AND THAT IS THE RIGHT ANSWER -- but it shipped with
+   * six plank lines 90pt apart on a 390pt screen and four horizontals crossing
+   * them, so the room read as a grid of four big tiles. A rendered course was
+   * built and rejected (a cross-laid course with staggered butt joints is
+   * running bond, which is masonry however the proportions are tuned), so
+   * these hold the two parameters that were actually wrong.
+   */
+  it('draws a floor of boards rather than a grid of tiles', () => {
+    const src = homeSource();
+    const m = /Array\.from\(\{ length: (\d+) \}, \(_, i\) => \(i \+ 0\.5\) \* \(420 \/ (\d+)\)\)/.exec(src);
+    if (!m) throw new Error('the floor no longer generates its plank lines from one count');
+    const count = Number(m[1]);
+    expect(Number(m[2])).toEqual(count);
+    // At the wall the boards must be narrower than a tenth of the room. Six
+    // lines in a 420 viewBox put them at 72 units -- 17% of the floor each.
+    expect(420 / count).toBeLessThan(42);
+    // And no horizontal rules: those were what made the squares.
+    expect(src).not.toMatch(/d=\{`M0 \$\{y\}H420`\}/);
+  });
+
   it('draws no hand-drawn landscape behind the window glass any more', () => {
     const src = homeSource();
     const pane = src.slice(src.indexOf('<Svg width={apertureW}'), src.indexOf('windowGlint'));

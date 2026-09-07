@@ -686,3 +686,44 @@ Fixed that way rather than by exempting the window by name: the next composite
 (a shopfront with its sign, a screen with a picture on it) says the same thing
 and gets the same treatment. Verified in both directions — the beach shell put
 back at `fx 0.94` is still caught, and Home passes.
+
+### The floor: a rendered course was built, and rejected
+
+Home's floor was the last surface still drawn, and both things wrong with it
+were parameters rather than technique. Measured on the shipped scene: six plank
+lines 90pt apart on a 390pt screen — a four-board room — with four *horizontal*
+rules crossing them, which is what turned the floor into a grid of squares.
+Under that, a second `Rect` at 0.72 opacity stepped the tone across the middle
+of the room along a hard edge: **a 117-unit row-to-row jump in a clear strip of
+floor**, which is a step, not a floor.
+
+The obvious move was the one town's pavement got — a rendered course, laid at
+increasing width so the courses recede. It was built (`home_floorboards`) and
+it took three passes, each of which read as brickwork:
+
+| pass | per-board aspect | read |
+|---|---|---|
+| 8 segments/course, 0.44 deep | 2.3:1 | bricks |
+| 3 segments/course, 0.44 deep | 4.8:1 | large blocks |
+| 3 segments/course, 0.23 deep | 10.2:1 | *still* running bond |
+
+The third pass had the proportions of a plank and still said wall, which is
+when the actual problem became clear: **a cross-laid course of boards with
+staggered butt joints IS running bond.** That is what running bond means. No
+amount of proportion tuning gets a masonry pattern to read as timber, and the
+reason a real floor does not look like that is that floorboards run the length
+of the room — away from the viewer — where their joints are rare and their
+seams converge.
+
+Which is exactly what the drawn floor was already doing, with the wrong numbers.
+So: fifteen plank lines instead of six, the horizontal rules deleted, the same
+1.85 spread kept (boards widening toward the camera was the one thing the
+original projection had exactly right), and the hard `Rect` replaced by a
+gradient that starts transparent at the wall. The worst row-to-row jump in a
+clear strip of floor is **11** now, against 117.
+
+`home_floorboards` is deleted — builder, registration and asset. A prop that
+does not fit is not a prop to keep in the pack because it cost three passes to
+make; that is the sunk-cost version of the unwired-capability sin this document
+already argues against. What is worth keeping is the finding, which is why it
+is written down here.

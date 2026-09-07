@@ -22,7 +22,6 @@ const VISTA = require('../../../assets/world/home/props/vista.png');
 const SKIRTING_ASPECT = 633 / 35;
 const PANELLING_ASPECT = 635 / 119;
 const VISTA_ASPECT = 640 / 263;
-
 /**
  * Window sun/moon geometry, as FRACTIONS of the aperture.
  *
@@ -744,9 +743,21 @@ export function HomeScene({
         <LinearGradient colors={wall} style={[styles.fill, { bottom: undefined, height: floorTop }]} />
       </WorldLayer>
 
-      <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
+      <WorldLayer name="ground">
+      {/*
+        THE FLOOR IS ONE THING, so it is one child of this layer.
+
+        A `WorldObject` carries a baseline-derived zIndex, which is right for
+        an object standing on the floor and wrong for the floor itself: the
+        nearest course would have sorted in front of the rug and the couch. The
+        boards are plain Images inside this wrapper instead, and the wrapper
+        sits under everything else in the layer.
+      */}
+      <View style={[styles.fill, { zIndex: 0 }]}>
+      <Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
         <Rect x={0} y={floorTop} width={420} height={760 - floorTop} fill={floorFar} />
-        <Rect x={0} y={floorTop + 78} width={420} height={682 - floorTop} fill={floorNear} opacity={0.72} />
+      </Svg>
+      <Svg width="100%" height="100%" viewBox="0 0 420 760" preserveAspectRatio="none" style={styles.fill}>
         {/*
           STRONG WINDOW LIGHT -- the first line of this scene's own target in
           docs/VISUAL_DIRECTION_KIDS_GAME.md ("Warm toy-diorama living room.
@@ -781,19 +792,41 @@ export function HomeScene({
             />
           );
         })()}
-        {[34, 106, 178, 250, 322, 394].map((x) => (
+        {/*
+          BOARDS RUN AWAY FROM YOU, and there are more than four of them.
+
+          The two things wrong with this floor were both parameters, not the
+          technique. Measured on the shipped scene the six plank lines landed
+          90pt apart on a 390pt screen -- a four-board room -- and a second set
+          of four HORIZONTAL lines crossed them, which is what turned the
+          floor into a grid of squares. Boards have butt joints, but not one
+          every 60pt in a straight line across the room; that is masonry.
+
+          Fifteen lines, no horizontals, and the same 1.85 spread that was
+          already here -- boards get WIDER as they come toward the camera,
+          which is the one thing the original projection had exactly right.
+
+          Tried and rejected: a rendered `home_floorboards` course, laid the
+          way town's paving courses recede. Three passes of it, and every one
+          read as brickwork, because a cross-laid course of boards with
+          staggered butt joints IS running bond. Proportion tuning cannot fix
+          that -- 8 segments per course gave 2.3:1 bricks, 3 gave 10:1 planks,
+          and the pattern still said wall. The prop is deleted rather than
+          left in the pack unused.
+        */}
+        {Array.from({ length: 15 }, (_, i) => (i + 0.5) * (420 / 15)).map((x, i) => (
           <Path
             key={x}
             d={`M${x} ${floorTop}L${210 + (x - 210) * 1.85} 760`}
             stroke={floorLine}
             strokeWidth={2}
-            opacity={night ? 0.15 : 0.22}
+            // Barely uneven, so fifteen parallel lines do not read as a ruled
+            // page. Real boards differ; these differ just enough to notice.
+            opacity={(night ? 0.13 : 0.19) * (i % 3 === 1 ? 0.72 : 1)}
           />
         ))}
-        {[floorTop + 44, floorTop + 99, floorTop + 166, floorTop + 244].map((y) => (
-          <Path key={y} d={`M0 ${y}H420`} stroke={floorLine} strokeWidth={2} opacity={night ? 0.12 : 0.18} />
-        ))}
       </Svg>
+      </View>
 
         {has('home_rug') && <Rug groundY={groundY} night={night} scale={propScale} />}
       </WorldLayer>
