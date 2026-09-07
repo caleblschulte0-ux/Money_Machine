@@ -71,3 +71,6 @@ tools/blender/__pycache__/
 # perf-review writes its report here; the numbers belong in a commit message or
 # a pull request, not in the tree.
 art-review/performance/
+
+# first-ten-minutes writes its transcript here; it is a thing to read, not to keep.
+art-review/first-ten-minutes.txt
