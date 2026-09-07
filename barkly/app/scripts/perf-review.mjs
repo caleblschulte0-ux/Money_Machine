@@ -26,7 +26,7 @@
  *   node scripts/perf-review.mjs --site dist      # a split build, over 4G and 3G
  */
 import { createServer } from 'node:http';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
@@ -183,7 +183,25 @@ async function overNetwork(browser, root, prefix) {
 
 const browser = await chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
 const site = arg('--site', null);
-const pageBytes = statSync(html).size;
+/*
+ * The SITE's weight, not the HTML file's.
+ *
+ * This reported "page: 0MB" the first time it ran against the split build --
+ * it was measuring index.html, which is now 1KB of markup pointing at
+ * everything else. A performance report claiming a game weighs nothing is
+ * worse than no report, and it is the same mistake in a new place: measuring
+ * the handle instead of the load.
+ */
+function dirBytes(dir) {
+  let total = 0;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = `${dir}/${entry.name}`;
+    total += entry.isDirectory() ? dirBytes(full) : statSync(full).size;
+  }
+  return total;
+}
+const pageDir = html.replace(/\/[^/]+$/, '');
+const pageBytes = dirBytes(pageDir);
 const load = await measureLoad(browser, { width: 390, height: 844 });
 
 const results = [];
@@ -214,7 +232,7 @@ await browser.close();
 const report = {
   generatedAt: new Date().toISOString(),
   note: 'Headless numbers are a regression signal, not a device benchmark.',
-  page: { file: html, bytes: pageBytes, megabytes: Number((pageBytes / 1048576).toFixed(2)) },
+  page: { dir: pageDir, bytes: pageBytes, megabytes: Number((pageBytes / 1048576).toFixed(2)) },
   load,
   network,
   results,
@@ -225,7 +243,7 @@ const lines = [
   'Barkly performance review',
   'Headless numbers are a regression signal, not a device benchmark.',
   '',
-  `page: ${report.page.megabytes}MB single file`,
+  `site: ${report.page.megabytes}MB served from ${pageDir.split('/').pop()}/`,
   `load: dom ${load.domReadyMs}ms · first paint ${load['first-contentful-paint'] ?? '?'}ms · dog on screen ${load.spriteVisibleMs ?? 'never'}ms`,
   '',
 ];
