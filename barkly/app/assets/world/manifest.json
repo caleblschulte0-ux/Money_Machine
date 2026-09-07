@@ -93,9 +93,29 @@
       "displayWidth": 170,
       "anchor": "bottom"
     },
+    "sky/cloud": {
+      "file": "sky/cloud.png",
+      "displayWidth": 168,
+      "anchor": "bottom"
+    },
+    "sky/cloud_far": {
+      "file": "sky/cloud_far.png",
+      "displayWidth": 96,
+      "anchor": "bottom"
+    },
+    "home/vista": {
+      "file": "home/vista.png",
+      "displayWidth": 200,
+      "anchor": "bottom"
+    },
     "beach/headland": {
       "file": "beach/headland.png",
       "displayWidth": 420,
+      "anchor": "bottom"
+    },
+    "beach/surf": {
+      "file": "beach/surf.png",
+      "displayWidth": 440,
       "anchor": "bottom"
     },
     "beach/shells": {
