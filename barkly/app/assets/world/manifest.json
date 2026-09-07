@@ -93,6 +93,21 @@
       "displayWidth": 170,
       "anchor": "bottom"
     },
+    "beach/headland": {
+      "file": "beach/headland.png",
+      "displayWidth": 420,
+      "anchor": "bottom"
+    },
+    "beach/shells": {
+      "file": "beach/shells.png",
+      "displayWidth": 58,
+      "anchor": "bottom"
+    },
+    "beach/dune_grass": {
+      "file": "beach/dune_grass.png",
+      "displayWidth": 54,
+      "anchor": "bottom"
+    },
     "beach/dune": {
       "file": "beach/dune.png",
       "displayWidth": 158,
