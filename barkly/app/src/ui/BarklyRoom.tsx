@@ -438,10 +438,10 @@ function NpcDog({
             so a bigger dog stands taller rather than floating.
           */}
           <Image
-            source={NPC_ART[id]}
+            source={NPC_ART[id].source}
             style={{
               width: spot.size * scale * build * stanceX,
-              height: spot.size * 1.25 * scale * build * stanceY,
+              height: spot.size * NPC_ART[id].aspect * scale * build * stanceY,
             }}
             resizeMode="stretch"
           />
@@ -450,7 +450,7 @@ function NpcDog({
       {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
       <Text
         testID={`npc-name-${id}`}
-        style={[styles.npcName, { bottom: compactLabel ? spot.size * 1.25 * scale * build * stanceY + 4 : -4 * scale }]}
+        style={[styles.npcName, { bottom: compactLabel ? spot.size * NPC_ART[id].aspect * scale * build * stanceY + 4 : -4 * scale }]}
       >
         {NPCS[id].name.toUpperCase()}
       </Text>

@@ -109,7 +109,7 @@ function LoreSubject({ item }: { item: RelationshipLore }) {
   return (
     <View style={[styles.subjectFrame, { borderColor: look.edge, backgroundColor: color.card }]}>
       {subject?.art === 'npc' ? (
-        <Image source={NPC_ART[subject.id]} style={styles.subjectPhoto} resizeMode="contain" />
+        <Image source={NPC_ART[subject.id].source} style={styles.subjectPhoto} resizeMode="contain" />
       ) : subject?.art === 'treasure' ? (
         <TreasureIcon id={subject.id} size={38} />
       ) : (
