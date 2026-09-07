@@ -19,17 +19,32 @@ const CARE_TRAY = require('../../assets/world/home/props/care_tray.png');
  * Waves stay drawn. They are the one slot that is not an OBJECT -- at the beach
  * the play control is "go and charge the sea" -- and there is nothing to model.
  */
-const KIT_ART: Record<string, { source: number; width: number; height: number }> = {
-  bowl: { source: require('../../assets/world/item/kit_bowl.png'), width: 74, height: 41 },
-  stick: { source: require('../../assets/world/item/kit_stick.png'), width: 80, height: 23 },
-  ball: { source: require('../../assets/world/item/toy_ball.png'), width: 54, height: 51 },
-  rope: { source: require('../../assets/world/item/toy_rope.png'), width: 80, height: 29 },
-  bed: { source: require('../../assets/world/home/props/bed.png'), width: 86, height: 29 },
+const KIT_ART: Record<string, { source: number; width: number; aspect: number }> = {
+  bowl: { source: require('../../assets/world/item/kit_bowl.png'), width: 74, aspect: 224 / 125 },
+  stick: { source: require('../../assets/world/item/kit_stick.png'), width: 80, aspect: 224 / 63 },
+  ball: { source: require('../../assets/world/item/toy_ball.png'), width: 54, aspect: 224 / 212 },
+  rope: { source: require('../../assets/world/item/toy_rope.png'), width: 80, aspect: 224 / 81 },
+  bed: { source: require('../../assets/world/home/props/bed.png'), width: 86, aspect: 534 / 181 },
 };
 
+/**
+ * Width, and the render's OWN aspect -- never a typed height.
+ *
+ * These started as hand-typed width/height pairs and one of them was already
+ * wrong: the dig site was drawn at 118x47 while its render is 529x165, so it
+ * shipped squashed by 22%. Nothing caught it, because a typed height is not
+ * checkable against anything. Derived heights are, and
+ * __tests__/scene_surfaces.test.ts holds every aspect below against the file.
+ */
 function KitArt({ id }: { id: keyof typeof KIT_ART }) {
   const art = KIT_ART[id];
-  return <Image source={art.source} style={{ width: art.width, height: art.height }} resizeMode="contain" />;
+  return (
+    <Image
+      source={art.source}
+      style={{ width: art.width, height: art.width / art.aspect }}
+      resizeMode="contain"
+    />
+  );
 }
 
 /** He is in it. The drawn bed carried this; the render cannot, so it rides on top. */

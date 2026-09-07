@@ -13,6 +13,26 @@
       "displayWidth": 136,
       "anchor": "bottom"
     },
+    "park/grass_tuft": {
+      "file": "park/grass_tuft.png",
+      "displayWidth": 46,
+      "anchor": "bottom"
+    },
+    "park/grass_clump": {
+      "file": "park/grass_clump.png",
+      "displayWidth": 130,
+      "anchor": "bottom"
+    },
+    "park/wildflowers": {
+      "file": "park/wildflowers.png",
+      "displayWidth": 50,
+      "anchor": "bottom"
+    },
+    "park/treeline": {
+      "file": "park/treeline.png",
+      "displayWidth": 420,
+      "anchor": "bottom"
+    },
     "park/hedge": {
       "file": "park/hedge.png",
       "displayWidth": 154,
@@ -31,6 +51,16 @@
     "town/store_violet": {
       "file": "town/store_violet.png",
       "displayWidth": 176,
+      "anchor": "bottom"
+    },
+    "town/rooftops": {
+      "file": "town/rooftops.png",
+      "displayWidth": 440,
+      "anchor": "bottom"
+    },
+    "town/kerb": {
+      "file": "town/kerb.png",
+      "displayWidth": 440,
       "anchor": "bottom"
     },
     "town/fountain": {
@@ -81,6 +111,11 @@
     "beach/sand_mound": {
       "file": "beach/sand_mound.png",
       "displayWidth": 118,
+      "anchor": "bottom"
+    },
+    "home/skirting": {
+      "file": "home/skirting.png",
+      "displayWidth": 440,
       "anchor": "bottom"
     },
     "home/rug": {

@@ -40,6 +40,11 @@ function declaredAspect(name: string, where = source()): number {
 const homeSource = () =>
   readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'HomeRenderedScene.tsx')).toString();
 
+function pngAspectAt(...parts: string[]): number {
+  const buf = readFileSync(join(ROOT, ...parts));
+  return buf.readUInt32BE(16) / buf.readUInt32BE(20);
+}
+
 describe('scene surface renders', () => {
   // Every surface render the scenes size by width and derive height for.
   const cases: [string, string, string][] = [
@@ -56,6 +61,46 @@ describe('scene surface renders', () => {
       expect(Math.abs(declaredAspect(name) - pngAspect(place, file))).toBeLessThan(0.02);
     });
   }
+
+  /*
+   * EVERY DERIVED HEIGHT IN THE APP, HELD AGAINST ITS FILE.
+   *
+   * These used to be hand-typed width/height PAIRS, and one of them was
+   * already wrong when this test was written: the dig site was drawn at
+   * 118x47 while its render is 529x165, so it shipped squashed by 22%. A typed
+   * height cannot be checked against anything, which is why nothing caught it.
+   * Every one of them is a width plus the render's own aspect now, and this is
+   * what makes that worth doing.
+   */
+  const derived: [string, string, string[]][] = [
+    ['kit_bowl', 'src/ui/BarklyKit.tsx', ['assets', 'world', 'item', 'kit_bowl.png']],
+    ['kit_stick', 'src/ui/BarklyKit.tsx', ['assets', 'world', 'item', 'kit_stick.png']],
+    ['toy_ball', 'src/ui/BarklyKit.tsx', ['assets', 'world', 'item', 'toy_ball.png']],
+    ['toy_rope', 'src/ui/BarklyKit.tsx', ['assets', 'world', 'item', 'toy_rope.png']],
+    ['bed', 'src/ui/BarklyKit.tsx', ['assets', 'world', 'home', 'props', 'bed.png']],
+  ];
+  for (const [name, file, asset] of derived) {
+    it(`the care tray draws ${name} at the shape it is`, () => {
+      const src = readFileSync(join(ROOT, ...file.split('/'))).toString();
+      const m = new RegExp(`${name}\\.png'\\),[^}]*?aspect: (\\d+) / (\\d+)`).exec(src);
+      if (!m) throw new Error(`${name} no longer declares its aspect as W / H`);
+      expect(Math.abs(Number(m[1]) / Number(m[2]) - pngAspectAt(...asset))).toBeLessThan(0.02);
+    });
+  }
+
+  it('the stage draws the dig mound and the ball at the shape they are', () => {
+    const src = readFileSync(join(ROOT, 'src', 'ui', 'StageProps.tsx')).toString();
+    const pairs: [string, string[]][] = [
+      ['MOUND_ASPECT', ['assets', 'world', 'park', 'props', 'dig_mound.png']],
+      ['MOUND_ASPECT', ['assets', 'world', 'beach', 'props', 'sand_mound.png']],
+      ['BALL_ASPECT', ['assets', 'world', 'item', 'toy_ball.png']],
+    ];
+    for (const [name, asset] of pairs) {
+      const m = new RegExp(`const ${name} = (\\d+) / (\\d+);`).exec(src);
+      if (!m) throw new Error(`${name} no longer declares its aspect as W / H`);
+      expect(Math.abs(Number(m[1]) / Number(m[2]) - pngAspectAt(...asset))).toBeLessThan(0.02);
+    }
+  });
 
   it('SKIRTING_ASPECT is what skirting.png actually is', () => {
     expect(Math.abs(declaredAspect('SKIRTING_ASPECT', homeSource()) - pngAspect('home', 'skirting.png')))

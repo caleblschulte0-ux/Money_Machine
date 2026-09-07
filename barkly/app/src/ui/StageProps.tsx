@@ -17,6 +17,19 @@ const BALL_ART = require('../../assets/world/item/toy_ball.png');
 const DIG_MOUND = require('../../assets/world/park/props/dig_mound.png');
 const SAND_MOUND = require('../../assets/world/beach/props/sand_mound.png');
 
+/*
+ * Widths, and the renders' OWN aspects -- never a typed height.
+ *
+ * MOUND_W/47 was the first version and it was wrong: the mound render is
+ * 529x165, so drawing it 118x47 squashed it by 22%, and nothing caught that
+ * because a typed height cannot be checked against anything. These are held
+ * against the real files by __tests__/scene_surfaces.test.ts.
+ */
+const MOUND_W = 118;
+const MOUND_ASPECT = 529 / 165;
+const BALL_W = 50;
+const BALL_ASPECT = 224 / 212;
+
 /**
  * The spark that says the ground is being worked. It belonged to the drawn
  * mounds; the renders are objects and have no idea anything is happening to
@@ -194,10 +207,10 @@ export function WetSandMound({ active = false }: { active?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  /* 118 x 47 is the trimmed render's own aspect; the sparks ride over the top. */
-  mound: { width: 118, height: 47 },
+  /* The sparks ride over the top of this. */
+  mound: { width: MOUND_W, height: MOUND_W / MOUND_ASPECT },
   digSparks: { position: 'absolute', top: -18, left: 3 },
-  ballArt: { width: 50, height: 47 },
+  ballArt: { width: BALL_W, height: BALL_W / BALL_ASPECT },
   /*
    * ABOVE THE CARE RACK, AND WITHIN REACH.
    *
