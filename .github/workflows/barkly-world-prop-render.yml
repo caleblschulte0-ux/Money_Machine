@@ -59,6 +59,7 @@ jobs:
             town/store_coral town/store_aqua town/store_violet town/fountain town/lamp town/planter \
             town/rooftops town/kerb town/paving \
             beach/umbrella beach/lifeguard beach/dune beach/castle beach/palm beach/sand_mound \
+            beach/headland beach/shells beach/dune_grass \
             home/rug home/care_tray home/skirting home/panelling \
             item/treat_biscuit item/treat_cheese item/treat_steak \
             item/toy_ball item/toy_rope \

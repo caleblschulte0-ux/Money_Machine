@@ -59,15 +59,43 @@ describe('anything sharing a layer with a prop states its own depth', () => {
   });
 
   it('never leaves a code-drawn element to lose to a rendered prop', () => {
+    /*
+     * PER ELEMENT, NOT PER LAYER.
+     *
+     * The first version asked only whether the string `zIndex` appeared
+     * anywhere in the block, which meant one stated depth excused every other
+     * element beside it. Removing the sea gradient's zIndex from Beach's
+     * "distant" layer -- leaving it to lose to a rendered headland -- did not
+     * fail this test, because the surf Svg two lines below still had one.
+     *
+     * Only DIRECT children of the layer are checked. A gradient nested inside
+     * a View inherits that View's stacking context and needs nothing of its
+     * own, so the rule follows indentation: the layer's children sit two
+     * spaces in from it.
+     */
     const offenders: string[] = [];
     for (const block of blocks) {
       if (!OBJECT_LAYERS.includes(block.layer)) continue;
       if (!block.body.includes('<WorldObject')) continue;
-      // Strip comments so prose about Views is not mistaken for a View.
-      const code = block.body.replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ');
-      const raw = /<(View|Text|Animated\.View)\b/.test(code);
-      if (raw && !code.includes('zIndex')) {
-        offenders.push(`${block.file}:${block.line} layer="${block.layer}"`);
+      const lines = block.body.replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ').split('\n');
+      const open = lines[0];
+      const indent = (open.match(/^\s*/) as RegExpMatchArray)[0].length;
+      const childAt = ' '.repeat(indent + 2) + '<';
+      for (let i = 0; i < lines.length; i += 1) {
+        if (!lines[i].startsWith(childAt)) continue;
+        const tag = /^<(View|Text|Animated\.View|LinearGradient|Svg)\b/.exec(lines[i].slice(indent + 2));
+        if (!tag) continue;
+        // The element's own opening tag: from here to the line that closes it
+        // at this indent, or the next sibling, whichever comes first.
+        let own = lines[i];
+        for (let j = i + 1; j < lines.length; j += 1) {
+          if (lines[j].startsWith(childAt)) break;
+          own += `\n${lines[j]}`;
+          if (/^\s*\/?>\s*$/.test(lines[j]) || /\/>\s*$/.test(lines[j])) break;
+        }
+        if (!own.includes('zIndex')) {
+          offenders.push(`${block.file}:${block.line + i} layer="${block.layer}" <${tag[1]}>`);
+        }
       }
     }
     expect(offenders).toEqual([]);

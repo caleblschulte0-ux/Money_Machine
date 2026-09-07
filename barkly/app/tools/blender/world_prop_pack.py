@@ -700,6 +700,82 @@ def beach_lifeguard():
 # #F4CA6D against a #FFDC93 near-sand), which is why both read as smudges on
 # the contact sheet no matter what the lighting did. Deeper, warmer, wetter
 # sand for the objects; the dry floor stays pale.
+def beach_headland():
+    """The far side of the bay.
+
+    The beach sky measured a standard deviation of 3.3 across a clean band --
+    the flattest surface in the game, flatter than the town sky was -- and the
+    sea ran to a hard line with a thin green strip on it. This is a headland to
+    sit on that line: one low mass, hazed toward the sky the way distance
+    actually works, so the water has a far edge and the sky has something to
+    end against.
+
+    Camera-facing frame, like every wide band in this pack.
+    """
+    turn = facing(camera_yaw())
+    far = material("Headland far", "#8FB79C", roughness=0.92)
+    far_b = material("Headland far b", "#9DC3A6", roughness=0.92)
+    far_c = material("Headland far c", "#82AB92", roughness=0.92)
+    rock = material("Headland rock", "#A9AFA6", roughness=0.90)
+
+    mats = (far, far_b, far_c, far_b, far)
+    for i in range(15):
+        h = 0.30 + 0.26 * ((i * 0.6180) % 1.0)
+        x, y = turn(-3.10 + i * 0.44, 0.05 * ((i % 3) - 1))
+        sphere(f"hill_{i}", (x, y, h * 0.58), (0.42, 0.30, h * 0.56), mats[i % len(mats)])
+    # A headland has to END somewhere, or it is a wall. One rocky point.
+    for i, (dx, hh) in enumerate(((0.0, 0.42), (0.30, 0.28), (0.56, 0.18))):
+        x, y = turn(2.30 + dx, 0.02)
+        sphere(f"point_{i}", (x, y, hh * 0.52), (0.26, 0.20, hh * 0.50), rock)
+    for i in range(13):
+        x, y = turn(-3.10 + i * 0.52, 0.06)
+        sphere(f"shore_{i}", (x, y, 0.06), (0.34, 0.26, 0.10), far_c)
+
+
+def beach_shells():
+    """A scallop shell and a pebble, for the sand.
+
+    The sand measured sd 8.0 -- 318 distinct colours across a 160x70 patch,
+    and the same 318 on the other side of the frame. It is one fill, and this
+    is what goes on it.
+
+    A scallop is read from its SILHOUETTE, so it is built as a fan of lobes
+    radiating from the hinge: the scalloped outer edge is the whole shape. A
+    first pass made it a smooth dome with four dimples raked across it and
+    rendered three pale blobs -- ribs pressed INTO a shell do nothing at 58px,
+    because at 58px there is no surface, only an outline.
+    """
+    shell = material("Shell", "#F3DCC4", roughness=0.58, coat=0.10)
+    shell_warm = material("Shell warm", "#EBCBAF", roughness=0.58, coat=0.10)
+    hinge = material("Shell hinge", "#D9B594", roughness=0.66)
+    pebble = material("Pebble", "#B9A489", roughness=0.86)
+
+    root_x, root_y = -0.26, 0.06
+    lobes = 7
+    for i in range(lobes):
+        # A fan from about -55 to +55 degrees, opening away from the hinge.
+        angle = math.radians(-55 + i * (110 / (lobes - 1)))
+        reach = 0.36
+        sphere(
+            f"lobe_{i}",
+            (root_x + reach * math.cos(angle), root_y + reach * math.sin(angle) * 0.55, 0.09),
+            (0.16, 0.13, 0.075),
+            shell if i % 2 else shell_warm,
+        )
+    sphere("shell_body", (root_x + 0.17, root_y, 0.085), (0.24, 0.17, 0.08), shell)
+    sphere("hinge", (root_x, root_y, 0.07), (0.09, 0.08, 0.055), hinge)
+    sphere("pebble", (0.34, -0.20, 0.055), (0.12, 0.10, 0.062), pebble)
+
+
+def beach_dune_grass():
+    """Marram grass, for the dry sand. Sparser and paler than park grass --
+    it grows in tufts out of bare sand, not in a lawn."""
+    blade = material("Marram", "#A9BF6E", roughness=0.88)
+    blade_pale = material("Marram pale", "#C6D68C", roughness=0.86)
+    blade_deep = material("Marram deep", "#7E9A4E", roughness=0.90)
+    _blades(9, 0.57, 0.30, 1.05, (blade, blade_pale, blade_deep), lean=0.52, thickness=0.026)
+
+
 def beach_dune():
     sand = material("Dune sand", "#E7B247", roughness=0.92)
     sand_light = material("Dune light", "#FFC95F", roughness=0.90)
@@ -1214,6 +1290,9 @@ BUILDERS = {
     "town/planter": (town_planter, 3.8, (0, 0, 0.9), {"displayWidth": 74, "anchor": "bottom"}),
     "beach/umbrella": (beach_umbrella, 5.5, (0, 0, 1.95), {"displayWidth": 152, "anchor": "bottom"}),
     "beach/lifeguard": (beach_lifeguard, 6.4, (0, 0, 2.15), {"displayWidth": 170, "anchor": "bottom"}),
+    "beach/headland": (beach_headland, 6.6, (0, 0, 0.34), {"displayWidth": 420, "anchor": "bottom"}),
+    "beach/shells": (beach_shells, 1.7, (0, 0, 0.10), {"displayWidth": 58, "anchor": "bottom"}),
+    "beach/dune_grass": (beach_dune_grass, 2.6, (0, 0, 0.46), {"displayWidth": 54, "anchor": "bottom"}),
     "beach/dune": (beach_dune, 4.5, (0, 0, 0.72), {"displayWidth": 158, "anchor": "bottom"}),
     "beach/castle": (beach_castle, 4.5, (0, 0, 1.30), {"displayWidth": 112, "anchor": "bottom"}),
     "beach/palm": (beach_palm, 6.0, (0, 0, 2.20), {"displayWidth": 142, "anchor": "bottom"}),

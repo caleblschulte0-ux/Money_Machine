@@ -208,6 +208,46 @@ const BEACH_LIFEGUARD = require('../../../assets/world/beach/props/lifeguard.png
 const BEACH_DUNE = require('../../../assets/world/beach/props/dune.png');
 const BEACH_CASTLE = require('../../../assets/world/beach/props/castle.png');
 const BEACH_PALM = require('../../../assets/world/beach/props/palm.png');
+const BEACH_HEADLAND = require('../../../assets/world/beach/props/headland.png');
+const BEACH_SHELLS = require('../../../assets/world/beach/props/shells.png');
+const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png');
+const HEADLAND_ASPECT = 640 / 67;
+const SHELLS_ASPECT = 272 / 142;
+const MARRAM_ASPECT = 212 / 249;
+
+/**
+ * WHAT GOES ON THE SAND.
+ *
+ * Measured off a screenshot, the beach sand varies by a standard deviation of
+ * 8.0 -- 318 distinct colours across a 160x70 patch, and the same 318 on the
+ * other side of the frame. It has a good gradient down it and still reads as
+ * one fill, because a gradient is not texture.
+ *
+ * `dy` is measured down from the tide line rather than from the horizon, since
+ * that is where this scene's ground actually starts. Same rule as the park:
+ * clear of the SIFT badge and BISCUIT's plate, and clear of his face column,
+ * both held by __tests__/scene_surfaces.test.ts.
+ */
+const BEACH_COVER: readonly Cover[] = [
+  // Dry sand just up from the wet strip.
+  { fx: 0.14, dy: 26, s: 0.42, depth: 0.30 },
+  { fx: 0.44, dy: 34, s: 0.38, depth: 0.30, flip: true },
+  { fx: 0.72, dy: 24, s: 0.44, depth: 0.30 },
+  { fx: 0.90, dy: 40, s: 0.46, depth: 0.32, flower: true },
+  // Mid beach. Nothing between fx 0.10 and 0.32 at this height: that is the
+  // SIFT badge's column.
+  { fx: 0.02, dy: 116, s: 0.62, depth: 0.50, flower: true },
+  { fx: 0.52, dy: 128, s: 0.58, depth: 0.52 },
+  { fx: 0.62, dy: 108, s: 0.66, depth: 0.50, flip: true },
+  // Near. Clear of BISCUIT's plate on the left and of the middle, which is him.
+  { fx: 0.36, dy: 206, s: 0.86, depth: 0.74, flip: true },
+  // Not fx 0.94: at that width the shell lands entirely inside the right
+  // dune, which `scripts/blocking.mjs` calls -- and calls correctly, because a
+  // prop wholly inside another prop at the same distance is not depth, it is
+  // clutter. The dune runs x 298..437 and the sandcastle x 271..381; this sits
+  // in the gap left of both.
+  { fx: 0.56, dy: 222, s: 0.92, depth: 0.76 },
+];
 
 /** Sun/moon geometry, shared by the body and the box its halo needs. */
 const SUN_R = 25;
@@ -1210,14 +1250,33 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
           cyans, so the sea contributed nothing below 0.56 value and the whole
           location had no anchor for the eye.
         */}
+        {/* Depth stated: this layer holds a rendered headland now, and a
+            LinearGradient carries no zIndex of its own. Sea, headland, surf. */}
         <LinearGradient
           colors={[oceanDeep, oceanA, oceanB]}
           locations={[0, 0.42, 1]}
-          style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: tide - horizon + 28 }}
+          style={{ zIndex: 1, position: 'absolute', left: 0, right: 0, top: horizon, height: tide - horizon + 28 }}
         />
-        <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
-        <Path d={`M-20 ${horizon + 24}Q32 ${horizon - 22} 84 ${horizon + 19}Q112 ${horizon - 2} 148 ${horizon + 27}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.64} />
-        <Path d={`M440 ${horizon + 28}Q398 ${horizon - 18} 350 ${horizon + 17}Q320 ${horizon - 3} 286 ${horizon + 27}Z`} fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay} opacity={0.58} />
+        {/*
+          THE FAR SIDE OF THE BAY.
+
+          Two SVG slivers used to sit here -- a bump at each end of the horizon
+          with open sky between them, which reads as two hills floating on the
+          sea rather than as a coastline. The beach sky measures a standard
+          deviation of 3.3, the flattest surface in the game, and the reason is
+          that nothing ends against it. Same fix the park's treeline got.
+        */}
+        <WorldObject
+          source={BEACH_HEADLAND}
+          left={-26}
+          top={horizon - (width + 52) / HEADLAND_ASPECT + 12}
+          width={width + 52}
+          height={(width + 52) / HEADLAND_ASPECT}
+          night={night}
+          depth={0.08}
+          opacity={0.82}
+        />
+        <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={[styles.fill, { zIndex: 2 }]}>
         <Path d={`M0 ${horizon + 36}Q82 ${horizon + 18} 164 ${horizon + 34}T316 ${horizon + 32}T430 ${horizon + 35}`} stroke={night ? DIORAMA.oceanNightLight : DIORAMA.oceanDayLight} strokeWidth={7} fill="none" opacity={night ? 0.08 : 0.30} />
         <Path d={`M-18 ${tide + 7}Q50 ${tide - 12} 118 ${tide + 4}T244 ${tide + 2}T362 ${tide + 1}T440 ${tide + 3}`} stroke={night ? DIORAMA.foamNightShade : DIORAMA.foamDayShade} strokeWidth={20} fill="none" />
         <Path d={`M-18 ${tide}Q50 ${tide - 19} 118 ${tide}T244 ${tide - 3}T362 ${tide - 4}T440 ${tide - 2}`} stroke={night ? DIORAMA.foamNight : DIORAMA.foamDay} strokeWidth={10} fill="none" />
@@ -1266,6 +1325,30 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
       </WorldLayer>
       <WorldLayer name="landmark">
         {showPalm && <WorldObject source={BEACH_PALM} left={palmLeft} top={horizon - 82} width={palmW} height={palmH} night={night} depth={0.44} opacity={0.86} ambient="sway" contactShadow />}
+        {/* What is actually ON the sand. See BEACH_COVER. Same layer as the
+            tower and the umbrella so a shell in front of the dune is a fact
+            about where it lies, not about which layer it was filed under. */}
+        {BEACH_COVER.map((c, i) => {
+          const w = (c.flower ? 54 : 58) * c.s * scale;
+          const h = w / (c.flower ? MARRAM_ASPECT : SHELLS_ASPECT);
+          return (
+            <WorldObject
+              key={`shore-${c.fx}-${c.dy}`}
+              source={c.flower ? BEACH_MARRAM : BEACH_SHELLS}
+              left={width * c.fx - w / 2}
+              top={sandTop + c.dy - h}
+              width={w}
+              height={h}
+              night={night}
+              depth={c.depth}
+              opacity={0.62 + 0.38 * c.depth}
+              ambient={c.flower ? 'sway' : undefined}
+              motionDelay={260 * i}
+              flip={c.flip}
+              contactShadow
+            />
+          );
+        })}
         <WorldObject source={BEACH_LIFEGUARD} left={towerLeft} top={horizon + 16} width={lifeguardW * 0.94} height={lifeguardH * 0.94} night={night} depth={0.50} opacity={0.92} contactShadow />
         <WorldObject source={BEACH_UMBRELLA} right={umbrellaRight} top={horizon + 38} width={umbrellaW} height={umbrellaH} night={night} depth={0.56} ambient="sway" motionDelay={500} contactShadow />
       </WorldLayer>

@@ -55,6 +55,9 @@ describe('scene surface renders', () => {
     ['ROOFTOPS_ASPECT', 'town', 'rooftops.png'],
     ['KERB_ASPECT', 'town', 'kerb.png'],
     ['PAVING_ASPECT', 'town', 'paving.png'],
+    ['HEADLAND_ASPECT', 'beach', 'headland.png'],
+    ['SHELLS_ASPECT', 'beach', 'shells.png'],
+    ['MARRAM_ASPECT', 'beach', 'dune_grass.png'],
   ];
 
   for (const [name, place, file] of cases) {
@@ -201,6 +204,113 @@ describe('scene surface renders', () => {
       }
     }
     expect(clashes).toEqual([]);
+  });
+
+  it('keeps the beach scatter clear of its badges and his face', () => {
+    /*
+     * Same geometry as the park's check, against the beach's own boxes. Both
+     * sets are `scripts/blocking.mjs` output at 390x844, and the face column
+     * and dog top are `scripts/prop-clear-check.mjs`. `sandTop` is `tide + 15`
+     * and `tide` is `horizon + 120`, with horizon clamped to 172..210 -- so
+     * the sand starts between 307 and 345, and every value in between is a
+     * live frame. Sweeping the range, because checking the two ends of a clamp
+     * only finds the worst case when the worst case is at an end.
+     */
+    const src = source();
+    const table = src.slice(src.indexOf('const BEACH_COVER'), src.indexOf('];', src.indexOf('const BEACH_COVER')));
+    const cover = [...table.matchAll(/\{ fx: ([\d.]+), dy: (\d+), s: ([\d.]+)[^}]*?(flower: true)?\s*\}/g)].map((m) => ({
+      fx: Number(m[1]),
+      dy: Number(m[2]),
+      s: Number(m[3]),
+      flower: Boolean(m[4]),
+    }));
+    expect(cover.length).toBeGreaterThan(5);
+
+    const WIDTH = 390;
+    const LABELS = [
+      { name: 'BISCUIT', x0: 50, x1: 114, y0: 620, y1: 638 },
+      { name: 'SIFT', x0: 59, x1: 105, y0: 453, y1: 471 },
+    ];
+    const FACE = { x0: 162, x1: 226, y0: 419, y1: 497 };
+    const DOG_TOP = 387;
+    const MARGIN = 12;
+    const shells = declaredAspect('SHELLS_ASPECT');
+    const marram = declaredAspect('MARRAM_ASPECT');
+
+    const clashes: string[] = [];
+    for (let horizon = 172; horizon <= 210; horizon += 2) {
+      const sandTop = horizon + 135;
+      for (const c of cover) {
+        const w = (c.flower ? 54 : 58) * c.s;
+        const h = w / (c.flower ? marram : shells);
+        const left = WIDTH * c.fx - w / 2;
+        const bottom = sandTop + c.dy;
+        const box = { x0: left, x1: left + w, y0: bottom - h, y1: bottom };
+        for (const label of LABELS) {
+          if (box.x1 > label.x0 && box.x0 < label.x1 && box.y1 > label.y0 && box.y0 < label.y1) {
+            clashes.push(`horizon ${horizon}: fx ${c.fx} dy ${c.dy} covers ${label.name}`);
+          }
+        }
+        if (
+          box.x1 > FACE.x0 - MARGIN &&
+          box.x0 < FACE.x1 + MARGIN &&
+          box.y1 > FACE.y0 &&
+          box.y0 < FACE.y1 &&
+          box.y0 < DOG_TOP
+        ) {
+          clashes.push(`horizon ${horizon}: fx ${c.fx} dy ${c.dy} crosses his face`);
+        }
+      }
+    }
+    expect(clashes).toEqual([]);
+  });
+
+  it('never buries a piece of beach scatter inside another prop', () => {
+    /*
+     * The third distinct way this has gone wrong, so it is written down too.
+     * `scripts/blocking.mjs` fails a small prop that sits inside a bigger one
+     * at the same distance -- not depth, clutter -- and a shell at fx 0.94
+     * landed 100% inside the right-hand dune.
+     *
+     * Boxes are that gate's own output for BEACH at 390x844. Only the big
+     * ones matter: a shell overlapping another shell is not what it catches.
+     */
+    const PROPS = [
+      { name: 'lifeguard', x0: 9, x1: 156, y0: 221, y1: 450, base: 450 },
+      { name: 'umbrella', x0: 256, x1: 408, y0: 242, y1: 449, base: 449 },
+      { name: 'dune left', x0: -105, x1: 50, y0: 438, y1: 533, base: 533 },
+      { name: 'dune right', x0: 298, x1: 437, y0: 478, y1: 564, base: 564 },
+      { name: 'castle', x0: 271, x1: 381, y0: 464, y1: 610, base: 610 },
+    ];
+    const src = source();
+    const table = src.slice(src.indexOf('const BEACH_COVER'), src.indexOf('];', src.indexOf('const BEACH_COVER')));
+    const cover = [...table.matchAll(/\{ fx: ([\d.]+), dy: (\d+), s: ([\d.]+)[^}]*?(flower: true)?\s*\}/g)].map((m) => ({
+      fx: Number(m[1]),
+      dy: Number(m[2]),
+      s: Number(m[3]),
+      flower: Boolean(m[4]),
+    }));
+    const shells = declaredAspect('SHELLS_ASPECT');
+    const marram = declaredAspect('MARRAM_ASPECT');
+    const buried: string[] = [];
+    for (let horizon = 172; horizon <= 210; horizon += 2) {
+      const sandTop = horizon + 135;
+      for (const c of cover) {
+        const w = (c.flower ? 54 : 58) * c.s;
+        const h = w / (c.flower ? marram : shells);
+        const left = 390 * c.fx - w / 2;
+        const base = sandTop + c.dy;
+        for (const prop of PROPS) {
+          const inside = Math.max(0, Math.min(prop.x1, left + w) - Math.max(prop.x0, left)) / w;
+          // "Same distance" is what makes it clutter rather than depth.
+          const sameDistance = Math.abs(base - prop.base) < 44;
+          if (inside > 0.6 && sameDistance) {
+            buried.push(`horizon ${horizon}: fx ${c.fx} dy ${c.dy} is ${Math.round(inside * 100)}% inside ${prop.name}`);
+          }
+        }
+      }
+    }
+    expect(buried).toEqual([]);
   });
 
   it('never puts a piece of cover across his face', () => {
