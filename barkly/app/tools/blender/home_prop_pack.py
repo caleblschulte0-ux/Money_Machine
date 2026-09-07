@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 
 import bpy
@@ -231,14 +232,28 @@ def lamp():
 
 
 def bed():
-    rim = make_material("Aqua plush rim", "#1DBEE6", roughness=0.86)
-    rim_dark = make_material("Aqua plush cavity", "#0B85A5", roughness=0.92)
-    cushion = make_material("Cream plush cushion", "#FFE8BB", roughness=0.94)
+    """His bed: a STUFFED bolster, not a swim ring.
+
+    It was one smooth flattened torus with a flat cream disc lying inside it,
+    and at any size that is an inflatable pool ring with a cushion dropped in.
+    Two things fix it and neither is texture: the bolster is LUMPY (a ring of
+    overlapping spheres over the torus, so the silhouette is stuffed fabric
+    rather than a machined tube) and the cushion DOMES above the cavity instead
+    of sinking into it.
+    """
+    # Deeper than the first aqua. The bed is the single biggest object on the
+    # floor and at #1DBEE6 it was the brightest thing in the room after the
+    # window -- and, measured against the shop panes its own card sits on, it
+    # came out at 2.7:1 where 3:1 is the floor. Same colour, less light in it.
+    rim = make_material("Aqua plush rim", "#1596BC", roughness=0.90)
+    rim_lump = make_material("Aqua plush lump", "#1BA9D2", roughness=0.92)
+    rim_dark = make_material("Aqua plush cavity", "#075D75", roughness=0.94)
+    cushion = make_material("Cream plush cushion", "#F2D8A4", roughness=0.94)
+    cushion_shade = make_material("Cream plush shade", "#D6B67F", roughness=0.95)
     stitch = make_material("Bed stitch", "#D78D43", roughness=0.95)
 
     contact_shadow(1.48, 0.76)
-    # Flattened torus gives the bed real depth and a tactile donut silhouette.
-    bpy.ops.mesh.primitive_torus_add(major_segments=64, minor_segments=24, location=(0, 0.08, 0.48), major_radius=0.95, minor_radius=0.39)
+    bpy.ops.mesh.primitive_torus_add(major_segments=64, minor_segments=24, location=(0, 0.08, 0.48), major_radius=0.95, minor_radius=0.37)
     outer = bpy.context.object
     outer.name = "plush_rim"
     outer.scale = (1.42, 0.86, 0.70)
@@ -246,11 +261,28 @@ def bed():
     outer.data.materials.append(rim)
     bpy.ops.object.shade_smooth()
 
-    sphere("bed_cavity", (0, 0.04, 0.37), (1.13, 0.67, 0.28), rim_dark)
-    sphere("bed_cushion", (0, -0.03, 0.47), (0.96, 0.56, 0.27), cushion)
+    # The stuffing. Fourteen overlapping lobes around the same ellipse the
+    # torus follows, so there is no gap to fall through and the outline reads
+    # as something a dog would sink into.
+    lobes = 14
+    for i in range(lobes):
+        angle = (i / lobes) * math.tau
+        sphere(
+            f"plush_lobe_{i}",
+            (1.349 * math.cos(angle), 0.08 + 0.817 * math.sin(angle), 0.50),
+            (0.40, 0.31, 0.27),
+            rim_lump if i % 2 else rim,
+        )
+
+    sphere("bed_cavity", (0, 0.04, 0.36), (1.12, 0.66, 0.24), rim_dark)
+    sphere("bed_cushion_shade", (0, 0.03, 0.48), (1.03, 0.60, 0.22), cushion_shade)
+    # High enough to swell against the inner lip. Sunk at 0.46 you were looking
+    # down a well past the near bolster at a small pale disc, which is a swim
+    # ring with something floating in it, not a bed with a cushion in it.
+    sphere("bed_cushion", (0, -0.03, 0.56), (0.97, 0.56, 0.22), cushion)
     # Three stitched channels hint at compression without noisy texture.
     for x in (-0.44, 0, 0.44):
-        cylinder(f"stitch_{x}", (x, -0.54, 0.50), 0.035, 0.18, stitch, rotation=(math.radians(90), 0, 0), vertices=24)
+        cylinder(f"stitch_{x}", (x, -0.52, 0.56), 0.035, 0.18, stitch, rotation=(math.radians(90), 0, 0), vertices=24)
 
 
 def shelf():
@@ -305,8 +337,12 @@ def main():
         "light": "warm upper-left key + cool fill + warm rim",
         "assets": {},
     }
+    # Same PROP_ONLY narrowing as the world pack: render one prop while you are
+    # iterating on it. The manifest still describes every prop either way.
+    only = os.environ.get("PROP_ONLY", "").strip()
     for name, (builder, scale, target, metadata) in BUILDERS.items():
-        render_prop(name, builder, scale, target)
+        if not only or name.startswith(only):
+            render_prop(name, builder, scale, target)
         manifest["assets"][name] = {"file": f"{name}.png", **metadata}
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 

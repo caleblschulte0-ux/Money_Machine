@@ -1,11 +1,46 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
+import Svg, { Ellipse, Path } from 'react-native-svg';
 import { color, elevation, radius, space, type } from './theme';
 import { CARE_DOCK_HEIGHT, INTERACTION_GUTTER, TAP_MIN } from './layout';
-import { BALL, BRASS, DIORAMA, ITEM } from './scenes/artPalette';
+import { BRASS, DIORAMA } from './scenes/artPalette';
 
 const CARE_TRAY = require('../../assets/world/home/props/care_tray.png');
+
+/**
+ * HIS THINGS, RENDERED.
+ *
+ * Everything on this tray was a flat SVG standing on a Blender render of a
+ * wooden tray, under a Blender render of a dog: a bowl drawn as two stacked
+ * ellipses, and a "stick" that was three brown strokes on brown wood measuring
+ * 1.02:1 against it. The bowl, the stick, the ball, the rope and the bed are
+ * the same objects the shop sells and the room contains, from the same pack.
+ *
+ * Waves stay drawn. They are the one slot that is not an OBJECT -- at the beach
+ * the play control is "go and charge the sea" -- and there is nothing to model.
+ */
+const KIT_ART: Record<string, { source: number; width: number; height: number }> = {
+  bowl: { source: require('../../assets/world/item/kit_bowl.png'), width: 74, height: 41 },
+  stick: { source: require('../../assets/world/item/kit_stick.png'), width: 80, height: 23 },
+  ball: { source: require('../../assets/world/item/toy_ball.png'), width: 54, height: 51 },
+  rope: { source: require('../../assets/world/item/toy_rope.png'), width: 80, height: 29 },
+  bed: { source: require('../../assets/world/home/props/bed.png'), width: 86, height: 29 },
+};
+
+function KitArt({ id }: { id: keyof typeof KIT_ART }) {
+  const art = KIT_ART[id];
+  return <Image source={art.source} style={{ width: art.width, height: art.height }} resizeMode="contain" />;
+}
+
+/** He is in it. The drawn bed carried this; the render cannot, so it rides on top. */
+function Zzz() {
+  return (
+    <Svg width={22} height={18} viewBox="0 0 22 18" style={{ position: 'absolute', right: 2, top: -2 }}>
+      <Path d="M3 5h7l-7 8h7" stroke={DIORAMA.paleCream} strokeWidth={2.2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M13 2h5l-5 6h5" stroke={DIORAMA.paleCream} strokeWidth={1.8} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />
+    </Svg>
+  );
+}
 
 export type KitAction = 'feed' | 'play' | 'sleep';
 
@@ -35,28 +70,7 @@ function useNudge(active: boolean) {
   return v.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
 }
 
-function Bowl() {
-  return <Svg width={76} height={55} viewBox="0 0 70 50">
-    <Ellipse cx={35} cy={44} rx={27} ry={5} fill={DIORAMA.shadow} opacity={0.22} />
-    <Circle cx={25} cy={14} r={5.5} fill={ITEM.biscuitEdge} />
-    <Circle cx={41} cy={12} r={4.8} fill={ITEM.biscuit} />
-    <Ellipse cx={35} cy={22} rx={27} ry={8} fill={BRASS.edge} />
-    <Ellipse cx={35} cy={20} rx={24} ry={7} fill={BRASS.mid} />
-    <Path d="M8 22 a27 8 0 0 0 54 0 l-6 16 a21 6 0 0 1-42 0Z" fill={BRASS.polished} />
-    <Path d="M15 25 Q35 32 55 25" stroke={BRASS.light} strokeWidth={5} fill="none" strokeLinecap="round" opacity={0.82} />
-    <Path d="M18 23 Q29 27 40 23" stroke={DIORAMA.white} strokeWidth={3.4} fill="none" strokeLinecap="round" opacity={0.5} />
-  </Svg>;
-}
 
-function Ball() {
-  return <Svg width={64} height={64} viewBox="0 0 54 54">
-    <Ellipse cx={27} cy={49} rx={19} ry={4} fill={DIORAMA.shadow} opacity={0.22} />
-    <Circle cx={27} cy={27} r={22} fill={BALL.edge} />
-    <Circle cx={27} cy={24} r={21} fill={BALL.body} />
-    <Path d="M6 21 C17 13 37 13 48 21" stroke={BALL.seam} strokeWidth={3.8} fill="none" />
-    <Circle cx={18} cy={15} r={6.2} fill={BALL.gloss} opacity={0.48} />
-  </Svg>;
-}
 
 /**
  * A RIM, SO THE OBJECT EXISTS AGAINST THE SHELF.
@@ -79,25 +93,7 @@ function Ball() {
  */
 const RIM = { stroke: DIORAMA.paleCream, strokeLinecap: 'round' as const, fill: 'none' as const, opacity: 0.9 };
 
-function Rope() {
-  return <Svg width={80} height={48} viewBox="0 0 68 40">
-    <Ellipse cx={34} cy={35} rx={27} ry={4} fill={DIORAMA.shadow} opacity={0.2} />
-    <Path d="M10 21 q11-12 24 0 q11 11 24 0" strokeWidth={19} {...RIM} />
-    <Path d="M10 21 q11-12 24 0 q11 11 24 0" stroke={ITEM.ropeShade} strokeWidth={16} strokeLinecap="round" fill="none" />
-    <Path d="M10 18 q11-10 24 0 q11 10 24 0" stroke={ITEM.rope} strokeWidth={10} strokeLinecap="round" fill="none" />
-    <Path d="M11 15 q10-7 20 0" stroke={DIORAMA.white} strokeWidth={2.8} strokeLinecap="round" fill="none" opacity={0.38} />
-  </Svg>;
-}
 
-function Stick() {
-  return <Svg width={82} height={48} viewBox="0 0 70 40">
-    <Ellipse cx={35} cy={35} rx={27} ry={4} fill={DIORAMA.shadow} opacity={0.2} />
-    <Path d="M8 26 q17-11 33-6 q13 4 21-5" strokeWidth={16} {...RIM} />
-    <Path d="M8 26 q17-11 33-6 q13 4 21-5" stroke={DIORAMA.woodDeep} strokeWidth={13} strokeLinecap="round" fill="none" />
-    <Path d="M8 22 q17-9 33-5 q13 4 21-5" stroke={ITEM.stick} strokeWidth={11} strokeLinecap="round" fill="none" />
-    <Path d="M10 18 q16-6 30-2" stroke={ITEM.stickLight} strokeWidth={3.4} strokeLinecap="round" fill="none" opacity={0.8} />
-  </Svg>;
-}
 
 function Waves() {
   return <Svg width={82} height={52} viewBox="0 0 76 46">
@@ -109,17 +105,6 @@ function Waves() {
   </Svg>;
 }
 
-function Bed({ asleep }: { asleep: boolean }) {
-  return <Svg width={84} height={58} viewBox="0 0 74 50">
-    <Ellipse cx={37} cy={45} rx={31} ry={4.5} fill={DIORAMA.shadow} opacity={0.22} />
-    <Ellipse cx={37} cy={29} rx={32} ry={15} fill={DIORAMA.bedEdge} />
-    <Ellipse cx={37} cy={25} rx={31} ry={15} fill={ITEM.bedRim} />
-    <Ellipse cx={37} cy={22} rx={27} ry={12} fill={ITEM.bed} />
-    <Ellipse cx={37} cy={28} rx={21} ry={8} fill={ITEM.bedCushion} />
-    <Path d="M17 17 Q37 9 57 17" stroke={DIORAMA.white} strokeWidth={3.5} fill="none" opacity={0.38} strokeLinecap="round" />
-    {asleep && <Path d="M50 10 h7 l-7 7 h7" stroke={DIORAMA.paleCream} strokeWidth={2.2} fill="none" strokeLinecap="round" />}
-  </Svg>;
-}
 
 function Slot({ action, label, hint, wanted, disabled, onPress, children }: {
   action: KitAction; label: string; hint: string; wanted: boolean; disabled: boolean;
@@ -176,11 +161,11 @@ export default function BarklyKit({ toyId, playLabel, asleep, wants, disabled, o
     <View style={styles.dock} pointerEvents="none">
       <Image source={CARE_TRAY} style={styles.dockWood} resizeMode="stretch" />
     </View>
-    <Slot action="feed" label="food" hint="His bowl. Tap it to choose what he eats." wanted={wants === 'feed'} disabled={disabled} onPress={onPress}><Bowl /></Slot>
+    <Slot action="feed" label="food" hint="His bowl. Tap it to choose what he eats." wanted={wants === 'feed'} disabled={disabled} onPress={onPress}><KitArt id="bowl" /></Slot>
     <Slot action="play" label={playLabel} hint={hint} wanted={wants === 'play'} disabled={disabled} onPress={onPress}>
-      {visual === 'rope' ? <Rope /> : visual === 'ball' ? <Ball /> : visual === 'waves' ? <Waves /> : <Stick />}
+      {visual === 'waves' ? <Waves /> : <KitArt id={visual} />}
     </Slot>
-    <Slot action="sleep" label={asleep ? 'wake' : 'bed'} hint={asleep ? 'Wake him up.' : 'His bed.'} wanted={wants === 'sleep'} disabled={disabled} onPress={onPress}><Bed asleep={asleep} /></Slot>
+    <Slot action="sleep" label={asleep ? 'wake' : 'bed'} hint={asleep ? 'Wake him up.' : 'His bed.'} wanted={wants === 'sleep'} disabled={disabled} onPress={onPress}><><KitArt id="bed" />{asleep && <Zzz />}</></Slot>
   </View>;
 }
 
@@ -205,9 +190,19 @@ const styles = StyleSheet.create({
   dockWood: { position: 'absolute', left: -2.5, right: -2.5, top: -2.5, bottom: -2.5 },
   slot: { minWidth: TAP_MIN + 26, minHeight: TAP_MIN + 10, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 2 },
   off: { opacity: 0.4 },
-  wellShadow: { position: 'absolute', bottom: 5, width: 82, height: 29, borderRadius: radius.lg, backgroundColor: DIORAMA.shadow, opacity: 0.28 },
+  /*
+   * A MAT the object rests on, sized to the object -- not a dish it stands in.
+   *
+   * 29pt was too short once the items became renders: a brown stick lying on
+   * brown planks measures 1.02:1 against them, and the drawn version only got
+   * away with it by painting a cream outline around itself. Taking it to 52
+   * over-corrected -- the tray is about 60pt tall on a phone, so the mats stood
+   * PROUD of it, three white ovals floating over a wooden tray with the objects
+   * huddled at the bottom of each. 34 covers what the art actually occupies.
+   */
+  wellShadow: { position: 'absolute', bottom: 4, width: 82, height: 34, borderRadius: radius.lg, backgroundColor: DIORAMA.shadow, opacity: 0.28 },
   wellShadowWanted: { opacity: 0.38 },
-  well: { position: 'absolute', bottom: 9, width: 82, height: 29, borderRadius: radius.lg, backgroundColor: DIORAMA.cream, borderWidth: 2, borderColor: DIORAMA.woodDeep, overflow: 'hidden' },
+  well: { position: 'absolute', bottom: 8, width: 82, height: 34, borderRadius: radius.lg, backgroundColor: DIORAMA.cream, borderWidth: 2, borderColor: DIORAMA.woodDeep, overflow: 'hidden' },
   wellWanted: { backgroundColor: DIORAMA.goldGlowSoft, borderColor: BRASS.dark },
   wellGloss: { position: 'absolute', left: 10, right: 10, top: 4, height: 4, borderRadius: radius.pill, backgroundColor: DIORAMA.white, opacity: 0.64 },
   art: { alignItems: 'center', justifyContent: 'flex-end', height: 58, zIndex: 2 },

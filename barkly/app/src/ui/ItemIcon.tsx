@@ -30,8 +30,8 @@
 
 import React from 'react';
 import { Image, View } from 'react-native';
-import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
-import { BALL, BRASS, ITEM } from './scenes/artPalette';
+import Svg, { Circle, Defs, Ellipse, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { BALL, BRASS, DIORAMA, ITEM } from './scenes/artPalette';
 
 /**
  * The rendered pack, keyed by item id. Anything absent here falls through to
@@ -39,15 +39,18 @@ import { BALL, BRASS, ITEM } from './scenes/artPalette';
  * and removing one cannot leave a hole.
  */
 const RENDERED: Record<string, { source: number; aspect: number }> = {
-  treat_biscuit: { source: require('../../assets/world/item/treat_biscuit.png'), aspect: 160 / 111 },
-  treat_cheese: { source: require('../../assets/world/item/treat_cheese.png'), aspect: 160 / 145 },
-  treat_steak: { source: require('../../assets/world/item/treat_steak.png'), aspect: 160 / 111 },
-  toy_ball: { source: require('../../assets/world/item/toy_ball.png'), aspect: 160 / 152 },
-  toy_rope: { source: require('../../assets/world/item/toy_rope.png'), aspect: 160 / 58 },
-  collar_red: { source: require('../../assets/world/item/collar_red.png'), aspect: 160 / 101 },
-  collar_blue: { source: require('../../assets/world/item/collar_blue.png'), aspect: 160 / 101 },
-  collar_green: { source: require('../../assets/world/item/collar_green.png'), aspect: 160 / 101 },
-  collar_gold: { source: require('../../assets/world/item/collar_gold.png'), aspect: 160 / 101 },
+  treat_biscuit: { source: require('../../assets/world/item/treat_biscuit.png'), aspect: 224 / 155 },
+  treat_cheese: { source: require('../../assets/world/item/treat_cheese.png'), aspect: 224 / 203 },
+  treat_steak: { source: require('../../assets/world/item/treat_steak.png'), aspect: 224 / 155 },
+  toy_ball: { source: require('../../assets/world/item/toy_ball.png'), aspect: 224 / 212 },
+  toy_rope: { source: require('../../assets/world/item/toy_rope.png'), aspect: 224 / 81 },
+  collar_red: { source: require('../../assets/world/item/collar_red.png'), aspect: 224 / 141 },
+  collar_blue: { source: require('../../assets/world/item/collar_blue.png'), aspect: 224 / 141 },
+  collar_green: { source: require('../../assets/world/item/collar_green.png'), aspect: 224 / 141 },
+  collar_gold: { source: require('../../assets/world/item/collar_gold.png'), aspect: 224 / 141 },
+  kit_bowl: { source: require('../../assets/world/item/kit_bowl.png'), aspect: 224 / 125 },
+  kit_stick: { source: require('../../assets/world/item/kit_stick.png'), aspect: 224 / 63 },
+  home_bed: { source: require('../../assets/world/home/props/bed.png'), aspect: 534 / 181 },
 };
 
 /** Slightly darker sibling of a hex, for the shaded side of a shape. */
@@ -229,5 +232,32 @@ export default function ItemIcon({ id, tint, size = 30 }: { id: string; tint?: s
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View style={{ transform: [{ scale: size / 30 }] }}>{art}</View>
     </View>
+  );
+}
+
+/**
+ * The soft shadow an item stands on.
+ *
+ * The first version was a flat rounded rectangle at 16% scrim. On the pale
+ * panes the shop uses that is a crisp grey bar with hard ends -- it read as a
+ * progress bar under the biscuit, not as a shadow. A shadow has no edge, so
+ * this is a radial fade, which is the only way to get one without a blur.
+ *
+ * Sized by the caller, because it has to match the object standing on it.
+ */
+export function ItemStand({ width }: { width: number }) {
+  const id = React.useId();
+  const height = Math.max(5, width * 0.2);
+  return (
+    <Svg width={width} height={height}>
+      <Defs>
+        <RadialGradient id={id} cx="50%" cy="50%" rx="50%" ry="50%">
+          <Stop offset="0" stopColor={DIORAMA.shadow} stopOpacity={0.3} />
+          <Stop offset="0.5" stopColor={DIORAMA.shadow} stopOpacity={0.15} />
+          <Stop offset="1" stopColor={DIORAMA.shadow} stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <Ellipse cx={width / 2} cy={height / 2} rx={width / 2} ry={height / 2} fill={`url(#${id})`} />
+    </Svg>
   );
 }

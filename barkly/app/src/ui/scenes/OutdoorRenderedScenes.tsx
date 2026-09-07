@@ -772,14 +772,26 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
           else. The plaque is measured from the asset rather than guessed: in
           store_aqua.png the cream board runs y 0.187..0.311 and x 0.154..0.778
           of the trimmed art, with the accent bar crossing it at 0.26.
+
+          AND IT IS TEXT, NOT A SIGN. Getting the depth right revealed the
+          second half: it was drawing its OWN butter plaque, with a teal border
+          and a drop shadow, on top of the plaque the shop already has painted
+          on it. The two did not line up, so the shop's accent bar stuck out
+          below the pill as a loose teal underline and the whole thing read as
+          a disabled text field hovering in front of the building. The shop has
+          a signboard. The only thing missing from it was the name, so that is
+          all this draws -- placed in the cream band ABOVE the accent bar
+          (0.190..0.255), which is why its height is a fraction of the prop
+          rather than 24 points.
         */}
         <View
           style={[
             styles.shopSign,
             {
               left: centerStoreLeft + shopW * 0.96 * 0.16,
-              top: horizon + 8 + shopH * 0.96 * 0.195,
+              top: horizon + 8 + shopH * 0.96 * 0.190,
               width: shopW * 0.96 * 0.62,
+              height: shopH * 0.96 * 0.065,
               zIndex: baselineZ(horizon + 8, shopH * 0.96) + 1,
             },
           ]}
@@ -1094,7 +1106,7 @@ const styles = StyleSheet.create({
   lampSpill: { position: 'absolute', transform: [{ scaleX: 1.1 }] },
   townGlint: { position: 'absolute', left: 0, width: 18, height: 190, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   fountainSpark: { position: 'absolute', width: 9, height: 9, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
-  shopSign: { position: 'absolute', height: 24, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', backgroundColor: DIORAMA.butter, borderWidth: 2, borderColor: DIORAMA.townBlueEdge, ...elevation.low },
+  shopSign: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   shopSignText: { fontWeight: '900', letterSpacing: 1.2, color: DIORAMA.townBlueEdge },
   waveGlint: { position: 'absolute', right: 62, width: 64, height: 5, borderRadius: radius.pill, backgroundColor: DIORAMA.white },
   gull: { position: 'absolute', left: 0, width: 32, height: 18 },

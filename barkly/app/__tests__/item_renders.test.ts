@@ -36,14 +36,16 @@ function pngSize(file: string): { width: number; height: number } {
 }
 
 /** The `id: { source: require('...x.png'), aspect: W / H }` table in ItemIcon. */
-function declaredAspects(): Map<string, { file: string; aspect: number }> {
+function declaredAspects(): Map<string, { path: string; file: string; aspect: number }> {
   const src = readFileSync(join(ROOT, 'src', 'ui', 'ItemIcon.tsx')).toString();
   const table = src.slice(src.indexOf('const RENDERED'), src.indexOf('};', src.indexOf('const RENDERED')));
-  const out = new Map<string, { file: string; aspect: number }>();
+  const out = new Map<string, { path: string; file: string; aspect: number }>();
   const entry = /(\w+):\s*\{\s*source:\s*require\('([^']+)'\),\s*aspect:\s*([\d.]+)\s*\/\s*([\d.]+)\s*\}/g;
   let m: RegExpExecArray | null;
   while ((m = entry.exec(table))) {
-    out.set(m[1], { file: m[2].split('/').pop() as string, aspect: Number(m[3]) / Number(m[4]) });
+    // The require path is relative to src/ui/.
+    const rel = m[2].replace(/^\.\.\/\.\.\//, '');
+    out.set(m[1], { path: join(ROOT, ...rel.split('/')), file: m[2].split('/').pop() as string, aspect: Number(m[3]) / Number(m[4]) });
   }
   return out;
 }
@@ -52,15 +54,18 @@ describe('rendered store items', () => {
   const declared = declaredAspects();
 
   it('declares every render it ships', () => {
+    // Everything in the item pack is loaded by something. Renders that live
+    // elsewhere -- the bed is a room prop the shop also sells -- are allowed to
+    // be referenced from here, they just are not part of this directory.
     const onDisk = readdirSync(ITEM_DIR).filter((f) => f.endsWith('.png')).sort();
-    const referenced = [...declared.values()].map((v) => v.file).sort();
-    expect(referenced).toEqual(onDisk);
+    const referenced = [...declared.values()].map((v) => v.file);
+    for (const file of onDisk) expect(referenced).toContain(file);
   });
 
   it('states each render aspect as the PNG actually is', () => {
     expect(declared.size).toBeGreaterThan(0);
-    for (const [id, { file, aspect }] of declared) {
-      const { width, height } = pngSize(join(ITEM_DIR, file));
+    for (const [id, { path, aspect }] of declared) {
+      const { width, height } = pngSize(path);
       // One pixel of rounding is fine; a re-render that changes the shape is not.
       expect(Math.abs(aspect - width / height)).toBeLessThan(0.02);
       expect(id).toBeTruthy();
@@ -183,14 +188,17 @@ describe('the pane an item stands on', () => {
     // Five categories; if one is dropped the shop lost a section, so say so here.
     expect(panes.length).toBe(5);
 
-    const items = readdirSync(ITEM_DIR).filter((f) => f.endsWith('.png'));
-    expect(items.length).toBeGreaterThan(0);
+    // Only the things that actually stand on a pane: the shop's cards and the
+    // food tray's rows. The care tray's bowl and stick stand on wood, which is
+    // a different ground with a different answer.
+    const shown = STORE.map((item) => item.id).filter((id) => declaredAspects().has(id));
+    expect(shown.length).toBeGreaterThan(0);
     const worst: string[] = [];
-    for (const file of items) {
-      const mean = meanColor(join(ITEM_DIR, file));
+    for (const id of shown) {
+      const mean = meanColor(declaredAspects().get(id)!.path);
       for (const pane of panes) {
         const ratio = contrast(mean, pane.rgb as [number, number, number]);
-        if (ratio < 3) worst.push(`${file} on ${pane.name}: ${ratio.toFixed(2)}:1`);
+        if (ratio < 3) worst.push(`${id} on ${pane.name}: ${ratio.toFixed(2)}:1`);
       }
     }
     expect(worst).toEqual([]);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import ItemIcon, { BowlIcon } from './ItemIcon';
+import ItemIcon, { BowlIcon, ItemStand } from './ItemIcon';
 import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import { STORE, Wallet } from '../game/progression';
@@ -103,7 +103,7 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
           >
             <View style={[styles.itemRail, { backgroundColor: color.pop }]} pointerEvents="none" />
             <View style={[styles.iconWell, { backgroundColor: color.popPane, borderColor: color.pop }]}>
-              <View style={styles.iconStand} pointerEvents="none" />
+              <View style={styles.iconStand} pointerEvents="none"><ItemStand width={34} /></View>
               <FloatingIcon index={0} still={reduceMotion}><BowlIcon /></FloatingIcon>
             </View>
             <View style={styles.copy}>
@@ -148,7 +148,7 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
                   >
                     <View style={[styles.itemRail, { backgroundColor: accent }]} pointerEvents="none" />
                     <View style={[styles.iconWell, { backgroundColor: treatPane(index), borderColor: accent }]}>
-                      <View style={styles.iconStand} pointerEvents="none" />
+                      <View style={styles.iconStand} pointerEvents="none"><ItemStand width={34} /></View>
                       <FloatingIcon index={index + 1} still={reduceMotion}><ItemIcon id={item.id} tint={item.color} /></FloatingIcon>
                     </View>
                     <View style={styles.copy}>
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   itemRail: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
   iconWell: { width: 52, height: 52, borderRadius: radius.md, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   /** The shadow the treat stands on, so it sits in the well rather than on it. */
-  iconStand: { position: 'absolute', left: 12, right: 12, bottom: 7, height: 6, borderRadius: radius.pill, backgroundColor: color.scrim, opacity: 0.16 },
+  iconStand: { position: 'absolute', left: 0, right: 0, bottom: 6, alignItems: 'center' },
   copy: { flex: 1, marginLeft: space.md },
   name: { ...type.strong, fontWeight: '900', color: color.ink },
   detail: { marginTop: space.xs, ...type.caption, color: color.inkMid },

@@ -9,7 +9,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import ItemIcon from './ItemIcon';
+import ItemIcon, { ItemStand } from './ItemIcon';
 import CollarPreview, { hasCollarPreview } from './CollarPreview';
 import { color, elevation, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
@@ -264,7 +264,9 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                         <View style={[styles.cardWindow, { backgroundColor: slotPane(slot), borderColor: slotColor(slot) }]}>
                           {/* A shadow the object stands on, so it is IN the
                               window rather than floating on a pale square. */}
-                          <View style={styles.cardStand} pointerEvents="none" />
+                          <View style={styles.cardStand} pointerEvents="none">
+                            <ItemStand width={artSize * 0.72} />
+                          </View>
                           {/*
                             A collar is shown ON HIM. Everything else is still
                             the drawn object, because a bag of biscuits does not
@@ -406,16 +408,7 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
     overflow: 'hidden',
   },
-  cardStand: {
-    position: 'absolute',
-    left: '22%',
-    right: '22%',
-    bottom: '13%',
-    height: 10,
-    borderRadius: radius.pill,
-    backgroundColor: color.scrim,
-    opacity: 0.16,
-  },
+  cardStand: { position: 'absolute', left: 0, right: 0, bottom: '12%', alignItems: 'center' },
   heldTag: { position: 'absolute', right: space.xs, bottom: space.xs, paddingHorizontal: space.sm, paddingVertical: 1, borderRadius: radius.pill, backgroundColor: color.ink },
   heldText: { ...type.micro, color: color.paper },
   cardName: { ...type.strong, color: color.ink, textAlign: 'center' },

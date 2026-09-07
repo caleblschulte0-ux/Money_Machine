@@ -54,13 +54,14 @@ jobs:
       - name: Confirm modular transparent outputs
         run: |
           for file in \
-            park/tree park/bench park/hedge \
+            park/tree park/bench park/hedge park/dig_mound \
             town/store_coral town/store_aqua town/store_violet town/fountain town/lamp town/planter \
-            beach/umbrella beach/lifeguard beach/dune beach/castle beach/palm \
+            beach/umbrella beach/lifeguard beach/dune beach/castle beach/palm beach/sand_mound \
             home/rug home/care_tray \
             item/treat_biscuit item/treat_cheese item/treat_steak \
             item/toy_ball item/toy_rope \
-            item/collar_red item/collar_blue item/collar_green item/collar_gold; do
+            item/collar_red item/collar_blue item/collar_green item/collar_gold \
+            item/kit_bowl item/kit_stick; do
             test -s "art-review/world-props/${file}.png"
           done
           test -s art-review/world-props/manifest.json
@@ -78,12 +79,13 @@ jobs:
           # file this step did not name, so CI rendered it and promoted nothing --
           # the builder and the asset in the app would have drifted apart silently.
           cp art-review/world-props/home/*.png assets/world/home/props/
-          # The shop's icons are seen at 30-48px. A 640px render of a biscuit is
-          # a quarter of a megabyte for something the size of a fingernail, and
-          # nine of them would be most of the first-paint budget, so they are
-          # promoted at 160px -- still 3x the biggest place any of them is drawn.
+          # The shop's icons are seen at 30-48px and the care tray's at 74-86pt.
+          # A 640px render of a biscuit is a quarter of a megabyte for something
+          # the size of a fingernail, so they are promoted at 224px -- still
+          # comfortably over 2x the largest place any of them is drawn, on a 3x
+          # screen, and about a fifth of the bytes.
           for file in art-review/world-props/item/*.png; do
-            convert "$file" -resize '160x160>' -strip "assets/world/item/$(basename "$file")"
+            convert "$file" -resize '224x224>' -strip "assets/world/item/$(basename "$file")"
           done
           cp art-review/world-props/manifest.json assets/world/manifest.json
 

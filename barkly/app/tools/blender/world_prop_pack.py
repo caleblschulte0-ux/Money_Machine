@@ -591,6 +591,78 @@ def home_care_tray():
 # player later sees in his mouth. Modelled bold rather than detailed: they are
 # read at about 48px in a list row, so silhouette and one strong colour do all
 # the work and a fillet does the rest.
+def _mound(hex_body, hex_lump, hex_shade, hex_hole, hex_light, ripples=False):
+    """A dug-up mound: earth thrown up in a ring around an actual hole.
+
+    The drawn version was a hard-edged half-disc with a flat crescent under it,
+    a dark oval and two eyebrow strokes -- a croissant, or a closed eye, and the
+    loudest hand-drawn thing left in the park now that the trees and the bench
+    are renders.
+
+    A first pass modelled it as one heap with a dark sphere for the hole, and
+    the hole vanished: a sphere INSIDE a bigger sphere renders as nothing. You
+    cannot fake a hole with geometry that sits on top of the thing it is meant
+    to be a hole in. So the spoil is a RING -- lumps at seven different heights
+    around an ellipse -- and the pit is what you see through the middle of it,
+    which is a real opening rather than a dark patch painted on a lump.
+    """
+    body = material("Mound body", hex_body, roughness=0.94)
+    lump = material("Mound lump", hex_lump, roughness=0.95)
+    shade = material("Mound shade", hex_shade, roughness=0.95)
+    hole = material("Mound hole", hex_hole, roughness=0.96)
+    light = material("Mound light", hex_light, roughness=0.92)
+
+    # The pit first, so the spoil ring closes over its edges.
+    sphere("pit", (0, 0.00, 0.08), (0.94, 0.54, 0.10), hole)
+    sphere("pit_floor", (0.05, -0.10, 0.11), (0.54, 0.30, 0.06), shade)
+
+    # A HORSESHOE, open toward the camera.
+    #
+    # A closed ring did not work either. The camera looks down this world at
+    # about 22 degrees, so a 0.5-high lump on the near side of a 0.12-deep pit
+    # hides the pit completely: the second pass rendered a tidy heap of boulders
+    # with nothing in the middle. Real spoil piles up on the far side of the
+    # hole anyway -- you throw it away from yourself -- so the far arc carries
+    # the height and the near arc is a low lip you see straight over.
+    ring_rx, ring_ry = 1.00, 0.60
+    heights = (0.30, 0.24, 0.34, 0.22, 0.32, 0.26, 0.36, 0.23, 0.29)
+    sizes = (0.46, 0.38, 0.50, 0.36, 0.44, 0.40, 0.52, 0.37, 0.42)
+    mats = (body, lump, light, shade, body, lump, body, shade, lump)
+    for i, (zz, rr, mat) in enumerate(zip(heights, sizes, mats)):
+        angle = (i / len(heights)) * math.tau
+        y = -0.02 + ring_ry * math.sin(angle)
+        near = y < -0.16
+        sphere(
+            f"spoil_{i}",
+            (ring_rx * math.cos(angle) * 1.15, y, (0.10 if near else zz)),
+            (rr, rr * 0.62, rr * (0.30 if near else 0.58)),
+            shade if near else mat,
+        )
+
+    if ripples:
+        for i, x in enumerate((-1.20, -0.60, 0.62, 1.18)):
+            cylinder(f"ripple_{i}", (x, -0.62, 0.10), 0.045, 0.30, shade,
+                     rotation=(0, math.radians(90), math.radians(12 * (1 if i % 2 else -1))))
+
+    # Clods, thrown clear. They are what says somebody has been digging here.
+    for i, (cx, cy, cz, cr) in enumerate((
+        (-1.66, -0.34, 0.09, 0.15),
+        (-1.38, 0.26, 0.07, 0.11),
+        (1.62, -0.28, 0.09, 0.14),
+        (1.34, 0.30, 0.06, 0.10),
+        (0.24, -0.74, 0.07, 0.12),
+    )):
+        sphere(f"clod_{i}", (cx, cy, cz), (cr, cr * 0.8, cr * 0.7), lump if i % 2 else shade)
+
+
+def park_dig_mound():
+    return _mound("#AA681F", "#B97826", "#73400E", "#2E1A08", "#E1963D")
+
+
+def beach_sand_mound():
+    return _mound("#F8CD8C", "#FFDCA6", "#D09853", "#8B6231", "#FFECCA", ripples=True)
+
+
 # ---------------------------------------------------------------------------
 
 
@@ -637,7 +709,25 @@ def item_steak():
     fat = material("Steak fat", "#F3DCC0", roughness=0.62)
     sphere("fat_rim", (0, 0.03, 0.56), (0.52, 0.20, 0.36), fat)
     sphere("cut", (0, -0.04, 0.56), (0.46, 0.20, 0.31), meat)
-    sphere("cut_lit", (-0.12, -0.20, 0.66), (0.22, 0.07, 0.12), sear)
+    # The seared face reads as a broad lift across the top of the cut, not a
+    # separate ellipse in the middle -- that centred patch looked like a yolk.
+    sphere("cut_lit", (0.02, -0.19, 0.70), (0.34, 0.05, 0.10), sear)
+    # The T-bone, INSIDE the silhouette. A fourth pass: a slab of red with a
+    # cream rim is meat, but it is also ham, a pork chop, or a bread roll shot
+    # from above. The bone is what names it -- and every earlier attempt put it
+    # outside the outline, which is exactly what turned it into a drumstick.
+    tilt = math.radians(-16)
+    bone_x, bone_y, bone_z, bone_half = -0.27, -0.26, 0.56, 0.17
+    cylinder("bone_bar", (bone_x, bone_y, bone_z), 0.042, bone_half * 2, fat,
+             rotation=(0, tilt, 0))
+    for end in (1, -1):
+        sphere(
+            f"bone_end_{end}",
+            (bone_x + end * bone_half * math.sin(tilt), bone_y,
+             bone_z + end * bone_half * math.cos(tilt)),
+            (0.075, 0.05, 0.07),
+            fat,
+        )
 
 
 def item_ball():
@@ -684,6 +774,60 @@ def item_rope():
                  rotation=(0, math.radians(outward * 90) - outward * angle, 0))
 
 
+def kit_bowl():
+    """His food bowl, for the care tray.
+
+    The tray under him is a Blender render and everything standing on it was a
+    flat SVG -- a bowl drawn as two stacked ellipses, directly beneath a
+    rendered dog. Same object, same rig, same light.
+
+    The dish is shallow and the food is MOUNDED above the rim. The first pass
+    put a disc across the opening at the same height as the kibble, which
+    swallowed all four pieces and rendered an empty orange bowl.
+    """
+    glaze = material("Bowl glaze", "#F5A704", roughness=0.36, coat=0.22)
+    rim = material("Bowl rim", "#FFC038", roughness=0.34, coat=0.24)
+    inside = material("Bowl inside", "#A9640A", roughness=0.55)
+    kibble = material("Kibble", "#8A4A18", roughness=0.74)
+    cone("bowl", (0, 0, 0.38), 0.30, 0.50, 0.34, glaze)
+    sphere("bowl_inside", (0, 0, 0.50), (0.44, 0.44, 0.06), inside)
+    torus("bowl_rim", (0, 0, 0.54), 0.48, 0.06, rim, scale=(1, 1, 0.7))
+    for x, y, z, r in (
+        (-0.15, -0.06, 0.57, 0.13),
+        (0.13, 0.03, 0.58, 0.12),
+        (-0.01, -0.15, 0.60, 0.12),
+        (0.19, -0.11, 0.56, 0.10),
+        (0.02, 0.04, 0.64, 0.11),
+    ):
+        sphere(f"kibble_{x}_{y}", (x, y, z), (r, r, r * 0.78), kibble)
+
+
+def kit_stick():
+    """The stick -- what he plays with before anything is bought.
+
+    ONE tapered branch with ONE twig. The first pass built it from three
+    cylinders whose ends did not actually meet, which rendered as a jack: three
+    separate brown rods crossing near the middle. A branch reads as a branch
+    because it TAPERS and because everything on it grows out of one line.
+    """
+    bark = material("Stick bark", "#7A3E15", roughness=0.86)
+    lit = material("Stick lit", "#CF7A2B", roughness=0.80)
+    cone("limb", (0, 0, 0.58), 0.10, 0.062, 1.06, bark,
+         rotation=(0, math.radians(90), 0))
+    knot_x = 0.13
+    sphere("knot", (knot_x, 0, 0.585), (0.105, 0.098, 0.098), bark)
+    fork = math.radians(42)
+    cone("twig",
+         (knot_x + 0.14 * math.sin(fork), 0, 0.585 + 0.14 * math.cos(fork)),
+         0.055, 0.018, 0.28, bark,
+         rotation=(0, fork, 0))
+    # No painted-on highlight: a thin lit rod laid along the top of the branch
+    # sits PROUD of it at the tapered end and renders as a second stick lying
+    # across the first. The key light already gives it a top edge; the pale
+    # material is the scar where the twig broke off instead.
+    sphere("scar", (-0.30, -0.075, 0.60), (0.055, 0.03, 0.045), lit)
+
+
 def collar(name, hex_body, hex_edge):
     def build():
         body = material(f"{name} collar", hex_body, roughness=0.52, coat=0.08)
@@ -714,6 +858,8 @@ BUILDERS = {
     "beach/dune": (beach_dune, 4.5, (0, 0, 0.72), {"displayWidth": 158, "anchor": "bottom"}),
     "beach/castle": (beach_castle, 4.5, (0, 0, 1.30), {"displayWidth": 112, "anchor": "bottom"}),
     "beach/palm": (beach_palm, 6.0, (0, 0, 2.20), {"displayWidth": 142, "anchor": "bottom"}),
+    "park/dig_mound": (park_dig_mound, 4.2, (0, 0, 0.36), {"displayWidth": 118, "anchor": "bottom"}),
+    "beach/sand_mound": (beach_sand_mound, 4.2, (0, 0, 0.36), {"displayWidth": 118, "anchor": "bottom"}),
     "home/rug": (home_rug, 4.5, (0, 0, 0.42), {"displayWidth": 188, "anchor": "bottom"}),
     # Wide and shallow, so the ortho box is sized to the long axis rather than
     # to a tall prop's height, or the tray renders as a sliver in a big canvas.
@@ -724,6 +870,8 @@ BUILDERS = {
     "item/treat_steak": (item_steak, 1.7, (0, 0, 0.54), {"displayWidth": 48, "anchor": "center"}),
     "item/toy_ball": (item_ball, 1.5, (0, 0, 0.58), {"displayWidth": 48, "anchor": "center"}),
     "item/toy_rope": (item_rope, 1.9, (0, 0, 0.58), {"displayWidth": 48, "anchor": "center"}),
+    "item/kit_bowl": (kit_bowl, 1.6, (0, 0, 0.48), {"displayWidth": 76, "anchor": "center"}),
+    "item/kit_stick": (kit_stick, 1.9, (0, 0, 0.60), {"displayWidth": 82, "anchor": "center"}),
     "item/collar_red": (collar("Red", "#C4432E", "#8E2C1D"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
     "item/collar_blue": (collar("Blue", "#3E6E9C", "#28496A"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
     "item/collar_green": (collar("Green", "#4E7A46", "#33512E"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),

@@ -18,22 +18,13 @@ export const GROUND = {
 } as const;
 
 /** The dig spot at the park: turned earth. */
-export const DIRT = {
-  mound: '#AA681F',
-  shade: '#73400E',
-  hole: '#41260F',
-  light: '#E1963D',
-  edge: '#5D3510',
-} as const;
-
-/** The same spot at the beach: wet sand. */
-export const SAND = {
-  mound: '#F8CD8C',
-  shade: '#D09853',
-  ripple: '#A06E39',
-  light: '#FFECCA',
-  edge: '#AD763B',
-} as const;
+/*
+ * DIRT and SAND used to live here: the colours of the park's dig mound and the
+ * beach's search spot, when both were hand-drawn SVG. Both are Blender props
+ * now (tools/blender/world_prop_pack.py, `_mound`), which is where their
+ * colours went with them -- and this file only holds colours something in
+ * `src/` actually paints with.
+ */
 
 /** Metal on props and status dots — his tag, a buckle, a warning light. */
 export const BRASS = {
