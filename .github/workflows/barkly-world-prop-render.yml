@@ -57,7 +57,10 @@ jobs:
             park/tree park/bench park/hedge \
             town/store_coral town/store_aqua town/store_violet town/fountain town/lamp town/planter \
             beach/umbrella beach/lifeguard beach/dune beach/castle beach/palm \
-            home/rug home/care_tray; do
+            home/rug home/care_tray \
+            item/treat_biscuit item/treat_cheese item/treat_steak \
+            item/toy_ball item/toy_rope \
+            item/collar_red item/collar_blue item/collar_green item/collar_gold; do
             test -s "art-review/world-props/${file}.png"
           done
           test -s art-review/world-props/manifest.json
@@ -67,7 +70,7 @@ jobs:
 
       - name: Promote rendered modules into app
         run: |
-          mkdir -p assets/world/park/props assets/world/town/props assets/world/beach/props assets/world/home/props
+          mkdir -p assets/world/park/props assets/world/town/props assets/world/beach/props assets/world/home/props assets/world/item
           cp art-review/world-props/park/*.png assets/world/park/props/
           cp art-review/world-props/town/*.png assets/world/town/props/
           cp art-review/world-props/beach/*.png assets/world/beach/props/
@@ -75,13 +78,24 @@ jobs:
           # file this step did not name, so CI rendered it and promoted nothing --
           # the builder and the asset in the app would have drifted apart silently.
           cp art-review/world-props/home/*.png assets/world/home/props/
+          # The shop's icons are seen at 30-48px. A 640px render of a biscuit is
+          # a quarter of a megabyte for something the size of a fingernail, and
+          # nine of them would be most of the first-paint budget, so they are
+          # promoted at 160px -- still 3x the biggest place any of them is drawn.
+          for file in art-review/world-props/item/*.png; do
+            convert "$file" -resize '160x160>' -strip "assets/world/item/$(basename "$file")"
+          done
           cp art-review/world-props/manifest.json assets/world/manifest.json
 
       - name: Commit generated modules to branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/world/park assets/world/town assets/world/beach assets/world/home/props/rug.png assets/world/manifest.json
+          # The whole promoted tree. This line used to name home/props/rug.png
+          # by hand, two lines under a comment about exactly that mistake: the
+          # copy step took every home prop and this step staged one of them, so
+          # the care tray was rendered and promoted and then never committed.
+          git add assets/world
           if git diff --cached --quiet; then
             echo "Rendered assets unchanged."
           else

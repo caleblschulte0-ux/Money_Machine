@@ -82,6 +82,51 @@
       "file": "home/care_tray.png",
       "displayWidth": 330,
       "anchor": "bottom"
+    },
+    "item/treat_biscuit": {
+      "file": "item/treat_biscuit.png",
+      "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/treat_cheese": {
+      "file": "item/treat_cheese.png",
+      "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/treat_steak": {
+      "file": "item/treat_steak.png",
+      "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/toy_ball": {
+      "file": "item/toy_ball.png",
+      "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/toy_rope": {
+      "file": "item/toy_rope.png",
+      "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/collar_red": {
+      "file": "item/collar_red.png",
+      "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/collar_blue": {
+      "file": "item/collar_blue.png",
+      "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/collar_green": {
+      "file": "item/collar_green.png",
+      "displayWidth": 48,
+      "anchor": "center"
+    },
+    "item/collar_gold": {
+      "file": "item/collar_gold.png",
+      "displayWidth": 48,
+      "anchor": "center"
     }
   }
 }

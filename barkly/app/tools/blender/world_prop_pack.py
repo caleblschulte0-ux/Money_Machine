@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 
 import bpy
@@ -576,6 +577,125 @@ def home_care_tray():
         stud(f"rivet_{i}", (x, -0.49, 0.23), (0.05, 0.035, 0.05), brass)
 
 
+# ---------------------------------------------------------------------------
+# THE STORE'S ITEMS, RENDERED LIKE EVERYTHING ELSE HE OWNS.
+#
+# The care tray under Barkly is a render, the bowl and toy on it are drawn with
+# real volume, and the food sheet listed the SAME OBJECTS as flat glyphs in
+# coloured squares: a beige blob for dinner, a white bone on coral for biscuits,
+# a yellow square with a scribble for cheese. One app, two art languages, and
+# the cheap one used on the screen where a child chooses what to give him.
+#
+# These go through the shared camera and light rig -- and, since the colour
+# space fix, the shared basis too -- so an item in the shop is the same object a
+# player later sees in his mouth. Modelled bold rather than detailed: they are
+# read at about 48px in a list row, so silhouette and one strong colour do all
+# the work and a fillet does the rest.
+# ---------------------------------------------------------------------------
+
+
+def item_biscuit():
+    """A bone biscuit: one smooth bar with a knob at each corner of each end.
+
+    The first pass laid a darker bar along the underside as a shadow line; at
+    thumbnail size that stripe read as a plank, and the whole thing looked like
+    a little wooden bench. A bone is a silhouette, so it is now only that.
+    """
+    dough = material("Biscuit dough", "#D79A4C", roughness=0.78)
+    for x in (-0.34, 0.34):
+        for z in (-0.16, 0.16):
+            sphere(f"knob_{x}_{z}", (x, 0, 0.58 + z), (0.18, 0.16, 0.17), dough)
+    cube("bone_bar", (0, 0, 0.58), (0.34, 0.11, 0.11), dough, 0.09)
+
+
+def item_cheese():
+    """A wedge. A three-sided cylinder IS a triangular prism; a rotated cube is
+    a rhombus, which is what the first pass rendered."""
+    flesh = material("Cheese flesh", "#FFC93F", roughness=0.60, coat=0.05)
+    rind = material("Cheese rind", "#E8A21C", roughness=0.64)
+    hole = material("Cheese hole", "#B4761A", roughness=0.72)
+    cylinder("wedge", (0, 0, 0.56), 0.52, 0.34, flesh,
+             rotation=(math.radians(90), 0, 0), vertices=3)
+    cylinder("wedge_rind", (0, -0.18, 0.56), 0.52, 0.03, rind,
+             rotation=(math.radians(90), 0, 0), vertices=3)
+    for x, z in ((-0.06, 0.52), (0.12, 0.44), (0.00, 0.68)):
+        sphere(f"hole_{x}_{z}", (x, -0.19, z), (0.055, 0.03, 0.055), hole)
+
+
+def item_steak():
+    """A cut of meat: one mass, a rim of fat around it, one seared highlight.
+
+    Three passes were lost to detail this thing has no room for. Pale caps at
+    each END made it symmetrical and read as a wrapped sweet; fat along the top
+    edge read as a bun; a bone poking out of one side read as a drumstick. The
+    thing that actually says "steak" at 48px is a rounded slab of red with a
+    cream rim, so that is all this is now -- and no bone, because a bone is what
+    kept turning it into some other food.
+    """
+    meat = material("Steak", "#A93A2A", roughness=0.68)
+    sear = material("Steak sear", "#C9553C", roughness=0.60)
+    fat = material("Steak fat", "#F3DCC0", roughness=0.62)
+    sphere("fat_rim", (0, 0.03, 0.56), (0.52, 0.20, 0.36), fat)
+    sphere("cut", (0, -0.04, 0.56), (0.46, 0.20, 0.31), meat)
+    sphere("cut_lit", (-0.12, -0.20, 0.66), (0.22, 0.07, 0.12), sear)
+
+
+def item_ball():
+    """A squeaky ball: one sphere with a cream stripe around its middle.
+
+    Three passes. A torus at the sphere's own radius renders as a ring AROUND
+    it -- a planet, not a toy. An inset patch at y=-0.30 sat entirely INSIDE a
+    sphere of radius 0.46 and rendered as two stray specks. Placing that patch
+    correctly on the visible face, with a gloss dot above it, drew a curved
+    line under a round highlight -- a smiley face, on a ball, in a dog's toy
+    box. The stripe now runs all the way round the equator, which is both what
+    a real ball looks like and a shape that cannot be read as a mouth.
+    """
+    body = material("Ball body", "#E0452F", roughness=0.42, coat=0.20)
+    band = material("Ball band", "#FFF3E0", roughness=0.44, coat=0.18)
+    sphere("ball", (0, 0, 0.58), (0.46, 0.46, 0.46), body)
+    sphere("band", (0, 0, 0.58), (0.485, 0.485, 0.14), band)
+
+
+def item_rope():
+    """A knotted tug rope: a thick braid with a fat knot and a tuft at each end.
+
+    Three passes. A flattened torus rendered as a tan disc; upright it rendered
+    as a doughnut, the one shape a rope toy must not have; and a thin bar with
+    dark beads strung along it rendered as a caterpillar. What reads is the
+    proportion -- the knots have to be much fatter than the braid, and the
+    frayed ends have to splay.
+    """
+    rope = material("Rope", "#D8B36A", roughness=0.88)
+    rope_dark = material("Rope shade", "#A8823F", roughness=0.90)
+    cylinder("braid", (0, 0, 0.58), 0.16, 0.88, rope,
+             rotation=(0, math.radians(90), 0))
+    for i, tw in enumerate((-0.22, 0.0, 0.22)):
+        sphere(f"twist_{i}", (tw, -0.12, 0.58), (0.035, 0.06, 0.17), rope_dark)
+    for i, x in enumerate((-0.44, 0.44)):
+        outward = 1 if x > 0 else -1
+        sphere(f"knot_{i}", (x, 0, 0.58), (0.21, 0.21, 0.21), rope)
+        for j, tilt in enumerate((-40, -14, 14, 40)):
+            angle = math.radians(tilt)
+            cone(f"fray_{i}_{j}",
+                 (x + outward * 0.24 * math.cos(angle), 0,
+                  0.58 + 0.24 * math.sin(angle)),
+                 0.065, 0.02, 0.16, rope,
+                 rotation=(0, math.radians(outward * 90) - outward * angle, 0))
+
+
+def collar(name, hex_body, hex_edge):
+    def build():
+        body = material(f"{name} collar", hex_body, roughness=0.52, coat=0.08)
+        edge = material(f"{name} collar edge", hex_edge, roughness=0.56)
+        brass = material("Collar brass", "#E0A93C", roughness=0.28, metallic=0.74)
+        torus("band", (0, 0, 0.58), 0.42, 0.09, body, scale=(1, 0.55, 1))
+        torus("band_edge", (0, 0, 0.52), 0.42, 0.04, edge, scale=(1, 0.55, 1))
+        cube("buckle", (0, -0.22, 0.58), (0.11, 0.04, 0.11), brass, 0.03)
+        sphere("tag", (0, -0.24, 0.30), (0.12, 0.04, 0.12), brass)
+    return build
+
+
 BUILDERS = {
     "park/tree": (park_tree, 6.4, (0, 0, 2.15), {"displayWidth": 190, "anchor": "bottom"}),
     "park/bench": (park_bench, 4.7, (0, 0, 1.0), {"displayWidth": 136, "anchor": "bottom"}),
@@ -598,6 +718,16 @@ BUILDERS = {
     # Wide and shallow, so the ortho box is sized to the long axis rather than
     # to a tall prop's height, or the tray renders as a sliver in a big canvas.
     "home/care_tray": (home_care_tray, 6.1, (0, 0, 0.30), {"displayWidth": 330, "anchor": "bottom"}),
+    # The store's items. Small ortho boxes: each one fills its own frame.
+    "item/treat_biscuit": (item_biscuit, 1.5, (0, 0, 0.60), {"displayWidth": 48, "anchor": "center"}),
+    "item/treat_cheese": (item_cheese, 1.7, (0, 0, 0.58), {"displayWidth": 48, "anchor": "center"}),
+    "item/treat_steak": (item_steak, 1.7, (0, 0, 0.54), {"displayWidth": 48, "anchor": "center"}),
+    "item/toy_ball": (item_ball, 1.5, (0, 0, 0.58), {"displayWidth": 48, "anchor": "center"}),
+    "item/toy_rope": (item_rope, 1.9, (0, 0, 0.58), {"displayWidth": 48, "anchor": "center"}),
+    "item/collar_red": (collar("Red", "#C4432E", "#8E2C1D"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
+    "item/collar_blue": (collar("Blue", "#3E6E9C", "#28496A"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
+    "item/collar_green": (collar("Green", "#4E7A46", "#33512E"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
+    "item/collar_gold": (collar("Gold", "#D9A62B", "#9A711A"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
 }
 
 
@@ -620,10 +750,18 @@ def main():
         "contract": "modular transparent props; app owns scene composition",
         "assets": {},
     }
+    # PROP_ONLY re-renders one pack while iterating on it -- a full pass is 24
+    # props and several minutes, which is long enough that you stop looking.
+    # It only ever narrows what is RENDERED; the manifest still describes every
+    # prop, so a partial run can never publish a manifest that forgets one.
+    only = os.environ.get("PROP_ONLY", "").strip()
     for path, (builder, scale, target, metadata) in BUILDERS.items():
-        render_prop(path, builder, scale, target)
+        if not only or path.startswith(only):
+            render_prop(path, builder, scale, target)
         manifest["assets"][path] = {"file": f"{path}.png", **metadata}
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    if only:
+        print(f"PROP_ONLY={only}: rendered a subset; manifest still describes all")
 
 
 if __name__ == "__main__":

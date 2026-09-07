@@ -22,6 +22,17 @@ function treatSurface(index: number): string {
 }
 
 /**
+ * The pale glass the treat stands on. The accent stays on the rail down the
+ * left edge and on the border; it came off the ground under the object once
+ * the treats became renders, which measured as low as 1.38:1 on full lemon.
+ */
+function treatPane(index: number): string {
+  if (index % 3 === 0) return color.coralPane;
+  if (index % 3 === 1) return color.lemonPane;
+  return color.violetPane;
+}
+
+/**
  * The food is ALIVE in the tray before you pick it.
  *
  * Every row of this sheet was a still icon in a coloured well, which reads as a
@@ -91,8 +102,8 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
             accessibilityHint="Feed him his ordinary food."
           >
             <View style={[styles.itemRail, { backgroundColor: color.pop }]} pointerEvents="none" />
-            <View style={[styles.iconWell, { backgroundColor: color.fill }]}>
-              <View style={styles.iconGloss} pointerEvents="none" />
+            <View style={[styles.iconWell, { backgroundColor: color.popPane, borderColor: color.pop }]}>
+              <View style={styles.iconStand} pointerEvents="none" />
               <FloatingIcon index={0} still={reduceMotion}><BowlIcon /></FloatingIcon>
             </View>
             <View style={styles.copy}>
@@ -136,8 +147,8 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
                     accessibilityHint="Give him this instead of dinner."
                   >
                     <View style={[styles.itemRail, { backgroundColor: accent }]} pointerEvents="none" />
-                    <View style={[styles.iconWell, { backgroundColor: accent }]}>
-                      <View style={styles.iconGloss} pointerEvents="none" />
+                    <View style={[styles.iconWell, { backgroundColor: treatPane(index), borderColor: accent }]}>
+                      <View style={styles.iconStand} pointerEvents="none" />
                       <FloatingIcon index={index + 1} still={reduceMotion}><ItemIcon id={item.id} tint={item.color} /></FloatingIcon>
                     </View>
                     <View style={styles.copy}>
@@ -220,8 +231,9 @@ const styles = StyleSheet.create({
     ...elevation.low,
   },
   itemRail: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
-  iconWell: { width: 52, height: 52, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  iconGloss: { position: 'absolute', left: 7, right: 7, top: 5, height: 7, borderRadius: radius.pill, backgroundColor: color.gloss, opacity: 0.65 },
+  iconWell: { width: 52, height: 52, borderRadius: radius.md, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  /** The shadow the treat stands on, so it sits in the well rather than on it. */
+  iconStand: { position: 'absolute', left: 12, right: 12, bottom: 7, height: 6, borderRadius: radius.pill, backgroundColor: color.scrim, opacity: 0.16 },
   copy: { flex: 1, marginLeft: space.md },
   name: { ...type.strong, fontWeight: '900', color: color.ink },
   detail: { marginTop: space.xs, ...type.caption, color: color.inkMid },

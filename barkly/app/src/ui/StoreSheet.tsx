@@ -52,6 +52,19 @@ function slotColor(slot: ItemSlot): string {
   return color.mint;
 }
 
+/**
+ * The near-white glass each item stands on. The full-strength category colour
+ * stays on the tab, the border and the bottom edge; it came OFF the ground the
+ * object stands on, because a rendered biscuit on full coral measured 1.61:1.
+ * See the pane tokens in theme.
+ */
+function slotPane(slot: ItemSlot): string {
+  if (slot === 'collar') return color.violetPane;
+  if (slot === 'treat') return color.coralPane;
+  if (slot === 'toy') return color.popPane;
+  return color.mintPane;
+}
+
 function slotEdge(slot: ItemSlot): string {
   if (slot === 'collar') return color.violetDeep;
   if (slot === 'treat') return color.coralDeep;
@@ -248,8 +261,10 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
                       >
                         <View style={[styles.cardEdge, { backgroundColor: slotEdge(slot) }]} pointerEvents="none" />
                         {/* The art sits in a lit window, the way a toy sits in its box. */}
-                        <View style={[styles.cardWindow, { backgroundColor: slotColor(slot) }]}>
-                          <View style={styles.cardGloss} pointerEvents="none" />
+                        <View style={[styles.cardWindow, { backgroundColor: slotPane(slot), borderColor: slotColor(slot) }]}>
+                          {/* A shadow the object stands on, so it is IN the
+                              window rather than floating on a pale square. */}
+                          <View style={styles.cardStand} pointerEvents="none" />
                           {/*
                             A collar is shown ON HIM. Everything else is still
                             the drawn object, because a bag of biscuits does not
@@ -381,15 +396,25 @@ const styles = StyleSheet.create({
     ...elevation.card,
   },
   cardEdge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 7 },
-  cardGloss: { position: 'absolute', left: space.sm, right: space.sm, top: space.xs, height: space.sm, borderRadius: radius.pill, backgroundColor: color.gloss },
   cardWindow: {
     width: '100%',
     aspectRatio: 1.16,
     borderRadius: radius.md,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: space.sm,
     overflow: 'hidden',
+  },
+  cardStand: {
+    position: 'absolute',
+    left: '22%',
+    right: '22%',
+    bottom: '13%',
+    height: 10,
+    borderRadius: radius.pill,
+    backgroundColor: color.scrim,
+    opacity: 0.16,
   },
   heldTag: { position: 'absolute', right: space.xs, bottom: space.xs, paddingHorizontal: space.sm, paddingVertical: 1, borderRadius: radius.pill, backgroundColor: color.ink },
   heldText: { ...type.micro, color: color.paper },

@@ -65,6 +65,31 @@ export const color = {
   coral: '#FF7A59',
   coralDeep: '#D65238',
 
+  /**
+   * The grounds the ITEM ART stands on, in the shop and the food tray.
+   *
+   * Both sheets used to set the well to the full-strength category colour --
+   * a coral square behind a biscuit, a lemon square behind cheese. That was
+   * fine while the items were flat drawings with white outlines, and it stopped
+   * being fine the day they became rendered objects in the world's own palette:
+   * measured against the mean colour of each render, cheese on coral came out
+   * at 1.38:1 and the biscuit at 1.61:1, where 3:1 is the floor for a graphic
+   * you are meant to identify.
+   *
+   * Each of these is its colour mixed into `paper` at the strongest fraction
+   * that still keeps EVERY item render at or above 3.05:1 -- solved per colour,
+   * which is why they are not all the same strength. The category is still
+   * loud: it carries on the section tab, the card border and the bottom edge.
+   * Recompute these if the item renders change. They are PANES, not `*Well`
+   * colours -- a well here is a filled chip behind text, and these are the
+   * near-white glass an object is displayed against.
+   */
+  coralPane: '#FFF2E9',
+  lemonPane: '#FFF5D8',
+  violetPane: '#F9F3F3',
+  popPane: '#EFF6F2',
+  mintPane: '#EEF7E4',
+
   /** Highlights are accents now, not translucent frosting over every surface. */
   gloss: 'rgba(255,255,255,0.34)',
   glossSoft: 'rgba(255,255,255,0.18)',

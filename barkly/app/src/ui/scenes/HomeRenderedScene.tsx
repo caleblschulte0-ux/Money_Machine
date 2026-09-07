@@ -16,9 +16,17 @@ const RUG = require('../../../assets/world/home/props/rug.png');
 const SHELF = require('../../../assets/world/home/props/shelf.png');
 const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_frame.png');
 
-/** Window sun/moon geometry, in the aperture's own coordinates. */
-const SKY_BODY_R = 14;
-const SKY_BODY_INSET = 16;
+/**
+ * Window sun/moon geometry, as FRACTIONS of the aperture.
+ *
+ * These were 14 and 16 -- pixels, in a pane whose width is derived from the
+ * screen. On a phone the aperture comes out around 85pt wide, so a "14px"
+ * radius drew a 28pt disc across a third of the view: the sun in the window was
+ * bigger, relative to its sky, than the sun over the park. Everything in here
+ * is a fraction now, for the same reason the room around it is.
+ */
+const SKY_BODY_R_FRAC = 0.115;
+const SKY_BODY_INSET_FRAC = 0.13;
 
 const SKY: Record<SkyBand, readonly [ColorValue, ColorValue]> = {
   morning: [DIORAMA.skyMorningA, DIORAMA.skyMorningB],
@@ -52,6 +60,11 @@ function RenderedWindow({
   const height = width * (760 / 720);
   const apertureW = width * 0.61;
   const apertureH = height * 0.53;
+  const bodyR = apertureH * SKY_BODY_R_FRAC;
+  const bodyX = apertureW * (1 - SKY_BODY_INSET_FRAC) - bodyR;
+  const bodyY = apertureH * SKY_BODY_INSET_FRAC + bodyR;
+  // Where the land starts, as a fraction of the pane. Three bands sit below it.
+  const horizon = apertureH * 0.62;
 
   return (
     <View style={[styles.windowWrap, { top, left, width, height }]}>
@@ -86,37 +99,81 @@ function RenderedWindow({
           system from the one the tab bar switches to.
         */}
         <RadialGlow
-          cx={apertureW - SKY_BODY_INSET - SKY_BODY_R}
-          cy={SKY_BODY_INSET + SKY_BODY_R}
-          r={SKY_BODY_R * 3.2}
+          cx={bodyX}
+          cy={bodyY}
+          r={bodyR * 3.2}
           color={night ? DIORAMA.goldGlow : DIORAMA.butter}
           stops={night ? [0.30, 0.15, 0.05] : [0.46, 0.23, 0.08]}
         />
         <Svg width={apertureW} height={apertureH} style={styles.fill}>
           {night ? (
             <Path
-              d={crescentPath(
-                apertureW - SKY_BODY_INSET - SKY_BODY_R,
-                SKY_BODY_INSET + SKY_BODY_R,
-                SKY_BODY_R,
-                SKY_BODY_R * 0.92,
-                8.4,
-                -5,
-              )}
+              d={crescentPath(bodyX, bodyY, bodyR, bodyR * 0.92, bodyR * 0.6, -5)}
               fill={DIORAMA.goldLight}
               opacity={0.96}
             />
           ) : (
-            <Circle
-              cx={apertureW - SKY_BODY_INSET - SKY_BODY_R}
-              cy={SKY_BODY_INSET + SKY_BODY_R}
-              r={SKY_BODY_R}
-              fill={DIORAMA.lemon}
-            />
+            <>
+              <Circle cx={bodyX} cy={bodyY} r={bodyR} fill={DIORAMA.lemon} />
+              <Circle cx={bodyX - bodyR * 0.22} cy={bodyY - bodyR * 0.24} r={bodyR * 0.52} fill={DIORAMA.butter} opacity={0.7} />
+            </>
           )}
+          {/*
+            THE VIEW, in three bands rather than two.
+
+            This was a pair of rotated pills positioned at fixed pixel offsets
+            (-24, 32, -30, 82) inside a pane about 85pt wide, so on a phone the
+            two "hills" were 82pt tall in an 85pt view: two flat green blobs
+            filling the bottom half, which is what a window looks like when
+            nobody has looked at it since the layout changed around it. Every
+            number below is a fraction of the pane, and there is a far ridge
+            behind the hills and a treeline on them, so the view has depth of
+            its own instead of being the last flat thing in the room.
+          */}
+          <Path
+            d={`M0 ${horizon + apertureH * 0.05}
+                Q ${apertureW * 0.26} ${horizon - apertureH * 0.09}
+                  ${apertureW * 0.54} ${horizon + apertureH * 0.02}
+                Q ${apertureW * 0.82} ${horizon + apertureH * 0.1}
+                  ${apertureW} ${horizon - apertureH * 0.02}
+                L ${apertureW} ${apertureH} L 0 ${apertureH} Z`}
+            fill={night ? DIORAMA.hillNight : DIORAMA.parkHillDayLight}
+            opacity={night ? 1 : 0.72}
+          />
+          {[0.16, 0.3, 0.44, 0.72].map((t, i) => {
+            const treeX = apertureW * t;
+            const baseY = horizon + apertureH * (i % 2 === 0 ? 0.07 : 0.11);
+            const treeH = apertureH * (i % 2 === 0 ? 0.19 : 0.15);
+            return (
+              <Ellipse
+                key={t}
+                cx={treeX}
+                cy={baseY - treeH * 0.5}
+                rx={treeH * 0.42}
+                ry={treeH * 0.55}
+                fill={night ? DIORAMA.hillNight : DIORAMA.parkHillDay}
+                opacity={night ? 1 : 0.82}
+              />
+            );
+          })}
+          <Path
+            d={`M0 ${horizon + apertureH * 0.17}
+                Q ${apertureW * 0.34} ${horizon + apertureH * 0.05}
+                  ${apertureW * 0.68} ${horizon + apertureH * 0.19}
+                Q ${apertureW * 0.86} ${horizon + apertureH * 0.26}
+                  ${apertureW} ${horizon + apertureH * 0.16}
+                L ${apertureW} ${apertureH} L 0 ${apertureH} Z`}
+            fill={night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay}
+          />
+          <Path
+            d={`M0 ${horizon + apertureH * 0.3}
+                Q ${apertureW * 0.5} ${horizon + apertureH * 0.2}
+                  ${apertureW} ${horizon + apertureH * 0.33}
+                L ${apertureW} ${apertureH} L 0 ${apertureH} Z`}
+            fill={night ? DIORAMA.hillNight : DIORAMA.parkHillDayLight}
+            opacity={night ? 0.9 : 1}
+          />
         </Svg>
-        <View style={[styles.hillBack, { backgroundColor: night ? DIORAMA.hillNight : DIORAMA.parkHillDayLight }]} />
-        <View style={[styles.hillFront, { backgroundColor: night ? DIORAMA.parkHillNight : DIORAMA.parkHillDay }]} />
         {!night && <View style={styles.windowGlint} />}
       </View>
       <Image source={WINDOW_FRAME} resizeMode="contain" style={[styles.windowImage, { width, height }]} />
@@ -210,7 +267,32 @@ function BiographyObject({ visual, night }: { visual: BiographyProp['visual']; n
         <Circle cx={19.4} cy={16} r={1.7} fill={ITEM.leather} opacity={dim} />
         <Circle cx={24.6} cy={16} r={1.7} fill={ITEM.leather} opacity={dim} />
         <Path d="M13 11q2.4-4 5 0M27 11q2.4-4 5 0" stroke={ITEM.leather} strokeWidth={2} fill="none" strokeLinecap="round" opacity={0.8 * dim} />
-        {rival && <Path d="M8 27 36 8M8 9 36 28" stroke={ITEM.leather} strokeWidth={2.2} opacity={0.62 * dim} strokeLinecap="round" />}
+        {/*
+            The rival's photo is SCRIBBLED ON, not crossed out. A full X corner
+            to corner over a small framed picture is the broken-image glyph --
+            at 44pt on a wall it read as a missing asset rather than as an
+            opinion. A scrawl over the face is unmistakably somebody's doing.
+          */}
+        {rival && (
+          <Path
+            d="M11 21q5-7 9-2t9-5"
+            stroke={ITEM.leather}
+            strokeWidth={2.4}
+            fill="none"
+            strokeLinecap="round"
+            opacity={0.7 * dim}
+          />
+        )}
+        {rival && (
+          <Path
+            d="M12 15q6 5 11 1t8 3"
+            stroke={ITEM.leather}
+            strokeWidth={2.2}
+            fill="none"
+            strokeLinecap="round"
+            opacity={0.55 * dim}
+          />
+        )}
         <Path d="M6 4 L14 4" stroke={DIORAMA.white} strokeWidth={2.4} opacity={0.8} strokeLinecap="round" />
       </Svg>
     );
@@ -291,16 +373,21 @@ function HomeBiography({
   const slotStyle = (slot: BiographyProp['slot']) => {
     switch (slot) {
       case 'shelf-left':
-        return { right: shelfRight + shelfW * 0.58, top: chromeBottom + 100 };
+        return { right: shelfRight + shelfW * 0.58, top: chromeBottom + 100 * scale };
       case 'shelf-right':
-        return { right: shelfRight + shelfW * 0.16, top: chromeBottom + 100 };
+        return { right: shelfRight + shelfW * 0.16, top: chromeBottom + 100 * scale };
       // Pictures hang on the open wall BETWEEN the window and the shelf,
       // stacked, rather than being anchored off the shelf -- which is how the
       // photo ended up on top of the window when the wall was recomposed.
+      //
+      // Every drop below is scaled. They were raw pixels while the art they
+      // position is scaled by `transform`, so on a small phone the two frames
+      // shrank and the gap between them did not: two little pictures with a
+      // hand's width of bare wall between them.
       case 'wall-left':
-        return { left: stripCenter - 17 * scale, top: chromeBottom + 74 };
+        return { left: stripCenter - 17 * scale, top: chromeBottom + 74 * scale };
       case 'wall-right':
-        return { left: stripCenter - 17 * scale, top: chromeBottom + 150 };
+        return { left: stripCenter - 17 * scale, top: chromeBottom + 150 * scale };
       default:
         return { right: shelfRight + 6, top: floorTop - 4 };
     }
@@ -869,14 +956,6 @@ const styles = StyleSheet.create({
     backgroundColor: DIORAMA.skyDayA,
   },
   windowImage: { position: 'absolute', left: 0, top: 0 },
-  hillBack: {
-    position: 'absolute', left: -24, right: 32, bottom: -30, height: 82,
-    borderRadius: radius.pill, transform: [{ rotate: '-6deg' }],
-  },
-  hillFront: {
-    position: 'absolute', left: 34, right: -26, bottom: -36, height: 88,
-    borderRadius: radius.pill, transform: [{ rotate: '8deg' }],
-  },
   windowGlint: {
     position: 'absolute', left: 12, top: 15, width: '44%', height: 7,
     borderRadius: radius.pill, backgroundColor: DIORAMA.white, opacity: 0.2,

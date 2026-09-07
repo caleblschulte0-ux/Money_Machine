@@ -16,12 +16,39 @@
  *
  * Deliberately not tokenised: these are art, like the scenes and the mascot.
  * The palette lives in scenes/artPalette.
+ *
+ * SECOND PASS. Drawing them by hand fixed the emoji, but it left the app
+ * saying the same object two different ways: the dock under Barkly shows a
+ * rendered 3D care tray, and the sheet that opens off it drew the biscuit as
+ * a flat white bone. The nine purchasable things are now the SAME modular
+ * Blender pack the world props come from -- same camera, same light rig, same
+ * palette -- so a biscuit in the shop is the biscuit in his bowl. The three
+ * that have no render yet (bed, rug, window) keep their drawing, and the
+ * drawings ALL stay: they are the fallback if an image fails to load, and the
+ * only art at sizes where a photo of a 3D object turns to mush.
  */
 
 import React from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { BALL, BRASS, ITEM } from './scenes/artPalette';
+
+/**
+ * The rendered pack, keyed by item id. Anything absent here falls through to
+ * the drawing below -- that is the contract, so adding a render is one line
+ * and removing one cannot leave a hole.
+ */
+const RENDERED: Record<string, { source: number; aspect: number }> = {
+  treat_biscuit: { source: require('../../assets/world/item/treat_biscuit.png'), aspect: 160 / 111 },
+  treat_cheese: { source: require('../../assets/world/item/treat_cheese.png'), aspect: 160 / 145 },
+  treat_steak: { source: require('../../assets/world/item/treat_steak.png'), aspect: 160 / 111 },
+  toy_ball: { source: require('../../assets/world/item/toy_ball.png'), aspect: 160 / 152 },
+  toy_rope: { source: require('../../assets/world/item/toy_rope.png'), aspect: 160 / 58 },
+  collar_red: { source: require('../../assets/world/item/collar_red.png'), aspect: 160 / 101 },
+  collar_blue: { source: require('../../assets/world/item/collar_blue.png'), aspect: 160 / 101 },
+  collar_green: { source: require('../../assets/world/item/collar_green.png'), aspect: 160 / 101 },
+  collar_gold: { source: require('../../assets/world/item/collar_gold.png'), aspect: 160 / 101 },
+};
 
 /** Slightly darker sibling of a hex, for the shaded side of a shape. */
 function shade(hex: string, amount = 0.78): string {
@@ -177,6 +204,25 @@ const BY_ID: Record<string, React.ReactElement> = {
  * drift.
  */
 export default function ItemIcon({ id, tint, size = 30 }: { id: string; tint?: string; size?: number }) {
+  const [renderFailed, setRenderFailed] = React.useState(false);
+  const rendered = renderFailed ? undefined : RENDERED[id];
+  if (rendered) {
+    // Fit the render inside the caller's square without cropping it: a rope is
+    // nearly three times as wide as it is tall, and letting it fill a square
+    // box would either stretch it or chop the frayed ends off.
+    const width = rendered.aspect >= 1 ? size : size * rendered.aspect;
+    const height = rendered.aspect >= 1 ? size / rendered.aspect : size;
+    return (
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Image
+          source={rendered.source}
+          style={{ width, height }}
+          resizeMode="contain"
+          onError={() => setRenderFailed(true)}
+        />
+      </View>
+    );
+  }
   const art = id.startsWith('collar_') ? <Collar tint={tint ?? ITEM.leather} /> : BY_ID[id] ?? <Rug />;
   if (size === 30) return art;
   return (

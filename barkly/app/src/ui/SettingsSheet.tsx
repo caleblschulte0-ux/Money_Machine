@@ -110,12 +110,35 @@ function Stepper({
  * and a colour that means something (green is fine, amber is getting low, coral
  * needs attention) so the row reads before it is read.
  */
+/*
+ * WORDS, NOT A READOUT.
+ *
+ * These were four stacked meters with "65", "80", "60", "50" beside them, which
+ * is the visual grammar of a server dashboard and is what the visual direction
+ * doc means by a screen that reads as a generated app. A number out of a
+ * hundred is also the wrong unit for the question being asked: nobody wants to
+ * know their dog is at sixty-five percent mood. They want to know he is in a
+ * good mood.
+ *
+ * The meter stays -- it is a shape a child can read at a glance and it was
+ * already drawn properly -- and the number becomes the word the number meant.
+ */
+const STAT_WORDS: Record<string, [string, string, string]> = {
+  //          low            middling      high
+  mood: ['grumpy', 'alright', 'delighted'],
+  energy: ['worn out', 'pottering', 'bouncing'],
+  tummy: ['starving', 'peckish', 'full'],
+  bond: ['polite', 'warming up', 'devoted'],
+};
+
 function StatBar({ label, value, invert }: { label: string; value: number; invert?: boolean }) {
   const shown = Math.max(0, Math.min(100, invert ? 100 - value : value));
   const paint =
     shown >= 66 ? { body: color.mint, edge: color.mintDeep }
     : shown >= 33 ? { body: color.lemon, edge: color.lemonDeep }
     : { body: color.coral, edge: color.coralDeep };
+  const words = STAT_WORDS[label] ?? ['low', 'okay', 'good'];
+  const word = shown >= 66 ? words[2] : shown >= 33 ? words[1] : words[0];
   return (
     <View style={styles.statRow}>
       <Text style={styles.statLabel}>{label}</Text>
@@ -126,7 +149,7 @@ function StatBar({ label, value, invert }: { label: string; value: number; inver
           <View style={styles.statFillGloss} pointerEvents="none" />
         </View>
       </View>
-      <Text style={styles.statValue}>{Math.round(shown)}</Text>
+      <Text style={styles.statWord}>{word}</Text>
     </View>
   );
 }
@@ -217,42 +240,60 @@ export default function SettingsSheet(props: Props) {
               the two of them have. See PackBookSheet.
             */}
 
-            <Text style={styles.section}>Providers</Text>
             {/*
-              The "Dialogue:" row is gone. It printed `engine.providerName`,
-              which for the resilient provider is an internal diagnostic id
-              built as `${primary}+${fallback}` -- so a parent opening Settings
-              read the literal string "no model configured+scripted-offline".
-              That is a debug field, not a sentence, and everything a person
-              actually needs from it is in the Brain row directly below, in
-              English. The name still exists on the engine for logs.
+              DIAGNOSTICS ARE NOT FOR THE PLAYER.
+
+              This block used to be unconditional, so a child opening Settings
+              in the shipped build read "Brain: offline Barkly (no model
+              configured in this build)" and "Speech input: keyboard (mic needs
+              a dev build)". Those are true sentences about our infrastructure
+              and they are meaningless-to-alarming to the person holding the
+              phone. The precedent is right above: the "Dialogue:" row was
+              removed for exactly this, after it printed the literal string
+              "no model configured+scripted-offline" at a parent.
+
+              What a player can actually act on is kept, in their language, and
+              only when it is true -- if he is talking in the phone's voice
+              instead of his own, that is worth a sentence. Everything else
+              moves behind dev mode, where it is genuinely useful.
             */}
-            <Text style={styles.row}>
-              Brain:{' '}
-              {!modelConfigured
-                ? 'offline Barkly (no model configured in this build)'
-                : brain.using === 'primary'
-                  ? 'live model'
-                  : brain.breakerOpen
-                    ? 'offline Barkly (resting after a few failures)'
-                    : 'offline Barkly (last answer)'}
-            </Text>
-            {brain.lastFailure && <Text style={styles.empty}>Last hiccup: {brain.lastFailure}</Text>}
-            <Text style={styles.row}>
-              Speech input: {sttAvailable ? 'on-device recognition' : 'keyboard (mic needs a dev build)'}
-            </Text>
-            <Text style={styles.row}>
-              Voice:{' '}
-              {voice.muted
-                ? 'muted'
-                : voice.route === 'barkly'
-                  ? "Barkly's own voice"
-                  : voice.route === 'device'
-                    ? 'device voice (his own is unavailable)'
-                    : voice.route === 'silent'
-                      ? 'silent — no speech engine here'
-                      : 'not used yet'}
-            </Text>
+            {!devMode && voice.route === 'device' && (
+              <Text style={styles.voiceBlurb}>
+                He is borrowing this phone&rsquo;s voice today. His own is in the app, so he usually
+                sounds like himself.
+              </Text>
+            )}
+            {devMode && (
+              <>
+                <Text style={styles.section}>Providers</Text>
+                <Text style={styles.row}>
+                  Brain:{' '}
+                  {!modelConfigured
+                    ? 'offline Barkly (no model configured in this build)'
+                    : brain.using === 'primary'
+                      ? 'live model'
+                      : brain.breakerOpen
+                        ? 'offline Barkly (resting after a few failures)'
+                        : 'offline Barkly (last answer)'}
+                </Text>
+                {brain.lastFailure && <Text style={styles.empty}>Last hiccup: {brain.lastFailure}</Text>}
+                <Text style={styles.row}>
+                  Speech input: {sttAvailable ? 'on-device recognition' : 'keyboard (mic needs a dev build)'}
+                </Text>
+                <Text style={styles.row}>
+                  Voice:{' '}
+                  {voice.muted
+                    ? 'muted'
+                    : voice.route === 'barkly'
+                      ? "Barkly's own voice"
+                      : voice.route === 'device'
+                        ? 'device voice (his own is unavailable)'
+                        : voice.route === 'silent'
+                          ? 'silent — no speech engine here'
+                          : 'not used yet'}
+                </Text>
+              </>
+            )}
 
             <Text style={styles.section}>Sound</Text>
             {/*
@@ -285,9 +326,8 @@ export default function SettingsSheet(props: Props) {
 
             <Text style={styles.section}>His voice</Text>
             <Text style={styles.voiceBlurb}>
-              He was pitched a third of an octave up, which the speech engines do by resampling —
-              that is where the chipmunk came from. Pick a voice and set how he sounds; tap “hear it”
-              after each change.
+              Pick how he sounds, then tap &ldquo;hear it&rdquo;. Every dog is allowed an opinion
+              about his own voice.
             </Text>
 
             <View style={styles.voiceList}>
@@ -530,7 +570,9 @@ const styles = StyleSheet.create({
   empty: { fontSize: 13, color: color.inkSoft, fontStyle: 'italic' },
   statRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 9 },
   statLabel: { width: 56, fontSize: 13, fontWeight: '800', color: color.inkMid },
-  statValue: { width: 26, textAlign: 'right', fontSize: 12, fontWeight: '800', color: color.inkSoft },
+  // A word needs room a two-digit number did not: 26px fitted "65" and would
+  // clip "bouncing" to "bounc".
+  statWord: { width: 74, textAlign: 'right', fontSize: 12, fontWeight: '800', color: color.inkMid },
   statTrack: {
     flex: 1, height: 16, borderRadius: 999, backgroundColor: color.fill,
     borderWidth: 1.5, borderColor: color.line, overflow: 'hidden', justifyContent: 'center',
