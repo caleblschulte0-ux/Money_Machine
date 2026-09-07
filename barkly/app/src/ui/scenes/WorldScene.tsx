@@ -35,6 +35,29 @@ export type WorldLayerName =
 
 export type WorldMotion = 'idle' | 'arrive' | 'active' | 'sleep';
 
+/*
+ * WHAT DRAWS IN FRONT OF WHAT.
+ *
+ * These numbers order the STAGE, not the things standing on it. That
+ * distinction was missing and it produced a park bench drawn straight through
+ * a tree trunk: the bench sat in `props` (40), the tree in `landmark` (30), so
+ * the bench won -- even though its base was 110px higher up the ground plane,
+ * which in a 2.5D diorama means it is standing further AWAY. Draw order was a
+ * naming convention maintained by hand, so it drifted the moment anything
+ * moved, and the only way to notice was to look at the render.
+ *
+ * A painter's-algorithm diorama has exactly one rule: whatever stands nearer
+ * the viewer covers whatever stands behind it, and on a flat ground plane
+ * "nearer" is simply "its feet are lower down the screen". WorldObject now
+ * derives its own z from its baseline, so scenery placed in a single layer
+ * sorts itself and cannot be got wrong by a placement edit.
+ *
+ * `landmark` is that layer: everything standing on the ground goes in it. The
+ * others stay meaningful for things that are deliberately NOT on the ground
+ * plane -- `distant` is BELOW `ground` on purpose, so a far hedge tucks in
+ * behind the hill rather than sitting on it, and `foreground` is for anything
+ * that must be nearest whatever its feet say.
+ */
 export const WORLD_LAYER_Z: Record<WorldLayerName, number> = {
   sky: 0,
   distant: 10,
@@ -44,6 +67,18 @@ export const WORLD_LAYER_Z: Record<WorldLayerName, number> = {
   foreground: 50,
   fx: 60,
 };
+
+/**
+ * Ground-line draw order for one object.
+ *
+ * Kept as a named export with its own test rather than inlined, because the
+ * bug it fixes is invisible in a diff: two props swap order and nothing in the
+ * code looks different. Offset so the value stays positive for a prop whose
+ * layout box starts above the top of the canvas.
+ */
+export function baselineZ(top: number, height: number): number {
+  return Math.max(1, Math.round(top + height) + 1000);
+}
 
 const CAMERA: Record<WorldMotion, { scale: number; y: number }> = {
   idle: { scale: 1, y: 0 },
@@ -182,7 +217,7 @@ export function WorldObject({
       : undefined;
 
   return (
-    <View style={[styles.object, position]} pointerEvents="none">
+    <View style={[styles.object, position, { zIndex: baselineZ(top, height) }]} pointerEvents="none">
       {contactShadow && (
         <>
           {/*

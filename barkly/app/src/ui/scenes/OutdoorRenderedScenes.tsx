@@ -120,7 +120,7 @@ const SKY_BODY = SUN_R * 2 * 3.4;
  * frame that lane, and supporting props stay near the edges.
  */
 const COMPOSITION = {
-  park: { treeLeft: -42, treeRight: -44, benchLeft: 10, hedgeLeft: 104, hedgeRight: 72 },
+  park: { treeLeft: -42, treeRight: -26, benchLeft: 214, hedgeLeft: 104, hedgeRight: 72, brushLeft: -64, brushRight: -37 },
   town: { sideStore: -154, centerStoreLeft: 94, lampLeft: 22, lampRight: 20, planterLeft: 2, planterRight: 4 },
   beach: { palmLeft: -30, towerLeft: 14, umbrellaRight: -12, duneLeft: -38, duneRight: -42, castleRight: 14 },
 } as const;
@@ -335,23 +335,65 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const grass = night ? DIORAMA.parkGrassNight : DIORAMA.parkGrassDay;
   const grassNear = night ? DIORAMA.parkGrassNightEdge : DIORAMA.parkGrassDayEdge;
 
+  /*
+   * FIVE DEPTH TIERS, NOT TWO.
+   *
+   * Measured at 390x844 the whole park lived between y90 and y400 -- two trees,
+   * two far hedges, a bench -- and the entire band from there down to the care
+   * tray held nothing but Barkly and the two visiting dogs. A background and an
+   * actor plane, and no foreground at all, which is why the scene measured
+   * 50.4% detail against Town's 79.0% and read as a wall of green with a dog in
+   * front of it. `scripts/dead-space.py` is the number.
+   *
+   * Depth here is bought three ways, all of them cheap and none of them a new
+   * asset: SCALE (the far tree is 0.76 of the near one, not 0.96 -- at 0.96 the
+   * pair reads as one flat hedge-row), OVERLAP (the bench crosses the far
+   * tree's trunk, the brush crosses everything), and CROPPING (the foreground
+   * brush runs off both frame edges, which is the strongest distance cue
+   * available and was simply absent).
+   */
   const treeW = 204 * scale;
   const treeH = 292 * scale;
-  // Pushed back and down a size. The bench sat at the same left anchor and
-  // roughly the same height as the DIG mound, and on a real handset -- where
-  // the stage is shorter than any harness viewport -- the two simply stacked
-  // on top of each other. The bench is background; the mound is a CONTROL, so
-  // the bench is the one that yields.
-  const benchW = 116 * scale;
-  const benchH = 85 * scale;
+  // The far tree. Smaller AND higher: both, or it reads as a small tree
+  // standing next to a big one rather than the same tree further away.
+  const farTree = 0.76;
+  /*
+   * The bench used to sit at left:10, which put it from x5 to x128 -- inside
+   * the left tree's trunk, at every viewport. It was not a near miss: it had
+   * been pushed there deliberately to get it clear of the DIG mound, and the
+   * trunk was never in that arithmetic. It lives in the midground now, right of
+   * centre, where it crosses the FAR tree's trunk and reads as standing in
+   * front of it.
+   */
+  const benchW = 128 * scale;
+  const benchH = 94 * scale;
   const hedgeW = 142 * scale;
   const hedgeH = 72 * scale;
+  /*
+   * The foreground tier, and it is DELIBERATELY narrow.
+   *
+   * A full-width band of brush across the bottom is the textbook version and
+   * this scene cannot have it: measured, the bottom of the park is entirely
+   * committed already -- the DIG control's badge at x61..102 y453, BISCUIT's at
+   * x28..92 y620, DUKE's at x304..353 y625. A first pass ran brush across both
+   * corners and covered two of them. Names and controls are information; the
+   * brush is decoration, and decoration yields.
+   *
+   * So it runs off the extreme edges only, clear of every badge, which still
+   * buys the thing that was missing: something nearer than the actors, cropped
+   * by the frame.
+   */
+  const brushW = 96 * scale;
+  const brushH = 132 * scale;
   const wideInset = Math.max(14, (width - 720) / 2);
   const treeLeft = width >= 600 ? wideInset : COMPOSITION.park.treeLeft;
-  const treeRight = width >= 600 ? wideInset : COMPOSITION.park.treeRight;
-  const benchLeft = width >= 600 ? wideInset + 30 : COMPOSITION.park.benchLeft;
+  const treeRight = width >= 600 ? wideInset + 40 : COMPOSITION.park.treeRight;
+  const benchLeft = width >= 600 ? wideInset + treeW * 1.18 : COMPOSITION.park.benchLeft;
   const hedgeLeft = width >= 600 ? wideInset + treeW * 0.88 : COMPOSITION.park.hedgeLeft;
   const hedgeRight = width >= 600 ? wideInset + treeW * 0.72 : COMPOSITION.park.hedgeRight;
+  const brushLeft = width >= 600 ? wideInset - 70 : COMPOSITION.park.brushLeft;
+  const brushRight = width >= 600 ? wideInset - 76 : COMPOSITION.park.brushRight;
+  const brushTop = ground - 206;
 
   return (
     <WorldScene motion={motion} testID="world-scene-park">
@@ -371,28 +413,87 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <Path d={`M84 ${ground + 92}l4 -6 4 6 4 -6 4 6M222 ${ground + 116}l4 -6 4 6 4 -6 4 6`} stroke={night ? DIORAMA.gold : DIORAMA.lemon} strokeWidth={2.5} fill="none" opacity={night ? 0.24 : 0.68} />
       </Svg>
         {/*
-          The park trail is GONE, not softened a third time.
+          THE TRAIL IS BACK, WITH THE RIGHT SHAPE.
 
-          It was drawn in a 420-wide viewBox stretched with
-          preserveAspectRatio="none", so instead of a path narrowing toward the
-          horizon it rendered as a roughly constant-width vertical ribbon --
-          from the right tree's canopy, straight through its trunk, and past
-          the far dog to the bottom of the frame. Dropping its opacity twice
-          only turned a strong glitch into a faint one; the SHAPE was wrong.
-          The grass reads better with nothing on it, and the ground already
-          carries its own gradient and tufts.
+          It was removed, correctly, and the note explaining why said the real
+          thing: "Dropping its opacity twice only turned a strong glitch into a
+          faint one; the SHAPE was wrong." It rendered as a roughly
+          constant-width vertical ribbon running from the right tree's canopy
+          through its trunk to the bottom of the frame.
+
+          The shape is why it is worth having. A path narrowing toward the
+          horizon is the one device that describes the GROUND PLANE itself, and
+          without it the park was a flat green wall with things standing on it:
+          measured, the emptiest location in the game at 50.4% detail against
+          Town's 79.0%, with a dead band right across the middle.
+
+          The stretch is measured rather than assumed this time. The SVG box is
+          the full scene and the viewBox is 420 x canvasHeight, which on a
+          390x844 handset works out at 0.929 in x and 0.929 in y -- near
+          uniform, so a taper authored here survives to the screen. It is drawn
+          from the crest of the far hill, not from the horizon, so it starts
+          BEHIND the hill's edge instead of floating above it.
+
+          Warm rather than a lighter green on purpose: what the scene lacked was
+          contrast, not more grass. A second pass that added big green shapes to
+          a green field measured WORSE -- 56.9% detail down to 53.2% -- because
+          flat mass has no internal contrast to find.
         */}
+        <Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
+          <Defs>
+            <SvgLinearGradient id="parkTrailV4" x1="0" y1="0" x2="0" y2="1">
+              {/*
+                DARKER at night, not a dimmer version of the daytime path.
+                Lifting the same warm sand to 20% opacity under the night grade
+                read as a spotlight down the middle of the park -- and measured
+                it: night's largest empty rectangle went from 20.1% of the
+                scene to 38.2%, because a big pale wedge IS a big flat area.
+                Bare ground under moonlight is the cool, dark thing in a field,
+                so it is drawn that way.
+              */}
+              <Stop offset="0" stopColor={night ? DIORAMA.parkGrassNightEdge : DIORAMA.sandDayFar} stopOpacity={night ? 0.42 : 0.52} />
+              <Stop offset="1" stopColor={night ? DIORAMA.parkHillNightEdge : DIORAMA.sandDayNear} stopOpacity={night ? 0.30 : 0.30} />
+            </SvgLinearGradient>
+          </Defs>
+          <Path
+            d={`M198 ${horizon + 72}Q186 ${horizon + 250} 44 ${canvasHeight}L382 ${canvasHeight}Q244 ${horizon + 250} 224 ${horizon + 72}Z`}
+            fill="url(#parkTrailV4)"
+          />
+          {/* Worn edges: the line where the grass gives up. */}
+          <Path
+            d={`M198 ${horizon + 72}Q186 ${horizon + 250} 44 ${canvasHeight}`}
+            stroke={night ? DIORAMA.parkGrassNightLight : DIORAMA.sandDayEdge}
+            strokeWidth={2.5}
+            fill="none"
+            opacity={night ? 0.18 : 0.30}
+          />
+          <Path
+            d={`M224 ${horizon + 72}Q244 ${horizon + 250} 382 ${canvasHeight}`}
+            stroke={night ? DIORAMA.parkGrassNightLight : DIORAMA.sandDayEdge}
+            strokeWidth={2.5}
+            fill="none"
+            opacity={night ? 0.18 : 0.30}
+          />
+        </Svg>
       </WorldLayer>
       <WorldLayer name="distant">
         <WorldObject source={PARK_HEDGE} left={hedgeLeft} top={horizon + 43} width={hedgeW * 0.62} height={hedgeH * 0.62} night={night} depth={0.25} opacity={0.70} ambient="sway" />
         <WorldObject source={PARK_HEDGE} right={hedgeRight} top={horizon + 57} width={hedgeW * 0.55} height={hedgeH * 0.55} night={night} depth={0.22} opacity={0.62} ambient="sway" motionDelay={700} />
       </WorldLayer>
+      {/*
+        ONE layer for everything standing on the grass. WorldObject sorts these
+        by their ground line, so the tree in front of the bench is a fact about
+        where their feet are rather than about which WorldLayer someone filed
+        them under -- which is the mistake that put a bench through a trunk.
+      */}
       <WorldLayer name="landmark">
+        <WorldObject source={PARK_TREE} right={treeRight} top={horizon - 46} width={treeW * farTree} height={treeH * farTree} night={night} depth={0.42} ambient="sway" motionDelay={900} flip contactShadow />
+        <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 190} width={benchW} height={benchH} night={night} depth={0.70} contactShadow />
         <WorldObject source={PARK_TREE} left={treeLeft} top={horizon - 88} width={treeW} height={treeH} night={night} depth={0.55} ambient="sway" contactShadow />
-        <WorldObject source={PARK_TREE} right={treeRight} top={horizon - 80} width={treeW * 0.96} height={treeH * 0.96} night={night} depth={0.52} ambient="sway" motionDelay={900} flip contactShadow />
       </WorldLayer>
-      <WorldLayer name="props">
-        <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 92} width={benchW} height={benchH} night={night} depth={0.78} contactShadow />
+      <WorldLayer name="foreground">
+        <WorldObject source={PARK_TREE} left={brushLeft} top={brushTop} width={brushW} height={brushH} night={night} depth={0.97} ambient="sway" motionDelay={1500} />
+        <WorldObject source={PARK_TREE} right={brushRight} top={brushTop + 18} width={brushW * 0.94} height={brushH * 0.94} night={night} depth={1} ambient="sway" motionDelay={2100} flip />
       </WorldLayer>
       <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
       <WorldLighting ground={ground} night={night} band={band} />
