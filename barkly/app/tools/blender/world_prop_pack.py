@@ -72,11 +72,135 @@ def look_at(obj, target=(0.0, 0.0, 1.2)):
     obj.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
 
 
-def material(name, color, roughness=0.55, metallic=0.0, coat=0.04):
+# WHAT EVERY SURFACE IN THE WORLD IS MADE OF.
+#
+# Barkly is a plush toy: felt weave on the fur, leather grain and stitching on
+# the collar, worn brass on the tag. Crop him next to the world at the same
+# scale and the world is bare plastic -- one flat colour, one roughness, no
+# surface at all. Not one object tells you what it is made of.
+#
+# That is not a composition problem and no amount of props fixes it. The hero
+# and the world were in different material languages, and every prop in the
+# game gets its material from this one function, so this is where it is fixed.
+#
+# Three things, all cheap, all driven by noise in object space:
+#   MOTTLE  the colour varies AROUND the authored value rather than replacing
+#           it, so nothing shifts hue -- the sRGB lesson this file already
+#           carries applies to every one of these numbers.
+#   ROUGH   roughness varies, which is most of what reads as "material" under
+#           a moving light.
+#   BUMP    a fine normal perturbation. This is the one that does the work:
+#           it is what makes felt look woven and plaster look plastered.
+#
+# `stretch` pulls the noise along one axis for grain -- wood is not isotropic.
+# WHAT THE NUMBERS MEAN, and why the first attempt at this did nothing.
+#
+# `cube`/`sphere` below call `transform_apply(scale=True)`, so an object's
+# scale is baked into its mesh and OBJECT texture coordinates are therefore in
+# the same units as the world. That makes every scale here readable as CYCLES
+# PER WORLD UNIT, and it is checkable: a park bench is ~3.5 units wide and
+# renders ~440px, so one world unit is ~125px. A noise scale of 190 -- the
+# first guess -- is 190 cycles per unit, which is 0.7px per cycle. It averaged
+# to flat grey and moved the render by a maximum of 5/255. A texture that is
+# finer than a pixel is not a subtle texture, it is no texture.
+#
+# So the bands are chosen against the frequencies a viewer can actually see,
+# measured against Barkly himself at a common size (subject normalised to
+# 400px tall, energy above a Gaussian of radius r):
+#
+#                hp1    hp2    hp4    hp8   hp16
+#   Barkly       3.65   7.41   13.9   24.5   40.8
+#   bench        0.90   2.38   4.68    9.8   20.6
+#   tree         0.24   0.97   2.72    6.6   12.4
+#   hedge        0.08   0.38   1.23    3.1    7.1
+#
+# The hero carried forty-five times the hedge's fine detail. That gap is the
+# whole "he is a plush toy standing in a world of untextured plastic" reading,
+# and it is one function's fault, because every prop in the game gets its
+# material from here.
+#
+#   GRAIN   ~5-12 cycles/unit, high Detail. The noise node's own octaves carry
+#           this up into the fine bands, so one field feeds hp16 down to hp2.
+#   TOOTH   ~40-120 cycles/unit, driving a bump. Roughly 1-3px per cycle in a
+#           prop render: not resolvable as a pattern, which is the point --
+#           it reads as surface tooth, and it is what makes felt look woven.
+#   MOTTLE  the colour varies AROUND the authored value by a MULTIPLIER, so
+#           hue is mathematically untouched and the mean is preserved. The
+#           sRGB lesson this file already carries is why that matters.
+#   ROUGH   roughness varies on the same field, which is most of what reads as
+#           material under a moving key light.
+#
+# `stretch` pulls the field along one axis, because wood is not isotropic.
+# `smooth` opts a material out entirely, for glass and polished metal.
+SURFACES = {
+    "matte":   {"grain":  7.0, "tooth":  55.0, "bump": 0.42, "depth": 0.012,
+                "mottle": 0.12, "rough": 0.14, "stretch": 1.0},
+    "felt":    {"grain":  9.0, "tooth":  80.0, "bump": 0.75, "depth": 0.010,
+                "mottle": 0.18, "rough": 0.12, "stretch": 1.0},
+    "wood":    {"grain":  5.0, "tooth":  45.0, "bump": 0.45, "depth": 0.014,
+                "mottle": 0.15, "rough": 0.16, "stretch": 9.0},
+    "foliage": {"grain": 11.0, "tooth":  70.0, "bump": 0.34, "depth": 0.016,
+                "mottle": 0.11, "rough": 0.15, "stretch": 1.0},
+    "sand":    {"grain": 12.0, "tooth": 120.0, "bump": 0.46, "depth": 0.007,
+                "mottle": 0.10, "rough": 0.10, "stretch": 1.0},
+    "stone":   {"grain":  6.0, "tooth":  40.0, "bump": 0.52, "depth": 0.020,
+                "mottle": 0.13, "rough": 0.20, "stretch": 1.0},
+    "smooth":  None,
+}
+
+
+# WHICH surface a material gets, inferred from the name it already has.
+#
+# There are 146 material() calls in this file and every one of them is named
+# for what it is -- "Bench honey wood", "Hedge green", "Paving slab", "Store
+# glass". That naming is not decoration, it is a usable declaration of
+# substance, so the surface is read off it rather than added as a 147th edit
+# that would go stale the moment someone adds a prop. A new material called
+# "Fence post oak" gets wood grain for free; one called "Kite nylon" gets
+# cloth. An explicit surface= always wins over the guess.
+#
+# Order matters: the first match wins, so the specific words come first.
+SURFACE_WORDS = (
+    # Nothing modulated. A contact shadow is not an object with a surface --
+    # it is a shadow, and putting tooth on it makes the ground look mouldy.
+    ("smooth", ("shadow", "glass", "water", "glow", "sky", "light beam",
+                "cloud", "glaze", "foam", "surf", "wave")),
+    ("wood",  ("wood", "bark", "plank", "timber", "board", "trunk", "log",
+               "oak", "pine", "slat", "decking", "driftwood", "pole")),
+    ("foliage", ("leaf", "leaves", "foliage", "hedge", "bush", "shrub",
+                 "canopy", "grass", "tuft", "clump", "marram", "moss",
+                 "fern", "palm", "treeline", "reed", "blade", "stem")),
+    ("sand",  ("sand", "dune", "beach", "gravel", "grit", "shingle",
+               "castle", "earth", "soil", "dirt", "mound", "path")),
+    ("stone", ("stone", "paving", "slab", "kerb", "curb", "grout", "brick",
+               "concrete", "plaster", "rock", "pebble", "tile", "slate",
+               "wall", "terracotta", "clay", "cobble", "asphalt")),
+    ("felt",  ("felt", "cloth", "fabric", "towel", "cushion", "canvas",
+               "awning", "umbrella", "flag", "rug", "blanket", "wool",
+               "nylon", "bed", "rope")),
+)
+
+
+def _infer_surface(name):
+    lowered = name.lower()
+    for surface, words in SURFACE_WORDS:
+        if any(word in lowered for word in words):
+            return surface
+    return "matte"
+
+
+def _shift(linear_rgb, amount):
+    """Scale a linear colour lighter or darker. A MULTIPLIER, so hue is exact."""
+    return tuple(min(1.0, max(0.0, c * (1.0 + amount))) for c in linear_rgb)
+
+
+def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
-    bsdf = mat.node_tree.nodes.get("Principled BSDF")
-    bsdf.inputs["Base Color"].default_value = (*rgb(color), 1.0)
+    nt = mat.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    base = rgb(color)
+    bsdf.inputs["Base Color"].default_value = (*base, 1.0)
     bsdf.inputs["Roughness"].default_value = roughness
     bsdf.inputs["Metallic"].default_value = metallic
     if "Coat Weight" in bsdf.inputs:
@@ -87,6 +211,74 @@ def material(name, color, roughness=0.55, metallic=0.0, coat=0.04):
         bsdf.inputs["Clearcoat"].default_value = coat
         if "Clearcoat Roughness" in bsdf.inputs:
             bsdf.inputs["Clearcoat Roughness"].default_value = max(0.08, roughness * 0.45)
+
+    spec = SURFACES.get(surface if surface is not None else _infer_surface(name))
+    if spec is None:
+        return mat
+
+    coord = nt.nodes.new("ShaderNodeTexCoord")
+    mapping = nt.nodes.new("ShaderNodeMapping")
+    mapping.inputs["Scale"].default_value = (1.0, 1.0 / spec["stretch"], 1.0)
+    nt.links.new(coord.outputs["Object"], mapping.inputs["Vector"])
+
+    # ONE field for colour and roughness. Detail 8 with a high noise-roughness
+    # keeps the fine octaves alive, so this single node covers several of the
+    # measured bands instead of sitting in one of them.
+    grain = nt.nodes.new("ShaderNodeTexNoise")
+    grain.inputs["Scale"].default_value = spec["grain"]
+    grain.inputs["Detail"].default_value = 8.0
+    if "Roughness" in grain.inputs:
+        grain.inputs["Roughness"].default_value = 0.62
+    nt.links.new(mapping.outputs["Vector"], grain.inputs["Vector"])
+
+    # SPREAD, and this is the node the whole pass turns on.
+    #
+    # A noise node's Fac is fBm: it is not uniform over 0..1, it clusters hard
+    # around 0.5 with a standard deviation near 0.1. Driving a mix with it raw
+    # therefore only ever travels about a fifth of the range you asked for, so
+    # every strength below was being quietly cut to a fifth before it reached
+    # the render. That is why the first attempt at this moved a bench by five
+    # values out of 255 and looked, correctly, like nothing had happened.
+    #
+    # Expanding the middle of the distribution back out to the full range is
+    # what makes an authored amplitude mean what it says.
+    spread = nt.nodes.new("ShaderNodeMapRange")
+    spread.inputs["From Min"].default_value = 0.36
+    spread.inputs["From Max"].default_value = 0.64
+    spread.clamp = True
+    nt.links.new(grain.outputs["Fac"], spread.inputs["Value"])
+
+    # Mix between a darker and a lighter version of the SAME colour, so the
+    # mean is what was authored and the hue is bit-for-bit unchanged.
+    mix = nt.nodes.new("ShaderNodeMixRGB")
+    mix.inputs["Color1"].default_value = (*_shift(base, -spec["mottle"]), 1.0)
+    mix.inputs["Color2"].default_value = (*_shift(base, spec["mottle"]), 1.0)
+    nt.links.new(spread.outputs["Result"], mix.inputs["Fac"])
+    nt.links.new(mix.outputs["Color"], bsdf.inputs["Base Color"])
+
+    rough = nt.nodes.new("ShaderNodeMapRange")
+    rough.inputs["To Min"].default_value = max(0.05, roughness - spec["rough"])
+    rough.inputs["To Max"].default_value = min(1.0, roughness + spec["rough"])
+    nt.links.new(spread.outputs["Result"], rough.inputs["Value"])
+    nt.links.new(rough.outputs["Result"], bsdf.inputs["Roughness"])
+
+    # The tooth, on its own much finer field, as a normal perturbation. Bump
+    # beats colour for this: it modulates the key light rather than the albedo,
+    # so it survives being lit and does not wash out in shadow.
+    fine = nt.nodes.new("ShaderNodeTexNoise")
+    fine.inputs["Scale"].default_value = spec["tooth"]
+    fine.inputs["Detail"].default_value = 3.0
+    nt.links.new(mapping.outputs["Vector"], fine.inputs["Vector"])
+    tooth = nt.nodes.new("ShaderNodeMapRange")
+    tooth.inputs["From Min"].default_value = 0.34
+    tooth.inputs["From Max"].default_value = 0.66
+    tooth.clamp = True
+    nt.links.new(fine.outputs["Fac"], tooth.inputs["Value"])
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = spec["bump"]
+    bump.inputs["Distance"].default_value = spec["depth"]
+    nt.links.new(tooth.outputs["Result"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
     return mat
 
 
@@ -327,7 +519,7 @@ def park_tree():
 
 def park_bench():
     wood = material("Bench honey wood", "#BD601C", roughness=0.58, coat=0.05)
-    wood_light = material("Bench sun face", "#EE8C36", roughness=0.52, coat=0.06)
+    wood_light = material("Bench sun-face wood", "#EE8C36", roughness=0.52, coat=0.06)
     metal = material("Bench iron", "#344349", roughness=0.36, metallic=0.64)
 
     contact_shadow(1.65, 0.52)
@@ -1588,14 +1780,27 @@ def main():
     # props and several minutes, which is long enough that you stop looking.
     # It only ever narrows what is RENDERED; the manifest still describes every
     # prop, so a partial run can never publish a manifest that forgets one.
-    only = os.environ.get("PROP_ONLY", "").strip()
+    # Comma-separated, because comparing a material change across several props
+    # at once is the only way to judge one. It was a single prefix, and a list
+    # matched NOTHING while still printing "rendered a subset" and exiting 0 --
+    # which cost a whole measurement pass that was read off stale renders.
+    # A filter that matches nothing is now an error, not a quiet success.
+    only = [p for p in os.environ.get("PROP_ONLY", "").split(",") if p.strip()]
+    only = [p.strip() for p in only]
+    rendered = 0
     for path, (builder, scale, target, metadata) in BUILDERS.items():
-        if not only or path.startswith(only):
+        if not only or any(path.startswith(prefix) for prefix in only):
             render_prop(path, builder, scale, target)
+            rendered += 1
         manifest["assets"][path] = {"file": f"{path}.png", **metadata}
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if only:
-        print(f"PROP_ONLY={only}: rendered a subset; manifest still describes all")
+        if not rendered:
+            raise SystemExit(
+                f"PROP_ONLY={','.join(only)} matched no prop. "
+                f"Known prefixes: {sorted({p.split('/')[0] for p in BUILDERS})}"
+            )
+        print(f"PROP_ONLY={','.join(only)}: rendered {rendered}; manifest still describes all")
 
 
 if __name__ == "__main__":

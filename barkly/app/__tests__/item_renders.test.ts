@@ -104,12 +104,25 @@ const Buf = (globalThis as any).Buffer as {
   alloc: (size: number) => any;
 };
 
-/** Mean RGB of the opaque pixels in an 8-bit RGBA PNG. */
+/**
+ * Mean RGB of the opaque pixels in an 8-bit PNG, truecolour OR palette.
+ *
+ * Palette support is not decoration. The shipped props are quantised to 256
+ * colours without dithering (see scripts/promote-props.py -- the size win that
+ * does not counterfeit the surface gate), which makes them colour type 3, and
+ * this decoder used to throw "not 8-bit RGBA" on sight. The choice was to stop
+ * quantising inventory art for the sake of a test's decoder, or to teach the
+ * decoder the format the art is actually in. This is the second one: it costs
+ * a PLTE/tRNS lookup and it keeps 268KB out of the bundle.
+ */
 function meanColor(file: string): [number, number, number] {
   const buf: any = readFileSync(file);
   let pos = 8;
   let width = 0;
   let height = 0;
+  let colorType = 6;
+  let palette: number[][] = [];
+  let alphas: number[] = [];
   const idat: any[] = [];
   while (pos < buf.length) {
     const len = buf.readUInt32BE(pos);
@@ -117,14 +130,26 @@ function meanColor(file: string): [number, number, number] {
     if (kind === 'IHDR') {
       width = buf.readUInt32BE(pos + 8);
       height = buf.readUInt32BE(pos + 12);
-      if (buf[pos + 16] !== 8 || buf[pos + 17] !== 6) throw new Error(`${file}: not 8-bit RGBA`);
+      colorType = buf[pos + 17];
+      if (buf[pos + 16] !== 8 || (colorType !== 6 && colorType !== 3)) {
+        throw new Error(`${file}: not 8-bit RGBA or palette`);
+      }
+    } else if (kind === 'PLTE') {
+      for (let i = 0; i < len; i += 3) {
+        palette.push([buf[pos + 8 + i], buf[pos + 9 + i], buf[pos + 10 + i]]);
+      }
+    } else if (kind === 'tRNS') {
+      // Palette transparency is optional and may cover only a prefix of the
+      // palette; entries it does not mention are fully opaque.
+      for (let i = 0; i < len; i += 1) alphas.push(buf[pos + 8 + i]);
     } else if (kind === 'IDAT') {
       idat.push(buf.subarray(pos + 8, pos + 8 + len));
     } else if (kind === 'IEND') break;
     pos += len + 12;
   }
   const raw = zlib.inflateSync(Buf.concat(idat));
-  const stride = width * 4;
+  const samples = colorType === 6 ? 4 : 1;
+  const stride = width * samples;
   const out = Buf.alloc(height * stride);
   let sum = [0, 0, 0];
   let seen = 0;
@@ -132,9 +157,9 @@ function meanColor(file: string): [number, number, number] {
     const filter = raw[y * (stride + 1)];
     const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
     for (let x = 0; x < stride; x += 1) {
-      const a = x >= 4 ? out[y * stride + x - 4] : 0;
+      const a = x >= samples ? out[y * stride + x - samples] : 0;
       const b = y > 0 ? out[(y - 1) * stride + x] : 0;
-      const c = x >= 4 && y > 0 ? out[(y - 1) * stride + x - 4] : 0;
+      const c = x >= samples && y > 0 ? out[(y - 1) * stride + x - samples] : 0;
       let v = line[x];
       if (filter === 1) v += a;
       else if (filter === 2) v += b;
@@ -149,10 +174,20 @@ function meanColor(file: string): [number, number, number] {
       out[y * stride + x] = v & 255;
     }
     for (let x = 0; x < width; x += 1) {
-      const i = y * stride + x * 4;
-      if (out[i + 3] > 200) {
-        sum = [sum[0] + out[i], sum[1] + out[i + 1], sum[2] + out[i + 2]];
-        seen += 1;
+      const i = y * stride + x * samples;
+      if (colorType === 6) {
+        if (out[i + 3] > 200) {
+          sum = [sum[0] + out[i], sum[1] + out[i + 1], sum[2] + out[i + 2]];
+          seen += 1;
+        }
+      } else {
+        const index = out[i];
+        const alpha = index < alphas.length ? alphas[index] : 255;
+        const rgb = palette[index];
+        if (alpha > 200 && rgb) {
+          sum = [sum[0] + rgb[0], sum[1] + rgb[1], sum[2] + rgb[2]];
+          seen += 1;
+        }
       }
     }
   }
@@ -179,6 +214,29 @@ function hexRgb(hex: string): [number, number, number] {
 }
 
 describe('the pane an item stands on', () => {
+  /*
+   * THE DECODER IS PART OF THE MEASUREMENT, so it is checked against known
+   * answers rather than trusted. It grew palette support when the props were
+   * quantised, and a decoder that silently returns the wrong mean turns every
+   * contrast assertion below into a green light that means nothing. These
+   * three numbers were taken independently (Pillow, opaque pixels only) from
+   * the same shipped files.
+   */
+  it('decodes a palette PNG to the same mean an independent reader gets', () => {
+    const cases: Array<[string, [number, number, number]]> = [
+      ['collar_red', [151.63, 65.98, 43.64]],
+      ['toy_ball', [176.83, 78.74, 65.14]],
+      ['treat_cheese', [175.36, 125.37, 36.21]],
+    ];
+    for (const [name, expected] of cases) {
+      const got = meanColor(join(ROOT, 'assets', 'world', 'item', `${name}.png`));
+      for (let i = 0; i < 3; i += 1) {
+        expect({ name, i, off: Math.abs(got[i] - expected[i]) < 0.5 })
+          .toEqual({ name, i, off: true });
+      }
+    }
+  });
+
   it('keeps every render legible against every pane it can land on', () => {
     const theme = readFileSync(join(ROOT, 'src', 'ui', 'theme.ts')).toString();
     const panes = [...theme.matchAll(/(\w+Pane): '(#[0-9A-Fa-f]{6})'/g)].map((m) => ({

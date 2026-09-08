@@ -230,7 +230,8 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     return camera
 
 
-def ground(hex_near: str, hex_far: str = "#84CE5E", centre: float = -48.5, size: float = 183.0):
+def ground(hex_near: str, hex_far: str = "#84CE5E", centre: float = -48.5,
+           size: float = 183.0, tooth: float = 9.0, bump: float = 0.5):
     """The ground, as geometry. It receives shadow and it occludes.
 
     AN ORTHOGRAPHIC CAMERA HAS NO HORIZON. Every ray is parallel, so an
@@ -253,7 +254,8 @@ def ground(hex_near: str, hex_far: str = "#84CE5E", centre: float = -48.5, size:
     plane.name = "ground"
     # BOTH tones are the caller's. The first version hardcoded the park's
     # lighter green as the second stop, so the beach rendered green sand.
-    plane.data.materials.append(noise_material("Ground", hex_near, hex_far, scale=1.5))
+    plane.data.materials.append(
+        noise_material("Ground", hex_near, hex_far, scale=1.5, tooth=tooth, bump=bump))
     return plane
 
 
@@ -368,7 +370,8 @@ def park():
         _tuft(fx, fy, fs)
 
 
-def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2, detail: float = 4.0):
+def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2,
+                   detail: float = 4.0, tooth: float = 9.0, bump: float = 0.5):
     """Ground that varies CONTINUOUSLY, instead of in painted shapes.
 
     The first attempt laid irregular n-gons of slightly different green over
@@ -396,6 +399,48 @@ def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2, detail
     ramp.color_ramp.elements[1].color = (*pack.rgb(hex_b), 1.0)
     nt.links.new(tex.outputs["Fac"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+
+    # AND TOOTH, because the ground was the last smooth thing in the picture.
+    #
+    # The colour ramp above gives the ground broad patches, which is the
+    # difference between "a fill" and "terrain" -- but the plane itself was
+    # still mathematically flat, and it stayed flat while every prop standing
+    # on it grew a surface. That mismatch is worse than both being smooth: it
+    # reads as models placed on a painted backdrop, which is the exact thing
+    # composing them into one lit place was meant to stop.
+    #
+    # `tooth` is in cycles per world unit, like the prop pack's surfaces. The
+    # ground plane is 183 units across and shows about 40px per unit near the
+    # camera, so single-digit scales land in the few-pixels-per-cycle band
+    # where a viewer reads texture rather than pattern.
+    # OBJECT COORDINATES, and this is the whole difference between a textured
+    # ground and a smooth one. A noise node with nothing plugged into Vector
+    # falls back to GENERATED coordinates, which are normalised 0..1 across the
+    # object's bounding box -- and this plane's bounding box is 183 units wide.
+    # A scale of 9 then means nine cycles across the entire field, one cycle
+    # per twenty metres, which renders as a faint gradient and reads as
+    # nothing. The plane is created at its final size and never scaled, so its
+    # object coordinates are world units and `tooth` means cycles per unit,
+    # exactly as it does in the prop pack.
+    #
+    # The colour ramp above is deliberately LEFT on Generated: its scale was
+    # tuned against the bounding box to give the field broad patches, and
+    # moving it here would be retuning a thing that works.
+    coord = nt.nodes.new("ShaderNodeTexCoord")
+    grain = nt.nodes.new("ShaderNodeTexNoise")
+    nt.links.new(coord.outputs["Object"], grain.inputs["Vector"])
+    grain.inputs["Scale"].default_value = tooth
+    grain.inputs["Detail"].default_value = 6.0
+    spread = nt.nodes.new("ShaderNodeMapRange")
+    spread.inputs["From Min"].default_value = 0.36
+    spread.inputs["From Max"].default_value = 0.64
+    spread.clamp = True
+    nt.links.new(grain.outputs["Fac"], spread.inputs["Value"])
+    relief = nt.nodes.new("ShaderNodeBump")
+    relief.inputs["Strength"].default_value = bump
+    relief.inputs["Distance"].default_value = 0.02
+    nt.links.new(spread.outputs["Result"], relief.inputs["Height"])
+    nt.links.new(relief.outputs["Normal"], bsdf.inputs["Normal"])
     return mat
 
 
@@ -664,7 +709,7 @@ def beach():
     the surf sits in a place rather than on a picture, and the umbrella throws
     its shadow across the sand it stands on.
     """
-    ground("#DFB877", "#EFD196")
+    ground("#DFB877", "#EFD196", tooth=16.0, bump=0.36)
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
     _anchor("horizon", 0.0, 43.0)
@@ -853,7 +898,7 @@ def _palm(x: float, y: float, s: float = 1.0):
 
 def _castle(x: float, y: float, s: float = 1.0):
     sand = pack.material("Castle sand", "#D8B476", roughness=0.94)
-    flag = pack.material("Castle flag", "#E1594C", roughness=0.70)
+    flag = pack.material("Castle pennant cloth", "#E1594C", roughness=0.70)
     stick = pack.material("Castle stick", "#4E9E4A", roughness=0.88)
     for dx, dy, h in ((-0.85, 0.0, 1.15), (0.85, 0.0, 1.05), (0.0, -0.6, 1.45)):
         cx, cy = TURN(x + dx * s, y + dy * s)

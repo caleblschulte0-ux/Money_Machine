@@ -14,9 +14,10 @@ declare const require: (m: string) => any;
 declare const __dirname: string;
 
 type Bytes = { readUInt32BE: (offset: number) => number; toString: () => string };
-const { readFileSync, existsSync } = require('fs') as {
+const { readFileSync, existsSync, readdirSync } = require('fs') as {
   readFileSync: (p: string) => Bytes;
   existsSync: (p: string) => boolean;
+  readdirSync: (p: string) => string[];
 };
 const { join } = require('path') as { join: (...p: string[]) => string };
 
@@ -31,10 +32,30 @@ const manifest = JSON.parse(
 };
 
 describe('scene plates', () => {
-  const names = Object.keys(manifest.scenes);
+  /*
+   * WHICH SCENES THESE TESTS ARE ABOUT: the ones that SHIP.
+   *
+   * The manifest is the render record, and it deliberately never narrows --
+   * rendering one scene still publishes every scene's anchors, because a
+   * partial run that dropped the others would ship a manifest that had
+   * forgotten where the dog stands. So it can describe a plate that is built
+   * and held back: the beach plate exists, was judged worse than its
+   * composited fallback, and is not in ScenePlate's PLATE_ART.
+   *
+   * The contract that matters is therefore the other direction. Every plate on
+   * disk must be fully and correctly described. An earlier version asserted
+   * that every DESCRIBED scene ships, which made "render a scene, don't like
+   * it, don't ship it" a test failure -- so the suite sat two red for days,
+   * which is how a suite stops being read.
+   */
+  const shipped = readdirSync(join(ROOT, 'assets', 'world', 'scenes'))
+    .filter((f) => f.endsWith('.png'));
+  const names = Object.keys(manifest.scenes).filter((n) =>
+    shipped.indexOf(manifest.scenes[n].file) !== -1);
 
-  it('ships a plate for every scene the manifest claims', () => {
-    expect(names.length).toBeGreaterThan(0);
+  it('describes every plate it ships', () => {
+    expect(shipped.length).toBeGreaterThan(0);
+    expect(names.length).toEqual(shipped.length);
     for (const name of names) {
       expect(existsSync(join(ROOT, 'assets', 'world', 'scenes', manifest.scenes[name].file))).toBe(true);
     }

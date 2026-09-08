@@ -844,3 +844,151 @@ They grow toward the camera. A patch is a fixed size in the world, so the near
 ones cover more of the frame; the first version kept them equal and flattened
 the very thing it was added to fix. The first strength was also too polite —
 a mean per-channel change of 5/255, which is not a shape, it is a rumour.
+
+## The material language: the world was untextured plastic
+
+*2026-09-08. The operator, after several passes of adding props, composition
+and depth: "adding shit on top of shit still makes it shit. There are
+fundamental changes to the most basic level of art in our game that need to
+be fixed."*
+
+He was right, and the fix was not another prop.
+
+### The diagnosis, as a number
+
+Crop Barkly and any prop at the same scale and the difference is not style, it
+is substance. He is a plush toy: felt weave on the fur, leather grain and
+stitching on the collar, worn brass on the tag, pores in the nose. The world
+is injection-moulded plastic: a flat white post, a flat coral roof, a flat
+green hedge.
+
+Measured at native resolution as mean absolute deviation from a 1px Gaussian
+blur, over interior pixels only:
+
+| | hp1 | hp2 | hp4 | hp8 |
+|---|---|---|---|---|
+| **Barkly** | 2.94 | 6.15 | 11.53 | 20.67 |
+| park hedge | 0.25 | 0.98 | 2.66 | 6.29 |
+| park tree | 0.20 | 0.82 | 2.34 | 5.84 |
+| beach dune | 0.60 | 1.93 | 5.32 | 12.23 |
+
+The hero carried **twelve times** the hedge's fine detail. Every prop in the
+game takes its material from ONE function, `material()` in
+`tools/blender/world_prop_pack.py`, and that function set a single flat base
+colour and a single roughness. That is the most basic level of the art, and it
+is one place.
+
+### What it now does
+
+Three fields, all driven by noise in object space, all preserving the authored
+colour exactly:
+
+- **MOTTLE** — the colour varies *around* the authored value by a MULTIPLIER,
+  so the hue is mathematically untouched and the mean is preserved. The sRGB
+  lesson this pipeline already carries is why that matters: a texture pass that
+  shifts the palette is a palette change wearing a costume.
+- **ROUGH** — roughness varies on the same field, which is most of what reads
+  as material under a moving key light.
+- **TOOTH** — a much finer field driving a bump. This is the one that does the
+  work; it modulates the key light rather than the albedo, so it survives being
+  lit and does not wash out in shadow.
+
+Six surfaces (`matte`, `felt`, `wood`, `foliage`, `sand`, `stone`) plus
+`smooth` for glass, water, cloud and contact shadows, which have no tooth by
+design. `stretch` pulls the field along one axis, because wood is not
+isotropic.
+
+**Which surface a material gets is read off the name it already had.** There
+are 146 `material()` calls and every one was already named for its substance —
+"Bench honey wood", "Hedge green", "Paving slab", "Store glass". That naming
+was a usable declaration, so a new material called "Fence post oak" gets wood
+grain for free. An explicit `surface=` always wins over the guess.
+
+### Three things that made the first attempt render nothing
+
+Worth recording, because each one produced output that looked exactly like
+success.
+
+1. **The scales were finer than a pixel.** `cube()`/`sphere()` call
+   `transform_apply(scale=True)`, so object texture coordinates are in world
+   units — a scale of 190 means 190 cycles per unit, and a bench is 3.5 units
+   across 440px. That is 0.7px per cycle. It averaged to flat grey. A texture
+   finer than a pixel is not a subtle texture, it is no texture. The scales are
+   now stated in cycles per world unit and checked against the render size.
+
+2. **A noise Fac is not uniform.** `ShaderNodeTexNoise` outputs fBm, which
+   clusters around 0.5 with a standard deviation near 0.1 — so a mix driven by
+   it raw only travels about a fifth of the range you asked for. Every
+   amplitude was being quietly cut to a fifth before it reached the render.
+   A `MapRange` expanding 0.36–0.64 back to the full range is the node the
+   whole pass turns on; without it the strongest setting moved a bench by five
+   values out of 255.
+
+3. **The measurement lied before the render did.** The first probe normalised
+   every prop to 400px tall, which UPSCALED a 638×21 paving course nineteen
+   times and reported its fine detail as exactly `0.00`. A measurement
+   artefact, indistinguishable from a flat render, pointing at the wrong bug.
+   Measure at native resolution: those are the pixels that ship.
+
+### Calibrated against the hero, not upward
+
+The first tuning that worked overshot: the hedge came back at 6.67 against
+Barkly's 2.94, and a prop with more than twice the hero's detail does not read
+as lush, it reads as noise. Amplitudes were cut so every prop lands in
+1.6–3.2 with Barkly at the top of the range. **He stays the richest thing on
+screen.** Means moved by at most 2.4/255, so the palette is intact.
+
+The ground got the same treatment. It already varied in broad patches, but the
+plane itself was mathematically flat, and it stayed flat while every prop
+standing on it grew a surface — which is worse than both being smooth, because
+it reads as models placed on a painted backdrop. Sand takes a finer, shallower
+grain than a grass field.
+
+### Two gates, because this was invisible
+
+- `scripts/surface-check.py` (in `npm run check:ui`) measures every shipped
+  prop and refuses one whose surface has gone flat. It checks that there IS a
+  texture, never that it is good — good is a judgement and belongs to whoever
+  is looking at the render.
+
+  It measures the **median** deviation from a 1px blur, not the mean, and that
+  is the whole design. The mean is dominated by GEOMETRY: a shopfront's window
+  mullions are a handful of pixels with huge values, and they put the
+  *untextured* store at 1.15 while the untextured hedge sat at 0.25 — so no
+  mean threshold could separate "has a surface" from "has detailed geometry",
+  and the first floor written here would have passed two of the props it
+  existed to catch. Surface texture is the opposite shape: a small deviation
+  at nearly every pixel. Measured across the props as they shipped before this
+  pass, every untextured one scores exactly **0** and every textured one
+  scores **1 or more**. The threshold is a genuine bimodal split, not a number
+  tuned under today's worst prop.
+- `scripts/promote-props.py` replaces the manual `cp` from `art-review/` into
+  `assets/`, and refuses to promote a render older than the builder that makes
+  it. That gap was not theoretical: a material change was measured against
+  day-old assets twice in one session, and both times the answer looked like
+  "nothing changed" — which is exactly what a real failure looks like.
+
+`PROP_ONLY` also now takes a comma-separated list and **errors when it matches
+nothing**. It was a single prefix; a list silently matched zero props, printed
+"rendered a subset", and exited 0, which cost one of those measurement passes.
+
+### Texture costs bytes, and one way of paying it back is a lie
+
+The surface pass took the world art from 3.6MB to 5.6MB — real texture is real
+entropy, and PNG cannot compress what is genuinely there. Quantising to a
+256-colour palette gives about 70% of it back with no visible banding, checked
+on the smoothest art in the game.
+
+It must be done **without dithering**, and this is not a preference. Dithering
+trades banding for pixel-scale noise, and pixel-scale noise is precisely the
+signal the surface gate measures. Quantised *with* dithering, the OLD
+untextured props measure exactly as textured as the new ones — median 1.0,
+mean up to 1.59 against a genuinely textured tree's 1.61. The gate would have
+gone on passing while the world went back to plastic. Quantised *without* it,
+the flat props stay at exactly 0.0 and the split holds.
+
+So the size win is taken in the one way that does not counterfeit the thing
+being gated, and `promote-props.py` is the only place that knows the recipe —
+trim, size inventory art, quantise — which is also what lets "has this been
+promoted?" be answered by building the candidate and comparing bytes instead
+of guessing what ImageMagick would have done.
