@@ -30,6 +30,7 @@ import shotnorm
 import filmlook as FL
 from ai import place as PL
 import depthtools as DT
+import hud as HUD
 from spec_e2 import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
                       GEN_ICE, CROP, figures, W, H, FPS, TOTAL)
 
@@ -556,12 +557,46 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
             (_, title, sub, t0, off) = lab[:5]
             lscale = lab[5] if len(lab) > 5 else 1.0
             cx, cy = lpath[min(i, len(lpath) - 1)]
+            if beat in RECOGNITION_LABELS and t < 0.55:
+                # THE CONVERGING RETICLE arlabel.py's own docstring names as
+                # the recognition step ("the convergence IS the recognition
+                # happening") -- built early in this project, never actually
+                # called from here. `lock` is the one real, unmodified
+                # object this film recognises (the falls); giving it the
+                # convergence it was designed for, right before the label
+                # settles on the same tracked anchor.
+                AR.reticle(d, (cx, cy), t, col=CYAN)
             if t >= t0:
                 k = AR.ease(min(1.0, (t - t0) / 0.5))
                 k *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
                 if k > 0:
                     draw_label(d, (cx, cy), (cx + off[0], cy + off[1]), title, sub, k,
                                beat, scale=lscale)
+
+        # RICHER HUD LAYER -- operator request, 2026-09-08: "ai overlays
+        # crazy... graphics to show how cool and futuristic this is."
+        # Gated to the beats where the device is plausibly doing
+        # something (hero/on/lock/anchor); every pure-B-roll beat
+        # (open/intro/rental/honest_stage/off/reach/vision) stays exactly
+        # as restrained as before -- a park does not get a hologram.
+        if beat == "hero":
+            HUD.gyro_glyph(d, (1650, 260), t, 72, CYAN)
+        elif beat == "on":
+            HUD.boot_pulse(d, t, dur, (W * 0.52, H * 0.40), CYAN)
+            HUD.scan_sweep(d, t, dur, W, H, CYAN)
+            HUD.data_ticker(d, t, W, H, CYAN, x=28, seed=7)
+            HUD.data_ticker(d, t, W, H, CYAN, x=W - 52, seed=13)
+        elif beat == "lock":
+            HUD.gyro_glyph(d, (cx, cy - 170), t, 34, CYAN)
+            HUD.telemetry(d, t, 0.0, W, H, seed=2.0, col=CYAN,
+                          corner="tl", label="TRACKING")
+            HUD.data_ticker(d, t, W, H, CYAN, x=28, seed=7)
+            HUD.data_ticker(d, t, W, H, CYAN, x=W - 52, seed=13)
+        elif beat == "anchor":
+            HUD.telemetry(d, t, 0.0, W, H, seed=5.0, col=CYAN,
+                          corner="tl", label="ANCHORED")
+            HUD.data_ticker(d, t, W, H, CYAN, x=28, seed=7)
+            HUD.data_ticker(d, t, W, H, CYAN, x=W - 52, seed=13)
 
         # THE HONESTY TAG FOLLOWS THE FIGURES, NOT THE BEAT.
         # It used to be drawn whenever the BEAT contained figures, which on
