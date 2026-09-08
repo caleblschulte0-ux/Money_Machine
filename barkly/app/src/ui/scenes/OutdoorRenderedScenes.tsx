@@ -555,7 +555,8 @@ export function ParkScene(props: {
 }
 
 function ParkScenePlated({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
-  const { height } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const scale = worldScale(width, height);
   const band = skyBand(hour);
   const night = band === 'night';
   const ground = groundY ?? bandHeight * 0.72;
@@ -578,6 +579,23 @@ function ParkScenePlated({ hour, bandHeight = 620, groundY, chromeBottom = CHROM
           time of day the air is.
         */}
         <GroundHaze horizon={horizon} height={canvasHeight} night={night} strength={0.34} />
+      </WorldLayer>
+      {/*
+        THE NEAR PLANE, on the PLATED park too.
+        The plate is one lit picture of a whole place, which gives it a
+        background and a midground and no near plane at all -- and this is the
+        scene the app actually ships, so adding the foreground only to the
+        composited fallback improved a park nobody sees. Measured, the plated
+        park's content stopped at y 0.90 while every other location now reaches
+        past the bottom of the frame.
+        The plate cannot supply this itself: anything painted into it at this
+        distance would be pinned to the plate's own scale and would slide
+        against the dog on a differently shaped phone. It belongs to the app,
+        in front of the picture.
+      */}
+      <WorldLayer name="foreground">
+        <WorldObject source={PARK_CLUMP} left={-58 * scale} top={ground + 30} width={272 * scale} height={(272 * scale) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={300} />
+        <WorldObject source={PARK_CLUMP} right={-76 * scale} top={ground + 54} width={248 * scale} height={(248 * scale) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={860} flip />
       </WorldLayer>
       <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
     </WorldScene>
@@ -808,6 +826,20 @@ function ParkSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = C
       <WorldLayer name="foreground">
         <WorldObject source={PARK_CLUMP} left={brushLeft - 22} top={brushTop + 48} width={brushW * 1.5} height={(brushW * 1.5) / CLUMP_ASPECT} night={night} depth={0.97} ambient="sway" motionDelay={1500} />
         <WorldObject source={PARK_CLUMP} right={brushRight - 26} top={brushTop + 62} width={brushW * 1.4} height={(brushW * 1.4) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={2100} flip />
+        {/*
+          THE NEAR PLANE, and it is the thing every scene was missing.
+          Measured, all four locations put their content between y 0.21 and
+          0.90 of the frame and then stopped: the strip between his feet and
+          the care tray was bare ground in every one. Nothing stood nearer
+          than the dog, so there was no near plane, and depth is the
+          relationship BETWEEN planes -- a background and a midground alone
+          read as a painted backdrop however good the painting is.
+          These are deliberately oversized and hung off the bottom and side
+          edges. A foreground earns its distance by being cropped: an object
+          that fits inside the frame is, by definition, not close.
+        */}
+        <WorldObject source={PARK_CLUMP} left={-58 * scale} top={ground + 30} width={272 * scale} height={(272 * scale) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={300} />
+        <WorldObject source={PARK_CLUMP} right={-76 * scale} top={ground + 54} width={248 * scale} height={(248 * scale) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={860} flip />
       </WorldLayer>
       <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
       <WorldLighting ground={ground} night={night} band={band} />
@@ -1261,6 +1293,22 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <WorldObject source={TOWN_LAMP} right={plazaInset} top={lampSpriteTop} width={lampW} height={lampH} night={night} depth={0.64} flip contactShadow />
         <WorldObject source={TOWN_FOUNTAIN} left={fountainLeft} top={sidewalk - fountainH + 30} width={fountainW} height={fountainH} night={night} depth={0.76} contactShadow />
       </WorldLayer>
+      <WorldLayer name="foreground">
+        {/*
+          THE NEAR PLANE, and it is the thing every scene was missing.
+          Measured, all four locations put their content between y 0.21 and
+          0.90 of the frame and then stopped: the strip between his feet and
+          the care tray was bare ground in every one. Nothing stood nearer
+          than the dog, so there was no near plane, and depth is the
+          relationship BETWEEN planes -- a background and a midground alone
+          read as a painted backdrop however good the painting is.
+          These are deliberately oversized and hung off the bottom and side
+          edges. A foreground earns its distance by being cropped: an object
+          that fits inside the frame is, by definition, not close.
+        */}
+        <WorldObject source={TOWN_PLANTER} left={-34 * scale} top={ground + 18} width={planterW * 2.1} height={planterH * 2.1} night={night} depth={1} ambient="sway" motionDelay={420} />
+        <WorldObject source={TOWN_KERB} right={-60 * scale} top={ground + 96} width={280 * scale} height={(280 * scale) / KERB_ASPECT} night={night} depth={1} />
+      </WorldLayer>
       <WorldLayer name="fx"><TownGlint night={night} top={horizon + 132} fountainLeft={fountainLeft + fountainW * 0.48} /></WorldLayer>
       <WorldLighting ground={ground} night={night} band={band} warm />
       {/*
@@ -1586,6 +1634,27 @@ function BeachSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = 
         <WorldObject source={BEACH_DUNE} left={duneLeft} top={sandTop + 98} width={duneW} height={duneH} night={night} depth={0.90} opacity={0.88} contactShadow />
         <WorldObject source={BEACH_DUNE} right={duneRight} top={sandTop + 138} width={duneW * 0.90} height={duneH * 0.90} night={night} depth={0.94} opacity={0.78} flip contactShadow />
         <WorldObject source={BEACH_CASTLE} right={castleRight} top={sandTop + 124} width={castleW} height={castleH * 1.50} night={night} depth={0.92} contactShadow />
+        {/*
+          THE NEAR PLANE, and it is the thing every scene was missing.
+          Measured, all four locations put their content between y 0.21 and
+          0.90 of the frame and then stopped: the strip between his feet and
+          the care tray was bare ground in every one. Nothing stood nearer
+          than the dog, so there was no near plane, and depth is the
+          relationship BETWEEN planes -- a background and a midground alone
+          read as a painted backdrop however good the painting is.
+          These are deliberately oversized and hung off the bottom and side
+          edges. A foreground earns its distance by being cropped: an object
+          that fits inside the frame is, by definition, not close.
+        */}
+        {/*
+          Low and well off the left edge: at its first placement this covered
+          BISCUIT's name badge, which `scripts/blocking.mjs` refuses -- scenery
+          may not sit on a label. A foreground plant is allowed to be huge and
+          cropped; it is not allowed to eat the one word that says who the dog
+          beside you is.
+        */}
+        <WorldObject source={BEACH_MARRAM} left={-78 * scale} top={ground + 92} width={196 * scale} height={(196 * scale) / MARRAM_ASPECT} night={night} depth={1} ambient="sway" motionDelay={240} />
+        <WorldObject source={BEACH_SHELLS} right={-30 * scale} top={ground + 86} width={252 * scale} height={(252 * scale) / SHELLS_ASPECT} night={night} depth={1} />
       </WorldLayer>
       <WorldLayer name="fx"><BeachMotion night={night} tide={tide} /></WorldLayer>
       <WorldLighting ground={ground} night={night} band={band} warm />

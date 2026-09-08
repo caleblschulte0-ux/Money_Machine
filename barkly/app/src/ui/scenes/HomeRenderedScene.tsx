@@ -978,6 +978,25 @@ export function HomeScene({
         is in front of the furniture, not behind it.
       */}
       <WorldLayer name="foreground">
+        {/*
+          THE NEAR PLANE. Home was the one room with nothing standing nearer
+          than the dog: measured, its content ran from y 0.31 to 0.90 and the
+          strip below his feet was bare floorboard. A chair arm cropped by the
+          left edge is what a room looks like from inside it -- furniture
+          continues past the frame, because you are in the room rather than
+          looking at a photograph of one. Oversized and hung off both the
+          bottom and the left, since a foreground earns its distance by being
+          cropped.
+        */}
+        <WorldObject
+          source={CHAIR}
+          left={-chairW * 0.62}
+          top={groundY - chairW * 0.30}
+          width={chairW * 1.7}
+          height={chairW * 1.7 * (343 / 341)}
+          night={night}
+          depth={1}
+        />
         <DustMotes
           left={wallInset}
           top={wallTop}

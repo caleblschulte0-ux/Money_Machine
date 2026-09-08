@@ -952,10 +952,10 @@ export function WorldLighting({
 export type ScenePlace = 'home' | 'park' | 'town' | 'beach';
 
 export const SCENE_CAMERA: Record<ScenePlace, { zoom: number; hero: number; lift: number }> = {
-  home: { zoom: 1.14, hero: 1.0, lift: 10 },
-  park: { zoom: 1.06, hero: 0.95, lift: -6 },
-  town: { zoom: 1.12, hero: 0.86, lift: -8 },
-  beach: { zoom: 0.94, hero: 0.84, lift: -14 },
+  home: { zoom: 1.45, hero: 1.0, lift: 40 },
+  park: { zoom: 1.0, hero: 0.88, lift: -24 },
+  town: { zoom: 1.12, hero: 0.72, lift: -10 },
+  beach: { zoom: 1.0, hero: 0.66, lift: -18 },
 };
 
 export function worldScale(viewportWidth: number, viewportHeight = 844): number {
