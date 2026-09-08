@@ -308,17 +308,23 @@ def park():
     # Near, large, and deliberately cropped by the frame -- they are the
     # proscenium, not scenery. Kept wide of x = +-5, where the app puts the DIG
     # mound and the two NPCs.
-    _tree(-8.6, -13.0, 3.2, canopy="#4FA436", trunk="#7A5233")
-    _tree(9.0, -11.0, 3.0, canopy="#57AC3C", trunk="#83593A")
+    # OUTSIDE the frame, not at its edge. The frame is x = +-9.25, and at
+    # x = -8.6 a scale-3.2 tree put its whole canopy inside the shot: a green
+    # mass across the middle of the picture where the dog stands, which frames
+    # nothing. A proscenium is mostly off-stage -- trunks out of shot, only the
+    # inner edge of each canopy reaching in.
+    _tree(-12.2, -12.0, 3.0, canopy="#4FA436", trunk="#7A5233")
+    _tree(12.6, -10.0, 2.9, canopy="#57AC3C", trunk="#83593A")
 
+    _bandstand(0.8, 21.0, 1.25)
     _bench(5.0, -1.6)
 
     # Middle distance: hedges give the field a middle, which four trees and a
     # bench on open grass do not.
     _hedge(-12.0, 16.0, 10.0, 1.2)
     _hedge(13.5, 13.0, 9.0, 1.15)
-    _hedge(-3.0, 27.0, 9.0, 1.0)
-    _hedge(11.0, 31.0, 8.0, 0.95)
+    _hedge(-9.0, 28.0, 8.0, 1.0)
+    _hedge(10.0, 30.0, 8.0, 0.95)
 
     # A PARK THAT IS ONLY GREEN IS A LAWN. Town carries coral, aqua and violet;
     # the beach carries a red umbrella and a yellow bucket. This had one yellow
@@ -557,6 +563,39 @@ def _path():
         left.append((wobble - w, y))
         right.append((wobble + w, y))
     _poly("path", left + right[::-1], 0.010, dirt)
+
+
+def _bandstand(x: float, y: float, s: float = 1.0):
+    """The park's landmark.
+
+    Four scenes side by side and this was the only one without a subject.
+    Town has a shopfront with its name on it, the beach has the lifeguard
+    tower, home has the window -- the park had scenery and nothing to look at.
+    Framing trees and flowerbeds made it a nicer field; they did not give it a
+    thing you would walk toward.
+
+    A bandstand is the right answer for a park specifically: it is
+    ARCHITECTURE, which is what town has and the park lacked, and its
+    silhouette -- a roof on posts, open underneath -- reads instantly at any
+    size without needing detail. Centre-back, so the dog stands in front of it
+    the way he stands in front of BARKLY'S.
+    """
+    post = pack.material(f"Band post{x:.1f}", "#FFF3DC", roughness=0.72)
+    roof = pack.material(f"Band roof{x:.1f}", "#E1594C", roughness=0.70)
+    trim = pack.material(f"Band trim{x:.1f}", "#3D8FD1", roughness=0.68)
+    base = pack.material(f"Band base{x:.1f}", "#C9A06A", roughness=0.88)
+    finial = pack.material(f"Band finial{x:.1f}", "#F2C13C", roughness=0.60)
+
+    cx, cy = TURN(x, y)
+    pack.cylinder(f"bandbase{x:.1f}", (cx, cy, 0.22 * s), 3.1 * s, 0.44 * s, base, vertices=24)
+    pack.cylinder(f"bandstep{x:.1f}", (cx, cy, 0.06 * s), 3.5 * s, 0.12 * s, base, vertices=24)
+    for i in range(6):
+        a = i / 6.0 * math.tau + 0.26
+        px, py = TURN(x + math.cos(a) * 2.5 * s, y + math.sin(a) * 2.5 * s)
+        pack.cylinder(f"bandpost{x:.1f}{i}", (px, py, 1.75 * s), 0.16 * s, 2.7 * s, post, vertices=12)
+    pack.cylinder(f"bandring{x:.1f}", (cx, cy, 3.18 * s), 2.72 * s, 0.22 * s, trim, vertices=24)
+    pack.cone(f"bandroof{x:.1f}", (cx, cy, 3.85 * s), 3.25 * s, 0.30 * s, 1.15 * s, roof, vertices=6)
+    pack.sphere(f"bandfin{x:.1f}", (cx, cy, 4.62 * s), (0.22 * s, 0.22 * s, 0.30 * s), finial)
 
 
 def _tree(x: float, y: float, s: float, canopy: str = "#5CB03A", trunk: str = "#8A5C39"):
