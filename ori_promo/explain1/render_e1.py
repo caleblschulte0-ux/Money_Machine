@@ -58,6 +58,27 @@ def mono(sz):
     return LK.mono(sz)
 
 
+# STABILIZED VARIANTS -- operator feedback, 2026-09-08 ('2/10 ...
+# footage looks bad'): these 4 clips are the ones shared across every
+# video (the on/lock/anchor take, off, reach, vision), so they carry the
+# most screen time of any source. Each has a 2-pass ffmpeg vidstab pass
+# (detect+transform, 1% zoom to hide the corrected border, full clip so
+# every in-point's timeline offset stays identical) saved as a NEW file
+# -- raw/IMG_6806.MOV etc. are NEVER touched, because v32c
+# (one/render_one.py) reads those same filenames and must never be
+# affected by this video's changes. Measured on a 5s test window: peak
+# frame-to-frame jitter dropped from 3.98px to 2.12px, drift barely
+# changed (this is a corrective pass on shake, not on intentional pans).
+# Falls back to the original if a _STAB file is somehow missing.
+_STAB = {"6806", "6797", "6803", "6796"}
+
+
+def _src_clip(clip):
+    if clip in _STAB and os.path.exists(f"{RAW}/IMG_{clip}_STAB.MOV"):
+        return f"{clip}_STAB"
+    return clip
+
+
 def frames_of(clip, tin, dur, crop=None):
     # OPTIONAL PRE-SCALE CROP, added for the `sign` beat's r141 fix. Found
     # by ChatGPT's r140 review: this beat's plate (IMG_6709, a portrait
@@ -81,7 +102,7 @@ def frames_of(clip, tin, dur, crop=None):
     else:
         vf = f"scale={W}:{H},fps={FPS}"
     r = subprocess.run(
-        ["ffmpeg", "-v", "error", "-ss", f"{tin}", "-i", f"{RAW}/IMG_{clip}.MOV",
+        ["ffmpeg", "-v", "error", "-ss", f"{tin}", "-i", f"{RAW}/IMG_{_src_clip(clip)}.MOV",
          "-frames:v", str(n), "-vf", vf,
          "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
     b = r.stdout
