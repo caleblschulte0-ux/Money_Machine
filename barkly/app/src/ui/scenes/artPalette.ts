@@ -122,6 +122,20 @@ export const DIORAMA = {
    * sky is saturated all the way down to the horizon; the horizon reads as
    * lighter because it is lighter in VALUE, not because it is grey.
    */
+  /*
+   * THE SKY HAS A ZENITH NOW, and it did not before.
+   *
+   * Measured 2026-09-08: the sky band carried the least value range in the
+   * whole picture -- the beach at 14:00 spanned 70 of 255 against its ground's
+   * 142 -- and MORNING spanned 1.8. Its two stops were 221.2 and 223.0: a flat
+   * wash with a name. It was also upside down, gold at the top and blue at the
+   * horizon, which is a sunrise happening in the wrong half of the sky.
+   *
+   * Three stops per band, deep overhead to bright at the horizon, the way a
+   * sky actually is. The warm end of morning and evening now sits where the
+   * sun is rather than above the player's head.
+   */
+  skyMorningZenith: '#6FA8DC',
   skyMorningA: '#FFDB90',
   skyMorningB: '#B9E7FF',
   /* Aerial perspective. `hazeDay` is the sky a distant prop wears; `hazeNight`
@@ -136,10 +150,13 @@ export const DIORAMA = {
   groundHazeNight: '#4A4E9E',
   groundDeepenDay: '#2E1E3A',
   groundDeepenNight: '#0C0A22',
+  skyDayZenith: '#3E9FE0',
   skyDayA: '#74CFFF',
   skyDayB: '#B7E9FF',
+  skyEveningZenith: '#7A6BA8',
   skyEveningA: '#FF9C88',
   skyEveningB: '#FFDFBA',
+  skyNightZenith: '#23245F',
   skyNightA: '#3E409B',
   skyNightB: '#7D6EC5',
 

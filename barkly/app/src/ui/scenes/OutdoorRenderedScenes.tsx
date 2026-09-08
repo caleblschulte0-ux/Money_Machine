@@ -329,11 +329,25 @@ const COMPOSITION = {
   beach: { palmLeft: -30, towerLeft: 14, umbrellaRight: -12, duneLeft: -100, duneRight: -42, castleRight: 14 },
 } as const;
 
-const SKY: Record<SkyBand, readonly [ColorValue, ColorValue]> = {
-  morning: [DIORAMA.skyMorningA, DIORAMA.skyMorningB],
-  day: [DIORAMA.skyDayA, DIORAMA.skyDayB],
-  evening: [DIORAMA.skyEveningA, DIORAMA.skyEveningB],
-  night: [DIORAMA.skyNightA, DIORAMA.skyNightB],
+/*
+ * ZENITH, MID, HORIZON -- three stops, deep overhead to bright at the eyeline.
+ *
+ * This was two stops, and measured across the whole picture the sky carried
+ * the least value range of anything in it: at 14:00 the beach sky spanned 70
+ * of 255 while its ground spanned 142. MORNING spanned 1.8 -- its two colours
+ * were 221.2 and 223.0, a flat wash with a gradient's name on it -- and it ran
+ * gold at the top into blue at the horizon, which puts the sunrise above the
+ * player's head instead of where the sun is.
+ *
+ * Order is top-to-bottom because that is what LinearGradient does with no
+ * start/end, which is how the inversion survived: nothing about
+ * `[skyMorningA, skyMorningB]` says which end is the ground.
+ */
+const SKY: Record<SkyBand, readonly [ColorValue, ColorValue, ColorValue]> = {
+  morning: [DIORAMA.skyMorningZenith, DIORAMA.skyMorningB, DIORAMA.skyMorningA],
+  day: [DIORAMA.skyDayZenith, DIORAMA.skyDayA, DIORAMA.skyDayB],
+  evening: [DIORAMA.skyEveningZenith, DIORAMA.skyEveningA, DIORAMA.skyEveningB],
+  night: [DIORAMA.skyNightZenith, DIORAMA.skyNightA, DIORAMA.skyNightB],
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -417,7 +431,17 @@ function SceneSky({ band, horizon, chromeBottom }: { band: SkyBand; horizon: num
   const cloudFarRight = Math.max(cloudW * 0.4, SUN_ZONE - SKY_BODY * 0.32);
   return (
     <View style={styles.fill}>
-      <LinearGradient colors={SKY[band]} style={styles.fill} />
+      {/*
+        AND THE STOPS SIT WHERE THE SKY IS.
+
+        The gradient fills the whole scene container, but the sky a player sees
+        is only its top third -- the chrome covers the first fifth and the
+        horizon arrives around the middle. Spread evenly, the deep zenith
+        stop landed behind the HUD and the visible sky got the pale end of the
+        ramp: adding a zenith colour moved the measured span by two units,
+        because none of it was on screen.
+      */}
+      <LinearGradient colors={SKY[band]} locations={[0.12, 0.30, 0.55]} style={styles.fill} />
       <SkyBody night={night} discTop={Math.max(chromeBottom + 26, horizon - 96)} />
       {/*
         THE CLOUDS ARE RENDERS NOW.
