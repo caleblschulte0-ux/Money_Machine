@@ -167,6 +167,7 @@ for (const place of PLACES) {
        * himself, at his own baseline, in every scene.
        */
       if (img.closest('[data-testid="hero-light"]')) continue;
+      if (img.closest('[data-testid="npc-light"]')) continue;
       const r = img.getBoundingClientRect();
       if (r.width < 8 || r.height < 8) continue;
       rows.push({ x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), base: Math.round(r.bottom) });

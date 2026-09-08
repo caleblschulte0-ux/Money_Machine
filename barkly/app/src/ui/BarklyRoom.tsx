@@ -21,7 +21,7 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { RadialGlow, SCENE_CAMERA, sceneLight } from './scenes/WorldScene';
+import { RadialGlow, SCENE_CAMERA, sceneLight, SceneLight } from './scenes/WorldScene';
 import { useBarkly } from '../hooks/useBarkly';
 import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
@@ -301,6 +301,7 @@ function NpcDog({
   talking,
   bond,
   compactLabel = false,
+  light,
 }: {
   id: NpcId;
   onPress: () => void;
@@ -311,6 +312,8 @@ function NpcDog({
   talking: boolean;
   /** The live relationship, so the HISTORY is visible in how they stand. */
   bond?: { kind: 'friend' | 'rival'; encounters: number };
+  /** The light of the place, the same one Barkly takes. See sceneLight(). */
+  light?: SceneLight | null;
   /** Short portrait phones put the name above the dog so the care dock cannot cover it. */
   compactLabel?: boolean;
 }) {
@@ -445,6 +448,31 @@ function NpcDog({
             }}
             resizeMode="stretch"
           />
+          {/*
+            AND THE SAME LIGHT BARKLY STANDS IN.
+
+            He started taking the colour of the place he is in before these
+            dogs did, which made the gap worse rather than better: at 23:00 on
+            the beach he was moonlit and Biscuit, two feet away, was still lit
+            for a sunny afternoon. Whatever the scene's light is, everyone in
+            the scene is under it.
+          */}
+          {light && light.strength > 0.004 && (
+            <Image
+              source={NPC_ART[id].source}
+              testID="npc-light"
+              tintColor={light.tint}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: spot.size * scale * build * stanceX,
+                height: spot.size * NPC_ART[id].aspect * scale * build * stanceY,
+                opacity: light.strength,
+              }}
+              resizeMode="stretch"
+            />
+          )}
         </Animated.View>
       </Pressable>
       {/* Below the ground line, out of the flow, so it cannot move the anchor. */}
@@ -1225,6 +1253,7 @@ export default function BarklyRoom() {
               talking={npcBubble?.id === id}
               bond={bondFor(barkly.character, NPCS[id].name)}
               compactLabel={landscape || screenH < 650}
+              light={heroLight}
               onPress={() => barkly.npcTalk(id)}
             />
           ))}
