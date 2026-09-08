@@ -10,6 +10,9 @@
  * to stay reachable, because the plate is a bet: a better picture bought with
  * less responsive freedom, and going back must never mean restoring assets.
  */
+declare const require: (m: string) => any;
+declare const __dirname: string;
+
 type Bytes = { readUInt32BE: (offset: number) => number; toString: () => string };
 const { readFileSync, existsSync } = require('fs') as {
   readFileSync: (p: string) => Bytes;

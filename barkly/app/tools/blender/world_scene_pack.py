@@ -61,7 +61,21 @@ OUT.mkdir(parents=True, exist_ok=True)
 # width -- the framing bushes fell off both edges and the trees came out
 # enormous. The stand point wants to sit near 0.77, which is roughly where the
 # dog's feet sit on a phone (652 of 844), and then almost nothing is cropped.
-RESOLUTION = (896, 1792)
+# 768x1792 is a 3:7 plate, narrower than a phone.
+#
+# The scale the app can show a plate at is the LARGEST of four lower bounds,
+# and at 896 wide the width bound (0.435) sat well under the height bound
+# (0.514), so 18% of every plate was cropped away for nothing -- the beach's
+# lifeguard tower and umbrella both fell half off the frame edges. Narrower,
+# the height bound is the only one that binds and the horizontal crop is about
+# one percent. The scene loses nothing: ortho_scale drops with the width so the
+# vertical coverage is unchanged.
+#
+# Then ortho_scale went UP rather than down. Dropping it with the width kept
+# the pixels-per-unit identical and simply showed less world, which came out
+# as a zoomed-in park with enormous trees. With the crop gone the plate can
+# afford a wider view instead, which is what it wanted all along.
+RESOLUTION = (768, 1792)
 CAMERA_LOCATION = (3.0, -10.8, 4.5)
 # How far back the camera stands along its OWN axis. An orthographic camera's
 # framing does not change when it dollies back -- only its clipping does -- and
@@ -69,7 +83,23 @@ CAMERA_LOCATION = (3.0, -10.8, 4.5)
 # because the near ground fell behind the camera plane and was clipped away.
 # Scaling the position keeps atan2(x, -y) identical, so the yaw every prop in
 # the shared pack is built against is untouched.
-CAMERA_BACKOFF = 2.8
+# THE CAMERA'S ANGLE IS SET, NOT SOLVED FOR.
+#
+# It used to be positioned by scaling CAMERA_LOCATION outward and pointed with
+# `look_at`, which couples two things that should be independent: how far back
+# it stands (a clipping concern) and how steeply it looks down (a framing one).
+# Every time a wider view needed the camera further back the pitch changed with
+# it and the whole composition moved -- and three separate renders came out
+# with a transparent strip along the bottom because the near ground had fallen
+# behind the clip plane.
+#
+# Pitch and yaw are the prop pack's own, derived from the camera every prop is
+# built against, so the plate and the props still agree about which way is up:
+#   yaw   = atan2(3.0, 10.8)           = 15.57 degrees
+#   pitch = atan(4.5 / hypot(3, 10.8)) = 21.88 degrees
+# Distance is then only "far enough that nothing clips".
+CAMERA_PITCH = math.atan(CAMERA_LOCATION[2] / math.hypot(CAMERA_LOCATION[0], CAMERA_LOCATION[1]))
+CAMERA_DISTANCE = 220.0
 
 # EVERY POSITION IN THIS FILE IS IN THE CAMERA'S FRAME, not the world's.
 #
@@ -153,19 +183,27 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     scene.world.use_nodes = False
     scene.world.color = pack.rgb(ambient)
 
-    bpy.ops.object.camera_add(location=tuple(v * CAMERA_BACKOFF for v in CAMERA_LOCATION))
+    bpy.ops.object.camera_add(location=(0.0, 0.0, 0.0))
     camera = bpy.context.object
     camera.data.type = "ORTHO"
     camera.data.ortho_scale = ortho_scale
     camera.data.sensor_fit = "HORIZONTAL"
     camera.data.clip_start = 0.1
-    camera.data.clip_end = 300.0
+    camera.data.clip_end = 600.0
     # The target is in the SCENE's frame too, or the camera aims off the axis
     # everything is built on: the first manifest put the dog's feet at x 0.461
     # and the horizon's centre at 0.418, which is a shot composed around a line
     # that is not the line the world was laid out on.
+    # Aim by angle, then stand back along that aim. `target` is the point the
+    # frame is CENTRED on, in the scene's own frame.
     aim = (*TURN(target[0], target[1]), target[2])
-    pack.look_at(camera, aim)
+    camera.rotation_euler = (math.pi / 2 - CAMERA_PITCH, 0.0, THETA)
+    forward = (
+        -math.sin(THETA) * math.cos(CAMERA_PITCH),
+        math.cos(THETA) * math.cos(CAMERA_PITCH),
+        -math.sin(CAMERA_PITCH),
+    )
+    camera.location = tuple(aim[i] - forward[i] * CAMERA_DISTANCE for i in range(3))
     scene.camera = camera
 
     # THE sun. One light, one direction, and it casts.
@@ -192,7 +230,7 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     return camera
 
 
-def ground(hex_near: str, hex_far: str = "#84CE5E", centre: float = 0.0, size: float = 124.0):
+def ground(hex_near: str, hex_far: str = "#84CE5E", centre: float = -48.5, size: float = 183.0):
     """The ground, as geometry. It receives shadow and it occludes.
 
     AN ORTHOGRAPHIC CAMERA HAS NO HORIZON. Every ray is parallel, so an
@@ -236,13 +274,13 @@ def park():
     # Where the dog stands, how tall a world unit is there, and the horizon.
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
-    _anchor("horizon", 0.0, 62.0)
+    _anchor("horizon", 0.0, 43.0)
 
     # The far treeline, as real trees at distance rather than a painted band.
     # A treeline far enough back to be a horizon, spread wider than the frame.
     for i in range(27):
         x = -34.0 + i * 2.6
-        y = 56.0 + ((i * 0.618) % 1.0) * 4.0
+        y = 37.5 + ((i * 0.618) % 1.0) * 3.0
         # SMALL. Wired into the app the first treeline came out as a wall of
         # trunks filling the top half of the phone: a tree of scale 2 is eight
         # units tall, and eight units at this camera is most of the frame. A
@@ -251,8 +289,8 @@ def park():
         _tree(x, y, s, canopy="#5FA83C", trunk="#7A5233")
 
     # Then the trees that frame the shot: two near the edges, two mid-distance.
-    for x, y, s in ((-7.6, -3.0, 1.6), (8.2, -1.4, 1.5), (-11.5, 14.0, 1.3), (12.5, 12.0, 1.25),
-                    (-15.0, 30.0, 1.15), (16.0, 27.0, 1.1)):
+    for x, y, s in ((-7.6, -3.0, 1.6), (8.2, -1.4, 1.5), (-11.5, 11.0, 1.3), (12.5, 9.0, 1.25),
+                    (-15.0, 22.0, 1.15), (16.0, 20.0, 1.1)):
         _tree(x, y, s)
 
     _path()
@@ -260,10 +298,10 @@ def park():
 
     # Middle distance: hedges give the field a middle, which four trees and a
     # bench on open grass do not.
-    _hedge(-12.0, 20.0, 10.0, 1.2)
-    _hedge(13.5, 17.0, 9.0, 1.15)
-    _hedge(-3.0, 36.0, 9.0, 1.0)
-    _hedge(11.0, 41.0, 8.0, 0.95)
+    _hedge(-12.0, 16.0, 10.0, 1.2)
+    _hedge(13.5, 13.0, 9.0, 1.15)
+    _hedge(-3.0, 27.0, 9.0, 1.0)
+    _hedge(11.0, 31.0, 8.0, 0.95)
 
     for fx, fy, fs in ((-4.6, 1.5, 1.1), (5.0, 3.2, 1.0), (-8.0, 6.0, 0.9),
                        (7.5, 6.8, 0.95), (-1.5, 9.5, 0.85), (3.0, 12.0, 0.8)):
@@ -322,6 +360,97 @@ def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2, detail
     ramp.color_ramp.elements[1].position = 0.66
     ramp.color_ramp.elements[1].color = (*pack.rgb(hex_b), 1.0)
     nt.links.new(tex.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    return mat
+
+
+def place(builder, x: float, y: float, s: float = 1.0, flip: bool = False):
+    """Put one of the PROP PACK'S OWN builders into this scene.
+
+    The beach spent several passes with scene-local rebuilds of props that
+    already exist and already look better: `beach_lifeguard` has a ladder and a
+    window, `beach_palm` has a crown, `beach_castle` has crenellations. My
+    versions had a red box, three flat blades and three plain cylinders. There
+    was never a reason to rebuild them -- they are built at the origin in world
+    space, for THIS camera, so placing one is a translation and a scale.
+
+    Everything the builder creates is parented to an empty and moved together,
+    because scaling each object about its own origin scales the pieces and not
+    the assembly.
+    """
+    before = set(bpy.data.objects)
+    builder()
+    made = [o for o in bpy.data.objects if o not in before]
+    if not made:
+        return None
+    # DROP THE FAKE SHADOW. Every prop-pack builder lays a dark flattened
+    # sphere under itself, because a prop rendered alone has no ground to cast
+    # onto and needs something that says "this is touching". In here the ground
+    # is real and the sun casts for itself, so that ellipse is a black hole
+    # painted under the object -- visible as exactly that under the first
+    # placed lifeguard tower and palm.
+    for obj in list(made):
+        if obj.name.startswith("contact_shadow"):
+            made.remove(obj)
+            bpy.data.objects.remove(obj, do_unlink=True)
+    bpy.ops.object.empty_add(location=(0.0, 0.0, 0.0))
+    root = bpy.context.object
+    root.name = f"placed_{x:.1f}_{y:.1f}"
+    for obj in made:
+        if obj.parent is None:
+            obj.parent = root
+    wx, wy = TURN(x, y)
+    root.location = (wx, wy, 0.0)
+    # No rotation: the props are already built for this camera's orientation.
+    root.scale = (-s if flip else s, s, s)
+    return root
+
+
+def _band(name: str, y0: float, y1: float, z: float, mat, half_width: float = 70.0):
+    """A depth band as an axis-aligned plane, ROTATED into the camera frame.
+
+    `_poly` bakes the rotation into its vertices, which leaves the object's
+    bounding box turned 15.6 degrees -- and `Generated` texture coordinates are
+    taken from that box, so a gradient meant to run from shore to horizon ran
+    diagonally across the water instead. Rotating the OBJECT keeps its local Y
+    pointing straight into the distance, which is what the ramp needs.
+    """
+    cx, cy = TURN(0.0, (y0 + y1) / 2)
+    bpy.ops.mesh.primitive_plane_add(size=1.0, location=(cx, cy, z), rotation=(0, 0, THETA))
+    obj = bpy.context.object
+    obj.name = name
+    obj.scale = (half_width * 2, y1 - y0, 1.0)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    obj.data.materials.append(mat)
+    return obj
+
+
+def depth_material(name: str, hex_near: str, hex_far: str, roughness: float = 0.90):
+    """A surface that changes colour with DISTANCE, continuously.
+
+    Same lesson the ground already taught, and I walked into it again: the
+    first sea was three flat rectangles of different teal, which is three hard
+    horizontal edges across the water. Shallows do not have an edge -- they get
+    deeper.
+
+    Generated coordinates run 0..1 across the object's own bounding box, so the
+    ramp is anchored to the polygon rather than to a world position, and moving
+    the sea moves its gradient with it.
+    """
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    bsdf.inputs["Roughness"].default_value = roughness
+    coord = nt.nodes.new("ShaderNodeTexCoord")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].position = 0.0
+    ramp.color_ramp.elements[0].color = (*pack.rgb(hex_near), 1.0)
+    ramp.color_ramp.elements[1].position = 1.0
+    ramp.color_ramp.elements[1].color = (*pack.rgb(hex_far), 1.0)
+    nt.links.new(coord.outputs["Generated"], sep.inputs["Vector"])
+    nt.links.new(sep.outputs["Y"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
     return mat
 
@@ -396,7 +525,7 @@ def _path():
     left, right = [], []
     for i in range(15):
         t = i / 14.0
-        y = -40.0 + t * 100.0
+        y = -40.0 + t * 81.0
         w = 2.2 - t * 1.95          # narrows with distance, because it does
         wobble = math.sin(t * 5.2) * 0.5
         left.append((wobble - w, y))
@@ -460,22 +589,22 @@ def beach():
     the surf sits in a place rather than on a picture, and the umbrella throws
     its shadow across the sand it stands on.
     """
-    ground("#E8C88C", "#F2D9A4", centre=-6.0, size=120.0)
+    ground("#DFB877", "#EFD196")
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
-    _anchor("horizon", 0.0, 62.0)
+    _anchor("horizon", 0.0, 43.0)
 
     # The sea: its own plane, starting at the tide line and running past the
     # sand's far edge so no seam of bare ground shows between them.
-    sea = noise_material("Sea", "#3AA7BE", "#57C6D6", scale=1.1)
-    _poly("sea", [(-70.0, 34.0), (70.0, 34.0), (70.0, 74.0), (-70.0, 74.0)], 0.004, sea)
-
     # Wet sand: the strip the water has just left, darker and slightly damp.
     wet = pack.material("Wet sand", "#C9A868", roughness=0.72, coat=0.18)
-    _poly("wet", [(-70.0, 28.0), (70.0, 28.0), (70.0, 34.3), (-70.0, 34.3)], 0.006, wet)
+    _band("wet", 20.0, 25.3, 0.006, wet)
 
-    _surf(34.0)
-    _headland(60.0)
+    # Shallows to deep water, as one continuous ramp.
+    _band("sea", 25.0, 43.0, 0.005, depth_material("Sea", "#8CE0E4", "#2F97AE"))
+
+    _surf(25.0)
+    _headland(40.0)
 
     # Dunes behind, so the sand has a back edge that is not the sea.
     # Dunes, kept inside the frame: x is only +-8.5 at this ortho scale.
@@ -484,17 +613,29 @@ def beach():
     # y = -56 at the bottom edge to the horizon at y = 62. The first pass put
     # every prop between y = -16 and +6 -- a band from 0.66 to 0.74 of the
     # frame -- and left the whole bottom third as empty sand.
-    for dx, dy, ds in ((-7.8, 22.0, 1.5), (7.6, 19.0, 1.4), (-6.4, 30.0, 1.1), (6.8, 32.0, 1.0)):
-        _dune(dx, dy, ds)
+    for dx, dy, ds in ((-7.8, 16.0, 1.1), (7.6, 14.0, 1.05), (-6.4, 21.0, 0.85), (6.8, 22.0, 0.8)):
+        place(pack.beach_dune, dx, dy, ds, flip=dx > 0)
 
     # AND NOT PAST THE CAMERA. The camera stands at y = -30 in this frame, so
     # a prop at y = -36 is behind its near plane and renders as nothing but the
     # shadow it casts -- which is exactly what the first palm did. Anything
     # nearer than about y = -26 is not foreground, it is gone.
-    _lifeguard(-4.4, 10.0, 1.5)       # ~0.64 -- behind him
-    _umbrella(5.6, -10.0, 2.0)        # ~0.75 -- beside him
-    _castle(4.4, -18.0, 1.8)          # ~0.79 -- in front of him
-    _palm(-7.8, -21.0, 1.35)          # ~0.81 -- the near corner, cropped by the edge
+    # THE APP PUTS THINGS HERE TOO. The dig/sift mound lands on the left of
+    # the frame just below his shoulder and the NPCs stand either side of him,
+    # so the plate has to leave that band clear -- the first wiring put the
+    # lifeguard tower exactly where the SIFT mound goes and the two drew
+    # through each other.
+    place(pack.beach_lifeguard, -6.4, 13.0, 1.05)  # ~0.58 -- back and left
+    place(pack.beach_umbrella, 6.2, -8.0, 1.15)    # ~0.74 -- beside him
+    place(pack.beach_castle, 5.0, -16.0, 1.2)      # ~0.78 -- in front of him
+    # NO PALM. Four passes at it: too small to read, then overlapping the
+    # lifeguard tower, then a flat green mass across it. The prop is fine --
+    # it is built to be seen alone at 142pt, where its crown reads from the
+    # side; at this camera, at the size the near corner needs, it covers the
+    # thing behind it. A scene does not owe every prop a place in it.
+    place(pack.beach_dune, -7.4, -13.0, 1.3, flip=True)
+    _towel(1.6, -3.0, 1.0)            # ~0.71 -- the middle, which was bare sand
+    _bucket(-3.0, -11.0, 0.8)
 
     # Scatter: shells, pebbles and marram, thinning toward the water.
     for i in range(34):
@@ -528,11 +669,16 @@ def _surf(y: float):
 def _headland(y: float):
     far = pack.material("Headland", "#8FB79C", roughness=0.94)
     far_b = pack.material("Headland b", "#9DC3A6", roughness=0.94)
-    for i in range(15):
-        x = -34.0 + i * 4.6
+    for i in range(23):
+        x = -34.0 + i * 3.0
         wx, wy = TURN(x, y + ((i * 0.618) % 1.0) * 2.0)
-        h = 1.6 + ((i * 0.382) % 1.0) * 1.4
-        pack.sphere(f"head{i}", (wx, wy, h * 0.35), (3.0, 2.0, h * 0.6),
+        # SMALL. At the scale the app shows this plate, headland hills of
+        # h 1.6-3.0 came out as green pillows filling a fifth of the phone.
+        # A far shore is a low band, not a range of hills.
+        # Rounded mounds, not discs. At (2.2, 1.5) wide and 0.3 tall they
+        # flattened into pale ellipses lying on the water -- lily pads.
+        h = 1.0 + ((i * 0.382) % 1.0) * 0.7
+        pack.sphere(f"head{i}", (wx, wy, h * 0.18), (1.7, 1.15, h * 0.85),
                     far if i % 2 else far_b)
 
 
@@ -642,6 +788,25 @@ def _castle(x: float, y: float, s: float = 1.0):
     pack.cube(f"flag{x:.1f}", (wx + 0.2 * s, wy, (1.45 + 0.62) * s), (0.24 * s, 0.02 * s, 0.16 * s), flag, 0.01)
 
 
+def _towel(x: float, y: float, s: float = 1.0):
+    """A towel laid on the sand. The middle of the frame was bare."""
+    stripe_a = pack.material(f"Towel a{x:.1f}", "#E85C6B", roughness=0.88)
+    stripe_b = pack.material(f"Towel b{x:.1f}", "#FFF1DC", roughness=0.88)
+    for i in range(4):
+        wx, wy = TURN(x, y - 1.35 * s + i * 0.9 * s)
+        pack.cube(f"towel{x:.1f}{i}", (wx, wy, 0.045 * s), (1.7 * s, 0.45 * s, 0.045 * s),
+                  stripe_a if i % 2 else stripe_b, 0.03, rotation=(0, 0, THETA))
+
+
+def _bucket(x: float, y: float, s: float = 1.0):
+    body = pack.material(f"Bucket{x:.1f}", "#F2C13C", roughness=0.70)
+    handle = pack.material(f"Bucket handle{x:.1f}", "#3D8FD1", roughness=0.66)
+    bx, by = TURN(x, y)
+    pack.cone(f"bucket{x:.1f}", (bx, by, 0.42 * s), 0.46 * s, 0.34 * s, 0.84 * s, body, vertices=20)
+    pack.torus(f"bhandle{x:.1f}", (bx, by, 0.86 * s), 0.42 * s, 0.045 * s, handle,
+               rotation=(math.pi / 2, 0, THETA))
+
+
 def _pebble(x: float, y: float, s: float = 1.0):
     tone = pack.material(f"Pebble{x:.2f}{y:.2f}", "#E4D2AE" if (int(x * 7) % 2) else "#D3BE95", roughness=0.86)
     px, py = TURN(x, y)
@@ -661,18 +826,32 @@ def _marram(x: float, y: float, s: float = 1.0):
 
 
 SCENES = {
-    "park": (park, 17.0, (0.0, 29.5, 1.0), 4.2, "#FFE2B4", "#7FA8C8"),
-    "beach": (beach, 17.0, (0.0, 29.5, 1.0), 4.6, "#FFE9C4", "#8FC0DC"),
+    "park": (park, 18.5, (0.0, 20.0, 1.0), 4.2, "#FFE2B4", "#7FA8C8"),
+    "beach": (beach, 18.5, (0.0, 20.0, 1.0), 4.6, "#FFE9C4", "#8FC0DC"),
 }
 
 
 def main():
     only = os.environ.get("SCENE_ONLY", "").strip()
+    # SCENE_ONLY NARROWS WHAT IS RENDERED, NEVER WHAT IS DESCRIBED.
+    #
+    # The prop pack carries this exact warning about PROP_ONLY and I wrote the
+    # bug anyway: rendering one scene rewrote the manifest with only that
+    # scene in it, so promoting after a `SCENE_ONLY=beach` run published a
+    # manifest that had forgotten the park -- and the park plate, still on
+    # disk and still shipping, would have had no anchors to stand the dog on.
+    previous = {}
+    manifest_path = OUT / "manifest.json"
+    if manifest_path.exists():
+        try:
+            previous = json.loads(manifest_path.read_text(encoding="utf-8")).get("scenes", {})
+        except (ValueError, OSError):
+            previous = {}
     manifest = {
         "camera": "Barkly composed scene v1 (orthographic, one sun, EEVEE shadows + AO)",
         "contract": "one lit plate per location; app keeps sky, grade, and every dynamic object",
         "resolution": list(RESOLUTION),
-        "scenes": {},
+        "scenes": dict(previous),
     }
     for name, (builder, ortho, target, energy, sun_hex, ambient) in SCENES.items():
         if only and name != only:
@@ -697,7 +876,9 @@ def main():
             # Pixels per world unit at the dog's feet: what the app scales him by.
             entry["unitPx"] = round(abs(points["stand"]["y"] - points["standTop"]["y"]) * h, 4)
         manifest["scenes"][name] = entry
-    (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    if only:
+        print(f"SCENE_ONLY={only}: rendered a subset; manifest still describes all")
 
 
 if __name__ == "__main__":

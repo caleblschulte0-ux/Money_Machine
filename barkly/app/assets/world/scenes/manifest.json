@@ -2,29 +2,29 @@
   "camera": "Barkly composed scene v1 (orthographic, one sun, EEVEE shadows + AO)",
   "contract": "one lit plate per location; app keeps sky, grade, and every dynamic object",
   "resolution": [
-    896,
+    768,
     1792
   ],
   "scenes": {
     "park": {
       "file": "park.png",
-      "width": 896,
+      "width": 768,
       "height": 1792,
       "anchors": {
         "stand": {
           "x": 0.5,
-          "y": 0.707792
+          "y": 0.720007
         },
         "standTop": {
           "x": 0.5,
-          "y": 0.6789
+          "y": 0.698509
         },
         "horizon": {
           "x": 0.5,
-          "y": 0.349992
+          "y": 0.32299
         }
       },
-      "unitPx": 51.7745
+      "unitPx": 38.5244
     }
   }
 }

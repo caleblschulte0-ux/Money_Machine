@@ -1333,7 +1333,42 @@ function BeachMotion({ night, tide }: { night: boolean; tide: number }) {
 }
 
 /** Beach landmarks are modular props over code-owned ocean, tide, and sand. */
-export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
+/** Beach, either way. See ParkScene for why both paths stay. */
+export function BeachScene(props: {
+  hour: number;
+  bandHeight?: number;
+  groundY?: number;
+  chromeBottom?: number;
+  motion?: WorldMotion;
+}) {
+  return hasPlate('beach') ? <BeachScenePlated {...props} /> : <BeachSceneComposited {...props} />;
+}
+
+function BeachScenePlated({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
+  const { height } = useWindowDimensions();
+  const band = skyBand(hour);
+  const night = band === 'night';
+  const ground = groundY ?? bandHeight * 0.72;
+  const canvasHeight = ground + 264;
+  const horizon = plateHorizon('beach', ground, height) ?? clamp(ground - 386, 172, 210);
+  const tide = horizon + 120;
+
+  return (
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-beach">
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
+      <WorldLayer name="ground">
+        <ScenePlate name="beach" groundY={ground} night={night} />
+        {/* The plate carries the water and the shoreline, so the haze only has
+            to say what hour it is -- and the sea is this scene's colour anchor,
+            which is why it takes even less of it than the park does. */}
+        <GroundHaze horizon={horizon} height={canvasHeight} night={night} strength={0.22} />
+      </WorldLayer>
+      <WorldLayer name="fx"><BeachMotion night={night} tide={tide} /></WorldLayer>
+    </WorldScene>
+  );
+}
+
+function BeachSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
   const { width, height } = useWindowDimensions();
   const scale = worldScale(width, height);
   const band = skyBand(hour);
