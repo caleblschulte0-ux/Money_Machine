@@ -195,6 +195,31 @@ describe('scene surface renders', () => {
     expect(src).not.toMatch(/d=\{`M0 \$\{y\}H420`\}/);
   });
 
+  /*
+   * ONE LIGHT, ONE DIRECTION.
+   *
+   * Every prop had a pool directly underneath it and nothing else, so on a
+   * sunny field with a visible sun nothing threw a shadow anywhere -- which is
+   * what made a lit diorama read as flat cutouts on green paper. The direction
+   * is not a taste: the pack's key sits at (-4.8, -5.0, 8.4), upper left, so
+   * every render is lit from the upper left and its shadow runs down-RIGHT.
+   * Flipping it would fight the shading baked into every asset, so the sign of
+   * the offset is held here rather than left to whoever edits next.
+   */
+  it('casts every shadow the way the render pack is lit', () => {
+    const src = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'WorldScene.tsx')).toString();
+    // The key light this pack renders with, read from the Blender pack itself.
+    const pack = readFileSync(join(ROOT, 'tools', 'blender', 'world_prop_pack.py')).toString();
+    const key = /light_add\(type="AREA", location=\((-?[\d.]+), (-?[\d.]+), (-?[\d.]+)\)\)\n    key = /.exec(pack);
+    if (!key) throw new Error('the warm key is no longer the first area light in the pack');
+    expect(Number(key[1])).toBeLessThan(0); // lit from the left...
+    const cast = src.slice(src.indexOf('styles.castShadow'), src.indexOf('styles.contactPool'));
+    const left = /left: width \* ([\d.]+)/.exec(cast);
+    if (!left) throw new Error('the cast shadow no longer offsets by a fraction of the width');
+    expect(Number(left[1])).toBeGreaterThan(0); // ...so the shadow falls right.
+    expect(cast).toContain('height * CAST_LENGTH');
+  });
+
   it('draws no hand-drawn landscape behind the window glass any more', () => {
     const src = homeSource();
     const pane = src.slice(src.indexOf('<Svg width={apertureW}'), src.indexOf('windowGlint'));

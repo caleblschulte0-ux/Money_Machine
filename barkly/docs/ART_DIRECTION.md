@@ -809,3 +809,38 @@ water went 0.526 / 0.455 → 0.640 / 0.377: a pale grey-blue where there had bee
 teal, which is the flatness the beach was rebuilt to fix, arriving from the
 other direction. Shortening the band does not help, because the sea *is* the
 band. `GroundHaze` takes a `strength` multiplier and the beach passes 0.46.
+
+### Nothing threw a shadow
+
+After the haze the scenes had depth and still read as cutouts, and the reason
+is visible the moment you crop the park's midground and look at the ground
+instead of the props: every object had a dark pool directly underneath it and
+**nothing threw a shadow in any direction**. On a sunny field, with a sun drawn
+in the sky, the objects and the ground never agreed that there was a light.
+
+One direction for the whole app, and it is not a preference. The prop pack's
+key sits at `(-4.8, -5.0, 8.4)` — upper left and in front — so every render is
+already lit from the upper left and the shadow it owes the ground runs down and
+to the **right**. Getting that backwards would fight the shading baked into
+every asset, so `scene_surfaces.test.ts` now reads the key's position out of
+`world_prop_pack.py` and checks the sign of the offset against it.
+
+Length scales with the prop's own height, because that is what a shadow does,
+and it stays flat: the ground is seen at a shallow angle, so a shadow lying on
+it projects to a fraction of its length. The pool and the core still sit on
+top, doing the "this is TOUCHING" half of the job.
+
+### And the field had no terrain in it
+
+The last flatness is the one the haze cannot reach: within any horizontal slice
+the ground is a single colour. Grass blades sit on it; nothing happens
+*between* them. `GroundPatches` adds the large low-frequency shapes every
+stylised background carries — cloud shadow, a dip that holds the damp, a place
+the light lands — soft-edged, placed by fractions of the ground band so the
+composition holds at any viewport, and drawn under everything, because they are
+terrain rather than props and no gate should treat them as objects.
+
+They grow toward the camera. A patch is a fixed size in the world, so the near
+ones cover more of the frame; the first version kept them equal and flattened
+the very thing it was added to fix. The first strength was also too polite —
+a mean per-channel change of 5/255, which is not a shape, it is a rumour.

@@ -18,6 +18,7 @@ import {
   WorldScene,
   worldScale,
   GroundHaze,
+  GroundPatches,
 } from './WorldScene';
 
 const PARK_TREE = require('../../../assets/world/park/props/tree.png');
@@ -672,6 +673,7 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
             );
           })()}
         </Svg>
+        <GroundPatches horizon={horizon} width={width} height={canvasHeight} night={night} />
         <GroundHaze horizon={horizon} height={canvasHeight} night={night} />
       </WorldLayer>
       <WorldLayer name="distant">
@@ -1077,6 +1079,7 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <Rect x={0} y={ground + 100} width={420} height={canvasHeight - ground - 100} fill={road} />
         <Path d={`M20 ${ground + 128}H112M166 ${ground + 128}H258M312 ${ground + 128}H402`} stroke={DIORAMA.cream} strokeWidth={7} strokeLinecap="round" opacity={night ? 0.10 : 0.38} />
       </Svg>
+        <GroundPatches horizon={horizon} width={width} height={canvasHeight} night={night} />
         <GroundHaze horizon={horizon} height={canvasHeight} night={night} />
       </WorldLayer>
       {/*
@@ -1440,6 +1443,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
           <Path d={`M44 ${sandTop + 92}q24 -8 48 0M306 ${sandTop + 82}q30 -10 58 1M122 ${sandTop + 186}q28 -7 54 2`} stroke={night ? DIORAMA.sandNightLight : DIORAMA.sandDayLight} strokeWidth={4} strokeLinecap="round" fill="none" opacity={0.34} />
           <Path d={`M74 ${sandTop + 128}l7 4 6 -5M344 ${sandTop + 166}l8 4 5 -6`} stroke={night ? DIORAMA.sandNightEdge : DIORAMA.sandDayEdge} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.34} />
         </Svg>
+        <GroundPatches horizon={horizon} width={width} height={canvasHeight} night={night} />
         <GroundHaze horizon={horizon} height={canvasHeight} night={night} strength={0.46} />
       </WorldLayer>
       <WorldLayer name="landmark">

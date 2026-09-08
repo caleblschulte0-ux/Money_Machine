@@ -86,6 +86,14 @@ export const WORLD_LAYER_Z: Record<WorldLayerName, number> = {
  * background goes pastel, which is the failure mode this replaces.
  */
 export const HAZE_MAX = 0.34;
+/*
+ * How far a shadow runs, as a fraction of the prop's height. The ground is
+ * seen at a shallow angle, so a shadow lying on it projects to a fraction of
+ * its true length -- 0.34 puts a tree's shadow about a third of its height
+ * across the grass, which reads as afternoon without turning the field into
+ * stripes.
+ */
+export const CAST_LENGTH = 0.34;
 /** Day haze is the sky; night haze is the deep blue the master grade uses. */
 export const HAZE_DAY = DIORAMA.hazeDay;
 export const HAZE_NIGHT = DIORAMA.hazeNight;
@@ -115,6 +123,69 @@ const GROUND_HAZE_A = 0.62;
 const GROUND_DEEPEN_A = 0.20;
 const GROUND_HAZE_A_NIGHT = 0.55;
 const GROUND_DEEPEN_A_NIGHT = 0.30;
+
+/*
+ * BIG SOFT SHAPES ON THE GROUND.
+ *
+ * After the haze the ground recedes correctly and is still, within any
+ * horizontal slice, one flat colour. Sampled across the park's field there are
+ * grass blades on it and nothing between them -- so the eye reads a green
+ * plane with detail sprinkled on top rather than ground with terrain in it.
+ *
+ * These are the large low-frequency patches every stylised background carries:
+ * cloud shadow, a dip that holds the damp, a place the light lands. Low
+ * opacity and soft-edged, placed by FRACTIONS of the ground band so they hold
+ * their composition at any viewport, and drawn under everything -- they are
+ * terrain, not props, so no gate treats them as objects and nothing has to
+ * stand clear of them.
+ *
+ * They also grow toward the camera. A patch is a fixed size in the world, so
+ * the near ones cover more of the frame; keeping them equal was the first
+ * version and it flattened the very thing it was added to fix.
+ */
+const GROUND_PATCHES: readonly { fx: number; fy: number; r: number; dark: boolean }[] = [
+  { fx: 0.20, fy: 0.10, r: 0.30, dark: true },
+  { fx: 0.76, fy: 0.06, r: 0.24, dark: false },
+  { fx: 0.46, fy: 0.30, r: 0.40, dark: true },
+  { fx: 0.06, fy: 0.52, r: 0.44, dark: false },
+  { fx: 0.90, fy: 0.62, r: 0.42, dark: true },
+  { fx: 0.40, fy: 0.88, r: 0.58, dark: false },
+];
+
+export function GroundPatches({
+  horizon,
+  width,
+  height,
+  night,
+  strength = 1,
+}: {
+  horizon: number;
+  width: number;
+  height: number;
+  night: boolean;
+  strength?: number;
+}) {
+  const band = Math.max(120, height - horizon);
+  return (
+    <View style={[styles.fill, { zIndex: 8 }]} pointerEvents="none">
+      {GROUND_PATCHES.map((p) => {
+        const r = width * p.r * (0.72 + p.fy * 0.6);
+        const a = (p.dark ? 0.20 : 0.15) * (night ? 0.7 : 1) * strength;
+        return (
+          <RadialGlow
+            key={`${p.fx}-${p.fy}`}
+            cx={width * p.fx}
+            cy={horizon + band * p.fy}
+            r={r}
+            ry={r * 0.33}
+            color={p.dark ? DIORAMA.shadow : DIORAMA.cream}
+            stops={[a, a * 0.55, a * 0.16]}
+          />
+        );
+      })}
+    </View>
+  );
+}
 
 export function GroundHaze({
   horizon,
@@ -363,6 +434,39 @@ export function WorldObject({
             shadow up inside the bed and is why it looked unshadowed. Measured
             across every prop in assets/world: none has more than 1% padding.
           */}
+          {/*
+            AND A SHADOW THAT FALLS SOMEWHERE.
+
+            Every prop had a pool directly underneath it and nothing else, so
+            on a sunny field with a visible sun in the sky, nothing threw a
+            shadow in any direction. That is what makes a lit diorama read as
+            flat cutouts standing on green paper: the objects and the ground
+            never agree that there is a light.
+
+            One direction for the whole app, and it is not a taste -- the prop
+            pack's key sits at (-4.8, -5.0, 8.4), upper left and in front, so
+            every prop is already lit from the upper left and the shadow it
+            owes the ground runs down and to the RIGHT. Getting this backwards
+            would fight the shading baked into every render.
+
+            Length scales with the prop's own height, because that is what a
+            shadow does, and it stays flat: this ground is seen at a shallow
+            angle, so a shadow lying on it projects to a fraction of its
+            length. Drawn before the pool and the core, which keep sitting on
+            top and doing the "this is TOUCHING" half of the job.
+          */}
+          <View
+            style={[
+              styles.castShadow,
+              {
+                left: width * 0.26,
+                width: width * 0.52 + height * CAST_LENGTH,
+                height: Math.max(9, Math.min(34, height * 0.13)),
+                bottom: -Math.max(2, height * 0.012),
+                opacity: (night ? 0.09 : 0.15) * (0.6 + safeDepth * 0.4),
+              },
+            ]}
+          />
           <View
             style={[
               styles.contactPool,
@@ -775,6 +879,12 @@ const styles = StyleSheet.create({
   camera: { position: 'absolute', left: -5, right: -5, top: -5, bottom: -5 },
   object: { position: 'absolute' },
   objectImage: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, width: '100%', height: '100%' },
+  castShadow: {
+    position: 'absolute',
+    backgroundColor: DIORAMA.shadow,
+    borderRadius: radius.pill,
+    transform: [{ rotate: '-5deg' }],
+  },
   contactPool: {
     position: 'absolute',
     backgroundColor: DIORAMA.shadow,
