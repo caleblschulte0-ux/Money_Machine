@@ -21,6 +21,7 @@ import {
   GroundPatches,
   AtmosphereContext,
 } from './WorldScene';
+import { hasPlate, plateHorizon, ScenePlate } from './ScenePlate';
 
 const PARK_TREE = require('../../../assets/world/park/props/tree.png');
 const PARK_BENCH = require('../../../assets/world/park/props/bench.png');
@@ -530,7 +531,59 @@ function ParkMotion({ night, horizon }: { night: boolean; horizon: number }) {
 }
 
 /** Park keeps terrain live in code and composes independent rendered landmarks over it. */
-export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
+/**
+ * PARK, EITHER WAY.
+ *
+ * `ParkSceneComposited` is the original: a code-drawn ground with separate
+ * props arranged over it, every one of them lit alone in Blender and given a
+ * fake shadow and a fake haze here. `ParkScenePlated` draws one plate that was
+ * rendered as a single lit place -- one sun, real cast shadows, real occlusion
+ * -- and keeps the sky, the grade and every moving thing in the app.
+ *
+ * Both stay. `SCENE_PLATES` in `ScenePlate.tsx` decides, the composited path is
+ * not deleted, and no asset has to be restored to go back to it.
+ */
+export function ParkScene(props: {
+  hour: number;
+  bandHeight?: number;
+  groundY?: number;
+  chromeBottom?: number;
+  motion?: WorldMotion;
+}) {
+  return hasPlate('park') ? <ParkScenePlated {...props} /> : <ParkSceneComposited {...props} />;
+}
+
+function ParkScenePlated({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
+  const { height } = useWindowDimensions();
+  const band = skyBand(hour);
+  const night = band === 'night';
+  const ground = groundY ?? bandHeight * 0.72;
+  const canvasHeight = ground + 264;
+  // The plate's own horizon, projected through the same camera that rendered
+  // it, so the sky and the haze meet the ground where the ground actually is.
+  const horizon = plateHorizon('park', ground, height) ?? clamp(ground - 416, 148, 184);
+
+  return (
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-park">
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
+      <WorldLayer name="ground">
+        <ScenePlate name="park" groundY={ground} night={night} />
+        {/*
+          The plate carries its own terrain and its own shadows, so
+          `GroundPatches` has nothing to add here -- but aerial perspective is
+          still the app's, because it changes with the hour and the plate does
+          not. At full strength it drowned the plate: a composited scene needs
+          the haze to MAKE its depth, and a plate only needs it to say what
+          time of day the air is.
+        */}
+        <GroundHaze horizon={horizon} height={canvasHeight} night={night} strength={0.34} />
+      </WorldLayer>
+      <WorldLayer name="fx"><ParkMotion night={night} horizon={horizon} /></WorldLayer>
+    </WorldScene>
+  );
+}
+
+function ParkSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
   const { width, height } = useWindowDimensions();
   const scale = worldScale(width, height);
   const band = skyBand(hour);

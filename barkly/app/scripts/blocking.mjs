@@ -157,6 +157,8 @@ for (const place of PLACES) {
        * inside a box of its own size at its own baseline. One prop, one box.
        */
       if (img.closest('[data-testid="prop-haze"]')) continue;
+      // A scene plate is the ground itself; see ScenePlate.tsx.
+      if (img.closest('[data-testid="scene-plate"]')) continue;
       const r = img.getBoundingClientRect();
       if (r.width < 8 || r.height < 8) continue;
       rows.push({ x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), base: Math.round(r.bottom) });
