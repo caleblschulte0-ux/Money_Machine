@@ -9,7 +9,7 @@
  * renderer is mounted, and a physical toy maps the same BodyActions to servos.
  */
 
-import { BarklyState, BodyAction } from '../barkly/types';
+import { BarklyState, BarklyStats, BodyAction } from '../barkly/types';
 import { SceneLight } from '../ui/scenes/WorldScene';
 import { LocationId } from '../world/locations';
 
@@ -35,6 +35,15 @@ export interface BarklyRenderProps {
    * sticker on a backdrop. See sceneLight() in ui/scenes/WorldScene.
    */
   light?: SceneLight | null;
+  /**
+   * His drives, 0-100 each.
+   *
+   * Only the RESTING face uses them, and only to decide which of the already
+   * authored expressions he wears when nothing is happening -- which is most
+   * of the time, and was one fixed frame before. A renderer with a single
+   * face may ignore this.
+   */
+  stats?: BarklyStats;
   /**
    * How much of his natural size to draw, 0..1.
    *

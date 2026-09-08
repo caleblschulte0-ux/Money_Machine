@@ -20,7 +20,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { color } from './theme';
 import { Animated, Easing, Image, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { BarklyRenderProps } from '../animation/renderer';
-import { BarklyState, BodyAction } from '../barkly/types';
+import { BarklyState, BodyAction, BarklyStats } from '../barkly/types';
 import BarklyRig from './BarklyRig';
 
 const RENDERS = {
@@ -143,11 +143,14 @@ export function faceFrame({
   jawOpen,
   lid,
   state,
+  stats,
 }: {
   talking: boolean;
   jawOpen: boolean;
   lid: 0 | 1 | 2;
   state: BarklyState;
+  /** His drives, so the face he rests in says how he is actually doing. */
+  stats?: BarklyStats;
 }) {
   if (talking && jawOpen) return FRONT_MOUTH_OPEN;
   if (lid === 2) return FRONT_BLINK;
@@ -163,11 +166,44 @@ export function faceFrame({
       // Heavy-lidded and unimpressed with the current food situation.
       return FRONT_HALF;
     default:
-      return RENDERS.front;
+      return restingFace(stats);
   }
 }
 
-export default function BarklyPhotoView({ state, actions, location, variant, collarId, scale = 1, look: lookAt, beat, light }: BarklyRenderProps) {
+/**
+ * THE FACE HE WEARS WHEN NOTHING IS HAPPENING.
+ *
+ * Every branch above is an EVENT -- he is listening, he just ate, you annoyed
+ * him. Between events he fell through to one fixed render, and between events
+ * is where a player spends almost all of their time: an art review on
+ * 2026-09-08 went through four locations at four times of day and every screen
+ * in the product and found the same face in all of them.
+ *
+ * That is the wrong constant for this game specifically. The promise is a dog
+ * who becomes yours and shows it, and the most-seen frame in the app was the
+ * one thing that never moved. So resting reads his drives:
+ *
+ *   worn out            heavy lids -- a tired dog looks tired
+ *   hungry              the same heavy lids, for the same honest reason
+ *   low mood            a squint he does not bother hiding
+ *   happy AND attached  he rests smiling, which is the whole point of the
+ *                       bond meter being visible on his face rather than in
+ *                       a settings sheet
+ *   otherwise           neutral
+ *
+ * Order matters: a tired dog who likes you is still tired. Thresholds are
+ * deliberately not near the middle, so the resting face is stable rather than
+ * flickering between two frames as a drive crosses 50.
+ */
+export function restingFace(stats?: BarklyStats) {
+  if (!stats) return RENDERS.front;
+  if (stats.energy < 28 || stats.hunger < 22) return FRONT_HALF;
+  if (stats.mood < 30) return FRONT_SQUINT;
+  if (stats.mood > 72 && stats.affection > 62) return FRONT_SMILE;
+  return RENDERS.front;
+}
+
+export default function BarklyPhotoView({ state, actions, location, variant, collarId, scale = 1, look: lookAt, beat, light, stats }: BarklyRenderProps) {
   const collarArt = collarId ? COLLAR_ART[collarId] : undefined;
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
@@ -379,7 +415,7 @@ export default function BarklyPhotoView({ state, actions, location, variant, col
             />
           ) : (
             <Animated.Image
-              source={shown.current === 'front' ? faceFrame({ talking, jawOpen, lid, state }) : RENDERS[shown.current]}
+              source={shown.current === 'front' ? faceFrame({ talking, jawOpen, lid, state, stats }) : RENDERS[shown.current]}
               style={{ width: size.width, height: size.height, opacity: crossIn, transform: [{ scale: crossScale }] }}
               resizeMode="contain"
             />
@@ -417,7 +453,7 @@ export default function BarklyPhotoView({ state, actions, location, variant, col
           */}
           {light && light.strength > 0.004 && (
             <Image
-              source={shown.current === 'front' ? faceFrame({ talking, jawOpen, lid, state }) : RENDERS[shown.current]}
+              source={shown.current === 'front' ? faceFrame({ talking, jawOpen, lid, state, stats }) : RENDERS[shown.current]}
               /*
                * scripts/blocking.mjs walks every <img> on screen, so an
                * untagged copy would make him report as standing 100% inside

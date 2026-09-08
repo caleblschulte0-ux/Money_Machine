@@ -1281,7 +1281,7 @@ export default function BarklyRoom() {
               testID="barkly-sprite"
               accessibilityHint="Tap to pet him."
             >
-              <Renderer state={snapshot.state} actions={actions} location={location} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} light={heroLight} />
+              <Renderer state={snapshot.state} actions={actions} location={location} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} light={heroLight} stats={snapshot.stats} />
             </Pressable>
           </Animated.View>
           {asleep && location === 'home' && <DogBedFront upgraded={barkly.hasHome('home_bed')} />}
