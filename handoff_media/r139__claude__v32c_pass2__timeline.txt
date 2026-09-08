@@ -1,0 +1,44 @@
+# Timeline for r139__claude__v32c_pass2__ORI_What_This_Place_Was_master.mp4 (41.1s)
+# v32c pass 2 -- ONE fix over r135's v32c, found by this session's own fresh
+# critical review (not a note from either AI, no operator complaint about a
+# specific defect -- the operator's instruction was simply to keep actively
+# working rather than treat r138's PASS as a stopping point):
+#  sign beat in-point (IMG_6709) moved 2.0 -> 22.3. The old in-point cropped
+#  every line of the plaque's paragraph mid-word on BOTH margins and let a
+#  second, unrelated plaque bleed into the bottom-right corner -- for a beat
+#  whose whole job is "read close." See r139__claude__v32c_pass2__sign_
+#  before_after.jpg for a direct comparison. The new in-point also clears
+#  render_one.py's own footage gate (shotqc.py) cleanly -- the first
+#  candidate in-point (20.5) read the same clean text but tripped a JOLT
+#  flag (peak 18.3px, a brief handheld settle); 22.3 keeps the identical
+#  framing and clears the gate outright (peak 5.1px, no flags).
+# Structure, every other beat, VO, and on-screen copy UNCHANGED from r135.
+
+   0.0-   1.5  sign    a different plaque (a poem), read close -- NOW LEGIBLE: "For as long as humans have inhabited this area, they have been attracted by the Falls." [IMG_6709 @22.3, was @2.0] [sign beat starts]; on-screen: FALLS PARK, SIOUX FALLS, SOUTH DAKOTA (location card)
+   1.5-   3.0  sign    same plaque, opening sentence reads clean, second plaque fully out of frame [IMG_6709 @22.3]
+   3.0-   4.5  sign    same plaque [IMG_6709 @22.3] VO: Most people walk right past.
+   4.5-   6.0  past    the empty riverbed, panning wide -- nobody stopping [IMG_6791]         [past beat starts]; VO: Most people walk right past.
+   6.0-   7.5  prod    the wearer at a different overlook, turning toward the water [IMG_6794] [prod beat starts]; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+   7.5-   9.0  prod    the wearer at a different overlook, turning toward the water [IMG_6794] VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+   9.0-  10.5  hero    glasses alone on dark table (generated plate)                          [hero beat starts]; on-screen: THE HARDWARE / VISUALIZATION; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  10.5-  12.0  hero    glasses alone on dark table (generated plate)                          VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  12.0-  13.5  hero    glasses alone on dark table (generated plate)                          VO: You put them on.
+  13.5-  15.0  on      hand raised to temple -- switching on (start of one unbroken shot)     [on beat starts]; VO: You put them on.
+  15.0-  16.5  on      hand raised to temple -- switching on (start of one unbroken shot)     VO: They know where you're standing, what you're looking at -- and who you're with.
+  16.5-  18.0  lock    same unbroken shot continues -- recognises the falls                   [lock beat starts]; on-screen: THE FALLS / BIG SIOUX RIVER; VO: They know where you're standing, what you're looking at -- and who you're with.
+  18.0-  19.5  lock    same unbroken shot continues -- recognises the falls                   VO: They know where you're standing, what you're looking at -- and who you're with.
+  19.5-  21.0  anchor  same unbroken shot continues -- anchored to the place                  [anchor beat starts]; VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  21.0-  22.5  anchor  same unbroken shot continues -- anchored to the place                  VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  22.5-  24.0  anchor  same unbroken shot continues -- anchored to the place                  VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  24.0-  25.5  anchor  same unbroken shot continues -- anchored to the place                  VO: You keep walking. It keeps working.
+  25.5-  27.0  reach   walking the park path                                                  [reach beat starts]; VO: You keep walking. It keeps working.
+  27.0-  28.5  reach   walking the park path
+  28.5-  30.0  off     glasses off, elevated wide view, nothing drawn on it                   [off beat starts]; VO: No tour group. No phone in your face. You just look.
+  30.0-  31.5  off     glasses off, elevated wide view, nothing drawn on it                   VO: No tour group. No phone in your face. You just look.
+  31.5-  33.0  off     glasses off, elevated wide view, nothing drawn on it                   VO: No tour group. No phone in your face. You just look.; VO: Open Range Interactive. Look closer at where you already are.
+  33.0-  34.5  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805] [walk beat starts]; VO: Open Range Interactive. Look closer at where you already are.
+  34.5-  36.0  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805] VO: Open Range Interactive. Look closer at where you already are.
+  36.0-  37.5  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805]
+  37.5-  39.0  end     held last frame, wordmark card                                         [end beat starts]; on-screen: OPEN RANGE INTERACTIVE (wordmark) + VISUAL INTENTION ONLY
+  39.0-  40.5  end     held last frame, wordmark card
+  40.5-  41.1  end     held last frame, wordmark card
