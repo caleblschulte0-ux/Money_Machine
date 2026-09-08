@@ -17,6 +17,7 @@ import {
   WorldObject,
   WorldScene,
   worldScale,
+  GroundHaze,
 } from './WorldScene';
 
 const PARK_TREE = require('../../../assets/world/park/props/tree.png');
@@ -671,6 +672,7 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
             );
           })()}
         </Svg>
+        <GroundHaze horizon={horizon} height={canvasHeight} night={night} />
       </WorldLayer>
       <WorldLayer name="distant">
         {/*
@@ -722,9 +724,9 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
               />
             );
           })}
-        <WorldObject source={PARK_TREE} right={treeRight} top={horizon - 46} width={treeW * farTree} height={treeH * farTree} night={night} depth={0.42} ambient="sway" motionDelay={900} flip contactShadow />
+        <WorldObject source={PARK_TREE} right={treeRight} top={horizon - 46} width={treeW * farTree} height={treeH * farTree} night={night} depth={0.34} ambient="sway" motionDelay={900} flip contactShadow />
         <WorldObject source={PARK_BENCH} left={benchLeft} top={horizon + 190} width={benchW} height={benchH} night={night} depth={0.70} contactShadow />
-        <WorldObject source={PARK_TREE} left={treeLeft} top={horizon - 88} width={treeW} height={treeH} night={night} depth={0.55} ambient="sway" contactShadow />
+        <WorldObject source={PARK_TREE} left={treeLeft} top={horizon - 88} width={treeW} height={treeH} night={night} depth={0.62} ambient="sway" contactShadow />
       </WorldLayer>
       {/*
         The foreground was TWO SHRUNKEN COPIES OF THE TREE. That bought the
@@ -1006,52 +1008,20 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
           depth={0.10}
           opacity={0.86}
         />
-        <WorldObject source={TOWN_STORE_CORAL} left={sideStoreInset} top={horizon + 34} width={shopW * 0.90} height={shopH * 0.90} night={night} depth={0.32} />
-        <WorldObject source={TOWN_STORE_AQUA} left={centerStoreLeft} top={horizon + 8} width={shopW * 0.96} height={shopH * 0.96} night={night} depth={0.38} />
-        <WorldObject source={TOWN_STORE_VIOLET} right={sideStoreInset} top={horizon + 28} width={shopW * 0.91} height={shopH * 0.91} night={night} depth={0.34} />
         {/*
-          THE SIGN HAS TO STATE ITS DEPTH NOW.
+          DEPTH IS A DISTANCE NOW, so these had to be re-authored.
 
-          Giving WorldObject a baseline-derived zIndex fixed the bench in the
-          tree and quietly broke this: a plain View has no zIndex, and among
-          siblings anything with one beats it, so the shop's name went BEHIND
-          the shopfront it names. It showed as "BARKLY'S" in dark teal against a
-          teal wall, above the painted plaque instead of on it -- which reads as
-          a font or position bug rather than a stacking one, and was only caught
-          by zooming into a capture.
+          The storefronts sat at 0.32-0.38, which was harmless while `depth`
+          only drove a 7% opacity nudge and nothing else. Turning on real
+          aerial perspective made them the three biggest, most saturated
+          objects in the game wearing 18% sky, and Town went straight back to
+          the washed-out state this repo already fought once.
 
-          This is the one place in any scene where a code-drawn element shares a
-          layer with a prop (__tests__/layer_stacking.test.ts keeps it the only
-          one), and the fix is for it to say where it stands like everything
-          else. The plaque is measured from the asset rather than guessed: in
-          store_aqua.png the cream board runs y 0.187..0.311 and x 0.154..0.778
-          of the trimmed art, with the accent bar crossing it at 0.26.
-
-          AND IT IS TEXT, NOT A SIGN. Getting the depth right revealed the
-          second half: it was drawing its OWN butter plaque, with a teal border
-          and a drop shadow, on top of the plaque the shop already has painted
-          on it. The two did not line up, so the shop's accent bar stuck out
-          below the pill as a loose teal underline and the whole thing read as
-          a disabled text field hovering in front of the building. The shop has
-          a signboard. The only thing missing from it was the name, so that is
-          all this draws -- placed in the cream band ABOVE the accent bar
-          (0.190..0.255), which is why its height is a fraction of the prop
-          rather than 24 points.
+          They are not distant. They are the street the dog is standing in --
+          the rooftops behind them at 0.10 are the distance here. Around 0.55
+          gives them the light kiss a building five metres away should take,
+          and keeps the ramp honest between the rooftops and the fountain.
         */}
-        <View
-          style={[
-            styles.shopSign,
-            {
-              left: centerStoreLeft + shopW * 0.96 * 0.16,
-              top: horizon + 8 + shopH * 0.96 * 0.190,
-              width: shopW * 0.96 * 0.62,
-              height: shopH * 0.96 * 0.065,
-              zIndex: baselineZ(horizon + 8, shopH * 0.96) + 1,
-            },
-          ]}
-        >
-          <Text style={[styles.shopSignText, { fontSize: Math.max(9, 11 * scale) }]}>BARKLY'S</Text>
-        </View>
       </WorldLayer>
       {/* Strung in front of the shopfronts, clear of the chrome above. */}
       <WorldLayer name="distant">
@@ -1106,7 +1076,82 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
         <Rect x={0} y={ground + 92} width={420} height={canvasHeight - ground - 92} fill={roadEdge} />
         <Rect x={0} y={ground + 100} width={420} height={canvasHeight - ground - 100} fill={road} />
         <Path d={`M20 ${ground + 128}H112M166 ${ground + 128}H258M312 ${ground + 128}H402`} stroke={DIORAMA.cream} strokeWidth={7} strokeLinecap="round" opacity={night ? 0.10 : 0.38} />
-      </Svg></WorldLayer>
+      </Svg>
+        <GroundHaze horizon={horizon} height={canvasHeight} night={night} />
+      </WorldLayer>
+      {/*
+        THE SHOPS STAND ON THE PAVEMENT, so they are landmarks, not distance.
+
+        They were in the `distant` layer, which sits at z 10 -- BELOW the
+        ground plane at z 20. That was invisible while the ground was only a
+        flat fill, and the moment the ground got a haze of its own the haze
+        washed straight over the three biggest, most saturated objects in the
+        game. Measured on the storefront band: saturation 0.459 with no haze,
+        0.425 from the ground haze alone, 0.405 once prop haze was added --
+        closing on the 0.42 floor this repo already fought Town back from once.
+
+        A building occludes the ground it stands on. `landmark` (z 30) is where
+        that is true, and it leaves `distant` holding what is actually distant:
+        the rooftops behind them, at depth 0.10.
+      */}
+      <WorldLayer name="landmark">
+        <WorldObject source={TOWN_STORE_CORAL} left={sideStoreInset} top={horizon + 34} width={shopW * 0.90} height={shopH * 0.90} night={night} depth={0.52} />
+        <WorldObject source={TOWN_STORE_AQUA} left={centerStoreLeft} top={horizon + 8} width={shopW * 0.96} height={shopH * 0.96} night={night} depth={0.58} />
+        <WorldObject source={TOWN_STORE_VIOLET} right={sideStoreInset} top={horizon + 28} width={shopW * 0.91} height={shopH * 0.91} night={night} depth={0.54} />
+        {/*
+          AND THE SIGN MOVES WITH THEM.
+
+          It carries `baselineZ(...) + 1`, which only beats the shopfront while
+          the two are SIBLINGS: zIndex is scoped to a stacking context, so the
+          moment the shops moved to `landmark` and the sign stayed behind in
+          `distant`, the name went behind the building again -- the exact defect
+          the note below was written about, reintroduced by a layer change
+          rather than by a missing zIndex. It vanished from the capture entirely.
+        */}
+        {/*
+          THE SIGN HAS TO STATE ITS DEPTH NOW.
+
+          Giving WorldObject a baseline-derived zIndex fixed the bench in the
+          tree and quietly broke this: a plain View has no zIndex, and among
+          siblings anything with one beats it, so the shop's name went BEHIND
+          the shopfront it names. It showed as "BARKLY'S" in dark teal against a
+          teal wall, above the painted plaque instead of on it -- which reads as
+          a font or position bug rather than a stacking one, and was only caught
+          by zooming into a capture.
+
+          This is the one place in any scene where a code-drawn element shares a
+          layer with a prop (__tests__/layer_stacking.test.ts keeps it the only
+          one), and the fix is for it to say where it stands like everything
+          else. The plaque is measured from the asset rather than guessed: in
+          store_aqua.png the cream board runs y 0.187..0.311 and x 0.154..0.778
+          of the trimmed art, with the accent bar crossing it at 0.26.
+
+          AND IT IS TEXT, NOT A SIGN. Getting the depth right revealed the
+          second half: it was drawing its OWN butter plaque, with a teal border
+          and a drop shadow, on top of the plaque the shop already has painted
+          on it. The two did not line up, so the shop's accent bar stuck out
+          below the pill as a loose teal underline and the whole thing read as
+          a disabled text field hovering in front of the building. The shop has
+          a signboard. The only thing missing from it was the name, so that is
+          all this draws -- placed in the cream band ABOVE the accent bar
+          (0.190..0.255), which is why its height is a fraction of the prop
+          rather than 24 points.
+        */}
+        <View
+          style={[
+            styles.shopSign,
+            {
+              left: centerStoreLeft + shopW * 0.96 * 0.16,
+              top: horizon + 8 + shopH * 0.96 * 0.190,
+              width: shopW * 0.96 * 0.62,
+              height: shopH * 0.96 * 0.065,
+              zIndex: baselineZ(horizon + 8, shopH * 0.96) + 1,
+            },
+          ]}
+        >
+          <Text style={[styles.shopSignText, { fontSize: Math.max(9, 11 * scale) }]}>BARKLY'S</Text>
+        </View>
+      </WorldLayer>
       <WorldLayer name="props">
         {/* The pavement's own surface. See TOWN_PAVING_COURSES. */}
         {TOWN_PAVING_COURSES.map((c) => {
@@ -1395,6 +1440,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
           <Path d={`M44 ${sandTop + 92}q24 -8 48 0M306 ${sandTop + 82}q30 -10 58 1M122 ${sandTop + 186}q28 -7 54 2`} stroke={night ? DIORAMA.sandNightLight : DIORAMA.sandDayLight} strokeWidth={4} strokeLinecap="round" fill="none" opacity={0.34} />
           <Path d={`M74 ${sandTop + 128}l7 4 6 -5M344 ${sandTop + 166}l8 4 5 -6`} stroke={night ? DIORAMA.sandNightEdge : DIORAMA.sandDayEdge} strokeWidth={2.4} strokeLinecap="round" fill="none" opacity={0.34} />
         </Svg>
+        <GroundHaze horizon={horizon} height={canvasHeight} night={night} strength={0.46} />
       </WorldLayer>
       <WorldLayer name="landmark">
         {showPalm && <WorldObject source={BEACH_PALM} left={palmLeft} top={horizon - 82} width={palmW} height={palmH} night={night} depth={0.44} opacity={0.86} ambient="sway" contactShadow />}

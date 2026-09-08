@@ -77,6 +77,90 @@ export const WORLD_LAYER_Z: Record<WorldLayerName, number> = {
  * code looks different. Offset so the value stays positive for a prop whose
  * layout box starts above the top of the canvas.
  */
+/*
+ * How much sky the furthest prop wears. Chosen against a measurement rather
+ * than a taste: the park's far, mid and near bands all sat at value 0.454 /
+ * 0.438 / 0.447 with this at zero, and the target is a far band clearly
+ * lighter than the near one without the flattening of chroma that killed the
+ * last attempt. Raise it and distance reads; raise it too far and the
+ * background goes pastel, which is the failure mode this replaces.
+ */
+export const HAZE_MAX = 0.34;
+/** Day haze is the sky; night haze is the deep blue the master grade uses. */
+export const HAZE_DAY = DIORAMA.hazeDay;
+export const HAZE_NIGHT = DIORAMA.hazeNight;
+
+/*
+ * THE GROUND HAS TO RECEDE TOO.
+ *
+ * Prop haze alone barely moved the measurement, and the reason is that most of
+ * a scene is GROUND, which is code-drawn and so wears no depth at all. Sampled
+ * down a clear column of park grass at 2pm: hue 89-100 degrees, saturation
+ * 0.48-0.50 and value 0.57 -> 0.52 across the entire field. One flat green
+ * from the horizon to the camera, which is what makes the scene read as a pile
+ * of objects standing on a colour rather than as a place.
+ *
+ * Two gradients, and they are the same two every stylised background uses:
+ * sky lying on the far ground, and the near ground going richer and deeper.
+ * Drawn at the END of the ground layer, so the terrain and the trail both
+ * recede together while every prop keeps its own per-depth haze.
+ */
+/** A palette token at an opacity, so no colour in this file is a raw literal. */
+function alpha(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+const CLEAR = 'rgba(0,0,0,0)';
+const GROUND_HAZE_A = 0.62;
+const GROUND_DEEPEN_A = 0.20;
+const GROUND_HAZE_A_NIGHT = 0.55;
+const GROUND_DEEPEN_A_NIGHT = 0.30;
+
+export function GroundHaze({
+  horizon,
+  height,
+  night,
+  strength = 1,
+}: {
+  horizon: number;
+  height: number;
+  night: boolean;
+  /*
+   * A multiplier on both gradients, for a scene whose ground is not one plane.
+   *
+   * The park's field and the town's pavement run continuously from the horizon
+   * to the camera, and take the full strength. The beach does not: its ground
+   * is TWO surfaces and the sea is the scene's colour anchor, sitting entirely
+   * inside the band where haze is strongest. At full strength the water went
+   * from value 0.526 / saturation 0.455 to 0.640 / 0.377 -- a pale grey-blue
+   * where there had been teal, which is the flatness this scene was rebuilt to
+   * fix, reintroduced from the other direction. Shortening the band does not
+   * help, because the sea IS the band; it has to be gentler there.
+   */
+  strength?: number;
+}) {
+  const haze = alpha(
+    night ? DIORAMA.groundHazeNight : DIORAMA.groundHazeDay,
+    (night ? GROUND_HAZE_A_NIGHT : GROUND_HAZE_A) * strength,
+  );
+  const deepen = alpha(
+    night ? DIORAMA.groundDeepenNight : DIORAMA.groundDeepenDay,
+    (night ? GROUND_DEEPEN_A_NIGHT : GROUND_DEEPEN_A) * strength,
+  );
+  return (
+    <View style={[styles.fill, { zIndex: 9 }]} pointerEvents="none">
+      <LinearGradient
+        colors={[haze, CLEAR]}
+        style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: Math.max(130, (height - horizon) * 0.42) }}
+      />
+      <LinearGradient
+        colors={[CLEAR, deepen]}
+        style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: Math.max(120, (height - horizon) * 0.44) }}
+      />
+    </View>
+  );
+}
+
 export function baselineZ(top: number, height: number): number {
   return Math.max(1, Math.round(top + height) + 1000);
 }
@@ -168,6 +252,7 @@ export function WorldObject({
   height,
   depth = 0.55,
   night = false,
+  hazeColor,
   opacity = 1,
   rotate,
   flip = false,
@@ -185,6 +270,8 @@ export function WorldObject({
   /** 0 is distant atmosphere, 1 is the gameplay plane. */
   depth?: number;
   night?: boolean;
+  /** The colour distance lays over this prop. Defaults to the scene's sky. */
+  hazeColor?: string;
   opacity?: number;
   rotate?: string;
   flip?: boolean;
@@ -205,6 +292,14 @@ export function WorldObject({
    * by fading things toward the background.
    */
   const atmosphericOpacity = 0.93 + safeDepth * 0.07;
+  /*
+   * How much sky lies between the camera and this prop. `depth` is 0 at the
+   * horizon and 1 at the camera, so the furthest things take the most haze.
+   * Squared, because haze accumulates with distance rather than linearly, and
+   * a linear ramp put a visible veil on midground props that should be clear.
+   */
+  const haze = HAZE_MAX * (1 - safeDepth) * (1 - safeDepth);
+  const hazeTint = hazeColor ?? (night ? HAZE_NIGHT : HAZE_DAY);
   const transforms: Array<{ rotate: string } | { scaleX: number }> = [];
   if (rotate) transforms.push({ rotate });
   if (flip) transforms.push({ scaleX: -1 });
@@ -313,6 +408,33 @@ export function WorldObject({
             style,
           ]}
         />
+        {/*
+          AERIAL PERSPECTIVE, AS A TINT RATHER THAN A FADE.
+          Measured in the park at 2pm: mean value 0.454 far, 0.438 mid, 0.447
+          near -- identical at every depth, which is why the scene read as a
+          pile of objects rather than a place. `atmosphericOpacity` above is
+          capped at a 7% swing, deliberately, because the previous attempt
+          faded distant props toward the background and turned Town grey.
+
+          Fading is the wrong operation. Distance does not make things
+          transparent; it lays the SKY over them, which lifts value and pulls
+          hue toward the sky while leaving the object's own chroma underneath.
+          A second copy of the art, tinted to the haze colour and drawn at low
+          opacity, does exactly that and respects the prop's alpha -- a plain
+          overlay View would haze a rectangle.
+        */}
+        {haze > 0.004 && (
+          <Image
+            source={source}
+            resizeMode="contain"
+            tintColor={hazeTint}
+            style={[
+              styles.objectImage,
+              { opacity: haze, transform: transforms.length ? transforms : undefined },
+              style,
+            ]}
+          />
+        )}
       </Animated.View>
     </View>
   );
@@ -613,23 +735,23 @@ export function WorldLighting({
         the frame that keeps the HUD off the art.
       */}
       <LinearGradient
-        colors={[g.vignette, 'rgba(0,0,0,0)']}
+        colors={[g.vignette, CLEAR]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.vignetteSide}
       />
       <LinearGradient
-        colors={['rgba(0,0,0,0)', g.vignette]}
+        colors={[CLEAR, g.vignette]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.vignetteSide}
       />
       <LinearGradient
-        colors={[g.vignette, 'rgba(0,0,0,0)']}
+        colors={[g.vignette, CLEAR]}
         style={styles.vignetteTop}
       />
       <LinearGradient
-        colors={['rgba(0,0,0,0)', g.vignette]}
+        colors={[CLEAR, g.vignette]}
         style={styles.vignetteBottom}
       />
     </View>

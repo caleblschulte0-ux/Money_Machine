@@ -727,3 +727,85 @@ does not fit is not a prop to keep in the pack because it cost three passes to
 make; that is the sunk-cost version of the unwired-capability sin this document
 already argues against. What is worth keeping is the finding, which is why it
 is written down here.
+
+---
+
+## Depth: the scenes had none, and the code said so (2026-09-08)
+
+"The backgrounds still need work — it's the art, the style." Measured before
+touching anything, sampling value and saturation in three horizontal bands of
+each scene at 2pm:
+
+| park band | value | saturation |
+|---|---|---|
+| far (behind the horizon) | 0.454 | 0.397 |
+| mid | 0.438 | 0.480 |
+| near (foreground) | 0.447 | 0.404 |
+
+**Identical at every depth.** A far-to-near value gap of +0.007. That is the
+whole finding: a scene with no aerial perspective reads as a pile of objects
+standing on a colour, not as a place, however good the objects are.
+
+The code said so too. `atmosphericOpacity` was `0.93 + depth * 0.07` — a 7%
+swing, deliberately clamped, because an earlier attempt faded distant props
+toward the background and turned Town grey.
+
+### Fading is the wrong operation
+
+Distance does not make things transparent. It lays the **sky** over them, which
+lifts value and pulls hue toward the sky while the object's own chroma survives
+underneath. Fading toward a background is what makes things grey; tinting
+toward the sky is what makes them distant.
+
+So `WorldObject` draws a second copy of its art, tinted to the haze colour at
+low opacity. It respects the prop's alpha, where a plain overlay View would
+haze a rectangle. `(1 - depth)²`, because haze accumulates with distance and a
+linear ramp veiled midground props that should be clear.
+
+### Most of a scene is ground, and the ground wore nothing
+
+Prop haze alone barely moved the measurement. Sampled down a clear column of
+park grass: hue 89–100°, saturation 0.48–0.50, value 0.57 → 0.52 across the
+**entire field**. One flat green from the horizon to the camera.
+
+`GroundHaze` draws the two gradients every stylised background uses — sky lying
+on the far ground, the near ground going richer and deeper — at the end of the
+ground layer, so terrain and trail recede together while props keep their own
+per-depth haze. Park's far-to-near value gap: **+0.007 → +0.096**. Town's
+flipped sign, from −0.078 (far *darker* than near) to +0.082.
+
+### Turning on a real effect exposed two authoring errors
+
+**Town's storefronts were authored as distance.** Depth 0.32–0.38, harmless
+while depth drove a 7% nudge, and at real strength it put 18% sky over the
+three biggest, most saturated objects in the game. They are not distant — they
+are the street the dog stands in; the rooftops behind them at 0.10 are the
+distance here. Re-authored to ~0.55.
+
+**And they were in the wrong layer.** `distant` sits at z 10, *below* the
+ground plane at z 20, so the ground's own haze washed straight over them.
+Invisible while the ground was a flat fill. Measured on the storefront band:
+
+| | value | saturation |
+|---|---|---|
+| no haze | 0.444 | 0.459 |
+| ground haze alone | 0.471 | 0.425 |
+| ground + prop haze | 0.488 | 0.405 |
+
+— closing on the 0.42 floor this document already records Town being fought
+back from once. A building occludes the ground it stands on, so they belong in
+`landmark` (z 30). With that and the depth fix: 0.460 / 0.433.
+
+Moving them broke the shop sign, exactly as the note in `OutdoorRenderedScenes`
+predicts: `baselineZ(...) + 1` only beats the shopfront while the two are
+**siblings**, so "BARKLY'S" went behind the building again and vanished from
+the capture. The sign moves with the shops.
+
+### One scene needed less
+
+The beach's ground is two surfaces, and the sea — the scene's colour anchor —
+sits entirely inside the band where haze is strongest. At full strength the
+water went 0.526 / 0.455 → 0.640 / 0.377: a pale grey-blue where there had been
+teal, which is the flatness the beach was rebuilt to fix, arriving from the
+other direction. Shortening the band does not help, because the sea *is* the
+band. `GroundHaze` takes a `strength` multiplier and the beach passes 0.46.

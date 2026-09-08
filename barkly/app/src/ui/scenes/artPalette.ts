@@ -124,6 +124,14 @@ export const DIORAMA = {
    */
   skyMorningA: '#FFDB90',
   skyMorningB: '#B9E7FF',
+  /* Aerial perspective. `hazeDay` is the sky a distant prop wears; `hazeNight`
+     is the blue the master grade already washes the world with after dark. */
+  hazeDay: '#CFEAFF',
+  hazeNight: '#4A4E9E',
+  groundHazeDay: '#CBE7FF',
+  groundHazeNight: '#4A4E9E',
+  groundDeepenDay: '#2E1E3A',
+  groundDeepenNight: '#0C0A22',
   skyDayA: '#74CFFF',
   skyDayB: '#B7E9FF',
   skyEveningA: '#FF9C88',
