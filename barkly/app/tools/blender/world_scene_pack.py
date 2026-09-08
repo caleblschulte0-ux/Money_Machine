@@ -316,7 +316,11 @@ def park():
     _tree(-12.2, -12.0, 3.0, canopy="#4FA436", trunk="#7A5233")
     _tree(12.6, -10.0, 2.9, canopy="#57AC3C", trunk="#83593A")
 
-    _bandstand(0.8, 21.0, 1.25)
+    # BACK, and off his head. At y 21 it sat directly behind the dog with its
+    # roof at his ears, and a wide shallow cone that close reads as a parasol
+    # rather than a building. Further away it is smaller, its posts and base
+    # come into view, and the silhouette does the work.
+    _bandstand(-2.6, 31.0, 1.5)
     _bench(5.0, -1.6)
 
     # Middle distance: hedges give the field a middle, which four trees and a
@@ -594,8 +598,14 @@ def _bandstand(x: float, y: float, s: float = 1.0):
         px, py = TURN(x + math.cos(a) * 2.5 * s, y + math.sin(a) * 2.5 * s)
         pack.cylinder(f"bandpost{x:.1f}{i}", (px, py, 1.75 * s), 0.16 * s, 2.7 * s, post, vertices=12)
     pack.cylinder(f"bandring{x:.1f}", (cx, cy, 3.18 * s), 2.72 * s, 0.22 * s, trim, vertices=24)
-    pack.cone(f"bandroof{x:.1f}", (cx, cy, 3.85 * s), 3.25 * s, 0.30 * s, 1.15 * s, roof, vertices=6)
-    pack.sphere(f"bandfin{x:.1f}", (cx, cy, 4.62 * s), (0.22 * s, 0.22 * s, 0.30 * s), finial)
+    pack.cone(f"bandroof{x:.1f}", (cx, cy, 4.05 * s), 2.95 * s, 0.22 * s, 1.65 * s, roof, vertices=6)
+    pack.sphere(f"bandfin{x:.1f}", (cx, cy, 5.05 * s), (0.20 * s, 0.20 * s, 0.28 * s), finial)
+    # A railing between the posts, which is what stops it reading as a canopy
+    # on sticks: a bandstand is enclosed at the bottom and open at the top.
+    for i in range(6):
+        a = i / 6.0 * math.tau + 0.26
+        rx, ry = TURN(x + math.cos(a) * 2.5 * s, y + math.sin(a) * 2.5 * s)
+        pack.cylinder(f"bandrail{x:.1f}{i}", (rx, ry, 1.05 * s), 0.10 * s, 0.30 * s, trim, vertices=10)
 
 
 def _tree(x: float, y: float, s: float, canopy: str = "#5CB03A", trunk: str = "#8A5C39"):
