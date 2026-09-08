@@ -134,7 +134,33 @@ BEATS = [
  # silent on `sign` so it isn't saying what's already on screen. v32b:
  # IMG_6709, a different plaque (a poem, not the park-history panel used
  # every prior version), close enough that no person is in frame.
- ("sign", "6709", 2.0, 0.0, 3.5, "a different plaque this time, read close -- the story as it's told today"),
+ # IN-POINT FIXED, v32c pass 2 (this session's own fresh critical review,
+ # not a note from either AI). tin=2.0 put the camera mid-pan across the
+ # plaque: EVERY line of the paragraph was cropped on BOTH margins
+ # mid-word ("s long as humans have inhabited this area, they" / "...rew
+ # early American explorers...") and a second, unrelated plaque bled into
+ # the bottom-right corner ("A tho... A tho... A tho..."). For a beat whose
+ # whole job is "read close," the one thing on screen was not actually
+ # readable. Sampled the full 28.2s clip frame-by-frame: the camera pans
+ # right, and by tin=20.5 it has settled on a stable frame (checked
+ # through 24.0, i.e. across this beat's whole 3.5s duration) where the
+ # paragraph's actual opening is intact and legible left-to-right: "For as
+ # long as humans have inhabited this area, they have been attracted by
+ # the Falls." The second plaque is fully out of frame by this point too.
+ # Right edge of later lines still clips (the plaque is wider than the
+ # frame at this focal length throughout the whole clip -- checked, no
+ # in-point avoids that), but a viewer can now read a complete opening
+ # sentence instead of no complete sentence at all.
+ # IN-POINT NUDGED 20.5 -> 22.3, same pass: render_one.py's own footage
+ # gate (shotqc.py) flagged 20.5 JOLT (peak 18.3px) -- a brief handheld
+ # settle ~1.1-1.2s into that in-point. Direct frame comparison before/
+ # after the settle showed it was subtle, not a whip or bump, but the gate
+ # exists precisely so a flag doesn't get eyeballed away when a clean
+ # alternative costs nothing: 22.3 sits just past the settle, keeps the
+ # exact same legible framing (verified same crop, same "For as long as
+ # humans..." opening, second plaque still fully out of frame), and clears
+ # the gate outright -- peak 5.1px, drift 1.0%, no flags.
+ ("sign", "6709", 22.3, 0.0, 3.5, "a different plaque this time, read close -- the story as it's told today"),
  # v32b: IMG_6791, a slow pan across the same empty riverbed from a
  # different vantage -- same idea (nobody stopping), different shot,
  # actual camera motion instead of a static frame.
