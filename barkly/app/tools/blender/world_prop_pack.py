@@ -93,58 +93,60 @@ def look_at(obj, target=(0.0, 0.0, 1.2)):
 #           it is what makes felt look woven and plaster look plastered.
 #
 # `stretch` pulls the noise along one axis for grain -- wood is not isotropic.
-# WHAT THE NUMBERS MEAN, and why the first attempt at this did nothing.
+# SURFACE, AND THE MISTAKE THIS BLOCK IS THE CORRECTION OF.
 #
-# `cube`/`sphere` below call `transform_apply(scale=True)`, so an object's
-# scale is baked into its mesh and OBJECT texture coordinates are therefore in
-# the same units as the world. That makes every scale here readable as CYCLES
-# PER WORLD UNIT, and it is checkable: a park bench is ~3.5 units wide and
-# renders ~440px, so one world unit is ~125px. A noise scale of 190 -- the
-# first guess -- is 190 cycles per unit, which is 0.7px per cycle. It averaged
-# to flat grey and moved the render by a maximum of 5/255. A texture that is
-# finer than a pixel is not a subtle texture, it is no texture.
+# The first version of this set out to give the world "material" because the
+# hero looked like a plush toy beside untextured plastic. That reading was
+# WRONG, and the operator said so as soon as he saw it: Barkly is not plush.
+# He is CLEAN and CARTOON -- big smooth forms, soft gradients, crisp dark
+# separation where shapes meet, a little sheen -- and what he carries at the
+# pixel level is a whisper of grain, not a weave. Matching the world to a
+# fabric that was never there put the background in a different material
+# language than the character, which is the same defect as before pointing
+# the other way.
 #
-# So the bands are chosen against the frequencies a viewer can actually see,
-# measured against Barkly himself at a common size (subject normalised to
-# 400px tall, energy above a Gaussian of radius r):
+# The number that settles it. Median absolute deviation from a 1px blur,
+# interior pixels only, at native resolution:
 #
-#                hp1    hp2    hp4    hp8   hp16
-#   Barkly       3.65   7.41   13.9   24.5   40.8
-#   bench        0.90   2.38   4.68    9.8   20.6
-#   tree         0.24   0.97   2.72    6.6   12.4
-#   hedge        0.08   0.38   1.23    3.1    7.1
+#   Barkly           median 1.0    p75 3.0
+#   hedge, as built  median 3.0    p75 5.0     <- three times the character
+#   bench, as built  median 2.0    p75 4.0
 #
-# The hero carried forty-five times the hedge's fine detail. That gap is the
-# whole "he is a plush toy standing in a world of untextured plastic" reading,
-# and it is one function's fault, because every prop in the game gets its
-# material from here.
+# So the target is Barkly's own number and Barkly's own character of grain:
 #
-#   GRAIN   ~5-12 cycles/unit, high Detail. The noise node's own octaves carry
-#           this up into the fine bands, so one field feeds hp16 down to hp2.
-#   TOOTH   ~40-120 cycles/unit, driving a bump. Roughly 1-3px per cycle in a
-#           prop render: not resolvable as a pattern, which is the point --
-#           it reads as surface tooth, and it is what makes felt look woven.
-#   MOTTLE  the colour varies AROUND the authored value by a MULTIPLIER, so
-#           hue is mathematically untouched and the mean is preserved. The
-#           sRGB lesson this file already carries is why that matters.
-#   ROUGH   roughness varies on the same field, which is most of what reads as
-#           material under a moving key light.
+#   FINE      scales here are 16-34 cycles per world unit for the albedo and
+#             120-220 for the bump, several times finer than the first pass.
+#             At a prop's render size that is a few pixels per cycle: felt
+#             reads as a weave because you can SEE the weave.
+#   FAINT     mottle is 4-6%, down from 11-24%. Enough that a surface is not
+#             one flat number; not enough to be a texture you notice.
+#   ALBEDO    bump drops to about a tenth of what it was, because a perturbed
+#             normal catching a hard key light is most of what says "fabric".
+#   NO ROUGHNESS VARIATION at all. That was the fibrous cue: patches of
+#             differing roughness read as nap, which is exactly wrong here.
 #
-# `stretch` pulls the field along one axis, because wood is not isotropic.
-# `smooth` opts a material out entirely, for glass and polished metal.
+# `stretch` still pulls the field along one axis for wood, because drawn wood
+# grain is a legitimate cartoon cue in a way that felt nap is not. `smooth`
+# opts out entirely, for glass, water, cloud and contact shadows.
+#
+# The mechanics below stay as they were, and two of them are load-bearing:
+# object coordinates are world units here (cube/sphere call transform_apply,
+# so `grain` really is cycles per unit), and a noise Fac is fBm clustered
+# around 0.5, so it must be spread before it drives anything or every
+# amplitude above is quietly cut to a fifth.
 SURFACES = {
-    "matte":   {"grain":  7.0, "tooth":  55.0, "bump": 0.42, "depth": 0.012,
-                "mottle": 0.12, "rough": 0.14, "stretch": 1.0},
-    "felt":    {"grain":  9.0, "tooth":  80.0, "bump": 0.75, "depth": 0.010,
-                "mottle": 0.18, "rough": 0.12, "stretch": 1.0},
-    "wood":    {"grain":  5.0, "tooth":  45.0, "bump": 0.45, "depth": 0.014,
-                "mottle": 0.15, "rough": 0.16, "stretch": 9.0},
-    "foliage": {"grain": 11.0, "tooth":  70.0, "bump": 0.34, "depth": 0.016,
-                "mottle": 0.11, "rough": 0.15, "stretch": 1.0},
-    "sand":    {"grain": 12.0, "tooth": 120.0, "bump": 0.46, "depth": 0.007,
-                "mottle": 0.10, "rough": 0.10, "stretch": 1.0},
-    "stone":   {"grain":  6.0, "tooth":  40.0, "bump": 0.52, "depth": 0.020,
-                "mottle": 0.13, "rough": 0.20, "stretch": 1.0},
+    "matte":   {"grain": 22.0, "tooth": 150.0, "bump": 0.10, "depth": 0.004,
+                "mottle": 0.045, "rough": 0.0, "stretch": 1.0},
+    "felt":    {"grain": 26.0, "tooth": 170.0, "bump": 0.12, "depth": 0.004,
+                "mottle": 0.055, "rough": 0.0, "stretch": 1.0},
+    "wood":    {"grain": 16.0, "tooth": 120.0, "bump": 0.12, "depth": 0.005,
+                "mottle": 0.060, "rough": 0.0, "stretch": 9.0},
+    "foliage": {"grain": 28.0, "tooth": 180.0, "bump": 0.11, "depth": 0.004,
+                "mottle": 0.050, "rough": 0.0, "stretch": 1.0},
+    "sand":    {"grain": 34.0, "tooth": 220.0, "bump": 0.10, "depth": 0.003,
+                "mottle": 0.040, "rough": 0.0, "stretch": 1.0},
+    "stone":   {"grain": 18.0, "tooth": 130.0, "bump": 0.12, "depth": 0.005,
+                "mottle": 0.055, "rough": 0.0, "stretch": 1.0},
     "smooth":  None,
 }
 
@@ -256,11 +258,16 @@ def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None)
     nt.links.new(spread.outputs["Result"], mix.inputs["Fac"])
     nt.links.new(mix.outputs["Color"], bsdf.inputs["Base Color"])
 
-    rough = nt.nodes.new("ShaderNodeMapRange")
-    rough.inputs["To Min"].default_value = max(0.05, roughness - spec["rough"])
-    rough.inputs["To Max"].default_value = min(1.0, roughness + spec["rough"])
-    nt.links.new(spread.outputs["Result"], rough.inputs["Value"])
-    nt.links.new(rough.outputs["Result"], bsdf.inputs["Roughness"])
+    # Roughness variation is OFF for every surface, and that is deliberate --
+    # see the note above. It stays wired for the case where a future surface
+    # genuinely wants it (wet stone, worn metal), but at 0.0 it is skipped
+    # rather than connected as a constant.
+    if spec["rough"] > 0:
+        rough = nt.nodes.new("ShaderNodeMapRange")
+        rough.inputs["To Min"].default_value = max(0.05, roughness - spec["rough"])
+        rough.inputs["To Max"].default_value = min(1.0, roughness + spec["rough"])
+        nt.links.new(spread.outputs["Result"], rough.inputs["Value"])
+        nt.links.new(rough.outputs["Result"], bsdf.inputs["Roughness"])
 
     # The tooth, on its own much finer field, as a normal perturbation. Bump
     # beats colour for this: it modulates the key light rather than the albedo,
@@ -443,6 +450,33 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     scene.render.image_settings.color_mode = "RGBA"
     scene.render.film_transparent = True
     scene.world.color = (0.045, 0.055, 0.075)
+
+    # AMBIENT OCCLUSION, which this pack did not have at all.
+    #
+    # THE ACTUAL GAP between the hero and the world, and it is not texture.
+    # Look at Barkly closely: big smooth forms, soft gradients, and a CRISP
+    # DARK SEAM everywhere two shapes meet -- muzzle against cheek, brow over
+    # eye, ear against head. That separation is what makes a clean cartoon
+    # read as solid instead of as flat shapes overlapping, and it is the thing
+    # the props were missing. Every light in the rig below is a big soft area
+    # light, so nothing in a prop was ever darkened by its own neighbours: the
+    # five spheres of a hedge met with no seam between them, and the slats of
+    # a bench with no shadow in the gaps.
+    #
+    # The scene pack has had this on since it was written. The pack that
+    # renders every single prop in the game did not, and that difference sat
+    # unnoticed while a whole pass went into surface noise instead.
+    #
+    # `gtao_distance` is in world units and the props are 1-4 units across, so
+    # 0.8 reaches across a gap between neighbouring parts without dimming a
+    # whole face.
+    for attribute, value in (
+        ("use_gtao", True),
+        ("gtao_distance", 0.8),
+        ("gtao_factor", 1.0),
+    ):
+        if hasattr(scene.eevee, attribute):
+            setattr(scene.eevee, attribute, value)
 
     # STANDARD, NOT AgX. Every prop in this pack was coming out of Blender
     # pastel: measured, the Town storefronts render around #A0A0A0/#C0A0A0

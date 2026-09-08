@@ -845,7 +845,110 @@ ones cover more of the frame; the first version kept them equal and flattened
 the very thing it was added to fix. The first strength was also too polite —
 a mean per-channel change of 5/255, which is not a shape, it is a rumour.
 
-## The material language: the world was untextured plastic
+## The material language, and the pass that aimed it at the wrong material
+
+*2026-09-08. Two rulings, in order, and the second corrects the first.*
+
+**"adding shit on top of shit still makes it shit. There are fundamental
+changes to the most basic level of art in our game that need to be fixed."**
+
+Right, and not another prop. But the answer I reached for was wrong.
+
+**"barkly ... still looks very clean and cartoon ... the background now give a
+felt vibe which is not what barkly has going on and no[t] what I want for the
+background."**
+
+### The wrong diagnosis, and how it survived being measured
+
+I cropped Barkly beside a prop and read him as a PLUSH TOY -- felt weave on the
+fur, leather grain on the collar, pores in the nose -- against a world of
+untextured plastic. Then I measured, and the measurement agreed: at native
+resolution he carried twelve times the park hedge's fine detail. So a whole
+pass went into giving every material mottle, roughness variation and tooth.
+
+The number was real. The reading was not. **Barkly is clean and cartoon**: big
+smooth forms, soft gradients, a little sheen, and at the pixel level a WHISPER
+of grain, not a weave. Matching the world to a fabric that was never there put
+the background in a different material language from the character -- the same
+defect as before, pointing the other way. A measurement can confirm that two
+things differ and tell you nothing about which one to move.
+
+The strength it took to make texture visible is exactly the strength at which
+it reads as felt. That is not a tuning window that was missed; there was no
+window.
+
+### What was actually missing: occlusion
+
+**The prop pack had no ambient occlusion at all.** The scene pack has had it
+since it was written; the pack that renders every single prop in the game did
+not, and that one absent line sat unnoticed underneath the entire surface pass.
+
+Every light in the prop rig is a large soft area light, so nothing in a prop
+was ever darkened by its own neighbours. The five spheres of a hedge met with
+no seam between them and read as one blurry green mass. A bench had no shadow
+in its slat gaps. A shopfront had no depth in its awning recesses.
+
+Look at Barkly and it is the most obvious thing about him: a **crisp dark seam
+wherever two shapes meet** -- muzzle against cheek, brow over eye, ear against
+head. That separation is what makes clean cartoon read as solid rather than as
+flat shapes overlapping. It is not texture, it costs one line, and it is the
+whole difference.
+
+`gtao_distance` is 0.8 world units, and props are 1-4 units across, so it
+reaches across the gap between neighbouring parts without dimming a whole face.
+
+### Where the surfaces ended up
+
+Kept, at a whisper: scales several times finer (16-34 cycles per world unit for
+albedo, 120-220 for bump), mottle at 4-6% rather than 11-24%, bump at about a
+tenth of the failed pass, and **roughness variation off entirely** -- patches of
+differing roughness read as nap, which is the fibrous cue itself.
+
+That leaves the grain very nearly unmeasurable, and the honest statement is
+that the surface work was mostly a dead end. It stays because it is free after
+quantisation and it helps large flat areas -- the scene ground especially,
+which had been one mathematically flat plane -- not because it is doing real
+work. The ground's own tooth was five times too strong for one pass, for the
+same reason and with the same result.
+
+### The gate that defended the wrong answer, deleted
+
+`scripts/surface-check.py` refused a prop for carrying too LITTLE surface
+texture. It was carefully built -- median rather than mean, so geometry edges
+could not fake it, verified to fire in both directions -- and it encoded
+precisely the hypothesis that turned out to be wrong. **A gate defending a
+rejected direction is worse than no gate**, so it is gone rather than retuned.
+
+`__tests__/render_shading.test.ts` holds the standard that replaced it: every
+pack that renders enables occlusion, and no surface may exceed the strength
+that reads as fabric. The ceilings sit above where the surfaces are now and
+well below where the failed pass put them, so it fails on drift back toward
+felt rather than on ordinary tuning. It asserts nothing about the PNGs, because
+the lesson of the deleted gate is that measuring the art was never the problem.
+
+### What survived the pass, and is worth keeping
+
+- `scripts/promote-props.py` -- the manual copy from `art-review/` into
+  `assets/` is now a script that refuses a render older than the builder that
+  makes it. That gap cost two measurement passes in one day, both of which
+  looked exactly like "nothing changed". It caught 45 untrimmed 640x640 props
+  being shipped, and it owns the whole recipe: trim, size inventory art,
+  quantise.
+- Quantising to 256 colours **without dithering**, which took the world art to
+  2.3MB -- smaller than the 3.6MB it was before any of this -- and the artifact
+  from 21.4MB to 16.9MB.
+- `PROP_ONLY` takes a comma list and errors when it matches nothing. It was a
+  single prefix, and a list silently matched zero props, printed "rendered a
+  subset" and exited 0.
+- Two mechanics that are load-bearing whatever the surfaces are set to: object
+  coordinates are world units in these packs (`transform_apply` bakes scale),
+  and a noise Fac is fBm clustered around 0.5, so it must have its distribution
+  spread before it drives anything or every authored amplitude is cut to a
+  fifth on the way to the render.
+
+---
+
+## Appendix: the felt pass, as originally written (superseded above)
 
 *2026-09-08. The operator, after several passes of adding props, composition
 and depth: "adding shit on top of shit still makes it shit. There are

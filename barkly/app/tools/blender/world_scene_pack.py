@@ -231,7 +231,7 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
 
 
 def ground(hex_near: str, hex_far: str = "#84CE5E", centre: float = -48.5,
-           size: float = 183.0, tooth: float = 9.0, bump: float = 0.5):
+           size: float = 183.0, tooth: float = 26.0, bump: float = 0.10):
     """The ground, as geometry. It receives shadow and it occludes.
 
     AN ORTHOGRAPHIC CAMERA HAS NO HORIZON. Every ray is parallel, so an
@@ -371,7 +371,7 @@ def park():
 
 
 def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2,
-                   detail: float = 4.0, tooth: float = 9.0, bump: float = 0.5):
+                   detail: float = 4.0, tooth: float = 26.0, bump: float = 0.10):
     """Ground that varies CONTINUOUSLY, instead of in painted shapes.
 
     The first attempt laid irregular n-gons of slightly different green over
@@ -400,19 +400,18 @@ def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2,
     nt.links.new(tex.outputs["Fac"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
 
-    # AND TOOTH, because the ground was the last smooth thing in the picture.
+    # AND A WHISPER OF TOOTH -- a whisper, and the amount is the point.
     #
     # The colour ramp above gives the ground broad patches, which is the
-    # difference between "a fill" and "terrain" -- but the plane itself was
-    # still mathematically flat, and it stayed flat while every prop standing
-    # on it grew a surface. That mismatch is worse than both being smooth: it
-    # reads as models placed on a painted backdrop, which is the exact thing
-    # composing them into one lit place was meant to stop.
+    # difference between "a fill" and "terrain". This adds the faintest break
+    # in the plane itself so it is not one mathematically flat surface.
     #
-    # `tooth` is in cycles per world unit, like the prop pack's surfaces. The
-    # ground plane is 183 units across and shows about 40px per unit near the
-    # camera, so single-digit scales land in the few-pixels-per-cycle band
-    # where a viewer reads texture rather than pattern.
+    # It was five times this strong for one pass, and that was a mistake: at
+    # that amount a field reads as FELT, and the game's character is clean and
+    # cartoon, not plush. `tooth` is cycles per world unit (the plane is
+    # created at its final size and never scaled, so its object coordinates
+    # are world units); high and faint is a surface that is merely not flat,
+    # low and strong is fabric.
     # OBJECT COORDINATES, and this is the whole difference between a textured
     # ground and a smooth one. A noise node with nothing plugged into Vector
     # falls back to GENERATED coordinates, which are normalised 0..1 across the
@@ -709,7 +708,7 @@ def beach():
     the surf sits in a place rather than on a picture, and the umbrella throws
     its shadow across the sand it stands on.
     """
-    ground("#DFB877", "#EFD196", tooth=16.0, bump=0.36)
+    ground("#DFB877", "#EFD196", tooth=38.0, bump=0.09)
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
     _anchor("horizon", 0.0, 43.0)
