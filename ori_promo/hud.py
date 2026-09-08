@@ -61,10 +61,12 @@ def boot_pulse(d, t, dur, centre, col, ring_dur=0.6):
     a = int(230 * (1 - k) ** 1.6)
     if a <= 0:
         return
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=col + (int(a * 0.35),), width=9)
     d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=col + (a,), width=3)
     r2 = 8 + k * 90
     a2 = int(255 * (1 - k) ** 1.2)
     if a2 > 0:
+        d.ellipse([cx - r2, cy - r2, cx + r2, cy + r2], outline=col + (int(a2 * 0.35),), width=7)
         d.ellipse([cx - r2, cy - r2, cx + r2, cy + r2], outline=col + (a2,), width=2)
     if k < 0.35:
         fa = int(120 * (1 - k / 0.35))
@@ -179,9 +181,19 @@ def gyro_glyph(d, centre, t, radius, col, spin=1.4):
             a = int(210 * alpha_scale[i])
             if a <= 4:
                 continue
+            # GLOW, cheap: two wider, fainter passes drawn under the crisp
+            # line rather than a real Gaussian blur -- this function only
+            # ever gets a plain ImageDraw handle (arlabel/labelkit's own
+            # convention, kept for compatibility with every existing call
+            # site), so there is no isolated layer here to blur. Stacked
+            # fading strokes is the same trick scan_sweep() already uses
+            # for its glow trail.
+            d.line([pts[i], pts[i + 1]], fill=col + (int(a * 0.22),), width=7)
+            d.line([pts[i], pts[i + 1]], fill=col + (int(a * 0.4),), width=4)
             d.line([pts[i], pts[i + 1]], fill=col + (a,), width=2)
     # a steady core point at the centre -- the thing the rings orbit
-    d.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], fill=col + (230,))
+    d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=col + (60,))
+    d.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=col + (230,))
 
 
 def data_ticker(d, t, W, H, col, x=28, seed=0):

@@ -597,6 +597,17 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
                           corner="tl", label="ANCHORED")
             HUD.data_ticker(d, t, W, H, CYAN, x=28, seed=7)
             HUD.data_ticker(d, t, W, H, CYAN, x=W - 52, seed=13)
+        elif beat == "rental":
+            # Extending the HUD past the on/lock/anchor take -- the
+            # operator asked for the treatment pushed further. Telemetry
+            # keeps running (a real AR system does not switch off between
+            # beats), relabelled per beat so it reads as live status, not
+            # a repeated graphic.
+            HUD.telemetry(d, t, 0.0, W, H, seed=9.0, col=CYAN,
+                          corner="tl", label="LICENSE")
+        elif beat == "vision":
+            HUD.telemetry(d, t, 0.0, W, H, seed=21.0, col=CYAN,
+                          corner="tl", label="RANGE")
 
         # THE HONESTY TAG FOLLOWS THE FIGURES, NOT THE BEAT.
         # It used to be drawn whenever the BEAT contained figures, which on
