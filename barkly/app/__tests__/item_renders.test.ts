@@ -215,25 +215,26 @@ function hexRgb(hex: string): [number, number, number] {
 
 describe('the pane an item stands on', () => {
   /*
-   * THE DECODER IS PART OF THE MEASUREMENT, so it is checked against known
-   * answers rather than trusted. It grew palette support when the props were
+   * THE DECODER IS PART OF THE MEASUREMENT, so it is checked against a known
+   * answer rather than trusted. It grew palette support when the props were
    * quantised, and a decoder that silently returns the wrong mean turns every
-   * contrast assertion below into a green light that means nothing. These
-   * three numbers were taken independently (Pillow, opaque pixels only) from
-   * the same shipped files.
+   * contrast assertion below into a green light that means nothing.
+   *
+   * Against a FIXTURE, not against the art. The first version of this pinned
+   * three shipped props to means taken from Pillow, which asserted "the
+   * decoder is right" using numbers that only held for one particular render
+   * -- so the next legitimate re-render broke it, which is a maintenance trap
+   * rather than a test. `fixtures/palette-probe.png` is a 7x4 palette PNG
+   * built to be awkward on purpose: an odd width so the row stride is not a
+   * convenient multiple, a fully transparent column that must be excluded
+   * from the mean, and four colours whose opaque mean is exact. It never
+   * changes when the world is re-rendered.
    */
-  it('decodes a palette PNG to the same mean an independent reader gets', () => {
-    const cases: Array<[string, [number, number, number]]> = [
-      ['collar_red', [151.63, 65.98, 43.64]],
-      ['toy_ball', [176.83, 78.74, 65.14]],
-      ['treat_cheese', [175.36, 125.37, 36.21]],
-    ];
-    for (const [name, expected] of cases) {
-      const got = meanColor(join(ROOT, 'assets', 'world', 'item', `${name}.png`));
-      for (let i = 0; i < 3; i += 1) {
-        expect({ name, i, off: Math.abs(got[i] - expected[i]) < 0.5 })
-          .toEqual({ name, i, off: true });
-      }
+  it('decodes a palette PNG to a known answer', () => {
+    const got = meanColor(join(ROOT, '__tests__', 'fixtures', 'palette-probe.png'));
+    const expected = [125.0, 137.5, 112.5];
+    for (let i = 0; i < 3; i += 1) {
+      expect({ i, off: Math.abs(got[i] - expected[i]) < 0.01 }).toEqual({ i, off: true });
     }
   });
 
