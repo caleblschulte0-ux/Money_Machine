@@ -21,7 +21,7 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { RadialGlow, SCENE_CAMERA } from './scenes/WorldScene';
+import { RadialGlow, SCENE_CAMERA, sceneLight } from './scenes/WorldScene';
 import { useBarkly } from '../hooks/useBarkly';
 import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
@@ -685,6 +685,12 @@ export default function BarklyRoom() {
   // The same band the scenes grade themselves from, so the dog and the room
   // can never disagree about what time it is.
   const night = skyBand(hour) === 'night' || asleep;
+  /*
+   * The light of the place he is standing in, from the same band the sky uses,
+   * so he changes when the world does. Asleep counts as night wherever he is:
+   * a dog asleep at noon is a dog with his eyes shut in a dark room.
+   */
+  const heroLight = sceneLight(location, asleep ? 'night' : skyBand(hour));
   const worldMotion = asleep
     ? 'sleep' as const
     : arriving
@@ -1246,7 +1252,7 @@ export default function BarklyRoom() {
               testID="barkly-sprite"
               accessibilityHint="Tap to pet him."
             >
-              <Renderer state={snapshot.state} actions={actions} location={location} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} />
+              <Renderer state={snapshot.state} actions={actions} location={location} variant={variant} collarId={barkly.collarId} scale={spriteScale} look={look} beat={beat} light={heroLight} />
             </Pressable>
           </Animated.View>
           {asleep && location === 'home' && <DogBedFront upgraded={barkly.hasHome('home_bed')} />}

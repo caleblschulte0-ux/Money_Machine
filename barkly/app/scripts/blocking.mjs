@@ -160,6 +160,13 @@ for (const place of PLACES) {
       if (img.closest('[data-testid="prop-haze"]')) continue;
       // A scene plate is the ground itself; see ScenePlate.tsx.
       if (img.closest('[data-testid="scene-plate"]')) continue;
+      /*
+       * ...and the hero's light. Same shape as the prop haze: a second copy of
+       * his art, tinted to the colour of the place he is standing in, drawn
+       * over him. Untagged it would make him report as standing 100% inside
+       * himself, at his own baseline, in every scene.
+       */
+      if (img.closest('[data-testid="hero-light"]')) continue;
       const r = img.getBoundingClientRect();
       if (r.width < 8 || r.height < 8) continue;
       rows.push({ x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), base: Math.round(r.bottom) });
@@ -191,6 +198,16 @@ for (const place of PLACES) {
       if (!/^[A-Z]{3,9}$/.test(t) || el.children.length) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 12 || r.width > 140 || r.top < chromeBottom) continue;
+      /*
+       * WORLD labels only. This rule protects an NPC's name badge, which
+       * stands in the world at world depth, from being covered by scenery
+       * standing next to it. The dialogue panel's speaker tag is not that: it
+       * is UI on an opaque surface drawn above the entire scene, so ground
+       * cover passing under it covers nothing a player can see. Collecting it
+       * made the near-ground bands report as burying the word BARKLY while the
+       * capture shows it perfectly legible on top of them.
+       */
+      if (el.closest('[data-testid="dialogue-panel"]')) continue;
       labels.push({ t, x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) });
     }
     return { rows, labels, sprite: s ? { x: Math.round(s.x), y: Math.round(s.y), w: Math.round(s.width), h: Math.round(s.height), base: Math.round(s.bottom) } : null };

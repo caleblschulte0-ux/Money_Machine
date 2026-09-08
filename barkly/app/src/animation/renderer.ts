@@ -10,6 +10,7 @@
  */
 
 import { BarklyState, BodyAction } from '../barkly/types';
+import { SceneLight } from '../ui/scenes/WorldScene';
 import { LocationId } from '../world/locations';
 
 export interface BarklyRenderProps {
@@ -24,6 +25,16 @@ export interface BarklyRenderProps {
    * back leftward. Renderers without matching art may ignore it.
    */
   variant?: 'runRight' | 'carryLeft' | null;
+  /**
+   * The colour and strength of the light where he is standing.
+   *
+   * A renderer without a way to tint may ignore it -- but ignoring it is what
+   * the photo renderer used to do implicitly, and it measured: his fur was
+   * identical at 08:00, 14:00 and 19:00 while the world moved 40 units of luma
+   * around him. A character lit once at render time and never again reads as a
+   * sticker on a backdrop. See sceneLight() in ui/scenes/WorldScene.
+   */
+  light?: SceneLight | null;
   /**
    * How much of his natural size to draw, 0..1.
    *

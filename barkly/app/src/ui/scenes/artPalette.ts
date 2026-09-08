@@ -217,6 +217,33 @@ export const DIORAMA = {
   parkHillDayLight: '#C2ED85',
   parkHillDayEdge: '#5C993D',
   parkHillNight: '#3E6335',
+  /*
+   * THE LIGHT ON THE CHARACTER, per hour and per place.
+   *
+   * These are the colour a scene's light casts on Barkly and the dogs with
+   * him, consumed by sceneLight() in WorldScene. They live here rather than in
+   * that file because every colour in this game lives here -- and because the
+   * night pair is a deliberate statement about two different situations: a
+   * room at night is lit by its own lamp and stays warm, while outdoors is
+   * moonlight. One cool dim everywhere is what made the living room read as
+   * the same blue as the beach.
+   */
+  lightMorningWarm: '#FFD9A8',
+  lightMorningOpen: '#FFE0AE',
+  lightMorningStreet: '#FFD9B2',
+  lightMorningShore: '#FFE6BE',
+  lightDayWarm: '#FFF3DE',
+  lightDayOpen: '#EEFFDF',
+  lightDayStreet: '#FFF6E6',
+  lightDayShore: '#FFF8E4',
+  lightEveningWarm: '#FFB07A',
+  lightEveningOpen: '#FFA98C',
+  lightEveningStreet: '#FFAE8E',
+  lightEveningShore: '#FF9F86',
+  lightNightLamp: '#FFC98A',
+  lightNightOpen: '#7C93D8',
+  lightNightStreet: '#8C9AD6',
+  lightNightShore: '#7488D2',
   parkGrassDay: '#5DCB3F',
   parkGrassDayLight: '#A9E873',
   parkGrassDayEdge: '#2F7C2E',

@@ -958,6 +958,71 @@ export const SCENE_CAMERA: Record<ScenePlace, { zoom: number; hero: number; lift
   beach: { zoom: 1.0, hero: 0.66, lift: -18 },
 };
 
+/**
+ * WHAT COLOUR THE LIGHT IS, where he is standing, at this hour.
+ *
+ * THE DEFECT THIS EXISTS TO FIX, measured 2026-09-08. Sampling one patch of
+ * Barkly's tan fur across the day: in the park he read 129.8 at 08:00, 129.8
+ * at 14:00 and 129.8 at 19:00 -- the same pixels, saturation flat at 0.47 --
+ * while the world behind him moved 40 units of luma. Across the four places he
+ * varied 8 to 44 where the world varied 40 to 101. At 23:00 he took a blanket
+ * dim along with everything else, which is a master grade rather than
+ * lighting, and it desaturated him HARDER than the room he was in (0.47 to
+ * 0.21, against the scene's 0.32).
+ *
+ * A character who does not change when the light does is a sticker on a
+ * backdrop, and no amount of background work reaches it. This is the light the
+ * scene is casting, applied to him and to the dogs he is standing with, so
+ * they belong to the picture.
+ *
+ * It is deliberately a TINT AND A STRENGTH rather than a filter. The same
+ * operation the world already uses for aerial perspective: a second copy of
+ * the art, tinted, at low opacity, which respects the sprite's alpha and
+ * leaves its own chroma underneath. Strengths are small by day -- a sunny
+ * afternoon is close to neutral and the render is already lit for it -- and
+ * carry the work at the ends of the day, which is when a scene's light is
+ * actually a colour.
+ */
+export type SceneLight = { tint: string; strength: number };
+
+const LIGHT: Record<SkyBand, Record<ScenePlace, SceneLight>> = {
+  // Low sun, long and gold, and colder indoors where it has not arrived yet.
+  morning: {
+    home: { tint: DIORAMA.lightMorningWarm, strength: 0.10 },
+    park: { tint: DIORAMA.lightMorningOpen, strength: 0.13 },
+    town: { tint: DIORAMA.lightMorningStreet, strength: 0.12 },
+    beach: { tint: DIORAMA.lightMorningShore, strength: 0.14 },
+  },
+  // The render's own key already IS midday, so this barely touches him.
+  day: {
+    home: { tint: DIORAMA.lightDayWarm, strength: 0.05 },
+    park: { tint: DIORAMA.lightDayOpen, strength: 0.06 },
+    town: { tint: DIORAMA.lightDayStreet, strength: 0.05 },
+    beach: { tint: DIORAMA.lightDayShore, strength: 0.07 },
+  },
+  // The strongest colour in the day and the best-looking grade in the game.
+  evening: {
+    home: { tint: DIORAMA.lightEveningWarm, strength: 0.18 },
+    park: { tint: DIORAMA.lightEveningOpen, strength: 0.20 },
+    town: { tint: DIORAMA.lightEveningStreet, strength: 0.19 },
+    beach: { tint: DIORAMA.lightEveningShore, strength: 0.22 },
+  },
+  // Night is the one time a PLACE changes the answer: a room is lit by its own
+  // lamp and stays warm, while outside is moonlight. The old behaviour -- one
+  // cool dim everywhere including indoors -- is what made the living room read
+  // as the same blue as the beach.
+  night: {
+    home: { tint: DIORAMA.lightNightLamp, strength: 0.16 },
+    park: { tint: DIORAMA.lightNightOpen, strength: 0.30 },
+    town: { tint: DIORAMA.lightNightStreet, strength: 0.26 },
+    beach: { tint: DIORAMA.lightNightShore, strength: 0.32 },
+  },
+};
+
+export function sceneLight(place: ScenePlace, band: SkyBand): SceneLight {
+  return LIGHT[band][place];
+}
+
 export function worldScale(viewportWidth: number, viewportHeight = 844): number {
   // The short edge behaves like a camera zoom. Portrait art can grow modestly
   // on a tablet; landscape art is constrained by its height. This keeps the

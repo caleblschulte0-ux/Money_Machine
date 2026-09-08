@@ -167,7 +167,7 @@ export function faceFrame({
   }
 }
 
-export default function BarklyPhotoView({ state, actions, location, variant, collarId, scale = 1, look: lookAt, beat }: BarklyRenderProps) {
+export default function BarklyPhotoView({ state, actions, location, variant, collarId, scale = 1, look: lookAt, beat, light }: BarklyRenderProps) {
   const collarArt = collarId ? COLLAR_ART[collarId] : undefined;
   const has = (a: BodyAction) => actions.includes(a);
   const asleep = state === 'sleepy' || has('SLEEP');
@@ -397,6 +397,42 @@ export default function BarklyPhotoView({ state, actions, location, variant, col
             <Image
               source={collarArt}
               style={[styles.collarArt, { width: size.width, height: size.height }]}
+              resizeMode="contain"
+            />
+          )}
+          {/*
+            THE LIGHT OF THE PLACE HE IS STANDING IN.
+
+            Measured before this existed: his fur read 129.8 in the park at
+            08:00, at 14:00 and at 19:00 -- the same pixels at every hour --
+            while the world behind him moved 40 units of luma. He was lit once,
+            at render time, and never again, which is what makes a character
+            read as a sticker on a backdrop rather than someone in the scene.
+
+            The same operation the props already use for aerial perspective: a
+            second copy of the art, tinted to the light's colour, at low
+            opacity. It respects his alpha (a plain overlay View would tint a
+            rectangle) and leaves his own colour underneath rather than
+            replacing it, so he takes the light without becoming it.
+          */}
+          {light && light.strength > 0.004 && (
+            <Image
+              source={shown.current === 'front' ? faceFrame({ talking, jawOpen, lid, state }) : RENDERS[shown.current]}
+              /*
+               * scripts/blocking.mjs walks every <img> on screen, so an
+               * untagged copy would make him report as standing 100% inside
+               * himself -- the same false positive the prop haze produced.
+               */
+              testID="hero-light"
+              tintColor={light.tint}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: size.width,
+                height: size.height,
+                opacity: light.strength,
+              }}
               resizeMode="contain"
             />
           )}
