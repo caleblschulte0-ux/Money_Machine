@@ -138,6 +138,21 @@ def marks():
         for (_src, _foot, _h, t0, _build, _sd, _m, _off, _sh, _ct) in figures(b):
             put(st+t0-0.55, _tick(int(0.20*SR), 520, 380, 0.055, 17.0))
             put(st+t0,      _tick(int(0.34*SR), 250, 150, 0.20, 8.0))
+        # HUD SFX, operator request 2026-09-08 ("crazy... futuristic") --
+        # the SAME two-part tick this function already uses for a figure
+        # locking, reused for the one REAL recognition event this film has
+        # (the falls, arlabel.reticle()'s converge-then-settle in
+        # render_e2.py), so the sound is consistent with the figure-lock
+        # sound rather than a new SFX vocabulary. Timed to the reticle's
+        # own 0.55s converge window (render_e2.py: `t < 0.55`).
+        if b == 'lock':
+            put(st+0.55-0.20, _tick(int(0.20*SR), 620, 460, 0.06, 17.0))
+            put(st+0.55,      _tick(int(0.34*SR), 300, 170, 0.22, 8.0))
+        # A single rising activation chime for the boot flash/scan sweep
+        # (hud.boot_pulse()/scan_sweep() in render_e2.py), distinct in
+        # pitch from the lock tick so the two read as different events.
+        if b == 'on':
+            put(st, _tick(int(0.42*SR), 260, 980, 0.14, 5.0))
     a = a[:int(TOTAL*SR)]
     import wave
     with wave.open(f"{OUT}/_marks.wav","wb") as w:
