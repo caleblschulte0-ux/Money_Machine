@@ -206,6 +206,37 @@ describe('scene surface renders', () => {
    * Flipping it would fight the shading baked into every asset, so the sign of
    * the offset is held here rather than left to whoever edits next.
    */
+  /*
+   * THE AIR HAS A COLOUR PER SKY BAND, and there are four of them.
+   *
+   * The haze shipped for one build with a day value and a night value while
+   * the app runs four bands, so a 7pm capture came back with a sunset overhead
+   * and a cool daylight band under it. That is the same defect the master
+   * grade already carries a comment about -- a scene disagreeing with its own
+   * sky about the time of day for a third of every day -- and the way it got
+   * in was writing two colours where four were needed. This holds the two
+   * tables to the same four keys and refuses duplicates, so adding a band to
+   * one and not the other fails here instead of at 7pm.
+   */
+  it('gives every sky band its own air', () => {
+    const src = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'OutdoorRenderedScenes.tsx')).toString();
+    const table = src.slice(src.indexOf('const AIR: Record<SkyBand'), src.indexOf('};', src.indexOf('const AIR: Record<SkyBand')));
+    const rows = [...table.matchAll(/(\w+): \{ haze: DIORAMA\.(\w+), ground: DIORAMA\.(\w+) \}/g)];
+    expect(rows.map((m) => m[1]).sort()).toEqual(['day', 'evening', 'morning', 'night']);
+    const palette = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'artPalette.ts')).toString();
+    const hex = (token: string) => {
+      const m = new RegExp(`${token}: '(#[0-9A-Fa-f]{6})'`).exec(palette);
+      if (!m) throw new Error(`${token} is not in the palette`);
+      return m[1].toUpperCase();
+    };
+    for (const col of [1, 2] as const) {
+      const colours = rows.map((m) => hex(m[col + 1]));
+      // Four bands, four different colours -- a duplicate means a band was
+      // added by copying its neighbour and never given its own air.
+      expect(new Set(colours).size).toEqual(4);
+    }
+  });
+
   it('casts every shadow the way the render pack is lit', () => {
     const src = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'WorldScene.tsx')).toString();
     // The key light this pack renders with, read from the Blender pack itself.

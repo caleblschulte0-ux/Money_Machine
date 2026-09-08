@@ -19,6 +19,7 @@ import {
   worldScale,
   GroundHaze,
   GroundPatches,
+  AtmosphereContext,
 } from './WorldScene';
 
 const PARK_TREE = require('../../../assets/world/park/props/tree.png');
@@ -93,6 +94,18 @@ const PARK_COVER: readonly Cover[] = [
  * from y 0. Nine pixels of air above that.
  */
 const CHROME_CLEAR = 118;
+
+/*
+ * The colour of the air, per sky band. Four, because the app has four -- the
+ * haze shipped for one build with only a day and a night value, and at 7pm
+ * that put a cool daylight band across the bottom of a sunset.
+ */
+const AIR: Record<SkyBand, { haze: string; ground: string }> = {
+  morning: { haze: DIORAMA.hazeMorning, ground: DIORAMA.groundHazeMorning },
+  day: { haze: DIORAMA.hazeDay, ground: DIORAMA.groundHazeDay },
+  evening: { haze: DIORAMA.hazeEvening, ground: DIORAMA.groundHazeEvening },
+  night: { haze: DIORAMA.hazeNight, ground: DIORAMA.groundHazeNight },
+};
 
 /*
  * The sky's own props. They belong to no location -- park, town and beach all
@@ -590,7 +603,7 @@ export function ParkScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const brushTop = ground - 206;
 
   return (
-    <WorldScene motion={motion} testID="world-scene-park">
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-park">
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Defs>
@@ -988,7 +1001,7 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const fountainLeft = width / 2 - fountainW / 2 - 108 * scale;
 
   return (
-    <WorldScene motion={motion} testID="world-scene-town">
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-town">
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon + 30} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="distant">
         {/*
@@ -1339,7 +1352,7 @@ export function BeachScene({ hour, bandHeight = 620, groundY, chromeBottom = CHR
   const castleRight = width >= 600 ? wideInset + 112 * scale : COMPOSITION.beach.castleRight;
 
   return (
-    <WorldScene motion={motion} testID="world-scene-beach">
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-beach">
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="distant">
         {/*

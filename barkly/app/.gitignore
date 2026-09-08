@@ -62,6 +62,7 @@ world-artifact.html
 # writes it, then PROMOTES the trimmed PNGs into assets/world/, which is what
 # ships. Keeping both copies doubles ~2MB of binaries in the diff for nothing.
 art-review/world-props/
+art-review/world-scenes/
 art-review/home-props/
 art-review/home-architecture/
 

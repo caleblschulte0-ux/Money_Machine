@@ -85,6 +85,24 @@ export const WORLD_LAYER_Z: Record<WorldLayerName, number> = {
  * last attempt. Raise it and distance reads; raise it too far and the
  * background goes pastel, which is the failure mode this replaces.
  */
+/*
+ * THE AIR HAS A COLOUR, AND IT IS NOT ALWAYS THE SAME COLOUR.
+ *
+ * The first version of aerial perspective had two haze colours, day and night,
+ * while the app runs FOUR sky bands. Shot at 7pm the park came back with a
+ * sunset overhead and a cool daylight haze under it -- a pale, faintly green
+ * band sitting at the horizon arguing with the pink above it. That is exactly
+ * the defect the master GRADE below was written to fix ("morning and evening
+ * rendering a sunset SKY under flat noon LIGHT"), reintroduced in the haze
+ * because I wrote two colours where the app needs four.
+ *
+ * It lives in context rather than as a prop because every WorldObject in every
+ * scene needs it and threading a colour through forty call sites is how the
+ * two of them fall out of step again.
+ */
+export type Atmosphere = { haze: string; ground: string };
+export const AtmosphereContext = React.createContext<Atmosphere | null>(null);
+
 export const HAZE_MAX = 0.34;
 /*
  * How far a shadow runs, as a fraction of the prop's height. The ground is
@@ -210,8 +228,9 @@ export function GroundHaze({
    */
   strength?: number;
 }) {
+  const air = React.useContext(AtmosphereContext);
   const haze = alpha(
-    night ? DIORAMA.groundHazeNight : DIORAMA.groundHazeDay,
+    air?.ground ?? (night ? DIORAMA.groundHazeNight : DIORAMA.groundHazeDay),
     (night ? GROUND_HAZE_A_NIGHT : GROUND_HAZE_A) * strength,
   );
   const deepen = alpha(
@@ -247,10 +266,13 @@ export function WorldScene({
   children,
   motion = 'idle',
   testID,
+  atmosphere,
 }: {
   children: React.ReactNode;
   motion?: WorldMotion;
   testID?: string;
+  /** The colour of this scene's air, at this hour. See AtmosphereContext. */
+  atmosphere?: Atmosphere;
 }) {
   const scale = useRef(new Animated.Value(CAMERA.idle.scale)).current;
   const translateY = useRef(new Animated.Value(CAMERA.idle.y)).current;
@@ -290,11 +312,13 @@ export function WorldScene({
   // Values are deliberately restrained. This is a living camera, not a zoom
   // effect competing with Barkly or shifting the HUD.
   return (
-    <View style={styles.fill} pointerEvents="none" testID={testID}>
-      <Animated.View style={[styles.camera, { transform: [{ translateY }, { scale }] }]}>
-        {children}
-      </Animated.View>
-    </View>
+    <AtmosphereContext.Provider value={atmosphere ?? null}>
+      <View style={styles.fill} pointerEvents="none" testID={testID}>
+        <Animated.View style={[styles.camera, { transform: [{ translateY }, { scale }] }]}>
+          {children}
+        </Animated.View>
+      </View>
+    </AtmosphereContext.Provider>
   );
 }
 
@@ -370,7 +394,8 @@ export function WorldObject({
    * a linear ramp put a visible veil on midground props that should be clear.
    */
   const haze = HAZE_MAX * (1 - safeDepth) * (1 - safeDepth);
-  const hazeTint = hazeColor ?? (night ? HAZE_NIGHT : HAZE_DAY);
+  const air = React.useContext(AtmosphereContext);
+  const hazeTint = hazeColor ?? air?.haze ?? (night ? HAZE_NIGHT : HAZE_DAY);
   const transforms: Array<{ rotate: string } | { scaleX: number }> = [];
   if (rotate) transforms.push({ rotate });
   if (flip) transforms.push({ scaleX: -1 });
