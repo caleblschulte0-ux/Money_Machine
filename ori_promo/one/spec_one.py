@@ -172,7 +172,25 @@ BEATS = [
  # fix is CROP (spec_one.py, applied by frames_of() before the render's
  # scale), not another in-point search -- no in-point changes how close to
  # the top of frame this plate's own text sits. See CROP["sign"] below.
- ("sign", "6709", 22.3, 0.0, 3.5, "a different plaque this time, read close -- the story as it's told today"),
+ # CLAIM CORRECTED, r143 (ChatGPT's r142 review, again right): pass 3's
+ # own note above overclaimed "legible left-to-right" -- every line, on
+ # BOTH margins, still clips mid-word ("this a[rea]", "Rumors a[bout]"),
+ # because the plaque is physically wider than this clip's field of view
+ # at every point across its full 28.2s, not just at this in-point.
+ # Checked for a way around it before accepting that: sampled the whole
+ # clip a second time end to end (no wider moment exists, the camera pans
+ # but never pulls back) and checked the surrounding HEIC stills
+ # (IMG_6707/6708/6710-6714) for a second angle on the same plaque --
+ # none exists; they are all wide park/river photos, not this sign. So
+ # this is a real limit of the footage, not a framing choice, and no
+ # crop or in-point fixes it. What IS true and worth keeping: the opening
+ # WORDS of both paragraphs read clean top-to-bottom, clear of both scope
+ # bars and the second plaque, which is a genuine improvement over pass 1
+ # (mid-word on every axis, second plaque bleeding in) even though it
+ # stops short of a complete, uncropped sentence. Beat description below
+ # changed to match what is actually on screen -- an interpretive detail
+ # of the plaque's text, not a claim that the full sentence reads.
+ ("sign", "6709", 22.3, 0.0, 3.5, "a different plaque this time, an interpretive detail on its text -- not a full read, the plaque is wider than this clip's frame throughout"),
  # v32b: IMG_6791, a slow pan across the same empty riverbed from a
  # different vantage -- same idea (nobody stopping), different shot,
  # actual camera motion instead of a static frame.
