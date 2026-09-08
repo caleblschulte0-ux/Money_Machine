@@ -21,7 +21,7 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { RadialGlow } from './scenes/WorldScene';
+import { RadialGlow, SCENE_CAMERA } from './scenes/WorldScene';
 import { useBarkly } from '../hooks/useBarkly';
 import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
@@ -609,7 +609,19 @@ export default function BarklyRoom() {
    * room for a text panel is the kind of thing that makes an app feel like a
    * web page. Capped at 1 so a tall phone gives him air, not a poster.
    */
-  const spriteScale = scaleForScreen(screenH, stageW, layout, dialogueExpanded, composerExpanded);
+  /*
+   * ...and then the PLACE gets a say, because it used to get none.
+   *
+   * Measured at 390x844, all four locations framed him identically: 5.4-6.1%
+   * of the frame, centred at x 0.49-0.51, head at 0.49-0.50, feet at
+   * 0.66-0.67. Four places, one camera, which is why they felt like one scene
+   * with four wallpapers no matter what art went into them. SCENE_CAMERA
+   * steps back for the open places and stays close for home; the multiplier
+   * is never above 1 because scaleForScreen has already fitted him to the
+   * stage band and going past it crops his paws.
+   */
+  const camera = SCENE_CAMERA[location];
+  const spriteScale = scaleForScreen(screenH, stageW, layout, dialogueExpanded, composerExpanded) * camera.hero;
   /** How tall the world is: everything above the one adaptive conversation slot. */
   const sceneBand = landscape ? screenH : screenH - conversationHeightPx - DIALOGUE_GAP * 2 + 8;
   /**
@@ -618,7 +630,11 @@ export default function BarklyRoom() {
    * of a rectangle — see Scenes.HomeScene.
    */
   const stageH = stageHeight(screenH, layout, dialogueExpanded, composerExpanded);
-  const groundY = topPad + chromeBottomPx + stageH - SPRITE_FOOT;
+  // `lift` raises the ground line for the open places, which is what puts
+  // space in FRONT of him -- the beach's subject is the sand he is standing
+  // on, and it cannot be the subject while his feet are two thirds down the
+  // frame in every location alike.
+  const groundY = topPad + chromeBottomPx + stageH - SPRITE_FOOT + camera.lift;
   const stateLabel = STATE_LABEL[snapshot.state];
 
   /**

@@ -267,12 +267,30 @@ export function WorldScene({
   motion = 'idle',
   testID,
   atmosphere,
+  zoom = 1,
 }: {
   children: React.ReactNode;
   motion?: WorldMotion;
   testID?: string;
   /** The colour of this scene's air, at this hour. See AtmosphereContext. */
   atmosphere?: Atmosphere;
+  /**
+   * HOW CLOSE THIS PLACE IS, as a camera and not as a prop size.
+   *
+   * The first attempt at giving each location its own scale multiplied every
+   * prop's WIDTH AND HEIGHT while leaving its position alone -- positions here
+   * are insets derived from the viewport, so growing the art without moving it
+   * walks the props into each other. Town failed the blocking gate exactly
+   * that way: a lamp ended up 100% inside the fountain and the fountain 67%
+   * inside a shopfront, all three still where they had always been.
+   *
+   * A zoom on the whole scene cannot do that. Every distance scales with every
+   * size, so the composition is preserved exactly and the only thing that
+   * changes is how much of it fits -- which is the point, because a place
+   * feels big when its buildings run off the top of the frame rather than
+   * sitting inside it.
+   */
+  zoom?: number;
 }) {
   const scale = useRef(new Animated.Value(CAMERA.idle.scale)).current;
   const translateY = useRef(new Animated.Value(CAMERA.idle.y)).current;
@@ -314,7 +332,16 @@ export function WorldScene({
   return (
     <AtmosphereContext.Provider value={atmosphere ?? null}>
       <View style={styles.fill} pointerEvents="none" testID={testID}>
-        <Animated.View style={[styles.camera, { transform: [{ translateY }, { scale }] }]}>
+        <Animated.View
+          style={[
+            styles.camera,
+            // The living camera (motion) and the place camera (zoom) are the
+            // same transform, multiplied, so a scene never gets two of them
+            // fighting. Anchored low, because the ground line is what must not
+            // move: the dog stands on it and he is drawn outside this view.
+            { transform: [{ translateY }, { scale: Animated.multiply(scale, zoom) }] },
+          ]}
+        >
           {children}
         </Animated.View>
       </View>
@@ -895,6 +922,41 @@ export function WorldLighting({
     </View>
   );
 }
+
+/**
+ * THE CAMERA, PER PLACE. Four locations used to share one.
+ *
+ * Measured across the four scenes at 390x844, the character occupied 5.4-6.1%
+ * of the frame, centred at x 0.49-0.51, with his head at y 0.49-0.50 and his
+ * feet at 0.66-0.67, and every scene's content reached from y 0.21 to 0.90.
+ * Those are the same numbers four times. Whatever art went into a location, it
+ * was framed identically to the other three, which is why the places felt like
+ * one scene with four wallpapers however much detail they carried.
+ *
+ * A location's feeling is mostly its camera:
+ *
+ *   home    the closest. He is at full size and the ground sits low, so the
+ *           room wraps around him and it reads as somewhere small and yours.
+ *   park    a step back. Slightly more air above him than at home.
+ *   town    HIM SMALLER AND THE WORLD BIGGER, which is the point of a town:
+ *           the storefronts should tower. They were rendering barely taller
+ *           than the dog, which is what made the street read as a stage flat.
+ *   beach   the widest. He is smallest, the ground line is highest, and the
+ *           space in front of him is the subject.
+ *
+ * `world` and `hero` are multipliers on the two scales; `lift` moves the
+ * ground line in points, negative being higher up the screen. The hero
+ * multiplier is never above 1: `scaleForScreen` already caps him so he fits
+ * the stage band, and multiplying past that crops his paws on a short phone.
+ */
+export type ScenePlace = 'home' | 'park' | 'town' | 'beach';
+
+export const SCENE_CAMERA: Record<ScenePlace, { zoom: number; hero: number; lift: number }> = {
+  home: { zoom: 1.14, hero: 1.0, lift: 10 },
+  park: { zoom: 1.06, hero: 0.95, lift: -6 },
+  town: { zoom: 1.12, hero: 0.86, lift: -8 },
+  beach: { zoom: 0.94, hero: 0.84, lift: -14 },
+};
 
 export function worldScale(viewportWidth: number, viewportHeight = 844): number {
   // The short edge behaves like a camera zoom. Portrait art can grow modestly

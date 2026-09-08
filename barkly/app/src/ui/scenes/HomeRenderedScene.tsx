@@ -6,7 +6,7 @@ import { useReduceMotion } from '../motion';
 import { radius } from '../theme';
 import { BRASS, DIORAMA, ITEM } from './artPalette';
 import { skyBand, SkyBand } from './CandyScenesV2';
-import { crescentPath, RadialGlow, WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
+import { crescentPath, RadialGlow, SCENE_CAMERA, WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
 import { BiographyProp } from '../../world/biography';
 
 const CHAIR = require('../../../assets/world/home/props/chair.png');
@@ -738,7 +738,7 @@ export function HomeScene({
   const bedH = bedW * (254 / 512);
 
   return (
-    <WorldScene motion={asleep ? 'sleep' : motion} testID="world-scene-home">
+    <WorldScene motion={asleep ? 'sleep' : motion} testID="world-scene-home" zoom={SCENE_CAMERA.home.zoom}>
       <WorldLayer name="sky">
         <LinearGradient colors={wall} style={[styles.fill, { bottom: undefined, height: floorTop }]} />
       </WorldLayer>

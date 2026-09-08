@@ -20,6 +20,7 @@ import {
   GroundHaze,
   GroundPatches,
   AtmosphereContext,
+  SCENE_CAMERA,
 } from './WorldScene';
 import { hasPlate, plateHorizon, ScenePlate } from './ScenePlate';
 
@@ -564,7 +565,7 @@ function ParkScenePlated({ hour, bandHeight = 620, groundY, chromeBottom = CHROM
   const horizon = plateHorizon('park', ground, height) ?? clamp(ground - 416, 148, 184);
 
   return (
-    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-park">
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-park" zoom={SCENE_CAMERA.park.zoom}>
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="ground">
         <ScenePlate name="park" groundY={ground} night={night} />
@@ -656,7 +657,7 @@ function ParkSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = C
   const brushTop = ground - 206;
 
   return (
-    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-park">
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-park" zoom={SCENE_CAMERA.park.zoom}>
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="ground"><Svg width="100%" height="100%" viewBox={`0 0 420 ${canvasHeight}`} preserveAspectRatio="none" style={styles.fill}>
         <Defs>
@@ -1054,7 +1055,7 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const fountainLeft = width / 2 - fountainW / 2 - 108 * scale;
 
   return (
-    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-town">
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-town" zoom={SCENE_CAMERA.town.zoom}>
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon + 30} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="distant">
         {/*
@@ -1354,7 +1355,7 @@ function BeachScenePlated({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   const tide = horizon + 120;
 
   return (
-    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-beach">
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-beach" zoom={SCENE_CAMERA.beach.zoom}>
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="ground">
         <ScenePlate name="beach" groundY={ground} night={night} />
@@ -1440,7 +1441,7 @@ function BeachSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = 
   const castleRight = width >= 600 ? wideInset + 112 * scale : COMPOSITION.beach.castleRight;
 
   return (
-    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-beach">
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-beach" zoom={SCENE_CAMERA.beach.zoom}>
       <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
       <WorldLayer name="distant">
         {/*
