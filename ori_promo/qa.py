@@ -17,9 +17,10 @@ import subprocess
 import sys
 
 
-def end_card_start(default=None):
-    """Where the deliberate held end-card frame begins, read from the spec
-    itself rather than guessed as a fixed offset from the total duration.
+def end_card_start(dur, default=None):
+    """Where the deliberate held end-card frame begins, read from the
+    RIGHT spec rather than guessed as a fixed offset from the total
+    duration.
 
     v31 grew `end` from 3.5s to 4.5s (spec_one.py's BEATS) and that alone
     flipped this check from PASS to a false FAIL: freezedetect's onset
@@ -30,15 +31,45 @@ def end_card_start(default=None):
     (`dur - 3.0`) -- tuned against whatever `end` was worth when that
     number was written, silently wrong the moment `end` grew past 3.0s.
     Reading the beat's real start removes the guess.
+
+    HARDCODED TO one/spec_one.py UNTIL THIS FIX: qa.py became the shared
+    QA gate for every sibling pipeline this project grows (explain1,
+    explain2, ...), each with its own spec and its own `end` beat start,
+    but this function always read v32c's spec_one.py regardless of which
+    video was actually being checked. explain1 (end at 63.0s) happened to
+    pass anyway -- v32c's own end (37.1s) is an earlier, harmless excuse
+    window for a video with real motion the whole way through. explain2
+    (end at 35.5s, freeze genuinely detected at 36.77s -- INSIDE its own
+    deliberate hold) did not: 36.77 < 37.1, so v32c's excuse window ended
+    a fraction of a second too early to cover it, and this reported a
+    false FAIL on a clean video. Fixed by searching every sibling spec_*.py
+    next to this script for the one whose own TOTAL matches the probed
+    file's duration, and reading THAT spec's `end` beat -- works for any
+    future explain3/4/5 without touching this file again.
     """
-    try:
-        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "one"))
-        from spec_one import BEATS
-        for name, _clip, _tin, start, _dur, _note in BEATS:
-            if name == "end":
-                return start
-    except Exception:
-        pass
+    here = os.path.dirname(os.path.abspath(__file__))
+    for name in sorted(os.listdir(here)):
+        d = os.path.join(here, name)
+        if not os.path.isdir(d):
+            continue
+        for fn in os.listdir(d):
+            if not (fn.startswith("spec_") and fn.endswith(".py")):
+                continue
+            mod = fn[:-3]
+            try:
+                sys.path.insert(0, d)
+                m = __import__(mod)
+                if abs(float(m.TOTAL) - dur) > 0.05:
+                    continue
+                for name_, _clip, _tin, start, _dur, _note in m.BEATS:
+                    if name_ == "end":
+                        return start
+            except Exception:
+                pass
+            finally:
+                if d in sys.path:
+                    sys.path.remove(d)
+                sys.modules.pop(mod, None)
     return default
 
 
@@ -84,7 +115,7 @@ def main(path, want_dur=None):
     # Read from spec_one.py's actual `end` beat start where possible, since
     # a fixed "last N seconds" guess goes stale the moment that beat's
     # duration changes (see end_card_start's docstring).
-    excuse_from = end_card_start(default=dur - 3.0)
+    excuse_from = end_card_start(dur, default=dur - 3.0)
     for tag in ("black_start", "freeze_start", "silence_start"):
         hits = re.findall(tag + r":\s*([0-9.]+)", r.stderr)
         hits = [h for h in hits if float(h) < excuse_from]
