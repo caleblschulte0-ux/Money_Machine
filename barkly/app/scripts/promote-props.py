@@ -232,6 +232,19 @@ def main() -> int:
         written.append(path)
     staging.unlink(missing_ok=True)
 
+    # The pack's own manifest, carried across as it always has been. Nothing
+    # in src/ reads it -- it is a render record that happens to ship -- but
+    # dropping it here would be a silent behaviour change hidden inside a
+    # refactor, and it is 5KB.
+    pack_manifest = RENDERS / "manifest.json"
+    if pack_manifest.exists():
+        target = ASSETS / "manifest.json"
+        text = pack_manifest.read_text(encoding="utf-8")
+        if not target.exists() or target.read_text(encoding="utf-8") != text:
+            if not check:
+                target.write_text(text, encoding="utf-8")
+            written.append("manifest.json")
+
     for path in written:
         print(f"{'would promote' if check else 'promoted'}  {path}")
     if moved:

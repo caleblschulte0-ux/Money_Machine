@@ -159,10 +159,37 @@ describe('world scenery stays modular', () => {
     expect(worldFactory).not.toMatch(/def home_care_tray[\s\S]*?\bwell_/);
   });
 
-  it('promotes every rendered prop family into the app by glob, not by hand', () => {
+  /*
+   * PROMOTION HAS ONE IMPLEMENTATION, and it is not in the workflow.
+   *
+   * This used to assert that the workflow contained a `cp <family>/*.png` line
+   * per family, guarding the bug where it copied home/rug.png by name and a
+   * second home prop was rendered in CI and reached the app never. Good guard,
+   * wrong place: the workflow was a SECOND copy of the promotion recipe next
+   * to scripts/promote-props.py, and on 2026-09-08 they disagreed -- the
+   * script had started quantising props to a 256-colour palette, the workflow
+   * had not, and because the workflow runs on every push touching the pack and
+   * commits over the branch, CI silently replaced the whole quantised world
+   * with unquantised renders at three times the bytes.
+   *
+   * So the guard moves to where promotion lives. The list of props still may
+   * not be hand-written -- it is derived from the pack's own BUILDERS -- and
+   * the workflow may not grow its own copy of the recipe back.
+   */
+  it('promotes from the pack\'s own builder list, in exactly one place', () => {
     const workflow = raw('..', '..', '.github', 'workflows', 'barkly-world-prop-render.yml');
+    const promote = raw('scripts', 'promote-props.py');
+
+    expect(workflow).toContain('python3 scripts/promote-props.py');
+    // No second recipe: nothing that copies or resizes art inline.
+    expect(workflow).not.toMatch(/cp art-review\/world-props/);
+    expect(workflow).not.toMatch(/convert "\$file" -resize/);
+
+    // And the script derives its props rather than listing them.
+    expect(promote).toContain('BUILDERS = {');
     for (const family of ['park', 'town', 'beach', 'home']) {
-      expect(workflow).toContain(`cp art-review/world-props/${family}/*.png assets/world/${family}/props/`);
+      expect({ family, handListed: promote.includes(`"${family}/`) })
+        .toEqual({ family, handListed: false });
     }
   });
 
