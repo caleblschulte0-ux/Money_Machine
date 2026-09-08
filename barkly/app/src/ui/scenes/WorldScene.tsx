@@ -530,6 +530,15 @@ export function WorldObject({
         {haze > 0.004 && (
           <Image
             source={source}
+            /*
+             * The collector in `scripts/blocking.mjs` walks every <img> in the
+             * scene, so this copy made each prop report twice and every prop in
+             * the game flagged itself as "100% inside" a box of its own size at
+             * its own baseline. The gate was right that something was
+             * duplicated; what is duplicated is one prop's ART, not a second
+             * object standing in the same place.
+             */
+            testID="prop-haze"
             resizeMode="contain"
             tintColor={hazeTint}
             style={[

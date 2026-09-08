@@ -149,6 +149,14 @@ for (const place of PLACES) {
     for (const img of scene.querySelectorAll('img')) {
       if (sprite && sprite.contains(img)) continue;
       if (composites.some((g) => g.contains(img))) continue;
+      /*
+       * Aerial perspective draws a prop's art TWICE -- once normally and once
+       * tinted to the haze colour, because a tint respects the art's alpha
+       * where an overlay View would haze a rectangle. Both are <img>, so every
+       * prop in the game reported twice and flagged itself as standing 100%
+       * inside a box of its own size at its own baseline. One prop, one box.
+       */
+      if (img.closest('[data-testid="prop-haze"]')) continue;
       const r = img.getBoundingClientRect();
       if (r.width < 8 || r.height < 8) continue;
       rows.push({ x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), base: Math.round(r.bottom) });
