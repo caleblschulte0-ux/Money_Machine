@@ -31,6 +31,7 @@ const PARK_TREELINE = require('../../../assets/world/park/props/treeline.png');
 const PARK_TUFT = require('../../../assets/world/park/props/grass_tuft.png');
 const PARK_FLOWERS = require('../../../assets/world/park/props/wildflowers.png');
 const PARK_CLUMP = require('../../../assets/world/park/props/grass_clump.png');
+const PARK_NEAR_GRASS = require('../../../assets/world/park/props/near_grass.png');
 
 /**
  * GROUND COVER, PLACED BY HAND.
@@ -56,6 +57,12 @@ const TREELINE_ASPECT = 640 / 119;
 const TUFT_ASPECT = 295 / 296;
 const FLOWERS_ASPECT = 238 / 280;
 const CLUMP_ASPECT = 403 / 295;
+/*
+ * THE NEAR-GROUND BANDS. Wide strips of ground cover rendered for the plane
+ * closest to the viewer, spanning the whole width and hung off the bottom.
+ * `__tests__/scene_surfaces.test.ts` holds these against the real PNGs.
+ */
+const NEAR_GRASS_ASPECT = 618 / 87;
 
 type Cover = { fx: number; dy: number; s: number; depth: number; flip?: boolean; flower?: boolean };
 const PARK_COVER: readonly Cover[] = [
@@ -206,9 +213,11 @@ const TOWN_PLANTER = require('../../../assets/world/town/props/planter.png');
 const TOWN_ROOFTOPS = require('../../../assets/world/town/props/rooftops.png');
 const TOWN_KERB = require('../../../assets/world/town/props/kerb.png');
 const TOWN_PAVING = require('../../../assets/world/town/props/paving.png');
+const TOWN_NEAR_PAVING = require('../../../assets/world/town/props/near_paving.png');
 /* Trimmed renders' own aspects; __tests__/scene_surfaces.test.ts holds them. */
 const ROOFTOPS_ASPECT = 640 / 144;
 const KERB_ASPECT = 605 / 33;
+const NEAR_PAVING_ASPECT = 640 / 45;
 const PAVING_ASPECT = 638 / 21;
 
 /**
@@ -249,11 +258,13 @@ const BEACH_CASTLE = require('../../../assets/world/beach/props/castle.png');
 const BEACH_PALM = require('../../../assets/world/beach/props/palm.png');
 const BEACH_HEADLAND = require('../../../assets/world/beach/props/headland.png');
 const BEACH_SHELLS = require('../../../assets/world/beach/props/shells.png');
+const BEACH_NEAR_SAND = require('../../../assets/world/beach/props/near_sand.png');
 const BEACH_SURF = require('../../../assets/world/beach/props/surf.png');
 const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png');
 const HEADLAND_ASPECT = 640 / 67;
 const SURF_ASPECT = 640 / 55;
 const SHELLS_ASPECT = 272 / 142;
+const NEAR_SAND_ASPECT = 554 / 40;
 const MARRAM_ASPECT = 212 / 249;
 
 /**
@@ -594,6 +605,17 @@ function ParkScenePlated({ hour, bandHeight = 620, groundY, chromeBottom = CHROM
         in front of the picture.
       */}
       <WorldLayer name="foreground">
+        {/*
+          THE GROUND YOU ARE STANDING ON.
+          The biggest single area in every scene was the ground between his
+          feet and the bottom of the frame, and it was a flat colour wash --
+          smooth grass, smooth sand, smooth pavement. Props in front of it did
+          not fix that; an empty foreground is more obviously empty than an
+          empty background, because it is the part nearest the eye. This is
+          real rendered cover, wider than the frame on purpose so it is cropped
+          on both sides and runs off the bottom.
+        */}
+        <WorldObject source={PARK_NEAR_GRASS} left={-0.10 * width} top={ground + 104} width={width * 1.2} height={(width * 1.2) / NEAR_GRASS_ASPECT} night={night} depth={1} ambient="sway" motionDelay={120} />
         <WorldObject source={PARK_CLUMP} left={-58 * scale} top={ground + 30} width={272 * scale} height={(272 * scale) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={300} />
         <WorldObject source={PARK_CLUMP} right={-76 * scale} top={ground + 54} width={248 * scale} height={(248 * scale) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={860} flip />
       </WorldLayer>
@@ -826,6 +848,17 @@ function ParkSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = C
       <WorldLayer name="foreground">
         <WorldObject source={PARK_CLUMP} left={brushLeft - 22} top={brushTop + 48} width={brushW * 1.5} height={(brushW * 1.5) / CLUMP_ASPECT} night={night} depth={0.97} ambient="sway" motionDelay={1500} />
         <WorldObject source={PARK_CLUMP} right={brushRight - 26} top={brushTop + 62} width={brushW * 1.4} height={(brushW * 1.4) / CLUMP_ASPECT} night={night} depth={1} ambient="sway" motionDelay={2100} flip />
+        {/*
+          THE GROUND YOU ARE STANDING ON.
+          The biggest single area in every scene was the ground between his
+          feet and the bottom of the frame, and it was a flat colour wash --
+          smooth grass, smooth sand, smooth pavement. Props in front of it did
+          not fix that; an empty foreground is more obviously empty than an
+          empty background, because it is the part nearest the eye. This is
+          real rendered cover, wider than the frame on purpose so it is cropped
+          on both sides and runs off the bottom.
+        */}
+        <WorldObject source={PARK_NEAR_GRASS} left={-0.10 * width} top={ground + 104} width={width * 1.2} height={(width * 1.2) / NEAR_GRASS_ASPECT} night={night} depth={1} ambient="sway" motionDelay={120} />
         {/*
           THE NEAR PLANE, and it is the thing every scene was missing.
           Measured, all four locations put their content between y 0.21 and
@@ -1306,6 +1339,17 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
           edges. A foreground earns its distance by being cropped: an object
           that fits inside the frame is, by definition, not close.
         */}
+        {/*
+          THE GROUND YOU ARE STANDING ON.
+          The biggest single area in every scene was the ground between his
+          feet and the bottom of the frame, and it was a flat colour wash --
+          smooth grass, smooth sand, smooth pavement. Props in front of it did
+          not fix that; an empty foreground is more obviously empty than an
+          empty background, because it is the part nearest the eye. This is
+          real rendered cover, wider than the frame on purpose so it is cropped
+          on both sides and runs off the bottom.
+        */}
+        <WorldObject source={TOWN_NEAR_PAVING} left={-0.10 * width} top={ground + 104} width={width * 1.2} height={(width * 1.2) / NEAR_PAVING_ASPECT} night={night} depth={1} />
         <WorldObject source={TOWN_PLANTER} left={-34 * scale} top={ground + 18} width={planterW * 2.1} height={planterH * 2.1} night={night} depth={1} ambient="sway" motionDelay={420} />
         <WorldObject source={TOWN_KERB} right={-60 * scale} top={ground + 96} width={280 * scale} height={(280 * scale) / KERB_ASPECT} night={night} depth={1} />
       </WorldLayer>
@@ -1653,6 +1697,17 @@ function BeachSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = 
           cropped; it is not allowed to eat the one word that says who the dog
           beside you is.
         */}
+        {/*
+          THE GROUND YOU ARE STANDING ON.
+          The biggest single area in every scene was the ground between his
+          feet and the bottom of the frame, and it was a flat colour wash --
+          smooth grass, smooth sand, smooth pavement. Props in front of it did
+          not fix that; an empty foreground is more obviously empty than an
+          empty background, because it is the part nearest the eye. This is
+          real rendered cover, wider than the frame on purpose so it is cropped
+          on both sides and runs off the bottom.
+        */}
+        <WorldObject source={BEACH_NEAR_SAND} left={-0.10 * width} top={ground + 108} width={width * 1.2} height={(width * 1.2) / NEAR_SAND_ASPECT} night={night} depth={1} />
         <WorldObject source={BEACH_MARRAM} left={-78 * scale} top={ground + 92} width={196 * scale} height={(196 * scale) / MARRAM_ASPECT} night={night} depth={1} ambient="sway" motionDelay={240} />
         <WorldObject source={BEACH_SHELLS} right={-30 * scale} top={ground + 86} width={252 * scale} height={(252 * scale) / SHELLS_ASPECT} night={night} depth={1} />
       </WorldLayer>

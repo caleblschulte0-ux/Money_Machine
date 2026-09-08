@@ -646,6 +646,118 @@ def park_grass_clump():
     _blades(23, 0.41, 0.82, 1.60, (deep, mid, dark, deep, mid), lean=0.46, thickness=0.040)
 
 
+# ---------------------------------------------------------------------------
+# THE NEAR GROUND.
+#
+# The largest single area in every scene is the ground between the dog's feet
+# and the bottom of the frame, and in all four locations it was a flat colour
+# wash: smooth sand, smooth pavement, smooth floorboard, smooth grass. Props
+# were added in front of it and it stayed a wash behind them, which is what
+# reads as unfinished -- an empty foreground is more obviously empty than an
+# empty background, because it is the part closest to the viewer.
+#
+# These are ground COVER, not props: wide strips meant to run off both side
+# edges and off the bottom, sitting under everything else in the near plane.
+# Each is rendered at a wide ortho scale so it comes out as a band rather than
+# an object, and each is deliberately coarser and darker than its midground
+# equivalent -- foreground that matches the midground in value is foreground
+# that does not read as one.
+# ---------------------------------------------------------------------------
+
+
+def park_near_grass():
+    """A dense band of grass seen from a step away."""
+    deep = material("Near grass deep", "#276F2C", roughness=0.90)
+    mid = material("Near grass mid", "#39923A", roughness=0.88)
+    dark = material("Near grass dark", "#1B5622", roughness=0.92)
+    lit = material("Near grass lit", "#4FB04A", roughness=0.86)
+    # Several roots across the width rather than one fan, or it reads as a
+    # single bush lying on its side -- and offset in the CAMERA's frame, not
+    # the world's. Stepping them along world x put each clump slightly further
+    # from the lens than the last, so the band came out sloping downhill to
+    # the right: a hillside, in a scene with no hill.
+    turn = facing(camera_yaw())
+    for i, ox in enumerate((-4.4, -3.1, -1.9, -0.7, 0.6, 1.8, 3.0, 4.3)):
+        dx, dy = turn(ox, 0.0)
+        before = set(bpy.data.objects)
+        _blades(
+            14, 0.17 + i * 0.31, 0.86, 1.15 + 0.30 * ((i * 0.61) % 1.0),
+            (deep, mid, dark, lit, mid), lean=0.52, thickness=0.052,
+        )
+        for obj in set(bpy.data.objects) - before:
+            obj.location.x += dx
+            obj.location.y += dy
+
+
+def beach_near_sand():
+    """Ripples and shells, close enough to see the grain.
+
+    CAMERA-FACING, like every other wide band in this pack. The first version
+    laid its ripples along the world axes and the 15-degree camera yaw turned
+    the whole strip into a diagonal ribbon with spikes on it. `turn` puts the
+    band in the camera's own frame so `x` really is "across the picture".
+    """
+    turn = facing(camera_yaw())
+    theta = camera_yaw()
+    sand = material("Near sand", "#D9B87C", roughness=0.95)
+    sand_lit = material("Near sand lit", "#EACB94", roughness=0.94)
+    shade = material("Near sand shade", "#BE9A62", roughness=0.96)
+    shell = material("Near shell", "#F3E4CE", roughness=0.80)
+
+    # Low, WIDE mounds rather than long thin lenses. A sphere squashed to a
+    # tenth of its length is a blade, which is what the first pass rendered:
+    # four green-looking spikes lying across the sand.
+    for i, (ox, oy, rx, ry, rz, mat) in enumerate((
+        (-2.30, -0.34, 2.60, 0.46, 0.085, shade),
+        (0.90, -0.06, 3.00, 0.50, 0.095, sand),
+        (-1.10, 0.30, 2.70, 0.44, 0.080, sand_lit),
+        (2.40, 0.60, 2.20, 0.40, 0.075, sand),
+    )):
+        cx, cy = turn(ox, oy)
+        obj = sphere(f"ripple_{i}", (cx, cy, rz * 0.5), (rx, ry, rz), mat)
+        obj.rotation_euler = (0, 0, theta)
+
+    for i, (ox, oy) in enumerate(((-3.4, 0.22), (-1.0, -0.28), (1.6, 0.40), (3.7, -0.10))):
+        cx, cy = turn(ox, oy)
+        sphere(f"nearshell_{i}", (cx, cy, 0.11), (0.26, 0.20, 0.085), shell)
+
+
+def town_near_paving():
+    """Slabs at arm's length, with the joints wide enough to read."""
+    turn = facing(camera_yaw())
+    theta = camera_yaw()
+    grout = material("Near paving grout", "#7E6B44", roughness=0.94)
+    slab_a = material("Near paving slab", "#E0CB9E", roughness=0.86)
+    slab_b = material("Near paving slab b", "#D2BA8C", roughness=0.86)
+    slab_c = material("Near paving slab c", "#EAD9AF", roughness=0.84)
+
+    bx, by = turn(0.0, 0.10)
+    cube("near_base", (bx, by, 0.02), (6.4, 0.92, 0.02), grout, 0.02, (0, 0, theta))
+    tones = (slab_a, slab_b, slab_c, slab_b, slab_a, slab_c, slab_a)
+    for i, ox in enumerate((-5.2, -3.5, -1.8, -0.1, 1.6, 3.3, 5.0)):
+        cx, cy = turn(ox, 0.10)
+        cube(f"near_slab_{i}", (cx, cy, 0.07), (0.79, 0.86, 0.05),
+             tones[i % len(tones)], 0.05, (0, 0, theta))
+
+
+def home_near_floor():
+    """Boards running across the near floor, close enough to show their grain."""
+    turn = facing(camera_yaw())
+    theta = camera_yaw()
+    board = material("Near board wood", "#C99A5E", roughness=0.72)
+    board_b = material("Near board wood b", "#BC8C51", roughness=0.74)
+    board_c = material("Near board wood c", "#D6A96C", roughness=0.70)
+    seam = material("Near board seam", "#8F6437", roughness=0.86)
+
+    bx, by = turn(0.0, 0.10)
+    cube("near_floor_base", (bx, by, 0.02), (6.4, 0.94, 0.02), seam, 0.02, (0, 0, theta))
+    tones = (board, board_b, board_c, board_b)
+    for i, ox in enumerate((-5.4, -3.6, -1.8, 0.0, 1.8, 3.6, 5.4)):
+        cx, cy = turn(ox, 0.10)
+        cube(f"near_board_{i}", (cx, cy, 0.06), (0.86, 0.90, 0.04),
+             tones[i % len(tones)], 0.03, (0, 0, theta))
+
+
 def park_wildflowers():
     """A tuft with three heads on it, so the scatter is not all one object."""
     mid = material("Flower stem", "#4FBE4A", roughness=0.86)
@@ -1737,6 +1849,10 @@ BUILDERS = {
     "park/bench": (park_bench, 4.7, (0, 0, 1.0), {"displayWidth": 136, "anchor": "bottom"}),
     "park/grass_tuft": (park_grass_tuft, 1.9, (0, 0, 0.32), {"displayWidth": 46, "anchor": "bottom"}),
     "park/grass_clump": (park_grass_clump, 3.6, (0, 0, 0.62), {"displayWidth": 130, "anchor": "bottom"}),
+    "park/near_grass": (park_near_grass, 11.0, (0, 0, 0.55), {"displayWidth": 430, "anchor": "bottom"}),
+    "beach/near_sand": (beach_near_sand, 11.0, (0, 0, 0.30), {"displayWidth": 430, "anchor": "bottom"}),
+    "town/near_paving": (town_near_paving, 11.0, (0, 0, 0.20), {"displayWidth": 430, "anchor": "bottom"}),
+    "home/near_floor": (home_near_floor, 11.0, (0, 0, 0.18), {"displayWidth": 430, "anchor": "bottom"}),
     "park/wildflowers": (park_wildflowers, 2.0, (0, 0, 0.38), {"displayWidth": 50, "anchor": "bottom"}),
     # Wide and shallow: it is a horizon, so the ortho box is sized to the run.
     "park/treeline": (park_treeline, 6.6, (0, 0, 0.42), {"displayWidth": 420, "anchor": "bottom"}),

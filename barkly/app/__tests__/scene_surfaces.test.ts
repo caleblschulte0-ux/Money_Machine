@@ -52,11 +52,17 @@ describe('scene surface renders', () => {
     ['TUFT_ASPECT', 'park', 'grass_tuft.png'],
     ['FLOWERS_ASPECT', 'park', 'wildflowers.png'],
     ['CLUMP_ASPECT', 'park', 'grass_clump.png'],
+    // The near-ground bands: the plane closest to the viewer, and the one the
+    // scenes had none of. Wider than the frame on purpose, so their aspect is
+    // what decides how tall a strip of ground you are standing on.
+    ['NEAR_GRASS_ASPECT', 'park', 'near_grass.png'],
     ['ROOFTOPS_ASPECT', 'town', 'rooftops.png'],
     ['KERB_ASPECT', 'town', 'kerb.png'],
     ['PAVING_ASPECT', 'town', 'paving.png'],
+    ['NEAR_PAVING_ASPECT', 'town', 'near_paving.png'],
     ['HEADLAND_ASPECT', 'beach', 'headland.png'],
     ['SHELLS_ASPECT', 'beach', 'shells.png'],
+    ['NEAR_SAND_ASPECT', 'beach', 'near_sand.png'],
     ['MARRAM_ASPECT', 'beach', 'dune_grass.png'],
     ['SURF_ASPECT', 'beach', 'surf.png'],
   ];
@@ -300,6 +306,7 @@ describe('scene surface renders', () => {
   for (const [name, file] of [
     ['SKIRTING_ASPECT', 'skirting.png'],
     ['PANELLING_ASPECT', 'panelling.png'],
+    ['NEAR_FLOOR_ASPECT', 'near_floor.png'],
   ] as [string, string][]) {
     it(`${name} is what ${file} actually is`, () => {
       expect(Math.abs(declaredAspect(name, homeSource()) - pngAspect('home', file))).toBeLessThan(0.02);

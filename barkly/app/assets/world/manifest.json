@@ -23,6 +23,26 @@
       "displayWidth": 130,
       "anchor": "bottom"
     },
+    "park/near_grass": {
+      "file": "park/near_grass.png",
+      "displayWidth": 430,
+      "anchor": "bottom"
+    },
+    "beach/near_sand": {
+      "file": "beach/near_sand.png",
+      "displayWidth": 430,
+      "anchor": "bottom"
+    },
+    "town/near_paving": {
+      "file": "town/near_paving.png",
+      "displayWidth": 430,
+      "anchor": "bottom"
+    },
+    "home/near_floor": {
+      "file": "home/near_floor.png",
+      "displayWidth": 430,
+      "anchor": "bottom"
+    },
     "park/wildflowers": {
       "file": "park/wildflowers.png",
       "displayWidth": 50,

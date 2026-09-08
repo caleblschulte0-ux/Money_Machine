@@ -16,6 +16,9 @@ const RUG = require('../../../assets/world/home/props/rug.png');
 const SHELF = require('../../../assets/world/home/props/shelf.png');
 const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_frame.png');
 const SKIRTING = require('../../../assets/world/home/props/skirting.png');
+const NEAR_FLOOR = require('../../../assets/world/home/props/near_floor.png');
+/** The near-ground band's own aspect. __tests__/scene_surfaces.test.ts holds it. */
+const NEAR_FLOOR_ASPECT = 640 / 45;
 const PANELLING = require('../../../assets/world/home/props/panelling.png');
 const VISTA = require('../../../assets/world/home/props/vista.png');
 /** The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds them. */
@@ -988,6 +991,20 @@ export function HomeScene({
           bottom and the left, since a foreground earns its distance by being
           cropped.
         */}
+        {/*
+          THE FLOOR YOU ARE STANDING ON. The room's near floor was a smooth
+          cream gradient -- the largest area in the scene and the emptiest.
+          Real boards, wider than the frame so they crop on both sides.
+        */}
+        <WorldObject
+          source={NEAR_FLOOR}
+          left={-0.10 * width}
+          top={groundY + 104}
+          width={width * 1.2}
+          height={(width * 1.2) / NEAR_FLOOR_ASPECT}
+          night={night}
+          depth={1}
+        />
         <WorldObject
           source={CHAIR}
           left={-chairW * 0.62}

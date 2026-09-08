@@ -25,6 +25,7 @@ about twelve minutes. Take the twelve minutes.
 """
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -209,7 +210,13 @@ def main() -> int:
     # 640x640 transparent canvas; the app ships them trimmed and SIZES them
     # from their aspect ratio, so shipping the raw canvas silently makes every
     # prop square -- which is what broke twenty aspect locks in one commit.
-    staging = ROOT / "art-review" / ".promote-staging.png"
+    # UNIQUE PER RUN. This was a single fixed path, and two promotes running at
+    # once -- easy to do, since a render pipeline invokes this at the end -- both
+    # wrote and converted the same staging file. They interleaved, and the file
+    # copied to assets/ was a half-written PNG: beach/castle shipped as bytes
+    # Pillow could not even identify as an image. A shared temp path is a race
+    # with a corrupted asset as its prize.
+    staging = ROOT / "art-review" / f".promote-staging-{os.getpid()}.png"
     for path, render, target in pending:
         try:
             size = build(render, path, staging)
@@ -217,7 +224,18 @@ def main() -> int:
             missing.append(f"{path} (rendered empty)")
             continue
         if target.exists():
-            was = Image.open(target).size
+            try:
+                was = Image.open(target).size
+            except Exception:
+                # An unreadable target is exactly what promotion is for. This
+                # used to raise and take the whole run down, so a single
+                # corrupt asset -- which is how the race above showed up --
+                # blocked the repair of the very file that was broken.
+                print(f"  {path}: shipped asset is unreadable; replacing it")
+                if not check:
+                    target.write_bytes(staging.read_bytes())
+                written.append(path)
+                continue
             if was != size:
                 # The silhouette changed. That is legitimate when a builder is
                 # edited and alarming when it is not, so it is reported rather
