@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+"""Narration for ORI Explainer #3 ("The Long Take"), synthesized offline.
+
+One of five videos requested by the operator (r145): five different
+STYLES, same single purpose -- a full, self-contained YouTube explainer,
+not a teaser. v32c stays exactly as it is. explain1/vo_e1.py speaks full
+explanatory sentences; explain2/vo_e2.py speaks bare fragments. THIS
+script's LINES are short, RHETORICAL, trailer-cadence statements --
+"Nothing here is owned. Only ever rented, place to place." -- the same
+facts said a third way. `detail` carries no VO at all: a silent texture
+beat, a breath rather than an explanation.
+
+Same standing rule as every version before this one: no invented raise,
+terms, traction, partnership, deployment date, or CTA; generated imagery
+is a VISUALIZATION, never evidence (FIGURES is empty here, so that
+disclosure banner never fires, same as v32c).
+
+Piper (en_US-lessac-high), CPU, offline, no licence attached to the
+output. Voice model files are not committed (100MB+ binaries) -- fetch on
+a fresh checkout:
+    curl -L -o vo/voices/en_US-lessac-high.onnx \
+      https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/en_US-lessac-high.onnx
+    curl -L -o vo/voices/en_US-lessac-high.onnx.json \
+      https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/en_US-lessac-high.onnx.json
+
+PLACEMENT IS COMPUTED, NOT JUST OFFSET -- see main()'s min_start logic,
+carried over unchanged from v32c: Piper's synthesis noise means the same
+text does not render to the same duration twice, so a LINES offset is a
+request for where a line would ideally start, and the real guarantee is
+that no line starts before the previous one's actual measured audio from
+THIS run has finished plus a fixed margin.
+"""
+import os
+import sys
+import wave
+
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from spec_e3 import BEATS, TOTAL
+
+SR = 48000
+VOICE = "../vo/voices/en_US-lessac-high.onnx"
+
+# (beat, seconds into that beat, line)
+# EXPLAINER #3, trailer-cadence style. Same approved facts as explain1/
+# explain2/v32c, said as short rhetorical statements -- no invented
+# raise/terms/traction/partnership/deployment date, beta explicitly
+# named as PROPOSED, not live. `detail` has no entry: it is a silent
+# beat by design.
+LINES = [
+    ("open", 0.40, "This is Falls Park. Sioux Falls, South Dakota."),
+    ("intro", 0.30, "This began with one question. What if a place could explain itself?"),
+    # `hero` carries no VO of its own -- its label already reads
+    # "THE HARDWARE" / "VISUALIZATION"; let it be looked at, not talked
+    # over.
+    ("on",   0.20, "You put them on."),
+    # `lock` and `anchor` are the SAME UNBROKEN TAKE (spec_e3.py) -- one
+    # continuous shot carrying two capability statements with no cut.
+    ("lock", 0.20, "It sees where you are."),
+    ("anchor", 0.20, "And anchors itself to what's real."),
+    ("rental", 0.30, "Nothing here is owned. Only ever rented, place to place."),
+    ("honest_stage", 0.30, "This isn't finished. Falls Park is where it starts."),
+    ("off",  0.20, "No noise. No interface. Just the place."),
+    ("reach", 0.20, "It keeps working, wherever you go."),
+    ("vision", 0.30, "One place. Then the next. Then anywhere."),
+]
+
+
+def _beat_start(name):
+    for b, clip, tin, st, d, note in BEATS:
+        if b == name:
+            return st, d
+    raise KeyError(name)
+
+
+def synth(text, path):
+    from piper import PiperVoice
+    v = PiperVoice.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), VOICE))
+    with wave.open(path, "wb") as w:
+        v.synthesize_wav(text, w)
+    with wave.open(path, "rb") as w:
+        n, sr = w.getnframes(), w.getframerate()
+        a = np.frombuffer(w.readframes(n), np.int16).astype(np.float32) / 32768.0
+    return a, sr
+
+
+def main():
+    os.makedirs("out_e3", exist_ok=True)
+    n = int(TOTAL * SR)
+    bus = np.zeros(n, np.float32)
+    placed = []
+    # PLACEMENT IS COMPUTED FROM THE ACTUAL SYNTHESIZED DURATION, not just
+    # measured against it. Piper's duration prediction carries its own
+    # noise term (noise_w_scale) -- re-synthesizing the SAME text with the
+    # SAME model is not byte-identical run to run; measured swings of
+    # ~0.3s on a single line during the v30.2 voice swap. A LINES offset
+    # is therefore a REQUEST for where a line would ideally start (kept,
+    # because several lines are anchored to a visual beat), not a
+    # guarantee -- min_start below is the actual guarantee: no line may
+    # start before the previous one's real audio, from THIS run, has
+    # finished plus a fixed margin. This makes the whole file
+    # self-correcting against synthesis variance for any voice, not just
+    # the one it happened to be tuned against.
+    MARGIN = 0.08
+    min_start = None
+    for idx, (beat, offset, text) in enumerate(LINES):
+        st, dur = _beat_start(beat)
+        # INDEXED, because a beat may now carry more than one line and the
+        # old name collided: both `sign` lines wrote out_e3/_vo_sign.wav.
+        # It happened to work only because each file is read back before
+        # the next is written, which is not a property to rely on.
+        a, sr = synth(text, f"out_e3/_vo_{idx:02d}_{beat}.wav")
+        if sr != SR:                       # piper is 22.05k; resample to the master rate
+            m = int(round(len(a) * SR / sr))
+            a = np.interp(np.linspace(0, len(a) - 1, m), np.arange(len(a)), a).astype(np.float32)
+        # a breath of room either side so it does not start on the cut
+        at = st + offset
+        if min_start is not None:
+            at = max(at, min_start)
+        i0 = int(at * SR)
+        seg = a * 0.92
+        k = int(0.04 * SR)
+        seg[:k] *= np.linspace(0, 1, k)
+        seg[-k:] *= np.linspace(1, 0, k)
+        end = min(n, i0 + len(seg))
+        bus[i0:end] += seg[:end - i0]
+        min_start = at + len(a) / SR + MARGIN
+        placed.append((beat, at, len(a) / SR, text))
+        if at + len(a) / SR > st + dur:
+            print(f"  ! {beat}: line runs {at + len(a)/SR - (st+dur):.2f}s past the beat")
+    peak = float(np.abs(bus).max())
+    if peak > 0.98:
+        bus *= 0.98 / peak
+    pcm = (np.clip(bus, -1, 1) * 32767).astype(np.int16)
+    with wave.open("out_e3/_vo.wav", "w") as w:
+        w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
+        w.writeframes(np.stack([pcm, pcm], 1).tobytes())
+    for beat, at, ln, text in placed:
+        print(f"  vo {at:5.1f}s  {ln:4.1f}s  {beat:<5} \"{text}\"")
+
+
+if __name__ == "__main__":
+    main()
