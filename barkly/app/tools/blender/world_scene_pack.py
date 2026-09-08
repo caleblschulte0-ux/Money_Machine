@@ -192,7 +192,7 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     return camera
 
 
-def ground(hex_near: str, centre: float = 0.0, size: float = 124.0):
+def ground(hex_near: str, hex_far: str = "#84CE5E", centre: float = 0.0, size: float = 124.0):
     """The ground, as geometry. It receives shadow and it occludes.
 
     AN ORTHOGRAPHIC CAMERA HAS NO HORIZON. Every ray is parallel, so an
@@ -213,7 +213,9 @@ def ground(hex_near: str, centre: float = 0.0, size: float = 124.0):
     bpy.ops.mesh.primitive_plane_add(size=size, location=(cx, cy, 0), rotation=(0, 0, THETA))
     plane = bpy.context.object
     plane.name = "ground"
-    plane.data.materials.append(noise_material("Ground", hex_near, "#84CE5E", scale=1.5))
+    # BOTH tones are the caller's. The first version hardcoded the park's
+    # lighter green as the second stop, so the beach rendered green sand.
+    plane.data.materials.append(noise_material("Ground", hex_near, hex_far, scale=1.5))
     return plane
 
 
@@ -448,8 +450,219 @@ def _tuft(x: float, y: float, s: float):
         blade.scale = (1.0, 0.34, 1.0)
 
 
+
+def beach():
+    """The beach, composed.
+
+    Two surfaces, not one: sand runs to the tide line and sea runs from there
+    to the horizon. The app used to draw both as gradients with a wavy SVG
+    stroke between them; here the shoreline is where two real planes meet, so
+    the surf sits in a place rather than on a picture, and the umbrella throws
+    its shadow across the sand it stands on.
+    """
+    ground("#E8C88C", "#F2D9A4", centre=-6.0, size=120.0)
+    _anchor("stand", 0.0, -3.0)
+    _anchor("standTop", 0.0, -3.0, 1.0)
+    _anchor("horizon", 0.0, 62.0)
+
+    # The sea: its own plane, starting at the tide line and running past the
+    # sand's far edge so no seam of bare ground shows between them.
+    sea = noise_material("Sea", "#3AA7BE", "#57C6D6", scale=1.1)
+    _poly("sea", [(-70.0, 34.0), (70.0, 34.0), (70.0, 74.0), (-70.0, 74.0)], 0.004, sea)
+
+    # Wet sand: the strip the water has just left, darker and slightly damp.
+    wet = pack.material("Wet sand", "#C9A868", roughness=0.72, coat=0.18)
+    _poly("wet", [(-70.0, 28.0), (70.0, 28.0), (70.0, 34.3), (-70.0, 34.3)], 0.006, wet)
+
+    _surf(34.0)
+    _headland(60.0)
+
+    # Dunes behind, so the sand has a back edge that is not the sea.
+    # Dunes, kept inside the frame: x is only +-8.5 at this ortho scale.
+    # PLACED BY WHERE THEY LAND ON SCREEN, not by eye. At this camera one
+    # world unit is 0.55% of the frame, so the visible ground runs from about
+    # y = -56 at the bottom edge to the horizon at y = 62. The first pass put
+    # every prop between y = -16 and +6 -- a band from 0.66 to 0.74 of the
+    # frame -- and left the whole bottom third as empty sand.
+    for dx, dy, ds in ((-7.8, 22.0, 1.5), (7.6, 19.0, 1.4), (-6.4, 30.0, 1.1), (6.8, 32.0, 1.0)):
+        _dune(dx, dy, ds)
+
+    # AND NOT PAST THE CAMERA. The camera stands at y = -30 in this frame, so
+    # a prop at y = -36 is behind its near plane and renders as nothing but the
+    # shadow it casts -- which is exactly what the first palm did. Anything
+    # nearer than about y = -26 is not foreground, it is gone.
+    _lifeguard(-4.4, 10.0, 1.5)       # ~0.64 -- behind him
+    _umbrella(5.6, -10.0, 2.0)        # ~0.75 -- beside him
+    _castle(4.4, -18.0, 1.8)          # ~0.79 -- in front of him
+    _palm(-7.8, -21.0, 1.35)          # ~0.81 -- the near corner, cropped by the edge
+
+    # Scatter: shells, pebbles and marram, thinning toward the water.
+    for i in range(34):
+        t = (i * 0.6180339887) % 1.0
+        u = (i * 0.3819660113) % 1.0
+        x = -13.0 + t * 26.0
+        y = -26.0 + u * 56.0
+        if abs(x) < 3.0 and y < 0.0:
+            continue
+        if i % 3 == 0:
+            _pebble(x, y, 0.7 + u * 0.7)
+        else:
+            _marram(x, y, 0.8 + u * 0.6)
+
+
+def _surf(y: float):
+    """Foam where the two surfaces meet. It BREAKS, or it is a kerb."""
+    foam = pack.material("Foam", "#F4F9FF", roughness=0.94)
+    wash = pack.material("Foam wash", "#D8ECF2", roughness=0.96)
+    _poly("wash", [(-70.0, y - 1.4), (70.0, y - 1.4), (70.0, y + 0.5), (-70.0, y + 0.5)], 0.008, wash)
+    groups = ((-26.0, 7.0), (-14.0, 9.0), (-1.0, 6.0), (7.0, 8.0), (18.0, 7.0))
+    for gi, (gx, glen) in enumerate(groups):
+        n = max(3, int(glen / 1.1))
+        for i in range(n):
+            fx = gx + i * (glen / (n - 1)) - glen / 2
+            wx, wy = TURN(fx, y + math.sin(i * 2.1 + gi) * 0.35)
+            h = 0.10 + ((i * 0.618) % 1.0) * 0.13
+            pack.sphere(f"foam{gi}{i}", (wx, wy, h * 0.3), (1.15, 0.5, h), foam)
+
+
+def _headland(y: float):
+    far = pack.material("Headland", "#8FB79C", roughness=0.94)
+    far_b = pack.material("Headland b", "#9DC3A6", roughness=0.94)
+    for i in range(15):
+        x = -34.0 + i * 4.6
+        wx, wy = TURN(x, y + ((i * 0.618) % 1.0) * 2.0)
+        h = 1.6 + ((i * 0.382) % 1.0) * 1.4
+        pack.sphere(f"head{i}", (wx, wy, h * 0.35), (3.0, 2.0, h * 0.6),
+                    far if i % 2 else far_b)
+
+
+def _dune(x: float, y: float, s: float = 1.0):
+    """A sand dune. The first beach pass reused the park's shrub for these and
+    put four green bushes on a beach, which is what happens when a builder is
+    borrowed for its shape and not its material."""
+    sand = pack.material(f"Dune{x:.1f}{y:.1f}", "#DFC085", roughness=0.95)
+    lit = pack.material(f"DuneLit{x:.1f}{y:.1f}", "#EDD3A0", roughness=0.94)
+    for i, (dx, dy, dz, r) in enumerate((
+        (0.0, 0.0, 0.30, 1.0), (-0.9, 0.2, 0.22, 0.75),
+        (0.85, -0.15, 0.24, 0.8), (0.1, 0.5, 0.34, 0.62),
+    )):
+        wx, wy = TURN(x + dx * s * 1.6, y + dy * s * 1.6)
+        pack.sphere(f"dune{x:.1f}{y:.1f}{i}", (wx, wy, dz * s),
+                    (r * s * 1.9, r * s * 1.3, r * s * 0.52), lit if i == 3 else sand)
+    for i in range(3):
+        _marram(x + (i - 1) * 1.1 * s, y + 0.4 * s, 0.9 * s)
+
+
+def _lifeguard(x: float, y: float, s: float = 1.0):
+    post = pack.material("Tower post", "#B0703C", roughness=0.86)
+    body = pack.material("Tower body", "#E1594C", roughness=0.74)
+    roof = pack.material("Tower roof", "#5FC7C7", roughness=0.70)
+    for dx, dy in ((-1.0, -0.8), (1.0, -0.8), (-1.0, 0.8), (1.0, 0.8)):
+        lx, ly = TURN(x + dx * s, y + dy * s)
+        pack.cylinder(f"post{dx}{dy}{x:.1f}", (lx, ly, 0.85 * s), 0.17 * s, 1.7 * s, post)
+    bx, by = TURN(x, y)
+    pack.cube(f"cab{x:.1f}", (bx, by, 2.55 * s), (1.45 * s, 1.25 * s, 1.05 * s), body, 0.12,
+              rotation=(0, 0, THETA))
+    pack.cube(f"roof{x:.1f}", (bx, by, 3.72 * s), (1.65 * s, 1.45 * s, 0.13 * s), roof, 0.07,
+              rotation=(0, 0, THETA))
+    glass = pack.material(f"Tower glass{x:.1f}", "#BFE7EE", roughness=0.30, coat=0.30)
+    rail = pack.material(f"Tower rail{x:.1f}", "#F0DCC0", roughness=0.80)
+    gx, gy = TURN(x, y - 1.2 * s)
+    pack.cube(f"glass{x:.1f}", (gx, gy, 2.75 * s), (0.95 * s, 0.06 * s, 0.55 * s), glass, 0.05,
+              rotation=(0, 0, THETA))
+    for i, dz in enumerate((1.62, 1.95)):
+        rx, ry = TURN(x, y - 1.28 * s)
+        pack.cube(f"rail{x:.1f}{i}", (rx, ry, dz * s), (1.42 * s, 0.05 * s, 0.06 * s), rail, 0.02,
+                  rotation=(0, 0, THETA))
+
+
+def _umbrella(x: float, y: float, s: float = 1.0):
+    pole = pack.material("Umbrella pole", "#8A5C39", roughness=0.85)
+    canopy = pack.material("Umbrella canopy", "#F0705C", roughness=0.70)
+    knob = pack.material("Umbrella knob", "#FFD34E", roughness=0.60)
+    px, py = TURN(x, y)
+    pack.cylinder(f"upole{x:.1f}", (px, py, 1.5 * s), 0.09 * s, 3.0 * s, pole)
+    pack.cone(f"ucan{x:.1f}", (px, py, 3.15 * s), 2.1 * s, 0.10 * s, 0.62 * s, canopy)
+    pack.sphere(f"uknob{x:.1f}", (px, py, 3.55 * s), (0.16 * s, 0.16 * s, 0.16 * s), knob)
+
+
+def _palm(x: float, y: float, s: float = 1.0):
+    """A palm.
+
+    Two passes wrong before this one, both the same mistake in different
+    clothes: a frond is ONE long leaf, and I kept building it out of small
+    round pieces. First seven flat discs in a ring around the crown -- lily
+    pads. Then three discs per frond stepping outward -- still discs, just
+    more of them. A shape that is 8:1 cannot be assembled out of shapes that
+    are 1:1; it has to be one 8:1 shape, rotated to point where it goes.
+
+    The trunk is one tapered cylinder with a lean, not a stack of segments.
+    """
+    trunk = pack.material(f"Palm trunk{x:.1f}", "#B08454", roughness=0.90)
+    trunk_hi = pack.material(f"Palm trunk hi{x:.1f}", "#C79A66", roughness=0.88)
+    frond = pack.material(f"Palm frond{x:.1f}", "#4E9E4A", roughness=0.86)
+    frond_hi = pack.material(f"Palm frond hi{x:.1f}", "#63B658", roughness=0.84)
+
+    lean = 0.10
+    height = 5.6 * s
+    for i in range(7):
+        t = i / 6.0
+        tx, ty = TURN(x + lean * height * t, y)
+        seg = pack.cylinder(f"pt{x:.1f}{i}", (tx, ty, height * t + 0.4 * s),
+                            (0.30 - 0.13 * t) * s, 0.95 * s,
+                            trunk_hi if i % 2 else trunk, vertices=14)
+        seg.rotation_euler = (0.0, lean, 0.0)
+
+    cx, cy = TURN(x + lean * height, y)
+    crown = height + 0.4 * s
+    for i in range(8):
+        a = i / 8.0 * math.tau + 0.3
+        droop = 0.42 + (i % 3) * 0.16
+        leaf = pack.sphere(f"pf{x:.1f}{i}", (cx, cy, crown),
+                           (2.6 * s, 0.34 * s, 0.10 * s),
+                           frond_hi if i % 3 == 0 else frond)
+        # Scale first, then aim it: out along `a`, and down by `droop`.
+        leaf.rotation_euler = (0.0, droop, a + THETA)
+        # Push it out from the crown so it hangs off the trunk rather than
+        # through it.
+        ox, oy = TURN(x + lean * height + math.cos(a) * 2.2 * s, y + math.sin(a) * 2.2 * s)
+        leaf.location = (ox, oy, crown - math.sin(droop) * 1.9 * s)
+    pack.sphere(f"pcrown{x:.1f}", (cx, cy, crown), (0.42 * s, 0.42 * s, 0.34 * s), trunk_hi)
+
+
+def _castle(x: float, y: float, s: float = 1.0):
+    sand = pack.material("Castle sand", "#D8B476", roughness=0.94)
+    flag = pack.material("Castle flag", "#E1594C", roughness=0.70)
+    stick = pack.material("Castle stick", "#4E9E4A", roughness=0.88)
+    for dx, dy, h in ((-0.85, 0.0, 1.15), (0.85, 0.0, 1.05), (0.0, -0.6, 1.45)):
+        cx, cy = TURN(x + dx * s, y + dy * s)
+        pack.cylinder(f"tw{x:.1f}{dx}", (cx, cy, h * 0.5 * s), 0.42 * s, h * s, sand, vertices=12)
+    wx, wy = TURN(x, y - 0.6 * s)
+    pack.cylinder(f"fstick{x:.1f}", (wx, wy, (1.45 + 0.4) * s), 0.04 * s, 0.8 * s, stick, vertices=8)
+    pack.cube(f"flag{x:.1f}", (wx + 0.2 * s, wy, (1.45 + 0.62) * s), (0.24 * s, 0.02 * s, 0.16 * s), flag, 0.01)
+
+
+def _pebble(x: float, y: float, s: float = 1.0):
+    tone = pack.material(f"Pebble{x:.2f}{y:.2f}", "#E4D2AE" if (int(x * 7) % 2) else "#D3BE95", roughness=0.86)
+    px, py = TURN(x, y)
+    pack.sphere(f"peb{x:.2f}{y:.2f}", (px, py, 0.08 * s), (0.3 * s, 0.22 * s, 0.1 * s), tone)
+
+
+def _marram(x: float, y: float, s: float = 1.0):
+    blade = pack.material(f"Marram{x:.2f}{y:.2f}", "#8FB25C", roughness=0.90)
+    for i in range(4):
+        a = i * 1.7 + x
+        lean = 0.30 + ((i * 0.618) % 1.0) * 0.22
+        h = (0.5 + ((i * 0.382) % 1.0) * 0.35) * s
+        bx, by = TURN(x + math.cos(a) * 0.10, y + math.sin(a) * 0.10)
+        obj = pack.cone(f"mar{x:.2f}{y:.2f}{i}", (bx, by, h / 2), 0.04 * s, 0.004, h, blade,
+                        rotation=(math.cos(a) * lean, math.sin(a) * lean, 0), vertices=8)
+        obj.scale = (1.0, 0.3, 1.0)
+
+
 SCENES = {
     "park": (park, 17.0, (0.0, 29.5, 1.0), 4.2, "#FFE2B4", "#7FA8C8"),
+    "beach": (beach, 17.0, (0.0, 29.5, 1.0), 4.6, "#FFE9C4", "#8FC0DC"),
 }
 
 
