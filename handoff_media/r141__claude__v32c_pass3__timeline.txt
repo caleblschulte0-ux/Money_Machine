@@ -1,0 +1,51 @@
+# Timeline for r141__claude__v32c_pass3__ORI_What_This_Place_Was_master.mp4 (41.1s)
+# v32c pass 3 -- fixes the real defect r140 (ChatGPT) found in r139's pass 2:
+#  r139 moved the sign beat's in-point to a frame where the plaque's opening
+#  sentence read clean in a RAW, unletterboxed grab -- but every beat in
+#  this film gets filmlook.py's standing 2.39:1 scope crop (12.8% off the
+#  top and bottom of the delivered frame), and this plate's paragraph sits
+#  close enough to the top of its portrait source that the scope bar was
+#  STILL cutting the first line in the actual render. r140 caught this from
+#  the rendered evidence itself; r139's own comparison image had the proof
+#  in it and wasn't read closely enough.
+# THE FIX IS A CROP, NOT ANOTHER IN-POINT: no in-point changes where the
+# text sits relative to the top of frame, only a genuine reframe does.
+# Added spec_one.CROP -- a per-beat pre-scale crop applied by render_one's
+# frames_of() before the 1920x1080 scale -- and cropped tight around the
+# text block itself, which both buys back the headroom the letterbox needs
+# and (as a side effect) reduces this beat's own aspect distortion versus
+# the uncropped portrait-to-16:9 stretch. Verified against 7 frames spanning
+# the entire 3.5s beat duration, not just the in-point frame -- the first
+# crop attempt (checked at one frame only) passed at t=0 and failed by
+# t=0.7s once ordinary handheld jitter was accounted for; this one holds
+# with margin at every sampled point.
+# Structure, every other beat, VO, and on-screen copy UNCHANGED from r139.
+
+   0.0-   1.5  sign    a different plaque (a poem), read close -- NOW FULLY LEGIBLE, clear of the film's 2.39:1 letterbox: "For as long as humans have inhabited this area, they have been attracted by the Falls." [IMG_6709 @22.3, cropped to spec_one.CROP["sign"]] [sign beat starts]; on-screen: FALLS PARK, SIOUX FALLS, SOUTH DAKOTA (location card)
+   1.5-   3.0  sign    same plaque, both paragraphs legible, second plaque fully out of frame [IMG_6709 @22.3, cropped]
+   3.0-   4.5  sign    same plaque [IMG_6709 @22.3, cropped] VO: Most people walk right past.
+   4.5-   6.0  past    the empty riverbed, panning wide -- nobody stopping [IMG_6791]         [past beat starts]; VO: Most people walk right past.
+   6.0-   7.5  prod    the wearer at a different overlook, turning toward the water [IMG_6794] [prod beat starts]; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+   7.5-   9.0  prod    the wearer at a different overlook, turning toward the water [IMG_6794] VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+   9.0-  10.5  hero    glasses alone on dark table (generated plate)                          [hero beat starts]; on-screen: THE HARDWARE / VISUALIZATION; VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  10.5-  12.0  hero    glasses alone on dark table (generated plate)                          VO: Open Range Interactive doesn't build the glasses. We build what runs on them.
+  12.0-  13.5  hero    glasses alone on dark table (generated plate)                          VO: You put them on.
+  13.5-  15.0  on      hand raised to temple -- switching on (start of one unbroken shot)     [on beat starts]; VO: You put them on.
+  15.0-  16.5  on      hand raised to temple -- switching on (start of one unbroken shot)     VO: They know where you're standing, what you're looking at -- and who you're with.
+  16.5-  18.0  lock    same unbroken shot continues -- recognises the falls                   [lock beat starts]; on-screen: THE FALLS / BIG SIOUX RIVER; VO: They know where you're standing, what you're looking at -- and who you're with.
+  18.0-  19.5  lock    same unbroken shot continues -- recognises the falls                   VO: They know where you're standing, what you're looking at -- and who you're with.
+  19.5-  21.0  anchor  same unbroken shot continues -- anchored to the place                  [anchor beat starts]; VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  21.0-  22.5  anchor  same unbroken shot continues -- anchored to the place                  VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  22.5-  24.0  anchor  same unbroken shot continues -- anchored to the place                  VO: Anchored to the real place around you. Picked up where you're going, not owned.
+  24.0-  25.5  anchor  same unbroken shot continues -- anchored to the place                  VO: You keep walking. It keeps working.
+  25.5-  27.0  reach   walking the park path                                                  [reach beat starts]; VO: You keep walking. It keeps working.
+  27.0-  28.5  reach   walking the park path
+  28.5-  30.0  off     glasses off, elevated wide view, nothing drawn on it                   [off beat starts]; VO: No tour group. No phone in your face. You just look.
+  30.0-  31.5  off     glasses off, elevated wide view, nothing drawn on it                   VO: No tour group. No phone in your face. You just look.
+  31.5-  33.0  off     glasses off, elevated wide view, nothing drawn on it                   VO: No tour group. No phone in your face. You just look.; VO: Open Range Interactive. Look closer at where you already are.
+  33.0-  34.5  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805] [walk beat starts]; VO: Open Range Interactive. Look closer at where you already are.
+  34.5-  36.0  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805] VO: Open Range Interactive. Look closer at where you already are.
+  36.0-  37.5  walk    a wider plaza/path, falls in the background -- closing line [IMG_6805]
+  37.5-  39.0  end     held last frame, wordmark card                                         [end beat starts]; on-screen: OPEN RANGE INTERACTIVE (wordmark) + VISUAL INTENTION ONLY
+  39.0-  40.5  end     held last frame, wordmark card
+  40.5-  41.1  end     held last frame, wordmark card
