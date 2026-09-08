@@ -27,9 +27,18 @@
  */
 import { chromium } from 'playwright';
 import { browserOptions } from './lib/browser.mjs';
+import { assertFreshArtifact } from './fresh-artifact.mjs';
 
 const [w, h] = (process.argv[3] || '390x844').split('x').map(Number);
 const PLACES = ['home', 'park', 'town', 'beach'];
+
+/*
+ * Measuring last build's composition and reporting it as this one's is exactly
+ * the failure this tool was written to catch elsewhere. Two whole measurement
+ * passes in one session were read off stale renders, and both times the
+ * honest-looking answer was "nothing changed".
+ */
+assertFreshArtifact(`${process.cwd()}/dist/playtest/index.html`, 'npm run build:pages');
 
 const browser = await chromium.launch(browserOptions());
 const page = await browser.newPage({ viewport: { width: w, height: h } });

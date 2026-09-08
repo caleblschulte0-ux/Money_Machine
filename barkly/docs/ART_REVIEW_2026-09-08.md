@@ -56,10 +56,23 @@ under-delivering.
 
 ### 2. The supporting cast are palette swaps of the hero
 
-Biscuit, Duke and Pepper are the same model as Barkly with a different fur
-colour. Same body, same head, same muzzle, same ears, same **collar**, and the
-same slightly-grumpy expression. Duke is written as a rival and Biscuit as a
-friend and they are physically identical.
+> **Corrected 2026-09-08, after reading the code instead of the assets folder.**
+> The paragraph below originally also claimed they are drawn at one size and
+> wear Barkly's collar exactly. Both were wrong: `build` and `stance` per NPC
+> have been in `world/npcs.ts` for some time (Biscuit 0.94 and stocky, Duke
+> 1.14 and taller), and zoomed in, the buckle metal and muzzle markings differ
+> per dog. I judged from the render folder rather than from the shipped
+> composite. The claim that survives is below, and it is now measured.
+
+Biscuit, Duke and Pepper are one model recoloured. `npc-distinct.py` now
+reports the like-for-like number: comparing the SAME pose between dogs,
+**Biscuit and Duke differ by 0.0%** — pixel-identical silhouettes — in both the
+front and three-quarter renders, and Pepper's front differs by 4.7%. Duke is
+written as a rival and Biscuit as a friend and they are physically the same
+dog.
+
+They also share one expression each, which is the part no runtime scale can
+disguise.
 
 For a product whose entire premise is a specific dog with a specific
 personality, a cast where everyone is the protagonist recoloured is a
@@ -81,11 +94,20 @@ interactions.
 
 ### 4. One face, everywhere
 
-Across all sixteen scene captures and every screen, he wears exactly one
-expression. Alternate faces exist in the renders (smile, blink, wide, squint,
-mouth-open) but the resting state is a single grumpy look, and resting state is
-what a player sees 95% of the time. The product promise is that he develops and
-becomes yours; his face is a constant.
+> **Corrected 2026-09-08.** This originally said he wears one expression
+> everywhere, full stop. That was wrong and checkable in a minute:
+> `faceFrame()` already switches on state — wide when listening, a smile when
+> happy, a squint when annoyed, heavy lids when hungry. What follows is the
+> claim that survives reading the code, and it is narrower and more useful.
+
+Every one of those branches is an EVENT. Between events he fell through to one
+fixed render, and between events is where a player spends nearly all of their
+time — which is why sixteen scene captures and every screen in the product all
+showed the same face. The most-seen frame in the app was the one thing that
+never moved.
+
+*(Fixed the same day: the resting face now reads his drives. See
+`__tests__/resting_face.test.ts`.)*
 
 ### 5. The HUD is heavy, bright and never changes
 
@@ -161,6 +183,17 @@ subtraction rather than a different lighting situation.
    lit windows — rather than a global multiply.
 8. **Break the horizontal symmetry** of the scenes, which is the remaining
    half of the composition work.
+
+## Two claims in this document were wrong
+
+Recorded here rather than quietly edited, because a review that reads as
+authoritative and is wrong in places is worse than one that shows its
+corrections. Both errors came from the same habit: **judging the assets folder
+instead of the shipped composite**, and stating the result with more confidence
+than the checking deserved. Both were a minute of reading away.
+
+The direction of the review held up — lighting and cast were the right two
+places to spend. The facts underneath two of its nine findings did not.
 
 ## What this review deliberately does not say
 

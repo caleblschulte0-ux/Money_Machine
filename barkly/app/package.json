@@ -53,7 +53,10 @@
     "check:playtest": "node scripts/playtest-acceptance.mjs http://localhost:8099/playtest/",
     "check:speech": "node scripts/speech-fit-check.mjs",
     "build:pages:inline": "node scripts/build-artifact.mjs --out dist/index.html && EXPO_PUBLIC_BARKLY_PLAYTEST=always node scripts/build-artifact.mjs --out dist/playtest/index.html",
-    "perf": "node scripts/perf-review.mjs --site dist"
+    "perf": "node scripts/perf-review.mjs --site dist",
+    "render:world": "scripts/render-world.sh",
+    "check:composition": "node scripts/composition.mjs",
+    "check:visible": "node scripts/visible-change.mjs"
   },
   "private": true,
   "jest": {

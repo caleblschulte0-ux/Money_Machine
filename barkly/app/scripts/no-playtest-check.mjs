@@ -21,6 +21,7 @@ import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { walkOnboarding } from './onboard.mjs';
 import { browserOptions } from './lib/browser.mjs';
+import { assertFreshArtifact } from './fresh-artifact.mjs';
 
 const [player, playtest] = process.argv.slice(2);
 if (!player || !playtest) {
@@ -35,6 +36,17 @@ for (const f of [player, playtest]) {
 }
 
 
+
+/*
+ * THIS ONE ESPECIALLY MUST NOT PASS ON A STALE BUILD.
+ *
+ * Every other gate reading an old artifact reports last build's art. This one
+ * reports last build's SECURITY: it is the check that the player build has no
+ * route to the playtest menu, and a stale pass would sign off a build nobody
+ * has actually inspected. Six of the eight browser gates already assert this
+ * and the two that did not were this and composition.mjs.
+ */
+for (const path of [player, playtest]) assertFreshArtifact(path, 'npm run build:pages');
 
 const browser = await chromium.launch(browserOptions());
 

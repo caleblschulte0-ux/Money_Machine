@@ -1095,3 +1095,49 @@ being gated, and `promote-props.py` is the only place that knows the recipe —
 trim, size inventory art, quantise — which is also what lets "has this been
 promoted?" be answered by building the candidate and comparing bytes instead
 of guessing what ImageMagick would have done.
+
+
+## How to work on this art (2026-09-08, after a day of doing it wrong)
+
+Six rules, each one paid for. The full account is
+`docs/PROCESS_REVIEW_2026-09-08.md`; this is the short form, here because this
+is the file somebody opens before touching the art.
+
+**1. Look at the whole thing first.** Capture every scene, every screen, every
+state, and look at them together before starting. In the session that produced
+these rules the cold review was the twentieth commit, and everything that
+landed came after it. It took half an hour. The nineteen commits before it cost
+four times the code for a result the operator could not see.
+
+**2. A measurement that two things DIFFER says nothing about which one to
+move.** Barkly measured twelve times the fine detail of the park hedge. That
+number was correct, and the conclusion drawn from it -- give the world more
+texture -- was wrong; he was the one being misread. State which way the fix
+goes before measuring, so the measurement can contradict you.
+
+**3. Validate an instrument on a known answer before believing it.** Four
+measurements in one session were artefacts: a normalisation that upscaled a
+638x21 course nineteen times and reported 0.00 detail; a "sky" sample that was
+mostly sea; a fur patch that drifted off the dog when the camera moved; two
+passes read off stale renders. `scripts/visible-change.mjs` carries its own
+calibration table for exactly this reason, and deliberately refuses to return a
+verdict, because no single number separated the changes whose answers were
+already known.
+
+**4. Read the shipped path before claiming a gap.** The assets folder is not
+the game. Two findings in the art review were false and both were a minute of
+reading away: the NPCs are scaled at runtime by `build`/`stance`, and
+`faceFrame()` already switched on state.
+
+**5. Do not build a gate for an idea that has not survived the operator's
+eye.** `surface-check.py` was careful, measured the median so geometry could
+not fake it, fired correctly in both directions -- and encoded a hypothesis
+that was wrong. It would have refused the correct art. It was deleted a day
+after it was written.
+
+**6. Do not send a before/after you cannot see yourself.** Run
+`npm run check:visible before.png after.png`; it writes a crop of whatever
+changed most, and the rule is that you look at that crop. If the difference is
+not obvious there it is not obvious to anybody, and asking someone else to
+adjudicate it spends their attention to tell you something you could have told
+yourself.

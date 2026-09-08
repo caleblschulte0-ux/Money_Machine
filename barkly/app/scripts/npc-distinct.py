@@ -72,7 +72,40 @@ def main():
         print(f"\nFAIL — {worst[0]} and {worst[1]} are the same shape ({worst[2]:.1f}% < {MIN_DIFFERENCE}%).")
         print("Two dogs differing only in colour is a palette swap, not a cast.")
         return 1
-    print(f"\nPASS — every dog is a different shape (closest pair {worst[2]:.1f}%).")
+    print(f"\nPASS — on screen, every dog is a different shape (closest pair {worst[2]:.1f}%).")
+
+    # ------------------------------------------------------------------
+    # AND THE PART THIS GATE CANNOT PROVE, measured and printed anyway.
+    #
+    # Everything above compares the poses actually SHIPPED, which is the right
+    # thing to gate: it is what a player sees. But the shipped set is one front
+    # render against two three-quarters, and a front outline differs from a
+    # three-quarter outline because the CAMERA differs. Pose variety is not
+    # character variety, and this gate would go on passing if all three dogs
+    # became the same model tomorrow.
+    #
+    # So the like-for-like number is measured here too -- same pose, different
+    # dog -- and reported rather than gated. It is NOT a gate because it is
+    # currently and knowingly failing: the three NPCs are one model recoloured,
+    # and fixing that needs a dog model this repository does not contain (the
+    # NPC PNGs are canon renders with no source here, same as Barkly's). A gate
+    # nobody can pass is a gate somebody disables.
+    # ------------------------------------------------------------------
+    npc_dir = APP / "assets" / "barkly" / "renders" / "npcs"
+    print("\nSAME POSE, DIFFERENT DOG — reported, not gated (see the note in this file):")
+    for pose in ("front", "tq"):
+        shapes = {}
+        for f in sorted(npc_dir.glob(f"*_{pose}.png")):
+            shapes[f.stem.split("_")[0]] = silhouette(f)
+        if len(shapes) < 2:
+            continue
+        pose_names = sorted(shapes)
+        for i, a in enumerate(pose_names):
+            for b in pose_names[i + 1:]:
+                union = np.logical_or(shapes[a], shapes[b]).sum()
+                d = np.logical_xor(shapes[a], shapes[b]).sum() / max(1, union) * 100
+                flag = "" if d >= MIN_DIFFERENCE else "   <- same model"
+                print(f"  {pose:5s} {a} vs {b}: {d:5.1f}%{flag}")
     return 0
 
 
