@@ -294,7 +294,24 @@ def park():
         _tree(x, y, s)
 
     _path()
-    _bench(5.4, -1.6)
+
+    # THE SHOT NEEDS FRAMING, and the first plate had none.
+    #
+    # Seen beside the other three locations the plated park was the WEAKEST of
+    # the four, which is the opposite of what the plate was for. Town has
+    # architecture and a sign to read, the beach has a tower and an umbrella,
+    # home has the window. The park had a path and a repeating treeline: real
+    # light on an empty field. The composited version it replaced had two big
+    # trees holding the left and right edges, and losing them cost more than
+    # the lighting gained.
+    #
+    # Near, large, and deliberately cropped by the frame -- they are the
+    # proscenium, not scenery. Kept wide of x = +-5, where the app puts the DIG
+    # mound and the two NPCs.
+    _tree(-8.6, -13.0, 3.2, canopy="#4FA436", trunk="#7A5233")
+    _tree(9.0, -11.0, 3.0, canopy="#57AC3C", trunk="#83593A")
+
+    _bench(5.0, -1.6)
 
     # Middle distance: hedges give the field a middle, which four trees and a
     # bench on open grass do not.
@@ -303,9 +320,17 @@ def park():
     _hedge(-3.0, 27.0, 9.0, 1.0)
     _hedge(11.0, 31.0, 8.0, 0.95)
 
-    for fx, fy, fs in ((-4.6, 1.5, 1.1), (5.0, 3.2, 1.0), (-8.0, 6.0, 0.9),
-                       (7.5, 6.8, 0.95), (-1.5, 9.5, 0.85), (3.0, 12.0, 0.8)):
-        _flowers(fx, fy, fs)
+    # A PARK THAT IS ONLY GREEN IS A LAWN. Town carries coral, aqua and violet;
+    # the beach carries a red umbrella and a yellow bucket. This had one yellow
+    # flower repeated six times, which is not colour, it is a texture.
+    beds = (
+        (-4.8, 1.5, 1.2, "#F2557B"), (5.2, 3.4, 1.1, "#FFFFFF"),
+        (-8.2, 6.0, 1.0, "#FFE45C"), (7.6, 6.8, 1.05, "#B06CE0"),
+        (-2.0, 10.0, 0.9, "#F2557B"), (3.4, 12.5, 0.85, "#FFE45C"),
+        (-6.0, 16.0, 0.8, "#FFFFFF"), (6.4, 18.0, 0.8, "#B06CE0"),
+    )
+    for fx, fy, fs, petal_hex in beds:
+        _flowers(fx, fy, fs, petal_hex)
 
     # Scatter. Placed by a repeatable sequence, never at random, so a re-render
     # is the same park.
@@ -496,12 +521,13 @@ def _bush(x: float, y: float, s: float = 1.0):
                     (r * s, r * 0.85 * s, r * 0.78 * s), lit if i == 3 else dark)
 
 
-def _flowers(x: float, y: float, s: float = 1.0):
-    petal = pack.material(f"Petal{x:.2f}{y:.2f}", "#FFE45C", roughness=0.80)
+def _flowers(x: float, y: float, s: float = 1.0, petal_hex: str = "#FFE45C"):
+    petal = pack.material(f"Petal{x:.2f}{y:.2f}", petal_hex, roughness=0.80)
     stem = pack.material(f"Stem{x:.2f}{y:.2f}", "#4E9B3A", roughness=0.90)
-    for i in range(4):
-        a = i * 1.9 + x
-        fx, fy = TURN(x + math.cos(a) * 0.22, y + math.sin(a) * 0.22)
+    for i in range(7):
+        a = i * 1.6 + x
+        r = 0.20 + (i % 3) * 0.14
+        fx, fy = TURN(x + math.cos(a) * r, y + math.sin(a) * r)
         h = (0.32 + ((i * 0.618) % 1.0) * 0.16) * s
         pack.cylinder(f"stem{x:.2f}{y:.2f}{i}", (fx, fy, h / 2), 0.022 * s, h, stem, vertices=8)
         pack.sphere(f"bud{x:.2f}{y:.2f}{i}", (fx, fy, h), (0.10 * s, 0.10 * s, 0.06 * s), petal)

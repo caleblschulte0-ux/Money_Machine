@@ -6,6 +6,26 @@
     1792
   ],
   "scenes": {
+    "beach": {
+      "file": "beach.png",
+      "width": 768,
+      "height": 1792,
+      "anchors": {
+        "stand": {
+          "x": 0.5,
+          "y": 0.720007
+        },
+        "standTop": {
+          "x": 0.5,
+          "y": 0.698509
+        },
+        "horizon": {
+          "x": 0.5,
+          "y": 0.32299
+        }
+      },
+      "unitPx": 38.5244
+    },
     "park": {
       "file": "park.png",
       "width": 768,
