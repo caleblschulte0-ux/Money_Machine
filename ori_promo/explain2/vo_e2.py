@@ -85,6 +85,27 @@ def synth(text, path):
     return a, sr
 
 
+def _srt_ts(t):
+    h = int(t // 3600); t -= h * 3600
+    m = int(t // 60); t -= m * 60
+    s = int(t); ms = int(round((t - s) * 1000))
+    if ms >= 1000:
+        s += 1; ms = 0
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def write_srt(placed, dst):
+    """Standard .srt captions built from the SAME placement data the mixed
+    VO track came from -- no separate timing table to drift out of sync."""
+    lines = []
+    for i, (beat, at, ln, text) in enumerate(placed, 1):
+        lines.append(str(i))
+        lines.append(f"{_srt_ts(at)} --> {_srt_ts(at + ln)}")
+        lines.append(text)
+        lines.append("")
+    with open(dst, "w") as f:
+        f.write("\n".join(lines))
+
 def main():
     os.makedirs("out_e2", exist_ok=True)
     n = int(TOTAL * SR)
@@ -138,6 +159,8 @@ def main():
         w.writeframes(np.stack([pcm, pcm], 1).tobytes())
     for beat, at, ln, text in placed:
         print(f"  vo {at:5.1f}s  {ln:4.1f}s  {beat:<5} \"{text}\"")
+    write_srt(placed, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                    "..", "out", "ORI_Explainer2_FastFacts_captions.srt"))
 
 
 if __name__ == "__main__":
