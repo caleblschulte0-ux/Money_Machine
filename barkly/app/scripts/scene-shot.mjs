@@ -16,13 +16,14 @@
  * exists when EXPO_PUBLIC_BARKLY_PLAYTEST=always.
  */
 import { chromium } from 'playwright';
+import { browserOptions } from './lib/browser.mjs';
 
 const place = process.argv[2] || 'home';
 const out = process.argv[3] || `/tmp/${place}.png`;
 const hour = Number(process.argv[4] || 14);
 const [vw, vh] = (process.argv[5] || '390x844').split('x').map(Number);
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const browser = await chromium.launch(browserOptions());
 const page = await browser.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: 2 });
 await page.addInitScript(`(() => {
   localStorage.setItem('barkly/profile/default/onboarding-v1', 'done');

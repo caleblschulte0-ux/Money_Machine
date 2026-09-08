@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
 import { walkOnboarding } from './onboard.mjs';
+import { browserOptions } from './lib/browser.mjs';
 
 const APP = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (name, fallback) => {
@@ -44,13 +45,7 @@ if (!existsSync(html)) {
 }
 assertFreshArtifact(html, 'npm run build:web');
 
-function browserOptions() {
-  const args = ['--no-sandbox'];
-  for (const candidate of [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium']) {
-    if (candidate && existsSync(candidate)) return { executablePath: candidate, args };
-  }
-  return { args };
-}
+
 
 // The three the a11y sweep runs, narrowest first.
 const SIZES = [

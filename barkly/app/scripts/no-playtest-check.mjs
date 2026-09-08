@@ -20,6 +20,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { walkOnboarding } from './onboard.mjs';
+import { browserOptions } from './lib/browser.mjs';
 
 const [player, playtest] = process.argv.slice(2);
 if (!player || !playtest) {
@@ -33,13 +34,7 @@ for (const f of [player, playtest]) {
   }
 }
 
-function browserOptions() {
-  const args = ['--no-sandbox'];
-  for (const candidate of [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium']) {
-    if (candidate && existsSync(candidate)) return { executablePath: candidate, args };
-  }
-  return { args };
-}
+
 
 const browser = await chromium.launch(browserOptions());
 

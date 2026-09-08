@@ -23,8 +23,11 @@
  */
 import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { browserOptions } from './lib/browser.mjs';
 
-const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+// Resolved, not hardcoded: that build number changes with every
+// Playwright bump and the path exists in one sandbox only.
+const CHROME = browserOptions().executablePath;
 const url = process.argv[2] || `file://${process.cwd()}/dist/playtest/index.html`;
 const NAME = 'Sam';
 const SECRET = 'pineapple';

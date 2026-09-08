@@ -28,6 +28,7 @@
  */
 import { chromium } from 'playwright';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
+import { browserOptions } from './lib/browser.mjs';
 
 const arg = process.argv[2] || 'park';
 const FAIL = process.argv.includes('--fail');
@@ -39,7 +40,7 @@ let defects = 0;
 // not build it, so on a stale one it would happily pass on old blocking.
 assertFreshArtifact(`${process.cwd()}/dist/playtest/index.html`, 'npm run build:pages');
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const browser = await chromium.launch(browserOptions());
 const page = await browser.newPage({ viewport: { width: w, height: h } });
 await page.addInitScript(() => localStorage.setItem('barkly/profile/default/onboarding-v1', 'done'));
 await page.goto(`file://${process.cwd()}/dist/playtest/index.html`);

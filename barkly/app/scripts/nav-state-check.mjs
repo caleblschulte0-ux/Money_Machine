@@ -32,6 +32,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
 import { walkOnboarding } from './onboard.mjs';
+import { browserOptions } from './lib/browser.mjs';
 
 const APP = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (name, fallback) => {
@@ -45,13 +46,7 @@ if (!existsSync(html)) {
   process.exit(2);
 }
 
-function browserOptions() {
-  const args = ['--no-sandbox'];
-  for (const candidate of [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium']) {
-    if (candidate && existsSync(candidate)) return { executablePath: candidate, args };
-  }
-  return { args };
-}
+
 
 const browser = await chromium.launch(browserOptions());
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });

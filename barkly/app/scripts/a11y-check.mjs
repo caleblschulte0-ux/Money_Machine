@@ -40,6 +40,7 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
 import { walkOnboarding } from './onboard.mjs';
+import { browserOptions } from './lib/browser.mjs';
 
 async function loadChromium() {
   for (const m of ['playwright', 'playwright-core', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
@@ -65,13 +66,7 @@ if (!existsSync(html)) {
 }
 const [width, height] = arg('--size', '390x844').split('x').map(Number);
 
-function browserOptions() {
-  const args = ['--no-sandbox'];
-  for (const candidate of [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium']) {
-    if (candidate && existsSync(candidate)) return { executablePath: candidate, args };
-  }
-  return { args };
-}
+
 
 /** Runs INSIDE the page. Returns the three failure lists for one screen. */
 function auditInPage(where) {

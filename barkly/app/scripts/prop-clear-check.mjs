@@ -17,6 +17,7 @@
 import { chromium } from 'playwright';
 import { existsSync, statSync, readdirSync } from 'fs';
 import { join } from 'path';
+import { browserOptions } from './lib/browser.mjs';
 
 const ART = `file://${process.cwd()}/dist/playtest/index.html`;
 const VIEWPORTS = [[360, 568], [360, 780], [390, 844], [430, 932]];
@@ -66,7 +67,7 @@ if (statSync(artifact).mtimeMs < newestSourceMs(`${process.cwd()}/src`)) {
   process.exit(2);
 }
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const browser = await chromium.launch(browserOptions());
 const failures = [];
 let checked = 0;
 

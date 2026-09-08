@@ -12,6 +12,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
 import { walkOnboarding } from './onboard.mjs';
+import { browserOptions } from './lib/browser.mjs';
 
 async function loadChromium() {
   for (const m of ['playwright', 'playwright-core', '/opt/node22/lib/node_modules/playwright/index.mjs']) {
@@ -24,13 +25,7 @@ async function loadChromium() {
 }
 const chromium = await loadChromium();
 
-function browserOptions() {
-  const args = ['--no-sandbox'];
-  for (const candidate of [process.env.CHROMIUM_PATH, '/opt/pw-browsers/chromium']) {
-    if (candidate && existsSync(candidate)) return { executablePath: candidate, args };
-  }
-  return { args };
-}
+
 
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(name);

@@ -30,8 +30,11 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { browserOptions } from './lib/browser.mjs';
 
-const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+// Resolved, not hardcoded: that build number changes with every
+// Playwright bump and the path exists in one sandbox only.
+const CHROME = browserOptions().executablePath;
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(name);
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
