@@ -36,7 +36,7 @@ import depthtools as DT
 # map_overlay / sync_overlay imports REMOVED, v31 restart -- see the note
 # at the old call site (search "legend-card and group-sync-circle").
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
-                      GEN_ICE, figures, W, H, FPS, TOTAL)
+                      GEN_ICE, CROP, figures, W, H, FPS, TOTAL)
 
 RAW = "../raw"
 OUT = "out1"
@@ -62,11 +62,31 @@ def mono(sz):
     return LK.mono(sz)
 
 
-def frames_of(clip, tin, dur):
+def frames_of(clip, tin, dur, crop=None):
+    # OPTIONAL PRE-SCALE CROP, added for the `sign` beat's r141 fix. Found
+    # by ChatGPT's r140 review: this beat's plate (IMG_6709, a portrait
+    # phone shot) has its own text sitting close enough to the top of frame
+    # that filmlook.py's standing 2.39:1 scope bars -- applied to every
+    # beat in the film, not something to special-case away -- were cutting
+    # the paragraph's own first line, even though it read cleanly in a raw,
+    # unletterboxed frame grab. `scale=W:H` alone can only reframe by
+    # squishing the WHOLE portrait frame into 16:9; it cannot buy back
+    # headroom. A crop taken BEFORE that scale can: crop tighter around
+    # just the text block and the same squish now maps a taller fraction
+    # of the paragraph into the frame's vertical extent, so the letterbox's
+    # fixed 12.8%-per-side cut lands in the surrounding margin instead of
+    # through the text. (Confirmed): this crop also reduces this beat's own
+    # aspect distortion as a side effect (portrait 1080x830 -> 16:9 is a
+    # smaller stretch than portrait 1080x1920 -> 16:9 was), not a new one.
     n = int(round(dur * FPS))
+    if crop:
+        cx, cy, cw, ch = crop
+        vf = f"crop={cw}:{ch}:{cx}:{cy},scale={W}:{H},fps={FPS}"
+    else:
+        vf = f"scale={W}:{H},fps={FPS}"
     r = subprocess.run(
         ["ffmpeg", "-v", "error", "-ss", f"{tin}", "-i", f"{RAW}/IMG_{clip}.MOV",
-         "-frames:v", str(n), "-vf", f"scale={W}:{H},fps={FPS}",
+         "-frames:v", str(n), "-vf", vf,
          "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
     b = r.stdout
     got = len(b) // (W * H * 3)
@@ -769,7 +789,7 @@ def main(only=None):
     # the way film1 does it.
     stats = []
     for b, c, tin, dur in rows:
-        ims = frames_of(c, tin, min(dur, 2.1))
+        ims = frames_of(c, tin, min(dur, 2.1), CROP.get(b))
         picks = [ims[j] for j in (2, len(ims) // 2, len(ims) - 1)]
         per = [shotnorm.measure(
                    shotnorm.deliver_region(i.astype(np.float32) / 255.0, aspect=16 / 9))
@@ -794,7 +814,7 @@ def main(only=None):
         if only and b not in only:
             continue
         fr = [(np.clip(shotnorm.apply(f.astype(np.float32) / 255.0, p), 0, 1) * 255
-               ).astype(np.uint8) for f in frames_of(c, tin, dur)]
+               ).astype(np.uint8) for f in frames_of(c, tin, dur, CROP.get(b))]
         prev_last = encode(compose(b, dur, fr, prev_last, gi), f"{OUT}/{b}_t.mp4")
         gi += len(fr)
         del fr

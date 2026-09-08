@@ -160,6 +160,18 @@ BEATS = [
  # exact same legible framing (verified same crop, same "For as long as
  # humans..." opening, second plaque still fully out of frame), and clears
  # the gate outright -- peak 5.1px, drift 1.0%, no flags.
+ # r141 (ChatGPT's r140 review): the pass-2 fix above was checked against
+ # a RAW, unletterboxed frame grab -- but every beat in this film gets
+ # filmlook.py's standing 2.39:1 scope bars, which crop 12.8% off the top
+ # and bottom of the ACTUAL delivered frame. This plate's paragraph starts
+ # close enough to the top of its portrait source that the scope bar was
+ # cutting the first line in the real render even though it read clean
+ # unletterboxed -- ChatGPT caught this from the rendered evidence itself,
+ # I hadn't re-checked my own comparison image closely enough to catch it
+ # myself. The in-point (22.3) already sat on a stable, legible frame; the
+ # fix is CROP (spec_one.py, applied by frames_of() before the render's
+ # scale), not another in-point search -- no in-point changes how close to
+ # the top of frame this plate's own text sits. See CROP["sign"] below.
  ("sign", "6709", 22.3, 0.0, 3.5, "a different plaque this time, read close -- the story as it's told today"),
  # v32b: IMG_6791, a slow pan across the same empty riverbed from a
  # different vantage -- same idea (nobody stopping), different shot,
@@ -257,6 +269,39 @@ LABELS = {
  # graphic on `anchor`, so the continuous take reads as one recognition
  # holding steady, not a slideshow of capabilities.
  "lock": ((880, 560), "THE FALLS", "BIG SIOUX RIVER", 0.9, (250, -330), 0.80),
+}
+
+# Optional per-beat pre-scale crop: beat -> (x, y, w, h) in the SOURCE
+# clip's own post-rotation pixel space, applied by render_one.py's
+# frames_of() BEFORE the render's scale-to-1920x1080. Added for `sign`,
+# r141 (ChatGPT's r140 review caught what r139 missed): filmlook.py's
+# standing 2.39:1 scope bars crop 12.8% off the top and bottom of EVERY
+# beat, film-wide -- not something to special-case away. IMG_6709 is a
+# portrait phone shot whose own paragraph starts close enough to the top
+# of its frame that a plain scale=1920:1080 (which maps the WHOLE 1080x
+# 1920 source into 16:9, squishing but not cropping) put the paragraph's
+# own first line inside that top 12.8% and the letterbox cut it, even
+# though the same frame read clean before letterboxing. Cropping tighter
+# around just the text block BEFORE the scale buys the headroom back: the
+# same fixed 12.8%-per-side cut now lands in this crop's own margins
+# instead of through the text.
+#
+# MARGIN WIDENED (0,70,1080,830) -> (0,0,1080,950), same r141 pass. The
+# first version was checked against a single frame at this beat's OWN
+# in-point (t=0 of the beat) and read clean there -- but this is live
+# handheld footage with real per-frame jitter (shotqc.py's own gate
+# measures it: mid 0.73px/frame at this in-point), and (0,70,1080,830)'s
+# margin above the first line was only ~30px, not enough to survive that
+# jitter across the beat's full 3.5s. Checked at t=0 it passed; checked a
+# second later it didn't -- which is exactly the mistake r139's in-point
+# fix made and r140 caught: one frame is not the beat. This crop was
+# verified against 7 frames spanning the ENTIRE 3.5s duration (22.3s
+# through 25.7s on the clip's own clock), each pushed through the same
+# crop -> scale -> letterbox math the renderer applies, with all 4 lines
+# of the opening sentence's paragraph clearing the top bar by ~50px+ at
+# every sampled point, not just the first.
+CROP = {
+ "sign": (0, 0, 1080, 950),
 }
 
 # No ice grade anywhere in this cut. Empty, not deleted.
