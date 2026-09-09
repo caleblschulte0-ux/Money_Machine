@@ -91,7 +91,20 @@ def end_card(d_sec):
             f2 = mono(32)
             w2 = sum(d.textlength(c, font=f2) for c in s2) + 6.0*(len(s2)-1)
             d.rectangle([W//2-w2/2-24, 652, W//2+w2/2+24, 700], fill=(6, 9, 12, int(150*a2/248)))
-            track(d, (W//2, 686), s2, f2, CYAN+(a2,), 6.0, "ms")
+            # r162 (operator: "why what's wrong specifics" -- lead-review
+            # pass). Same size, same scrim box as before -- r67's actual
+            # complaint was legibility, and that stands untouched. Only the
+            # COLOR changes, cyan -> DIM. Cyan is this film's one reserved
+            # color for "the AR system is actively recognising something
+            # right now" (labelkit.py's leader/ring, the `lock` beat's real
+            # recognition label). A legal disclosure line borrowing that
+            # exact hue told the eye "something live is happening here",
+            # the opposite of what fine print should say, and let it
+            # out-compete the brand name for attention. DIM matches the
+            # beta-framing and tagline lines already on this card -- the
+            # disclosure now reads as fine print in the film's own quiet
+            # voice, not as a second, brighter headline.
+            track(d, (W//2, 686), s2, f2, DIM+(a2,), 6.0, "ms")
         a2b = int(220*min(1.0, max(0.0, (t-1.5)/0.5)))
         if a2b > 0:
             s2b = "THE SAME PLATFORM COULD BRING REAL PLACES TO LIFE ANYWHERE."
