@@ -1,1 +1,8 @@
 __pycache__/
+
+# Render output -- never commit media (storage rule: mp4/png renders and
+# anything >256KB stay out of git; MP4s go to the operator directly via
+# SendUserFile, contact sheets go to the operator or the ORI_AI_HANDOFF
+# Drive mailbox, never into the repo itself).
+ori_promo/*/out/
+ori_promo/out/
