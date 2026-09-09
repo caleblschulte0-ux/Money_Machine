@@ -5,22 +5,54 @@
     "chair": {
       "file": "chair.png",
       "displayWidth": 168,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 2.587,
+        "parts": 8,
+        "widest": 2.56,
+        "foot": 1.82,
+        "waist": 2.36,
+        "crown": 2.56
+      }
     },
     "lamp": {
       "file": "lamp.png",
       "displayWidth": 100,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 3.787,
+        "parts": 4,
+        "widest": 1.84,
+        "foot": 1.5,
+        "waist": 0.44,
+        "crown": 1.84
+      }
     },
     "bed": {
       "file": "bed.png",
       "displayWidth": 164,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.66,
+        "parts": 20,
+        "widest": 3.498,
+        "foot": 2.24,
+        "waist": 3.498,
+        "crown": 3.498
+      }
     },
     "shelf": {
       "file": "shelf.png",
       "displayWidth": 174,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 3.58,
+        "parts": 15,
+        "widest": 2.4,
+        "foot": 2.4,
+        "waist": 2.4,
+        "crown": 2.4
+      }
     }
   }
 }

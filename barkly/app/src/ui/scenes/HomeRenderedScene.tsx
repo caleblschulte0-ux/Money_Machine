@@ -18,6 +18,24 @@ const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_fra
 const SKIRTING = require('../../../assets/world/home/props/skirting.png');
 const NEAR_FLOOR = require('../../../assets/world/home/props/near_floor.png');
 /** The near-ground band's own aspect. __tests__/scene_surfaces.test.ts holds it. */
+/*
+ * THE FURNITURE'S SHAPE, FROM THE FILES ON DISK.
+ *
+ * Same defect the outdoor props had, and worse here because the ratios were
+ * written as literals in the middle of a layout: the chair was drawn at
+ * 398/374, the lamp at exactly 2, the bed at 254/512 and the shelf at
+ * 481/298, none of which were what the renders measured. The bed was being
+ * stretched 40% taller than it is. Only a WIDTH is chosen now.
+ *
+ * `npm run check:aspects` restates these from the real PNGs -- it resolves a
+ * lock by the require path in this file, which is what lets LAMP_ASPECT
+ * and the town's LAMP_ASPECT both exist.
+ */
+const CHAIR_ASPECT = 349 / 351;
+const LAMP_ASPECT = 244 / 515;
+const BED_ASPECT = 546 / 193;
+const SHELF_ASPECT = 292 / 439;
+
 const NEAR_FLOOR_ASPECT = 654 / 61;
 const PANELLING = require('../../../assets/world/home/props/panelling.png');
 const VISTA = require('../../../assets/world/home/props/vista.png');
@@ -649,10 +667,10 @@ export function HomeScene({
   const floorNear = night ? DIORAMA.floorNightNear : DIORAMA.floorDayNear;
   const floorLine = night ? DIORAMA.floorNightEdge : DIORAMA.floorDayEdge;
 
-  const chairW = 146 * propScale;
-  const chairH = chairW * (398 / 374);
-  const lampW = 76 * propScale;
-  const lampH = lampW * 2;
+  const chairW = 155 * propScale;
+  const chairH = chairW / CHAIR_ASPECT;
+  const lampW = 72 * propScale;
+  const lampH = lampW / LAMP_ASPECT;
   /*
    * The wall is COMPOSED, not edge-pinned. The window used to hang 5px off the
    * left of the screen and the shelf sat 7px from the right, which read as two
@@ -725,8 +743,8 @@ export function HomeScene({
   const wallTop = chromeBottom + 52;
   const wallBand = Math.max(120, floorTop - wallTop - 18);
 
-  const shelfNaturalW = 138 * propScale;
-  const shelfNaturalH = shelfNaturalW * (481 / 298);
+  const shelfNaturalW = 135 * propScale;
+  const shelfNaturalH = shelfNaturalW / SHELF_ASPECT;
   const shelfFit = shelfNaturalH > wallBand ? wallBand / shelfNaturalH : 1;
   const shelfW = shelfNaturalW * shelfFit;
   const shelfH = shelfNaturalH * shelfFit;
@@ -738,7 +756,7 @@ export function HomeScene({
     windowNaturalH > wallBand ? windowNaturalScale * (wallBand / windowNaturalH) : windowNaturalScale;
   const windowW = (has('home_window') ? 224 : 208) * windowScale;
   const bedW = (has('home_bed') ? 144 : 126) * propScale;
-  const bedH = bedW * (254 / 512);
+  const bedH = bedW / BED_ASPECT;
 
   return (
     <WorldScene motion={asleep ? 'sleep' : motion} testID="world-scene-home" zoom={SCENE_CAMERA.home.zoom}>

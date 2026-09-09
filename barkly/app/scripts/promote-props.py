@@ -46,6 +46,20 @@ PACK = ROOT / "tools" / "blender" / "world_prop_pack.py"
 RENDERS = ROOT / "art-review" / "world-props"
 ASSETS = ROOT / "assets" / "world"
 
+# THE HOME PACK SHIPS THROUGH HERE TOO, and did not until 2026-09-09.
+#
+# `home_prop_pack.py` renders the chair, the lamp, the bed and the shelf, and
+# whatever moved those four into assets/ was not this script -- so when the
+# contour was added, the four biggest objects in the room the player STARTS in
+# shipped with no ink edge while the rug and the panelling beside them had one.
+# Measured, not guessed: the leftmost opaque pixel of rug.png was (13, 17, 35),
+# the ink, and of chair.png was (169, 69, 77), its own upholstery.
+#
+# That is the whole "these are two games" problem in one room, produced by a
+# second promotion path nobody remembered existed. There is one recipe now.
+HOME_PACK = ROOT / "tools" / "blender" / "home_prop_pack.py"
+HOME_RENDERS = ROOT / "art-review" / "home-props"
+
 # Scene PLATES -- whole locations rendered as one lit picture -- come out of a
 # different pack and ship into a different folder, but they are the same kind
 # of thing: a render that has to become a shipped asset by a recipe nobody
@@ -231,34 +245,50 @@ def promote_scenes(check: bool) -> int:
     return 0
 
 
-def builders() -> list[str]:
-    source = PACK.read_text(encoding="utf-8")
+def builders(pack: Path = PACK) -> list[str]:
+    """Every key in a pack's BUILDERS table.
+
+    Anchored to the start of a line, because the values are dicts with their
+    own quoted keys and `"anchor":` is a perfectly good match for a name.
+    """
+    source = pack.read_text(encoding="utf-8")
     block = source[source.index("BUILDERS = {"):]
     block = block[:block.index("\n}\n")]
-    return sorted(re.findall(r'"([a-z_]+/[a-z_0-9]+)":', block))
+    return sorted(re.findall(r'^    "([a-z_0-9/]+)":', block, re.M))
+
+
+def packs():
+    """(pack file, renders dir, builder key -> shipped path) for each pack."""
+    return (
+        (PACK, RENDERS, lambda key: key),
+        (HOME_PACK, HOME_RENDERS, lambda key: f"home/{key}"),
+    )
 
 
 def main() -> int:
     check = "--check" in sys.argv[1:]
-    pack_mtime = PACK.stat().st_mtime
-    pending, stale, missing = [], [], []
+    pending, missing = [], []
+    stale = {}
 
     # DECIDE FIRST, COPY AFTER. Nothing is written until every prop has been
     # looked at, because the refusal below is only worth anything if it happens
     # before the files move.
-    for path in builders():
-        render = RENDERS / f"{path}.png"
-        if not render.exists():
-            missing.append(path)
-            continue
-        if render.stat().st_mtime < pack_mtime:
-            stale.append(path)
-            continue
-        target = destination(path)
-        if not target.parent.exists():
-            missing.append(f"{path} (no {target.parent.relative_to(ROOT)})")
-            continue
-        pending.append((path, render, target))
+    for pack, renders, ship in packs():
+        pack_mtime = pack.stat().st_mtime
+        for key in builders(pack):
+            path = ship(key)
+            render = renders / f"{key}.png"
+            if not render.exists():
+                missing.append(path)
+                continue
+            if render.stat().st_mtime < pack_mtime:
+                stale.setdefault(pack, []).append(key)
+                continue
+            target = destination(path)
+            if not target.parent.exists():
+                missing.append(f"{path} (no {target.parent.relative_to(ROOT)})")
+                continue
+            pending.append((path, render, target))
 
     if stale:
         # Do not half-promote. If the pack has moved on, the props that happen
@@ -268,15 +298,16 @@ def main() -> int:
         if pending:
             print(
                 f"refusing to promote {len(pending)} fresh render(s) while "
-                f"{len(stale)} are stale -- a partial pass would ship a world "
+                f"{sum(len(v) for v in stale.values())} are stale -- a partial pass would ship a world "
                 f"rendered by two versions of the pack.\n"
             )
-        print(
-            f"STALE ({len(stale)}) -- these renders predate the builder that "
-            f"makes them:\n  {', '.join(stale)}\n\n"
-            f"  PROP_ONLY={','.join(stale)} blender -b --python "
-            f"tools/blender/world_prop_pack.py"
-        )
+        for pack, keys in stale.items():
+            print(
+                f"STALE ({len(keys)}) -- these renders predate the builder that "
+                f"makes them:\n  {', '.join(keys)}\n\n"
+                f"  PROP_ONLY={','.join(keys)} blender -b --python "
+                f"{pack.relative_to(ROOT)}\n"
+            )
         if missing:
             print(f"\nnever rendered ({len(missing)}): {', '.join(missing)}")
         return 1
@@ -330,14 +361,17 @@ def main() -> int:
     # in src/ reads it -- it is a render record that happens to ship -- but
     # dropping it here would be a silent behaviour change hidden inside a
     # refactor, and it is 5KB.
-    pack_manifest = RENDERS / "manifest.json"
-    if pack_manifest.exists():
-        target = ASSETS / "manifest.json"
+    for pack_manifest, target in (
+        (RENDERS / "manifest.json", ASSETS / "manifest.json"),
+        (HOME_RENDERS / "manifest.json", ASSETS / "home" / "props" / "manifest.json"),
+    ):
+        if not pack_manifest.exists():
+            continue
         text = pack_manifest.read_text(encoding="utf-8")
         if not target.exists() or target.read_text(encoding="utf-8") != text:
             if not check:
                 target.write_text(text, encoding="utf-8")
-            written.append("manifest.json")
+            written.append(str(target.relative_to(ASSETS)))
 
     for path in written:
         print(f"{'would promote' if check else 'promoted'}  {path}")

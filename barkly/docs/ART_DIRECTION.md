@@ -1330,3 +1330,28 @@ found both, called the lock ambiguous, and skipped it -- so the one lock this
 pass most needed to update was the one it left alone, on the run that existed
 to catch exactly that. It resolves by require path now, and `DUNE_GRASS` and
 the two mounds were renamed so that nothing is left unresolved at all.
+
+
+### The room the player starts in was outside all of it
+
+Found by sampling the leftmost opaque pixel of each shipped prop after the
+contour pass. `rug.png` came back (13, 17, 35) -- the ink. `chair.png` came
+back (169, 69, 77) -- its own upholstery. The chair, the lamp, the bed and the
+shelf come from `home_prop_pack.py`, and whatever had been moving those four
+into `assets/` was not `scripts/promote-props.py`, so they shipped with no
+edge while the rug and the panelling standing beside them had one. A second
+promotion path nobody remembered existed, in the one room every player opens
+the game in.
+
+There is one recipe now: `promote-props.py` reads BUILDERS from both packs,
+`.github/workflows/barkly-world-prop-render.yml` renders both, and the home
+builders log their geometry through the same `_record()`, so
+`scripts/proportion.py` holds the furniture to the same dials. Which
+immediately said what the sampling had implied: the floor lamp's stem measured
+**0.058** of its own height -- the same wire the town lamp post was, in the
+first thing the player ever sees. It is 0.116 now.
+
+And the same aspect defect, worse: the chair's height was written `chairW *
+(398 / 374)`, the lamp's `lampW * 2`, the bed's `bedW * (254 / 512)` -- ratios
+typed into a layout, none of them what the render measured. The bed was being
+drawn 40% taller than it is.

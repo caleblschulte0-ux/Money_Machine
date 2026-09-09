@@ -187,8 +187,14 @@ describe('world scenery stays modular', () => {
 
     // And the script derives its props rather than listing them.
     expect(promote).toContain('BUILDERS = {');
+    // A PROP, not a family. This was `includes("home/")` and it failed the day
+    // the home pack was brought into this same script: promotion maps a home
+    // builder key to its shipped path with `f"home/{key}"`, which is the path
+    // SHAPE, and is exactly as derived as the rest of it. What must never
+    // appear is a prop's own name.
     for (const family of ['park', 'town', 'beach', 'home']) {
-      expect({ family, handListed: promote.includes(`"${family}/`) })
+      const named = new RegExp(`"${family}/[a-z_0-9]+`);
+      expect({ family, handListed: named.test(promote) })
         .toEqual({ family, handListed: false });
     }
   });

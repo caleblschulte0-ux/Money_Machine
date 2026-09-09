@@ -14,6 +14,13 @@ on:
       - 'claude/barkley-*'
     paths:
       - 'barkly/app/tools/blender/world_prop_pack.py'
+      # The home pack promotes through the same script now, so a change to it
+      # has to re-render here too -- otherwise promotion refuses the whole run
+      # as stale, or (worse) CI ships the world from one pack and the living
+      # room from a render made before the recipe changed.
+      - 'barkly/app/tools/blender/home_prop_pack.py'
+      - 'barkly/app/tools/blender/proportion.py'
+      - 'barkly/app/tools/blender/palette.py'
       - '.github/workflows/barkly-world-prop-render.yml'
   workflow_dispatch:
 
@@ -43,6 +50,9 @@ jobs:
 
       - name: Render modular world prop pack
         run: xvfb-run -a blender -b --python tools/blender/world_prop_pack.py
+
+      - name: Render home prop pack
+        run: xvfb-run -a blender -b --python tools/blender/home_prop_pack.py
 
       # ONE PROMOTION RECIPE, AND IT LIVES IN THE REPO.
       #

@@ -19,6 +19,13 @@ import bpy
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
+# The form recorder and the proportion dials, from the packs that own them.
+# Home furniture is drawn to the same rules as everything outdoors -- it is the
+# room the player starts in, so it is the LAST place that should be an
+# exception -- and `scripts/proportion.py` can only hold it to them if these
+# builders log their geometry the way the world pack's do.
+import world_prop_pack as wpack  # noqa: E402
+from proportion import flare, shaft, stack  # noqa: E402
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -59,6 +66,7 @@ def rgb(hex_value: str):
 
 
 def clean_scene():
+    wpack.FORMS.clear()
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
     for block in list(bpy.data.materials):
@@ -104,7 +112,7 @@ def cube(name, loc, scale, material, bevel_width=0.12, rotation=(0, 0, 0)):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     bevel(obj, bevel_width)
     obj.data.materials.append(material)
-    return obj
+    return wpack._record(obj)
 
 
 def sphere(name, loc, scale, material):
@@ -115,7 +123,7 @@ def sphere(name, loc, scale, material):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     obj.data.materials.append(material)
     bpy.ops.object.shade_smooth()
-    return obj
+    return wpack._record(obj)
 
 
 def cylinder(name, loc, radius, depth, material, rotation=(0, 0, 0), vertices=48):
@@ -124,7 +132,17 @@ def cylinder(name, loc, radius, depth, material, rotation=(0, 0, 0), vertices=48
     obj.name = name
     obj.data.materials.append(material)
     bevel(obj, min(radius * 0.22, 0.08), 3)
-    return obj
+    return wpack._record(obj)
+
+
+def cone(name, loc, radius1, radius2, depth, material, rotation=(0, 0, 0), vertices=48):
+    bpy.ops.mesh.primitive_cone_add(vertices=vertices, radius1=radius1, radius2=radius2,
+                                    depth=depth, location=loc, rotation=rotation)
+    obj = bpy.context.object
+    obj.name = name
+    obj.data.materials.append(material)
+    bevel(obj, min(radius1 * 0.22, 0.08), 3)
+    return wpack._record(obj)
 
 
 def contact_shadow(rx, ry, z=0.055):
@@ -222,17 +240,23 @@ def lamp():
     shade = make_material("Warm woven shade", tone("sun", "lit"), roughness=0.68)
     inner = make_material("Lit shade underside", tone("sun", "pop"), roughness=0.62, coat=0.04)
 
-    contact_shadow(0.62, 0.38)
-    cylinder("lamp_base", (0, 0, 0.22), 0.48, 0.22, brass)
-    cylinder("lamp_stem", (-0.02, 0, 1.55), 0.105, 2.7, wood)
+    contact_shadow(0.68, 0.42)
+    # The stem measured 0.058 of its own height -- under STOUT, the same wire
+    # the town lamp post was, in the room the player opens the game in. It is a
+    # cone now, flaring 0.22 -> 0.10 onto a foot sized off the shaft, and the
+    # shade drops onto it with a BITE instead of balancing on top.
+    cylinder("lamp_base", (0, 0, 0.20), flare(0.22) * 2.2, 0.28, brass)
+    cone("lamp_stem", (-0.02, 0, 1.58), 0.22, shaft(0.22), 2.66, wood)
     # Chunky oversize shade, a recognizable silhouette rather than a triangle icon.
-    bpy.ops.mesh.primitive_cone_add(vertices=64, radius1=0.86, radius2=0.55, depth=1.02, location=(0, 0, 3.05))
+    bpy.ops.mesh.primitive_cone_add(vertices=64, radius1=0.92, radius2=0.58, depth=1.06,
+                                    location=(0, 0, stack(2.91, 0.53)))
     shade_obj = bpy.context.object
     shade_obj.name = "lamp_shade"
     shade_obj.data.materials.append(shade)
     bevel(shade_obj, 0.08, 4)
-    cylinder("shade_lower_rim", (0, 0, 2.56), 0.86, 0.09, inner)
-    cylinder("shade_top_rim", (0, 0, 3.56), 0.55, 0.08, brass)
+    shade_z = stack(2.91, 0.53)
+    cylinder("shade_lower_rim", (0, 0, shade_z - 0.50), 0.92, 0.10, inner)
+    cylinder("shade_top_rim", (0, 0, shade_z + 0.50), 0.58, 0.09, brass)
 
 
 def bed():
@@ -325,10 +349,8 @@ BUILDERS = {
 }
 
 
-def render_prop(name, builder, ortho_scale, target):
-    clean_scene()
-    add_camera_and_lights(ortho_scale=ortho_scale, target=target)
-    builder()
+def render_prop(name):
+    """Render whatever is currently built. The BUILD happens in main()."""
     scene = bpy.context.scene
     scene.render.filepath = str(OUT / f"{name}.png")
     bpy.ops.render.render(write_still=True)
@@ -345,9 +367,19 @@ def main():
     # iterating on it. The manifest still describes every prop either way.
     only = os.environ.get("PROP_ONLY", "").strip()
     for name, (builder, scale, target, metadata) in BUILDERS.items():
+        # Built either way, rendered only when wanted: measuring costs
+        # milliseconds and it is what keeps the manifest's proportion block
+        # complete under PROP_ONLY.
+        clean_scene()
+        add_camera_and_lights(ortho_scale=scale, target=target)
+        builder()
         if not only or name.startswith(only):
-            render_prop(name, builder, scale, target)
-        manifest["assets"][name] = {"file": f"{name}.png", **metadata}
+            render_prop(name)
+        entry = {"file": f"{name}.png", **metadata}
+        form = wpack.measure_form()
+        if form:
+            entry["form"] = form
+        manifest["assets"][name] = entry
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 

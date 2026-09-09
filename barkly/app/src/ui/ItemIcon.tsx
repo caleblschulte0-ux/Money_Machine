@@ -50,7 +50,7 @@ const RENDERED: Record<string, { source: number; aspect: number }> = {
   collar_gold: { source: require('../../assets/world/item/collar_gold.png'), aspect: 224 / 142 },
   kit_bowl: { source: require('../../assets/world/item/kit_bowl.png'), aspect: 224 / 129 },
   kit_stick: { source: require('../../assets/world/item/kit_stick.png'), aspect: 224 / 66 },
-  home_bed: { source: require('../../assets/world/home/props/bed.png'), aspect: 534 / 181 },
+  home_bed: { source: require('../../assets/world/home/props/bed.png'), aspect: 546 / 193 },
 };
 
 /** Slightly darker sibling of a hex, for the shaded side of a shape. */

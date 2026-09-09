@@ -38,7 +38,15 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools" / "blender"))
 from proportion import OVERHANG, STOUT  # noqa: E402
 
-MANIFEST = ROOT / "assets" / "world" / "manifest.json"
+# Two packs, two manifests, one set of rules. Home furniture is checked
+# alongside the outdoor props on purpose: the room the player starts in is the
+# last place that should be drawn to a different standard, and it was -- the
+# floor lamp's stem measured 0.058 of its own height, the same wire the town
+# lamp post was.
+MANIFESTS = (
+    ROOT / "assets" / "world" / "manifest.json",
+    ROOT / "assets" / "world" / "home" / "props" / "manifest.json",
+)
 
 # The props that stand up. Ground courses, horizon bands, clouds, surf, rugs
 # and the inventory items are not standing objects -- they have no support and
@@ -58,6 +66,9 @@ STANDING = (
     "beach/palm",
     "beach/lifeguard",
     "beach/castle",
+    "home/chair",
+    "home/lamp",
+    "home/shelf",
 )
 
 # And the subset that stands on a SUPPORT -- a trunk, a post, a stem, a column
@@ -72,6 +83,7 @@ SUPPORTED = (
     "beach/umbrella",
     "beach/palm",
     "beach/castle",
+    "home/lamp",
 )
 
 
@@ -86,10 +98,19 @@ def rules(path, form):
 
 def main() -> int:
     check = "--check" in sys.argv[1:]
-    if not MANIFEST.exists():
-        print(f"no {MANIFEST.relative_to(ROOT)}; render and promote the pack first")
-        return 1
-    assets = json.loads(MANIFEST.read_text(encoding="utf-8"))["assets"]
+    assets = {}
+    for manifest in MANIFESTS:
+        if not manifest.exists():
+            print(f"no {manifest.relative_to(ROOT)}; render and promote that pack first")
+            return 1
+        # Keyed off the manifest's place in the repo, not the absolute path:
+        # this checkout lives under /home/user, so `"home" in manifest.parts`
+        # was true for BOTH manifests and every world prop came back looking
+        # for a form under `home/park/tree`.
+        inside = manifest.relative_to(ROOT / "assets" / "world").parts
+        prefix = "home/" if inside[0] == "home" else ""
+        for key, value in json.loads(manifest.read_text(encoding="utf-8"))["assets"].items():
+            assets[f"{prefix}{key}"] = value
 
     missing = [p for p in STANDING if "form" not in assets.get(p, {})]
     if missing:
