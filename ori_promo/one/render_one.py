@@ -36,7 +36,7 @@ import depthtools as DT
 # map_overlay / sync_overlay imports REMOVED, v31 restart -- see the note
 # at the old call site (search "legend-card and group-sync-circle").
 from spec_one import (BEATS, LABELS, ICE, TITLES, UI_OFF, WEARER_BEATS,
-                      GEN_ICE, CROP, figures, W, H, FPS, TOTAL)
+                      GEN_ICE, CROP, JITTER_BEATS, figures, W, H, FPS, TOTAL)
 
 RAW = "../raw"
 OUT = "out1"
@@ -94,6 +94,41 @@ def frames_of(clip, tin, dur, crop=None):
         raise SystemExit(f"{clip}@{tin}: wanted {n} frames, got {got}")
     a = np.frombuffer(b[:n * W * H * 3], np.uint8).reshape(n, H, W, 3)
     return [f.copy() for f in a]
+
+
+def jitter_path(n, fps, seed, amp_px=1.4, ease_s=0.4):
+    """A small, smooth, bounded synthetic drift for beats in JITTER_BEATS
+    (spec_one.py) -- see that set's own comment for why. Three summed sine
+    waves at slow, non-repeating-looking frequencies, normalized to
+    +/-amp_px: bounded by construction (unlike a random walk, which needs
+    filtering and clipping to stay put), and smooth by construction (no
+    per-frame independent noise, which reads as vibration, not drift).
+    amp_px=1.4 matches the calmer real handheld beats' own measured peak
+    (`on`/`lock`, ~0.4-1.6px) rather than the noisier ones (`reach`, ~4px)
+    -- this plate should feel steady, not shaky.
+
+    EASED IN over ease_s seconds (r158, ChatGPT's review of this plan:
+    "deterministic, low-frequency camera drift with eased acceleration,
+    not independent frame-to-frame random offsets"). Without this, frame 0
+    sits at whatever phase the sine waves start at -- not zero -- so the
+    plate would jump by up to amp_px the instant the beat begins, which
+    reads as a cut artifact, not camera motion.
+    """
+    rng = np.random.default_rng(seed)
+    t = np.arange(n) / fps
+    x = np.zeros(n, np.float32)
+    y = np.zeros(n, np.float32)
+    for _ in range(3):
+        fx, fy = rng.uniform(0.15, 0.6, 2)
+        px, py = rng.uniform(0, 2 * np.pi, 2)
+        a = rng.uniform(0.3, 1.0)
+        x += a * np.sin(2 * np.pi * fx * t + px)
+        y += a * np.sin(2 * np.pi * fy * t + py)
+    x = x / max(np.max(np.abs(x)), 1e-6) * amp_px
+    y = y / max(np.max(np.abs(y)), 1e-6) * amp_px
+    envelope = np.clip(t / max(ease_s, 1e-6), 0.0, 1.0)
+    envelope = envelope * envelope * (3 - 2 * envelope)  # smoothstep, ease-in
+    return x * envelope, y * envelope
 
 
 def _guided(guide, src, r, eps):
@@ -468,9 +503,20 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
     # to hold every plate at once. The depth pass is per-frame work
     # anyway; holding the results bought nothing.
 
+    # r157 premiumization plan: a small bounded synthetic drift on beats
+    # that would otherwise be dead-still (see spec_one.py's JITTER_BEATS).
+    # Seeded from the beat name, not randomized per run, so re-rendering
+    # the same beat reproduces the same motion rather than a new one.
+    jit_x = jit_y = None
+    if beat in JITTER_BEATS:
+        jit_x, jit_y = jitter_path(len(frames), FPS, seed=hash(beat) & 0xFFFFFFFF)
+
     tag_a = 0.0
     for i, f in enumerate(frames):
         t = i / FPS
+        if jit_x is not None:
+            M = np.float32([[1, 0, jit_x[i]], [0, 1, jit_y[i]]])
+            f = cv2.warpAffine(f, M, (W, H), borderMode=cv2.BORDER_REFLECT)
         # The photographic layer is graded BEFORE anything is drawn on
         # it, so the HUD stays clean while the plate gets the look.
         plate = FL.grade(f.astype(np.float32))

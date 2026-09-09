@@ -408,6 +408,17 @@ ICE = {}
 # deleted.
 GEN_ICE = set()
 
+# r157 premiumization plan (operator: "AI overlays still don't look
+# real/premium enough", after the crop/border and ghosting were both
+# already fixed). A mathematically dead-still hold (or a perfectly linear
+# push-in) is one of the few things a real handheld camera never
+# produces -- every live-footage beat in this film carries genuine
+# micro-motion. Beats in this set get a small, smooth, bounded synthetic
+# drift (render_one.py's jitter_path()) applied before grading, sized to
+# match the calmer real beats' own measured drift (`on`/`lock`, not the
+# noisier `reach`) rather than invented arbitrarily.
+JITTER_BEATS = {"dak", "mam"}
+
 # The score's structure, read out of the cut so it cannot drift from it.
 # Four roles, not six: this arc is ONE rise and ONE release, not a four-
 # act historical journey with an ice age in the middle.
