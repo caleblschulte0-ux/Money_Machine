@@ -93,3 +93,49 @@ describe('the palette itself', () => {
     expect(Math.max(...values)).toBeGreaterThanOrEqual(0.9);
   });
 });
+
+describe('a surface still has grain', () => {
+  /*
+   * NO TWO MATERIALS IN ONE BUILDER MAY BE THE SAME TONE.
+   *
+   * This is the failure the palette introduced and it was worse than the
+   * problem it fixed. Mapping 196 hand-picked colours onto the ramp by name,
+   * "Paving slab", "Paving slab b" and "Paving slab c" all landed on
+   * `paving.base` -- three tones that made a pavement read as slabs became one
+   * flat wash. Same for the home floor's three boards, the beach headland's
+   * four rocks, and the near grass. The town's street and the home's floor
+   * came back from the re-render as empty planes, and the reason was not the
+   * palette, it was three names that differ by one letter.
+   *
+   * Some of them were plain mistakes too: a bench's IRON took the wood family
+   * because "bench" matched before "iron", a palm's TRUNK took foliage because
+   * "palm" matched before "trunk", a lamp's BRASS took metal, a flower's STEM
+   * took berry.
+   */
+  const dirFiles = readdirSync(DIR).filter((f: string) => f.endsWith('.py') && f !== 'palette.py');
+
+  test.each(dirFiles)('%s gives its siblings different tones', (file: string) => {
+    const src = readFileSync(join(DIR, file), 'utf8');
+    const fns = [...src.matchAll(/^def (\w+)/gm)].map((m) => ({ at: m.index ?? 0, name: m[1] }));
+    const owner = (pos: number) => {
+      let name = '<module>';
+      for (const f of fns) {
+        if (f.at < pos) name = f.name;
+        else break;
+      }
+      return name;
+    };
+    const seen = new Map<string, string[]>();
+    for (const m of src.matchAll(/material\(\s*f?"([^"]+)"\s*,\s*tone\("(\w+)",\s*"(\w+)"\)/g)) {
+      const key = `${owner(m.index ?? 0)}|${m[2]}.${m[3]}`;
+      seen.set(key, [...(seen.get(key) ?? []), m[1]]);
+    }
+    const collapsed = [...seen.entries()]
+      .filter(([, names]) => names.length > 1)
+      // A distance ramp legitimately repeats its furthest step; anything that
+      // is meant to read as one surface has to be named as one material.
+      .filter(([key]) => !key.endsWith('.pop'))
+      .map(([key, names]) => `${key}: ${names.join(', ')}`);
+    expect(collapsed).toEqual([]);
+  });
+});

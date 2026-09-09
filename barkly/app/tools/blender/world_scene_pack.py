@@ -676,7 +676,7 @@ def _tree(x: float, y: float, s: float, canopy: str = tone("foliage", "base"),
 
 def _bench(x: float, y: float):
     wood = pack.material("Bench wood", tone("wood", "base"), roughness=0.72)
-    iron = pack.material("Bench iron", tone("wood", "base"), roughness=0.60, metallic=0.4)
+    iron = pack.material("Bench iron", tone("metal", "shade"), roughness=0.60, metallic=0.4)
     for i, (dz, dy) in enumerate(((0.72, 0.0), (0.98, -0.20), (1.24, -0.34))):
         bx, by = TURN(x, y + dy)
         pack.cube(f"slat{i}", (bx, by, dz), (1.55, 0.10, 0.055), wood, 0.03,
@@ -778,7 +778,7 @@ def beach():
 def _surf(y: float):
     """Foam where the two surfaces meet. It BREAKS, or it is a kerb."""
     foam = pack.material("Foam", tone("cream", "base"), roughness=0.94)
-    wash = pack.material("Foam wash", tone("cream", "base"), roughness=0.96)
+    wash = pack.material("Foam wash", tone("sea", "lit"), roughness=0.96)
     _poly("wash", [(-70.0, y - 1.4), (70.0, y - 1.4), (70.0, y + 0.5), (-70.0, y + 0.5)], 0.008, wash)
     groups = ((-26.0, 7.0), (-14.0, 9.0), (-1.0, 6.0), (7.0, 8.0), (18.0, 7.0))
     for gi, (gx, glen) in enumerate(groups):
@@ -792,7 +792,7 @@ def _surf(y: float):
 
 def _headland(y: float):
     far = pack.material("Headland", tone("stone", "base"), roughness=0.94)
-    far_b = pack.material("Headland b", tone("stone", "base"), roughness=0.94)
+    far_b = pack.material("Headland b", tone("stone", "lit"), roughness=0.94)
     for i in range(23):
         x = -34.0 + i * 3.0
         wx, wy = TURN(x, y + ((i * 0.618) % 1.0) * 2.0)
@@ -826,7 +826,7 @@ def _dune(x: float, y: float, s: float = 1.0):
 def _lifeguard(x: float, y: float, s: float = 1.0):
     post = pack.material("Tower post", tone("wood", "base"), roughness=0.86)
     body = pack.material("Tower body", tone("roof", "base"), roughness=0.74)
-    roof = pack.material("Tower roof", tone("roof", "base"), roughness=0.70)
+    roof = pack.material("Tower roof", tone("berry", "shade"), roughness=0.70)
     for dx, dy in ((-1.0, -0.8), (1.0, -0.8), (-1.0, 0.8), (1.0, 0.8)):
         lx, ly = TURN(x + dx * s, y + dy * s)
         pack.cylinder(f"post{dx}{dy}{x:.1f}", (lx, ly, 0.85 * s), 0.17 * s, 1.7 * s, post)
@@ -847,9 +847,9 @@ def _lifeguard(x: float, y: float, s: float = 1.0):
 
 
 def _umbrella(x: float, y: float, s: float = 1.0):
-    pole = pack.material("Umbrella pole", tone("roof", "base"), roughness=0.85)
+    pole = pack.material("Umbrella pole", tone("cream", "lit"), roughness=0.85)
     canopy = pack.material("Umbrella canopy", tone("foliage", "base"), roughness=0.70)
-    knob = pack.material("Umbrella knob", tone("roof", "base"), roughness=0.60)
+    knob = pack.material("Umbrella knob", tone("sun", "base"), roughness=0.60)
     px, py = TURN(x, y)
     pack.cylinder(f"upole{x:.1f}", (px, py, 1.5 * s), 0.09 * s, 3.0 * s, pole)
     pack.cone(f"ucan{x:.1f}", (px, py, 3.15 * s), 2.1 * s, 0.10 * s, 0.62 * s, canopy)

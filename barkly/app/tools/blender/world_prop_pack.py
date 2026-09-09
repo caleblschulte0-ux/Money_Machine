@@ -558,7 +558,7 @@ def park_tree():
 def park_bench():
     wood = material("Bench honey wood", tone("wood", "base"), roughness=0.58, coat=0.05)
     wood_light = material("Bench sun-face wood", tone("wood", "lit"), roughness=0.52, coat=0.06)
-    metal = material("Bench iron", tone("wood", "base"), roughness=0.36, metallic=0.64)
+    metal = material("Bench iron", tone("metal", "shade"), roughness=0.36, metallic=0.64)
 
     contact_shadow(1.65, 0.52)
     for z in (1.15, 1.52, 1.88):
@@ -573,7 +573,7 @@ def park_bench():
 def park_hedge():
     leaf = material("Hedge green", tone("foliage", "base"), roughness=0.82)
     leaf_light = material("Hedge light", tone("foliage", "lit"), roughness=0.78)
-    earth = material("Hedge earth", tone("foliage", "base"), roughness=0.94)
+    earth = material("Hedge earth", tone("bark", "shade"), roughness=0.94)
     contact_shadow(1.60, 0.48)
     sphere("earth", (0, 0.18, 0.25), (1.50, 0.52, 0.20), earth)
     for i, x in enumerate((-1.18, -0.58, 0, 0.58, 1.18)):
@@ -646,7 +646,7 @@ def park_grass_clump():
     """
     deep = material("Clump deep", tone("foliage", "deep"), roughness=0.88)
     mid = material("Clump mid", tone("foliage", "base"), roughness=0.86)
-    dark = material("Clump dark", tone("foliage", "base"), roughness=0.90)
+    dark = material("Clump dark", tone("foliage", "shade"), roughness=0.90)
     _blades(23, 0.41, 0.82, 1.60, (deep, mid, dark, deep, mid), lean=0.46, thickness=0.040)
 
 
@@ -673,7 +673,7 @@ def park_near_grass():
     """A dense band of grass seen from a step away."""
     deep = material("Near grass deep", tone("grass", "deep"), roughness=0.90)
     mid = material("Near grass mid", tone("grass", "base"), roughness=0.88)
-    dark = material("Near grass dark", tone("grass", "base"), roughness=0.92)
+    dark = material("Near grass dark", tone("grass", "shade"), roughness=0.92)
     lit = material("Near grass lit", tone("grass", "lit"), roughness=0.86)
     # Several roots across the width rather than one fan, or it reads as a
     # single bush lying on its side -- and offset in the CAMERA's frame, not
@@ -694,54 +694,149 @@ def park_near_grass():
 
 
 def beach_near_sand():
-    """Ripples and shells, close enough to see the grain.
+    """Wet sand at your feet: ripples, a wrack line, shells and marram.
 
     CAMERA-FACING, like every other wide band in this pack. The first version
     laid its ripples along the world axes and the 15-degree camera yaw turned
     the whole strip into a diagonal ribbon with spikes on it. `turn` puts the
     band in the camera's own frame so `x` really is "across the picture".
+
+    AND IT HAS TO CARRY SILHOUETTE, not just tone. Four ripples and four
+    shells across a whole phone width is not a near plane, it is a slightly
+    bumpy floor -- the beach's bottom half read as an empty sand-coloured
+    rectangle in every capture. The park's near band works because things
+    STAND UP in it and get cropped by the bottom edge. So this one grew a
+    wrack line (the dark seaweed the tide leaves, which is also the only dark
+    value anywhere near the bottom of that scene), pebbles with real relief,
+    and marram blades at both edges where the dry sand starts.
     """
     turn = facing(camera_yaw())
     theta = camera_yaw()
     sand = material("Near sand", tone("sand", "base"), roughness=0.95)
-    sand_lit = material("Near sand lit", tone("sand", "lit"), roughness=0.94)
     shade = material("Near sand shade", tone("sand", "shade"), roughness=0.96)
     shell = material("Near shell", tone("cream", "base"), roughness=0.80)
+    shell_warm = material("Near shell warm", tone("cream", "lit"), roughness=0.78)
+    wrack = material("Near wrack", tone("foliage", "deep"), roughness=0.94)
+    wrack_lit = material("Near wrack lit", tone("foliage", "shade"), roughness=0.92)
+    pebble = material("Near pebble", tone("stone", "base"), roughness=0.88)
+    pebble_lit = material("Near pebble lit", tone("stone", "lit"), roughness=0.86)
 
     # Low, WIDE mounds rather than long thin lenses. A sphere squashed to a
     # tenth of its length is a blade, which is what the first pass rendered:
     # four green-looking spikes lying across the sand.
     for i, (ox, oy, rx, ry, rz, mat) in enumerate((
-        (-2.30, -0.34, 2.60, 0.46, 0.085, shade),
-        (0.90, -0.06, 3.00, 0.50, 0.095, sand),
-        (-1.10, 0.30, 2.70, 0.44, 0.080, sand_lit),
-        (2.40, 0.60, 2.20, 0.40, 0.075, sand),
+        (-3.60, -0.40, 1.30, 0.30, 0.050, shade),
+        (-2.30, -0.34, 1.45, 0.32, 0.055, shade),
+        (0.90, -0.06, 1.60, 0.34, 0.060, sand),
+        (-1.10, 0.30, 1.40, 0.30, 0.050, sand),
+        (2.40, 0.60, 1.25, 0.28, 0.048, shade),
+        (3.90, 0.16, 1.30, 0.30, 0.050, sand),
     )):
         cx, cy = turn(ox, oy)
         obj = sphere(f"ripple_{i}", (cx, cy, rz * 0.5), (rx, ry, rz), mat)
         obj.rotation_euler = (0, 0, theta)
 
-    for i, (ox, oy) in enumerate(((-3.4, 0.22), (-1.0, -0.28), (1.6, 0.40), (3.7, -0.10))):
+    # The wrack line. Small, dark, irregular, and the only deep value in the
+    # bottom third of the beach -- which is what stops the sand reading as one
+    # flat sheet of the same colour.
+    for i, (ox, oy, r) in enumerate((
+        (-4.6, 0.02, 0.20), (-3.9, -0.10, 0.15), (-3.3, 0.08, 0.22),
+        (-2.1, -0.04, 0.17), (-1.4, 0.10, 0.13), (-0.5, -0.08, 0.21),
+        (0.4, 0.06, 0.16), (1.3, -0.02, 0.19), (2.2, 0.09, 0.14),
+        (3.1, -0.06, 0.20), (4.0, 0.04, 0.16), (4.8, -0.09, 0.18),
+    )):
         cx, cy = turn(ox, oy)
-        sphere(f"nearshell_{i}", (cx, cy, 0.11), (0.26, 0.20, 0.085), shell)
+        sphere(f"wrack_{i}", (cx, cy, 0.05), (r, r * 0.42, 0.045),
+               wrack if i % 3 else wrack_lit)
+
+    for i, (ox, oy, r) in enumerate((
+        (-4.1, 0.34, 0.20), (-2.6, 0.42, 0.15), (-0.2, 0.36, 0.23),
+        (1.9, 0.44, 0.17), (3.4, 0.32, 0.19),
+    )):
+        cx, cy = turn(ox, oy)
+        sphere(f"nearpeb_{i}", (cx, cy, r * 0.34), (r, r * 0.74, r * 0.52),
+               pebble_lit if i % 2 else pebble)
+
+    for i, (ox, oy) in enumerate(((-3.4, 0.22), (-1.0, -0.28), (1.6, 0.40), (3.7, -0.10),
+                                  (-4.9, -0.20), (0.6, 0.52))):
+        cx, cy = turn(ox, oy)
+        sphere(f"nearshell_{i}", (cx, cy, 0.11), (0.26, 0.20, 0.085),
+               shell_warm if i % 2 else shell)
+
+    # NO TALL THINGS IN A WIDE THIN BAND. The first version of this put marram
+    # blades at both ends for silhouette; the blades doubled the strip's bbox
+    # height, and because the app sizes this prop from its ASPECT the whole
+    # near plane drew 1.75x deeper and hung below the care tray. Height in the
+    # near plane belongs in a prop of its own (beach/dune_grass); what this
+    # band carries is GRAIN -- ripples, wrack, pebbles, shells.
 
 
 def town_near_paving():
-    """Slabs at arm's length, with the joints wide enough to read."""
+    """Slabs at arm's length, with a kerb lip, weeds in the joints and grit.
+
+    THE SLABS ALONE WERE NOT A NEAR PLANE. One course of seven flat cubes lying
+    on the ground gives the eye a change of tone and nothing to measure depth
+    against, and the town's bottom half read as a pale empty rectangle in every
+    capture -- the single worst area in any of the four places. The park's near
+    band works because things STAND UP in it and are cropped by the bottom of
+    the frame.
+
+    So: two courses instead of one (a street has a joint running along it, not
+    just across it), a raised kerb lip at the very front, weeds pushing through
+    the joints, and grit. The weeds are the important part -- they are the only
+    green in the scene below the planter, and a pavement with something growing
+    out of it is a place rather than a texture.
+    """
     turn = facing(camera_yaw())
     theta = camera_yaw()
     grout = material("Near paving grout", tone("stone", "shade"), roughness=0.94)
-    slab_a = material("Near paving slab", tone("paving", "base"), roughness=0.86)
+    slab_a = material("Near paving slab", tone("paving", "lit"), roughness=0.86)
     slab_b = material("Near paving slab b", tone("paving", "base"), roughness=0.86)
-    slab_c = material("Near paving slab c", tone("paving", "base"), roughness=0.84)
+    slab_c = material("Near paving slab c", tone("paving", "pop"), roughness=0.84)
+    kerb = material("Near kerb lip", tone("stone", "base"), roughness=0.88)
+    kerb_top = material("Near kerb top", tone("stone", "lit"), roughness=0.86)
+    grit = material("Near grit", tone("stone", "deep"), roughness=0.92)
+    weed = material("Near weed", tone("grass", "shade"), roughness=0.90)
+    weed_lit = material("Near weed lit", tone("grass", "base"), roughness=0.88)
 
     bx, by = turn(0.0, 0.10)
-    cube("near_base", (bx, by, 0.02), (6.4, 0.92, 0.02), grout, 0.02, (0, 0, theta))
+    cube("near_base", (bx, by, 0.02), (6.4, 1.30, 0.02), grout, 0.02, (0, 0, theta))
+
+    # Two courses, offset like real paving, so the joints make a grid and not
+    # a row of stripes.
     tones = (slab_a, slab_b, slab_c, slab_b, slab_a, slab_c, slab_a)
-    for i, ox in enumerate((-5.2, -3.5, -1.8, -0.1, 1.6, 3.3, 5.0)):
-        cx, cy = turn(ox, 0.10)
-        cube(f"near_slab_{i}", (cx, cy, 0.07), (0.79, 0.86, 0.05),
-             tones[i % len(tones)], 0.05, (0, 0, theta))
+    for row, (oy, shift) in enumerate(((0.44, 0.0), (-0.42, 0.85))):
+        for i, ox in enumerate((-5.2, -3.5, -1.8, -0.1, 1.6, 3.3, 5.0)):
+            cx, cy = turn(ox + shift, oy)
+            cube(f"near_slab_{row}_{i}", (cx, cy, 0.07), (0.79, 0.40, 0.05),
+                 tones[(i + row) % len(tones)], 0.05, (0, 0, theta))
+
+    # The kerb lip at the very front, cropped by the bottom edge.
+    kx, ky = turn(0.0, -0.98)
+    cube("near_kerb", (kx, ky, 0.10), (6.6, 0.26, 0.10), kerb, 0.04, (0, 0, theta))
+    tx, ty = turn(0.0, -0.86)
+    cube("near_kerb_top", (tx, ty, 0.19), (6.6, 0.16, 0.03), kerb_top, 0.02, (0, 0, theta))
+
+    for i, (ox, oy, r) in enumerate((
+        (-4.4, -0.62, 0.075), (-2.9, -0.56, 0.055), (-1.2, -0.66, 0.085),
+        (0.7, -0.54, 0.060), (2.6, -0.64, 0.080), (4.2, -0.58, 0.065),
+    )):
+        cx, cy = turn(ox, oy)
+        sphere(f"near_grit_{i}", (cx, cy, r * 0.5), (r, r * 0.8, r * 0.55), grit)
+
+    # Weeds in the joints. SHORT, and that is not a style note: this band is
+    # 0.45 units tall and the app sizes it from its aspect, so a 0.52-tall weed
+    # doubles the drawn depth of the whole near plane. A pavement, not a meadow,
+    # and not a hedge.
+    for i, (ox, oy) in enumerate(((-3.42, 0.02), (-0.06, 0.02), (3.34, 0.02))):
+        dx, dy = turn(ox, oy)
+        before = set(bpy.data.objects)
+        _blades(7, 0.19 + i * 0.37, 0.30, 0.22 + 0.06 * ((i * 0.73) % 1.0),
+                (weed, weed_lit, weed, weed_lit, weed),
+                lean=0.66, thickness=0.030)
+        for obj in set(bpy.data.objects) - before:
+            obj.location.x += dx
+            obj.location.y += dy
 
 
 def home_near_floor():
@@ -749,8 +844,8 @@ def home_near_floor():
     turn = facing(camera_yaw())
     theta = camera_yaw()
     board = material("Near board wood", tone("wood", "base"), roughness=0.72)
-    board_b = material("Near board wood b", tone("wood", "base"), roughness=0.74)
-    board_c = material("Near board wood c", tone("wood", "base"), roughness=0.70)
+    board_b = material("Near board wood b", tone("wood", "shade"), roughness=0.74)
+    board_c = material("Near board wood c", tone("wood", "lit"), roughness=0.70)
     seam = material("Near board seam", tone("stone", "shade"), roughness=0.86)
 
     bx, by = turn(0.0, 0.10)
@@ -764,7 +859,7 @@ def home_near_floor():
 
 def park_wildflowers():
     """A tuft with three heads on it, so the scatter is not all one object."""
-    mid = material("Flower stem", tone("berry", "base"), roughness=0.86)
+    mid = material("Flower stem", tone("grass", "base"), roughness=0.86)
     deep = material("Flower stem deep", tone("berry", "deep"), roughness=0.88)
     petal = material("Flower petal", tone("berry", "base"), roughness=0.74)
     petal_b = material("Flower petal pale", tone("berry", "lit"), roughness=0.74)
@@ -874,7 +969,7 @@ def town_rooftops():
     slate = material("Roof slate", tone("roof", "base"), roughness=0.86)
     slate_b = material("Roof tile", tone("paving", "base"), roughness=0.86)
     wall = material("Far wall", tone("brick", "base"), roughness=0.84)
-    wall_b = material("Far wall warm", tone("brick", "base"), roughness=0.84)
+    wall_b = material("Far wall warm", tone("brick", "lit"), roughness=0.84)
     trim = material("Far trim", tone("metal", "lit"), roughness=0.86)
 
     blocks = (
@@ -930,8 +1025,8 @@ def town_paving():
     theta = camera_yaw()
     grout = material("Paving grout", tone("stone", "shade"), roughness=0.90)
     slab_a = material("Paving slab", tone("paving", "base"), roughness=0.82)
-    slab_b = material("Paving slab b", tone("paving", "base"), roughness=0.82)
-    slab_c = material("Paving slab c", tone("paving", "base"), roughness=0.80)
+    slab_b = material("Paving slab b", tone("paving", "shade"), roughness=0.82)
+    slab_c = material("Paving slab c", tone("paving", "lit"), roughness=0.80)
 
     # ONE course, deliberately. Two rows was the first attempt and the camera
     # ate it: looking down at 22 degrees, a 0.6-deep band projects to about a
@@ -967,8 +1062,8 @@ def town_kerb():
     turn = facing(camera_yaw())
     theta = camera_yaw()
     stone = material("Kerb stone", tone("paving", "base"), roughness=0.80)
-    stone_b = material("Kerb stone b", tone("paving", "base"), roughness=0.82)
-    edge = material("Kerb edge", tone("paving", "base"), roughness=0.84)
+    stone_b = material("Kerb stone b", tone("paving", "lit"), roughness=0.82)
+    edge = material("Kerb edge", tone("paving", "shade"), roughness=0.84)
     for i in range(14):
         x = -3.15 + i * 0.46
         bx, by = turn(x, 0.0)
@@ -1015,8 +1110,8 @@ def town_lamp():
     # family as townBlueEdge, so the two tallest objects in Town now belong to
     # Town's palette rather than reading as generic street furniture.
     iron = material("Lamp iron", tone("metal", "base"), roughness=0.42, metallic=0.10)
-    brass = material("Lamp brass", tone("metal", "base"), roughness=0.30, metallic=0.24)
-    glass = material("Lamp glow glass", tone("metal", "base"), roughness=0.22, coat=0.26)
+    brass = material("Lamp brass", tone("sun", "base"), roughness=0.30, metallic=0.24)
+    glass = material("Lamp glow glass", tone("sun", "pop"), roughness=0.22, coat=0.26)
     contact_shadow(0.56, 0.34)
     cylinder("base", (0, 0, 0.20), 0.42, 0.18, iron)
     cylinder("post", (0, 0, 1.72), 0.10, 3.05, iron)
@@ -1041,8 +1136,8 @@ def town_planter():
 def beach_umbrella():
     wood = material("Umbrella wood", tone("wood", "base"), roughness=0.66)
     coral = material("Umbrella coral", tone("roof", "base"), roughness=0.56, coat=0.05)
-    coral_dark = material("Umbrella coral edge", tone("roof", "base"), roughness=0.62)
-    yellow = material("Umbrella yellow", tone("roof", "base"), roughness=0.58, coat=0.05)
+    coral_dark = material("Umbrella coral edge", tone("roof", "shade"), roughness=0.62)
+    yellow = material("Umbrella yellow", tone("sun", "base"), roughness=0.58, coat=0.05)
     contact_shadow(1.22, 0.52)
     cylinder("umbrella_pole", (0, 0.08, 1.62), 0.09, 3.10, wood)
     cone("canopy", (0, 0, 3.44), 1.62, 0.18, 0.74, coral)
@@ -1097,10 +1192,10 @@ def beach_headland():
     Camera-facing frame, like every wide band in this pack.
     """
     turn = facing(camera_yaw())
-    far = material("Headland far", tone("stone", "base"), roughness=0.92)
-    far_b = material("Headland far b", tone("stone", "base"), roughness=0.92)
+    far = material("Headland far", tone("stone", "lit"), roughness=0.92)
+    far_b = material("Headland far b", tone("stone", "pop"), roughness=0.92)
     far_c = material("Headland far c", tone("stone", "base"), roughness=0.92)
-    rock = material("Headland rock", tone("stone", "base"), roughness=0.90)
+    rock = material("Headland rock", tone("stone", "shade"), roughness=0.90)
 
     mats = (far, far_b, far_c, far_b, far)
     for i in range(15):
@@ -1130,7 +1225,7 @@ def beach_shells():
     because at 58px there is no surface, only an outline.
     """
     shell = material("Shell", tone("cream", "base"), roughness=0.58, coat=0.10)
-    shell_warm = material("Shell warm", tone("cream", "base"), roughness=0.58, coat=0.10)
+    shell_warm = material("Shell warm", tone("cream", "lit"), roughness=0.58, coat=0.10)
     hinge = material("Shell hinge", tone("metal", "base"), roughness=0.66)
     pebble = material("Pebble", tone("stone", "base"), roughness=0.86)
 
@@ -1175,8 +1270,8 @@ def beach_castle():
     sand = material("Castle sand", tone("sand", "base"), roughness=0.92)
     sand_light = material("Castle sun face", tone("sun", "lit"), roughness=0.90)
     sand_dark = material("Castle depth", tone("sand", "shade"), roughness=0.94)
-    flag = material("Castle flag", tone("roof", "base"), roughness=0.60, coat=0.04)
-    wood = material("Flag pole", tone("roof", "base"), roughness=0.72)
+    flag = material("Castle flag", tone("berry", "base"), roughness=0.60, coat=0.04)
+    wood = material("Flag pole", tone("cream", "lit"), roughness=0.72)
     contact_shadow(1.32, 0.52)
     cube("castle_base", (0, 0.08, 0.48), (1.10, 0.60, 0.46), sand, 0.16)
     for i, x in enumerate((-0.82, 0, 0.82)):
@@ -1190,10 +1285,10 @@ def beach_castle():
 
 
 def beach_palm():
-    trunk = material("Palm trunk", tone("foliage", "base"), roughness=0.78)
-    trunk_light = material("Palm trunk light", tone("foliage", "lit"), roughness=0.72)
+    trunk = material("Palm trunk", tone("bark", "base"), roughness=0.78)
+    trunk_light = material("Palm trunk light", tone("bark", "lit"), roughness=0.72)
     leaf = material("Palm leaf", tone("foliage", "base"), roughness=0.80)
-    leaf_light = material("Palm leaf light", tone("foliage", "lit"), roughness=0.76)
+    leaf_light = material("Palm leaf light", tone("foliage", "pop"), roughness=0.76)
     contact_shadow(1.12, 0.50)
     for i in range(6):
         x = -0.10 + i * 0.08
@@ -1339,8 +1434,8 @@ def home_care_tray():
     apologising for the lighting, check the colour space before tuning it.
     """
     wood = material("Tray wood", tone("wood", "base"), roughness=0.58, coat=0.05)
-    floor = material("Tray floor", tone("wood", "base"), roughness=0.66, coat=0.03)
-    front = material("Tray front", tone("wood", "shade"), roughness=0.62, coat=0.04)
+    floor = material("Tray floor", tone("wood", "shade"), roughness=0.66, coat=0.03)
+    front = material("Tray front", tone("wood", "deep"), roughness=0.62, coat=0.04)
     rim = material("Tray rim", tone("wood", "lit"), roughness=0.50, coat=0.08)
     shine = material("Tray shine", tone("wood", "pop"), roughness=0.40, coat=0.12)
     brass = material("Tray brass", tone("sun", "base"), roughness=0.30, metallic=0.72)
@@ -1770,9 +1865,9 @@ def home_vista():
     mid = material("Vista mid", tone("foliage", "lit"), roughness=0.92)
     mid_b = material("Vista mid b", tone("foliage", "pop"), roughness=0.92)
     near = material("Vista near", tone("foliage", "base"), roughness=0.90)
-    near_b = material("Vista near b", tone("foliage", "lit"), roughness=0.90)
+    near_b = material("Vista near b", tone("foliage", "pop"), roughness=0.90)
     trunk = material("Vista trunk", tone("bark", "base"), roughness=0.88)
-    leaf = material("Vista leaf", tone("foliage", "base"), roughness=0.90)
+    leaf = material("Vista leaf", tone("foliage", "shade"), roughness=0.90)
 
     # Far: the TALLEST band, and the one furthest back. Hills read as distant
     # because they are pale and high, not because they are small.
@@ -1818,8 +1913,8 @@ def beach_surf():
     ends so the app can hang it off the frame edges.
     """
     turn = facing(camera_yaw())
-    foam = material("Surf foam", tone("sea", "base"), roughness=0.94, coat=0.0)
-    wash = material("Surf wash", tone("sea", "base"), roughness=0.96, coat=0.0)
+    foam = material("Surf foam", tone("cream", "pop"), roughness=0.94, coat=0.0)
+    wash = material("Surf wash", tone("sea", "lit"), roughness=0.96, coat=0.0)
 
     # The spent wash: what is left after a wave has broken, low and continuous,
     # so the broken crest above it still has a waterline to sit on.

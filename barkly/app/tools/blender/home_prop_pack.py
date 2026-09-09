@@ -217,7 +217,7 @@ def chair():
 
 
 def lamp():
-    brass = make_material("Lamp brass", tone("metal", "base"), roughness=0.28, metallic=0.72)
+    brass = make_material("Lamp brass", tone("sun", "base"), roughness=0.28, metallic=0.72)
     wood = make_material("Lamp stem wood", tone("wood", "base"), roughness=0.52, coat=0.04)
     shade = make_material("Warm woven shade", tone("sun", "lit"), roughness=0.68)
     inner = make_material("Lit shade underside", tone("sun", "pop"), roughness=0.62, coat=0.04)
@@ -291,12 +291,12 @@ def bed():
 
 def shelf():
     wood = make_material("Honey painted wood", tone("wood", "base"), roughness=0.52, coat=0.04)
-    wood_dark = make_material("Shelf recess", tone("wood", "base"), roughness=0.70)
-    cream = make_material("Cabinet inset", tone("wood", "base"), roughness=0.64)
-    brass = make_material("Shelf brass", tone("wood", "base"), roughness=0.30, metallic=0.68)
+    wood_dark = make_material("Shelf recess", tone("wood", "shade"), roughness=0.70)
+    cream = make_material("Cabinet inset", tone("wood", "lit"), roughness=0.64)
+    brass = make_material("Shelf brass", tone("sun", "base"), roughness=0.30, metallic=0.68)
     book_red = make_material("Muted red book", tone("berry", "base"), roughness=0.70)
     book_blue = make_material("Muted blue book", tone("sea", "base"), roughness=0.70)
-    trophy = make_material("Trophy gold", tone("sun", "base"), roughness=0.28, metallic=0.72)
+    trophy = make_material("Trophy gold", tone("sun", "lit"), roughness=0.28, metallic=0.72)
 
     contact_shadow(1.05, 0.46)
     # One strong cabinet mass with actual depth and just a few story objects.

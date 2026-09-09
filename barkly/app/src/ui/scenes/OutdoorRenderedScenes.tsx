@@ -217,7 +217,7 @@ const TOWN_NEAR_PAVING = require('../../../assets/world/town/props/near_paving.p
 /* Trimmed renders' own aspects; __tests__/scene_surfaces.test.ts holds them. */
 const ROOFTOPS_ASPECT = 640 / 144;
 const KERB_ASPECT = 605 / 33;
-const NEAR_PAVING_ASPECT = 640 / 45;
+const NEAR_PAVING_ASPECT = 640 / 58;
 const PAVING_ASPECT = 638 / 21;
 
 /**
@@ -264,7 +264,7 @@ const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png')
 const HEADLAND_ASPECT = 640 / 67;
 const SURF_ASPECT = 640 / 55;
 const SHELLS_ASPECT = 272 / 142;
-const NEAR_SAND_ASPECT = 554 / 40;
+const NEAR_SAND_ASPECT = 604 / 38;
 const MARRAM_ASPECT = 212 / 249;
 
 /**
