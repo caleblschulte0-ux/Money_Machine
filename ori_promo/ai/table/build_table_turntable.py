@@ -14,14 +14,33 @@ same design (glasses_turn_a.png front three-quarter, _b.png right
 profile, _c.png rear three-quarter, _d.png front/top) -- so this builds
 the real thing instead.
 
-METHOD: four ffmpeg xfade dissolves chained in sequence (a -> b -> c ->
-d), not a synthesized rotation -- there is no 3D model here, only four
-real generated angles, so a cross-dissolve between them is the honest
-way to suggest a turn without claiming a smoothness the source doesn't
-have. 1672x941 sources (all four identical) scale cleanly to 1920x1080
-with no crop needed -- already ~16:9.
+METHOD, REVISED (operator: "still a lot needed... that video looks like
+shit" -- the turntable was one of the specifics confirmed). The first cut
+used xfade's plain "fade" (a straight alpha cross-dissolve) between four
+angles that are structurally very different (front three-quarter, side
+profile, rear three-quarter, front/top) -- checked directly by extracting
+frames mid-transition, and every single transition shows a visible
+double-exposure ghost (two overlapping sets of temples/lenses at once,
+half-transparent). A cross-fade only reads as smooth motion when
+consecutive images are close enough in structure that blending them
+looks like blur, not superposition; four widely-spaced angles of a rigid
+object fail that test every time, at any transition duration.
 
-TIMING: 4 images, 0.5s crossfade each of the 3 transitions, total beat
+FIX: xfade transition type changed fade -> slideleft (a hard directional
+wipe, one angle slides fully off-frame as the next slides on -- no two
+images ever share a pixel with partial opacity, so there is no ghost to
+produce), and shortened from 0.5s to 0.3s so each swap reads as a quick,
+deliberate turn rather than a lingering effect. This is not a placeholder
+for a still-absent "real" motion -- a directional wipe between real
+photographs is what most actual product-reveal edits use for exactly
+this shot when they don't have a physical turntable rig, and it never
+lies about having smoothness the source doesn't have (the fade attempt
+did, by implying continuous rotation between only 4 samples).
+
+1672x941 sources (all four identical) scale cleanly to 1920x1080 with no
+crop needed -- already ~16:9.
+
+TIMING: 4 images, 0.3s wipe for each of the 3 transitions, total beat
 duration `dur` (default 6.0, matches spec_one.py's `table` beat). Solving
 clip_dur*4 - transition*3 = dur for clip_dur so the math is exact rather
 than approximate.
@@ -47,7 +66,7 @@ DST = os.path.join(RAW, "IMG_TABLE1.MOV")
 # needed; these are flatter studio-lit product shots with less to compress.
 
 
-def build(dur=6.0, fps=30, transition=0.5):
+def build(dur=6.0, fps=30, transition=0.3):
     n_img = len(IMAGES)
     clip_dur = (dur + (n_img - 1) * transition) / n_img
 
@@ -57,12 +76,15 @@ def build(dur=6.0, fps=30, transition=0.5):
 
     # Each input: scale to a shared canvas + fixed fps, required before xfade
     # (it needs constant, matching frame rate/size on every input stream).
+    # slideleft, not fade -- see file header. A directional wipe never
+    # overlaps two images at partial opacity, so it cannot ghost the way
+    # a cross-dissolve did between these four structurally different angles.
     filt = [f"[{i}:v]scale=1920:1080,fps={fps},format=yuv420p[s{i}]" for i in range(n_img)]
     chain = "s0"
     off = clip_dur - transition
     for i in range(1, n_img):
         outlab = f"x{i}" if i < n_img - 1 else "vout"
-        filt.append(f"[{chain}][s{i}]xfade=transition=fade:duration={transition}:offset={off:.4f}[{outlab}]")
+        filt.append(f"[{chain}][s{i}]xfade=transition=slideleft:duration={transition}:offset={off:.4f}[{outlab}]")
         chain = outlab
         off += clip_dur - transition
 
@@ -70,7 +92,7 @@ def build(dur=6.0, fps=30, transition=0.5):
     cmd += ["-filter_complex", filter_complex, "-map", "[vout]",
             "-t", str(dur), "-r", str(fps), "-pix_fmt", "yuv420p", DST]
     subprocess.run(cmd, check=True)
-    print(f"  wrote {DST} ({dur}s, {n_img}-angle real turntable cross-dissolve)")
+    print(f"  wrote {DST} ({dur}s, {n_img}-angle real turntable, directional wipe between angles)")
 
 
 if __name__ == "__main__":

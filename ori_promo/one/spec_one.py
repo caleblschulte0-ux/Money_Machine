@@ -282,7 +282,11 @@ BEATS = [
  # ai/table/build_table_turntable.py: a REAL turntable, four r146
  # ChatGPT-generated angles of the same glasses_hero_chatgpt.jpg design
  # (front three-quarter, right profile, rear three-quarter, front/top),
- # cross-dissolved in sequence -- not a synthesized spin out of one flat
+ # swapped with a directional wipe (not a cross-dissolve -- an early pass
+ # used xfade's plain "fade" and it ghosted badly between four angles
+ # this structurally different, checked directly on extracted frames; a
+ # slideleft wipe never overlaps two images at partial opacity, so there
+ # is nothing left to ghost) -- not a synthesized spin out of one flat
  # image (build_table_plate.py's now-superseded first pass; see that
  # script's own header for why that would have failed the operator's
  # "obviously real" standard).
