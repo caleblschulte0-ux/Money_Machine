@@ -28,6 +28,7 @@
 import { chromium } from 'playwright';
 import { browserOptions } from './lib/browser.mjs';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
+import { loadDevelopedSave, reachPlace } from './lib/playtest-save.mjs';
 
 const [w, h] = (process.argv[3] || '390x844').split('x').map(Number);
 const PLACES = ['home', 'park', 'town', 'beach'];
@@ -46,30 +47,28 @@ await page.addInitScript(() => localStorage.setItem('barkly/profile/default/onbo
 await page.goto(`file://${process.cwd()}/dist/playtest/index.html`);
 await page.waitForTimeout(6500);
 
-async function loadDevelopedSave() {
-  try {
-    await page.getByRole('button', { name: /more|⋯|\.\.\./i }).first().click({ timeout: 2500 });
-    await page.waitForTimeout(600);
-    await page.getByText(/playtest saves/i).first().click({ timeout: 2500 });
-    await page.waitForTimeout(800);
-    await page.getByText(/longterm|developed|established/i).first().click({ timeout: 2500 });
-    await page.waitForTimeout(2500);
-    return true;
-  } catch {
-    return false;
-  }
-}
-await loadDevelopedSave();
+await loadDevelopedSave(page);
 
 const rows = [];
 for (const place of PLACES) {
-  try {
-    await page.getByRole('tab', { name: new RegExp(place, 'i') }).first().click({ timeout: 3000 });
-  } catch {
-    try { await page.getByText(new RegExp(`^${place}$`, 'i')).first().click({ timeout: 3000 }); }
-    catch { console.log(`  ${place}: unreachable`); continue; }
+  /*
+   * A LOCKED TAB IS STILL A TAB.
+   *
+   * Beach is locked at level 1: its tab renders, it takes the click, and he
+   * says he cannot go -- leaving you standing in Town. This used to click and
+   * then measure whatever was on screen, and on 2026-09-09 it printed a beach
+   * row that was town's numbers to the decimal (29 props, massX 0.47, reach
+   * 0.41-1.08 on both lines) and exited 0. Two of the four places in a
+   * composition report were the same place. `reachPlace` lives in
+   * scripts/lib/playtest-save.mjs, shared with blocking.mjs, and returns true
+   * only when the scene itself is on screen.
+   */
+  if (!(await reachPlace(page, place))) {
+    console.error(`  ${place}: could not open it -- refusing to report another place's numbers as this one's`);
+    await browser.close();
+    process.exit(2);
   }
-  await page.waitForTimeout(2200);
+  await page.waitForTimeout(1400);
 
   const m = await page.evaluate(({ w, h }) => {
     const boxes = [];

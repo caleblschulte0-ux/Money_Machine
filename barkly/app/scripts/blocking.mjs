@@ -28,6 +28,7 @@
  */
 import { chromium } from 'playwright';
 import { assertFreshArtifact } from './fresh-artifact.mjs';
+import { loadDevelopedSave, reachPlace } from './lib/playtest-save.mjs';
 import { browserOptions } from './lib/browser.mjs';
 
 const arg = process.argv[2] || 'park';
@@ -56,60 +57,10 @@ await page.waitForTimeout(6500);
  * lab takes: the playtest menu, which only exists in a build made with
  * EXPO_PUBLIC_BARKLY_PLAYTEST=always, i.e. `npm run build:pages`.
  */
-/*
- * Loading it ONCE and hoping is not enough.
- *
- * A single attempt worked when this tool measured one scene at a time and then
- * dropped the Beach on the very first all-scenes run -- the menu is a few
- * animated steps and any of them can be missed. A flaky save load reads as
- * "that scene does not exist", which is the same sentence a broken selector
- * produces, so it retries and then says plainly which places it could not
- * reach rather than quietly measuring three of four.
- */
-async function loadDevelopedSave() {
-  try {
-    const gear = page.getByLabel('Settings').first();
-    if (!(await gear.count())) return;
-    await gear.click({ timeout: 6000 });
-    await page.waitForTimeout(520);
-    const entry = page.locator('[data-testid="playtest-settings"]').first();
-    if (!(await entry.count())) return;
-    await entry.click({ timeout: 6000 });
-    await page.waitForTimeout(650);
-    const slot = page.locator('[data-testid="playtest-longterm"]').first();
-    if (!(await slot.count())) return;
-    await slot.click({ force: true, timeout: 6000 });
-    await page.waitForSelector('[data-testid="dialogue-panel"]', { timeout: 20000 }).catch(() => {});
-  } catch { /* reported below */ }
-  await page.keyboard.press('Escape').catch(() => {});
-  await page.waitForTimeout(900);
-}
-
-/*
- * "Reachable" has to mean THE SCENE APPEARED, never "a tab with that name
- * exists". A locked Beach tab is still rendered -- with a padlock on it -- so a
- * tab-count check passes on a save that cannot open the place, which is the
- * same mistake that had scene-shot.mjs photographing Home and calling it Beach.
- */
-async function show(place) {
-  if (place === 'home') return true;
-  const tab = page.getByRole('tab', { name: new RegExp(place, 'i') }).first();
-  if (!(await tab.count())) return false;
-  await tab.click({ timeout: 6000 }).catch(() => {});
-  await page.waitForSelector(`[data-testid="world-scene-${place}"]`, { timeout: 12000 }).catch(() => {});
-  await page.waitForTimeout(1200);
-  return (await page.locator(`[data-testid="world-scene-${place}"]`).count()) > 0;
-}
-
-await loadDevelopedSave();
+await loadDevelopedSave(page);
 
 for (const place of PLACES) {
-  let open = await show(place);
-  for (let attempt = 1; attempt <= 2 && !open; attempt += 1) {
-    await loadDevelopedSave();
-    open = await show(place);
-  }
-  if (!open) {
+  if (!(await reachPlace(page, place))) {
     console.error(`FAIL: could not open "${place}" -- the developed playtest save did not load, so it is still locked.`);
     await browser.close();
     process.exit(2);

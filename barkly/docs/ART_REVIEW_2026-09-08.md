@@ -203,8 +203,14 @@ subtraction rather than a different lighting situation.
 6. **Rebuild the three weak items** to the standard of the ball.
 7. **Make night a lighting situation** — warm interior pools, cool exteriors,
    lit windows — rather than a global multiply.
-8. **Break the horizontal symmetry** of the scenes, which is the remaining
-   half of the composition work.
+8. ~~**Break the horizontal symmetry** of the scenes~~ — done 2026-09-09.
+   `SCENE_CAMERA` gained a `shift` and each place composes around it: he
+   measures 0.56 / 0.40 / 0.60 / 0.61 across home, park, town and beach,
+   where he was 0.50 in all four. The dogs and the dig mound move to the
+   side he leaves (`NPC_SPOTS` is keyed on the place now, and
+   `npc_spots.test.ts` holds that rule in both directions). The beach was
+   composed the other way first, with him on the left; `blocking.mjs`
+   refused it, because the SIFT label landed on the sandcastle.
 
 ## Two claims in this document were wrong
 

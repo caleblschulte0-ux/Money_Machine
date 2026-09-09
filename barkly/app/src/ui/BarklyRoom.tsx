@@ -133,11 +133,39 @@ const Renderer = process.env.EXPO_PUBLIC_BARKLY_RENDERER === 'vector' ? BarklyVi
  * printing over the bowl and the bed. Lifted onto his plane -- close to the
  * dock but clear of it, which the overlap harness checks on every viewport.
  */
-const NPC_SPOTS: Partial<Record<NpcId, { left?: number; right?: number; bottom: number; size: number }>> = {
-  biscuit: { left: 10, bottom: 106, size: 80 },
-  duke: { right: 3, bottom: 100, size: 90 },
-  pepper: { right: 8, bottom: 102, size: 86 },
+type NpcSpot = { left?: number; right?: number; bottom: number; size: number };
+
+/*
+ * WHERE THE OTHERS STAND, PER PLACE -- because he no longer stands in the
+ * middle of every one.
+ *
+ * These were three spots keyed on the DOG, so Biscuit was on the left of the
+ * park and the left of the beach and that was that. It worked only while
+ * Barkly was at x 0.50 in all four places; the moment SCENE_CAMERA.shift moved
+ * him left in the park, he walked straight into Biscuit's shoulder.
+ *
+ * The rule is simple and it is the whole point of the shift: THE CROWD GOES
+ * TO THE SIDE HE LEAVES. He is left in the park, so both dogs are to his
+ * right, at two different depths -- Duke near and low, Biscuit further up the
+ * field and smaller, which is a group standing in a space rather than a row
+ * of tokens along the bottom edge. The depth gap is not cosmetic: the two of
+ * them at 100 and 176 put BISCUIT and DUKE 10x8 points into each other on
+ * seven viewports, which overlap-check refused. Their NAMES are the thing
+ * that has to clear, and names do not scale with distance. Town puts him right, so Pepper takes the
+ * pavement on his left. The beach is his and Biscuit's, and he is furthest
+ * left there, so Biscuit has the whole right side of the sand.
+ */
+const NPC_SPOTS: Partial<Record<LocationId, Partial<Record<NpcId, NpcSpot>>>> = {
+  park: {
+    duke: { right: 3, bottom: 100, size: 90 },
+    biscuit: { right: 56, bottom: 232, size: 46 },
+  },
+  town: { pepper: { left: 8, bottom: 102, size: 86 } },
+  beach: { biscuit: { left: 10, bottom: 106, size: 80 } },
 };
+
+/** How far in from its edge each place's dig mound sits. See `digInset`. */
+const DIG_INSET: Partial<Record<LocationId, number>> = { park: 0.03, beach: 0.06 };
 
 const STATE_LABEL: Partial<Record<BarklyState, string>> = {
   listening: 'listening',
@@ -184,7 +212,7 @@ function AnimatedBubble({ children, changeKey }: { children: React.ReactNode; ch
  * appeared in the air above him. `headY` is derived from the same numbers that
  * place him.
  */
-function HeartBurst({ burst, headY }: { burst: number; headY: number }) {
+function HeartBurst({ burst, headY, shift }: { burst: number; headY: number; shift: number }) {
   const [hearts, setHearts] = useState<{ id: number; x: number; v: Animated.Value }[]>([]);
   const nextId = useRef(0);
   useEffect(() => {
@@ -207,7 +235,7 @@ function HeartBurst({ burst, headY }: { burst: number; headY: number }) {
   }, [burst]);
 
   return (
-    <View style={[styles.heartLayer, { bottom: headY }]} pointerEvents="none">
+    <View style={[styles.heartLayer, { bottom: headY, transform: [{ translateX: shift }] }]} pointerEvents="none">
       {hearts.map((h) => (
         <Animated.Text
           key={h.id}
@@ -318,7 +346,14 @@ function NpcDog({
   /** Short portrait phones put the name above the dog so the care dock cannot cover it. */
   compactLabel?: boolean;
 }) {
-  const spot = NPC_SPOTS[id]!;
+  /*
+   * Total by contract: every id in LOCATIONS[place].npcIds has a spot for that
+   * place. `npc_spots.test.ts` holds both directions, so a dog added to a
+   * location without a place to stand fails a test rather than rendering at
+   * the origin -- and a spot for a dog who is not there fails too, because
+   * that is how the beach quietly kept a table entry nobody could see.
+   */
+  const spot = NPC_SPOTS[location]![id]!;
   const fromLeft = spot.left !== undefined;
 
   const breathe = useRef(new Animated.Value(0)).current;
@@ -343,7 +378,14 @@ function NpcDog({
    * across the room, before anyone taps anything.
    */
   const closeness = Math.min((bond?.encounters ?? 0) / 30, 1);
-  const towardCentre = fromLeft ? 1 : -1;
+  /*
+   * Which way is TOWARD HIM. It used to be called `towardCentre` and the two
+   * were the same thing while he stood at x 0.50 everywhere. They are not any
+   * more -- SCENE_CAMERA.shift moves him, and NPC_SPOTS puts the others on
+   * the side he left, so inward from their edge is still toward him. The name
+   * is the part that had gone wrong.
+   */
+  const towardHero = fromLeft ? 1 : -1;
   const standIn = bond?.kind === 'friend' ? 26 * closeness : 10 * closeness;
   const squareUp = bond?.kind === 'rival' ? 4 * closeness : 0;
 
@@ -407,8 +449,8 @@ function NpcDog({
         { left: spot.left, right: spot.right, bottom: spot.bottom * scale },
         {
           transform: [
-            { translateX: (standIn + squareUp) * towardCentre * scale },
-            { translateX: floor.interpolate({ inputRange: [0, 1], outputRange: [0, 30 * towardCentre * scale] }) },
+            { translateX: (standIn + squareUp) * towardHero * scale },
+            { translateX: floor.interpolate({ inputRange: [0, 1], outputRange: [0, 30 * towardHero * scale] }) },
             { translateY: floor.interpolate({ inputRange: [0, 1], outputRange: [0, 14 * scale] }) },
             { scale: floor.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
           ],
@@ -664,6 +706,30 @@ export default function BarklyRoom() {
   // on, and it cannot be the subject while his feet are two thirds down the
   // frame in every location alike.
   const groundY = topPad + chromeBottomPx + stageH - SPRITE_FOOT + camera.lift;
+  /*
+   * Where he stands ACROSS the frame. `camera.shift` is a fraction of the
+   * stage so the composition survives a tablet; everything that belongs to him
+   * -- his contact shadow, the hearts that come off his head -- takes the same
+   * number, because a dog whose shadow stayed at the centre of the screen
+   * would be a dog standing next to his own shadow.
+   */
+  const heroShift = Math.round(stageW * camera.shift);
+  /*
+   * Anything that has to share the frame with him goes to the side he left.
+   * The dig mound is the only such thing placed by this file; the others are
+   * the dogs, in NPC_SPOTS.
+   *
+   * How far in from that edge is per place, because the two places that have
+   * digging in them do not have the same furniture on that side. The park's
+   * right edge is open grass, so the mound sits at the edge; the beach's left
+   * is wet sand and a rock, so it comes in a little further to clear the rock.
+   *
+   * Fractions of the stage, so this is a composition and not a pixel that
+   * happens to work on one phone.
+   */
+  const digInset = DIG_INSET[location] ?? 0.03;
+  const digEdge = Math.round(stageW * digInset);
+  const digSide = camera.shift < 0 ? { right: digEdge } : { left: digEdge };
   const stateLabel = STATE_LABEL[snapshot.state];
 
   /**
@@ -1305,7 +1371,7 @@ export default function BarklyRoom() {
             peekTransform,
           ]}
         >
-          {!asleep && <GroundShadow location={location} width={196 * spriteScale} style={{ bottom: 20 }} />}
+          {!asleep && <GroundShadow location={location} width={196 * spriteScale} style={{ bottom: 20, transform: [{ translateX: heroShift }] }} />}
           {asleep && location === 'home' && <DogBedBack upgraded={barkly.hasHome('home_bed')} />}
           {npcsHere.map((id) => (
             <NpcDog
@@ -1323,7 +1389,7 @@ export default function BarklyRoom() {
           <Animated.View
             style={{
               transform: [
-                { translateX: Animated.add(Animated.add(Animated.add(chaseX, walkX), tugX), eatX) },
+                { translateX: Animated.add(Animated.add(Animated.add(Animated.add(chaseX, walkX), tugX), eatX), heroShift) },
                 { translateY: Animated.add(hopY, eatDip.interpolate({ inputRange: [0, 1], outputRange: [0, 26] })) },
                 { rotate: digRotate.interpolate({ inputRange: [-1, 1], outputRange: ['-7deg', '7deg'] }) },
                 // A running dog leans into the direction he is going, and
@@ -1365,7 +1431,7 @@ export default function BarklyRoom() {
               stage at both extremes.
             */
             <Pressable
-              style={[styles.digSpot, { bottom: Math.min(stageH - 108, Math.max(96, stageH * 0.42)) }]}
+              style={[styles.digSpot, digSide, { bottom: Math.min(stageH - 108, Math.max(96, stageH * 0.42)) }]}
               onPress={runDig}
               disabled={digging || fetching || locked}
               hitSlop={8}
@@ -1405,7 +1471,7 @@ export default function BarklyRoom() {
           */}
           {night && <View pointerEvents="none" style={styles.stageNight} />}
 
-          <HeartBurst burst={heartBurst} headY={CARE_DOCK_CLEARANCE + SPRITE_HEIGHT * spriteScale * 0.66} />
+          <HeartBurst burst={heartBurst} headY={CARE_DOCK_CLEARANCE + SPRITE_HEIGHT * spriteScale * 0.66} shift={heroShift} />
           <Animated.View
             style={[StyleSheet.absoluteFill, { opacity: chromeFade }]}
             pointerEvents="box-none"
@@ -1833,7 +1899,14 @@ const styles = StyleSheet.create({
    * A real width makes `left: 10` do what all of them assumed it already did.
    * `scripts/prop-clear-check.mjs` measures the result against his face.
    */
-  digSpot: { position: 'absolute', left: 10, width: 112, alignItems: 'center', zIndex: 2 },
+  /*
+   * The mound is placed by the SCENE, not by this constant -- see `digSide`
+   * where it is rendered. It sat at a fixed left:10, which was fine while
+   * Barkly stood in the middle of every frame; the moment the park's camera
+   * moved him left it printed DIG across his ear. It takes the side he is
+   * not on, like everything else that has to share a frame with him.
+   */
+  digSpot: { position: 'absolute', width: 112, alignItems: 'center', zIndex: 2 },
   digHint: { marginTop: -11, ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodSoft, paddingHorizontal: 9, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   npcName: { position: 'absolute', ...type.micro, color: DIORAMA.cream, backgroundColor: DIORAMA.woodDeep, borderWidth: 1, borderColor: DIORAMA.woodWarm, paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.sm, overflow: 'hidden' },
   /*

@@ -944,18 +944,41 @@ export function WorldLighting({
  *   beach   the widest. He is smallest, the ground line is highest, and the
  *           space in front of him is the subject.
  *
- * `world` and `hero` are multipliers on the two scales; `lift` moves the
- * ground line in points, negative being higher up the screen. The hero
+ * `shift` moves him ACROSS the frame, as a fraction of the stage width, and
+ * it is the half of the composition work that the zoom and the lift could not
+ * reach. Measured again on 2026-09-09, after the per-place cameras had already
+ * separated his SIZE (17.0 / 13.3 / 9.2 / 7.6% of the frame), he still stood
+ * at x 0.50 in all four places and the Beach's own centre of mass was 0.50 to
+ * the decimal -- a mirror, which is what a stage set looks like and not what a
+ * place that carries on past the edge of the screen looks like. So each place
+ * puts him somewhere different in its frame, and the direction says something:
+ *
+ *   home    a touch right of centre, off the doorway, the room around him.
+ *   park    left, with the field open to his right where the others are.
+ *   town    right, on the near pavement, the storefronts running away left.
+ *   beach   right, because the sandcastle and the parasol own that side of
+ *           the sand and standing in front of them is what makes them read
+ *           as behind him -- and it leaves the whole wet-sand left for the
+ *           sifting and for Biscuit. He was left here first; blocking.mjs
+ *           refused it, because the SIFT label landed on the castle.
+ *
+ * The values are fractions of the stage, not points, so the composition is the
+ * same on a small phone and a tablet. `world` and `hero` are multipliers on
+ * the two scales; `lift` moves the ground line in points, negative being
+ * higher up the screen. The hero
  * multiplier is never above 1: `scaleForScreen` already caps him so he fits
  * the stage band, and multiplying past that crops his paws on a short phone.
  */
 export type ScenePlace = 'home' | 'park' | 'town' | 'beach';
 
-export const SCENE_CAMERA: Record<ScenePlace, { zoom: number; hero: number; lift: number }> = {
-  home: { zoom: 1.45, hero: 1.0, lift: 40 },
-  park: { zoom: 1.0, hero: 0.88, lift: -24 },
-  town: { zoom: 1.12, hero: 0.72, lift: -10 },
-  beach: { zoom: 1.0, hero: 0.66, lift: -18 },
+export const SCENE_CAMERA: Record<
+  ScenePlace,
+  { zoom: number; hero: number; lift: number; shift: number }
+> = {
+  home: { zoom: 1.45, hero: 1.0, lift: 40, shift: 0.06 },
+  park: { zoom: 1.0, hero: 0.88, lift: -24, shift: -0.1 },
+  town: { zoom: 1.12, hero: 0.72, lift: -10, shift: 0.1 },
+  beach: { zoom: 1.0, hero: 0.66, lift: -18, shift: 0.11 },
 };
 
 /**
