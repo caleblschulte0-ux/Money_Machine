@@ -16,6 +16,10 @@ import os
 from pathlib import Path
 
 import bpy
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
 from mathutils import Vector
 
 
@@ -432,7 +436,7 @@ def facing(theta):
 
 
 def contact_shadow(rx, ry, z=0.045):
-    shadow = material("Contact shadow", "#311E18", roughness=1.0, coat=0.0)
+    shadow = material("Contact shadow", tone("ink", "shade"), roughness=1.0, coat=0.0)
     return sphere("contact_shadow", (0, 0.18, z), (rx, ry, 0.035), shadow)
 
 
@@ -510,7 +514,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     key.name = "Barkly warm key"
     key.data.energy = 880
     key.data.size = 5.0
-    key.data.color = (1.0, 0.77, 0.58)
+    key.data.color = light_rgb("key")
     look_at(key, target)
 
     bpy.ops.object.light_add(type="AREA", location=(5.0, -2.2, 4.0))
@@ -518,7 +522,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     fill.name = "Barkly cool fill"
     fill.data.energy = 300
     fill.data.size = 5.5
-    fill.data.color = (0.58, 0.78, 1.0)
+    fill.data.color = light_rgb("fill")
     look_at(fill, target)
 
     bpy.ops.object.light_add(type="AREA", location=(1.8, 4.0, 6.8))
@@ -526,16 +530,16 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     rim.name = "Barkly warm rim"
     rim.data.energy = 408
     rim.data.size = 4.2
-    rim.data.color = (1.0, 0.84, 0.63)
+    rim.data.color = light_rgb("key")
     look_at(rim, target)
 
 
 def park_tree():
-    bark = material("Tree bark", "#70391A", roughness=0.72)
-    bark_light = material("Tree bark light", "#B96526", roughness=0.66)
-    leaf = material("Leaf green", "#2BA94C", roughness=0.76, coat=0.02)
-    leaf_light = material("Leaf light", "#68DC5D", roughness=0.72, coat=0.03)
-    leaf_dark = material("Leaf depth", "#136D36", roughness=0.80)
+    bark = material("Tree bark", tone("bark", "base"), roughness=0.72)
+    bark_light = material("Tree bark light", tone("bark", "lit"), roughness=0.66)
+    leaf = material("Leaf green", tone("foliage", "base"), roughness=0.76, coat=0.02)
+    leaf_light = material("Leaf light", tone("foliage", "lit"), roughness=0.72, coat=0.03)
+    leaf_dark = material("Leaf depth", tone("foliage", "deep"), roughness=0.80)
 
     contact_shadow(1.50, 0.74)
     cone("trunk", (0, 0.12, 1.45), 0.54, 0.28, 2.9, bark)
@@ -552,9 +556,9 @@ def park_tree():
 
 
 def park_bench():
-    wood = material("Bench honey wood", "#BD601C", roughness=0.58, coat=0.05)
-    wood_light = material("Bench sun-face wood", "#EE8C36", roughness=0.52, coat=0.06)
-    metal = material("Bench iron", "#344349", roughness=0.36, metallic=0.64)
+    wood = material("Bench honey wood", tone("wood", "base"), roughness=0.58, coat=0.05)
+    wood_light = material("Bench sun-face wood", tone("wood", "lit"), roughness=0.52, coat=0.06)
+    metal = material("Bench iron", tone("wood", "base"), roughness=0.36, metallic=0.64)
 
     contact_shadow(1.65, 0.52)
     for z in (1.15, 1.52, 1.88):
@@ -567,9 +571,9 @@ def park_bench():
 
 
 def park_hedge():
-    leaf = material("Hedge green", "#39AA43", roughness=0.82)
-    leaf_light = material("Hedge light", "#7BDF5A", roughness=0.78)
-    earth = material("Hedge earth", "#7A482B", roughness=0.94)
+    leaf = material("Hedge green", tone("foliage", "base"), roughness=0.82)
+    leaf_light = material("Hedge light", tone("foliage", "lit"), roughness=0.78)
+    earth = material("Hedge earth", tone("foliage", "base"), roughness=0.94)
     contact_shadow(1.60, 0.48)
     sphere("earth", (0, 0.18, 0.25), (1.50, 0.52, 0.20), earth)
     for i, x in enumerate((-1.18, -0.58, 0, 0.58, 1.18)):
@@ -627,9 +631,9 @@ def _blades(count, seed, spread, height, mats, lean=0.30, thickness=0.030, flatt
 
 def park_grass_tuft():
     """A small tuft, for scattering across the mid-ground."""
-    mid = material("Grass mid", "#4FBE4A", roughness=0.86)
-    light = material("Grass light", "#7BDF5A", roughness=0.82)
-    deep = material("Grass deep", "#2E8C36", roughness=0.88)
+    mid = material("Grass mid", tone("grass", "base"), roughness=0.86)
+    light = material("Grass light", tone("grass", "lit"), roughness=0.82)
+    deep = material("Grass deep", tone("grass", "deep"), roughness=0.88)
     _blades(13, 0.13, 0.36, 0.86, (mid, light, deep, mid), lean=0.34)
 
 
@@ -640,9 +644,9 @@ def park_grass_clump():
     to the camera than the key light's falloff, and a foreground that matches
     the mid-ground in value is a foreground that does not read as one.
     """
-    deep = material("Clump deep", "#2A7F33", roughness=0.88)
-    mid = material("Clump mid", "#3EA342", roughness=0.86)
-    dark = material("Clump dark", "#1E6128", roughness=0.90)
+    deep = material("Clump deep", tone("foliage", "deep"), roughness=0.88)
+    mid = material("Clump mid", tone("foliage", "base"), roughness=0.86)
+    dark = material("Clump dark", tone("foliage", "base"), roughness=0.90)
     _blades(23, 0.41, 0.82, 1.60, (deep, mid, dark, deep, mid), lean=0.46, thickness=0.040)
 
 
@@ -667,10 +671,10 @@ def park_grass_clump():
 
 def park_near_grass():
     """A dense band of grass seen from a step away."""
-    deep = material("Near grass deep", "#276F2C", roughness=0.90)
-    mid = material("Near grass mid", "#39923A", roughness=0.88)
-    dark = material("Near grass dark", "#1B5622", roughness=0.92)
-    lit = material("Near grass lit", "#4FB04A", roughness=0.86)
+    deep = material("Near grass deep", tone("grass", "deep"), roughness=0.90)
+    mid = material("Near grass mid", tone("grass", "base"), roughness=0.88)
+    dark = material("Near grass dark", tone("grass", "base"), roughness=0.92)
+    lit = material("Near grass lit", tone("grass", "lit"), roughness=0.86)
     # Several roots across the width rather than one fan, or it reads as a
     # single bush lying on its side -- and offset in the CAMERA's frame, not
     # the world's. Stepping them along world x put each clump slightly further
@@ -699,10 +703,10 @@ def beach_near_sand():
     """
     turn = facing(camera_yaw())
     theta = camera_yaw()
-    sand = material("Near sand", "#D9B87C", roughness=0.95)
-    sand_lit = material("Near sand lit", "#EACB94", roughness=0.94)
-    shade = material("Near sand shade", "#BE9A62", roughness=0.96)
-    shell = material("Near shell", "#F3E4CE", roughness=0.80)
+    sand = material("Near sand", tone("sand", "base"), roughness=0.95)
+    sand_lit = material("Near sand lit", tone("sand", "lit"), roughness=0.94)
+    shade = material("Near sand shade", tone("sand", "shade"), roughness=0.96)
+    shell = material("Near shell", tone("cream", "base"), roughness=0.80)
 
     # Low, WIDE mounds rather than long thin lenses. A sphere squashed to a
     # tenth of its length is a blade, which is what the first pass rendered:
@@ -726,10 +730,10 @@ def town_near_paving():
     """Slabs at arm's length, with the joints wide enough to read."""
     turn = facing(camera_yaw())
     theta = camera_yaw()
-    grout = material("Near paving grout", "#7E6B44", roughness=0.94)
-    slab_a = material("Near paving slab", "#E0CB9E", roughness=0.86)
-    slab_b = material("Near paving slab b", "#D2BA8C", roughness=0.86)
-    slab_c = material("Near paving slab c", "#EAD9AF", roughness=0.84)
+    grout = material("Near paving grout", tone("stone", "shade"), roughness=0.94)
+    slab_a = material("Near paving slab", tone("paving", "base"), roughness=0.86)
+    slab_b = material("Near paving slab b", tone("paving", "base"), roughness=0.86)
+    slab_c = material("Near paving slab c", tone("paving", "base"), roughness=0.84)
 
     bx, by = turn(0.0, 0.10)
     cube("near_base", (bx, by, 0.02), (6.4, 0.92, 0.02), grout, 0.02, (0, 0, theta))
@@ -744,10 +748,10 @@ def home_near_floor():
     """Boards running across the near floor, close enough to show their grain."""
     turn = facing(camera_yaw())
     theta = camera_yaw()
-    board = material("Near board wood", "#C99A5E", roughness=0.72)
-    board_b = material("Near board wood b", "#BC8C51", roughness=0.74)
-    board_c = material("Near board wood c", "#D6A96C", roughness=0.70)
-    seam = material("Near board seam", "#8F6437", roughness=0.86)
+    board = material("Near board wood", tone("wood", "base"), roughness=0.72)
+    board_b = material("Near board wood b", tone("wood", "base"), roughness=0.74)
+    board_c = material("Near board wood c", tone("wood", "base"), roughness=0.70)
+    seam = material("Near board seam", tone("stone", "shade"), roughness=0.86)
 
     bx, by = turn(0.0, 0.10)
     cube("near_floor_base", (bx, by, 0.02), (6.4, 0.94, 0.02), seam, 0.02, (0, 0, theta))
@@ -760,10 +764,10 @@ def home_near_floor():
 
 def park_wildflowers():
     """A tuft with three heads on it, so the scatter is not all one object."""
-    mid = material("Flower stem", "#4FBE4A", roughness=0.86)
-    deep = material("Flower stem deep", "#2E8C36", roughness=0.88)
-    petal = material("Flower petal", "#FFD84D", roughness=0.74)
-    petal_b = material("Flower petal pale", "#FFF0B0", roughness=0.74)
+    mid = material("Flower stem", tone("berry", "base"), roughness=0.86)
+    deep = material("Flower stem deep", tone("berry", "deep"), roughness=0.88)
+    petal = material("Flower petal", tone("berry", "base"), roughness=0.74)
+    petal_b = material("Flower petal pale", tone("berry", "lit"), roughness=0.74)
     _blades(11, 0.29, 0.32, 0.72, (mid, deep, mid), lean=0.34)
     # Small FLAT heads on thin stems. Domes on thick stems are mushrooms, which
     # is what the first pass grew.
@@ -786,10 +790,10 @@ def park_treeline():
     moment you can count them they stop being far away. A darker rank behind
     the front one gives the mass some depth without giving it detail.
     """
-    far = material("Treeline far", "#63A857", roughness=0.90)
-    far_b = material("Treeline far b", "#74B863", roughness=0.90)
-    far_c = material("Treeline far c", "#54964E", roughness=0.90)
-    back = material("Treeline back", "#4A8749", roughness=0.92)
+    far = material("Treeline far", tone("foliage", "lit"), roughness=0.90)
+    far_b = material("Treeline far b", tone("foliage", "pop"), roughness=0.90)
+    far_c = material("Treeline far c", tone("foliage", "base"), roughness=0.90)
+    back = material("Treeline back", tone("foliage", "shade"), roughness=0.92)
 
     # A horizon has to be LEVEL, and this camera is yawed, so a bar built along
     # world X renders as a slope. Built in the camera-facing frame instead --
@@ -827,12 +831,12 @@ def storefront(accent_name, body_hex, edge_hex, awning_hex):
     # the key light. A Clash Mini shopfront has no neutral in it: the cream is
     # a warm butter and the glass is a saturated teal that reads as colour, not
     # as reflection. See docs/ART_DIRECTION.md.
-    cream = material("Store cream", "#FFD786", roughness=0.62, coat=0.02)
-    glass = material("Store glass", "#3FBBD8", roughness=0.30, metallic=0.02, coat=0.12)
-    glass_dark = material("Store glass depth", "#2F7387", roughness=0.26, metallic=0.08, coat=0.20)
+    cream = material("Store cream", tone("cream", "base"), roughness=0.62, coat=0.02)
+    glass = material("Store glass", tone("sea", "lit"), roughness=0.30, metallic=0.02, coat=0.12)
+    glass_dark = material("Store glass depth", tone("sea", "shade"), roughness=0.26, metallic=0.08, coat=0.20)
     awning = material(f"{accent_name} awning", awning_hex, roughness=0.54, coat=0.05)
-    wood = material("Display wood", "#954D1F", roughness=0.62)
-    brass = material("Store brass", "#E79E1B", roughness=0.28, metallic=0.68)
+    wood = material("Display wood", tone("wood", "base"), roughness=0.62)
+    brass = material("Store brass", tone("sun", "base"), roughness=0.28, metallic=0.68)
 
     contact_shadow(2.05, 0.62)
     cube("store_body", (0, 0.48, 2.25), (1.78, 0.64, 2.22), body, 0.24)
@@ -867,11 +871,11 @@ def town_rooftops():
     # pitched roofs on a monochrome run read as peaks. A little warm in the
     # walls and a little terracotta in the roofs is all it takes to make the
     # same silhouette read as buildings.
-    slate = material("Roof slate", "#8C7E96", roughness=0.86)
-    slate_b = material("Roof tile", "#A2818A", roughness=0.86)
-    wall = material("Far wall", "#9AAAC6", roughness=0.84)
-    wall_b = material("Far wall warm", "#BCAFB2", roughness=0.84)
-    trim = material("Far trim", "#6E82A2", roughness=0.86)
+    slate = material("Roof slate", tone("roof", "base"), roughness=0.86)
+    slate_b = material("Roof tile", tone("paving", "base"), roughness=0.86)
+    wall = material("Far wall", tone("brick", "base"), roughness=0.84)
+    wall_b = material("Far wall warm", tone("brick", "base"), roughness=0.84)
+    trim = material("Far trim", tone("metal", "lit"), roughness=0.86)
 
     blocks = (
         (-3.05, 0.62, 0.86, wall, slate),
@@ -924,10 +928,10 @@ def town_paving():
     """
     turn = facing(camera_yaw())
     theta = camera_yaw()
-    grout = material("Paving grout", "#8A7448", roughness=0.90)
-    slab_a = material("Paving slab", "#E4CFA2", roughness=0.82)
-    slab_b = material("Paving slab b", "#D8C091", roughness=0.82)
-    slab_c = material("Paving slab c", "#EDDBB1", roughness=0.80)
+    grout = material("Paving grout", tone("stone", "shade"), roughness=0.90)
+    slab_a = material("Paving slab", tone("paving", "base"), roughness=0.82)
+    slab_b = material("Paving slab b", tone("paving", "base"), roughness=0.82)
+    slab_c = material("Paving slab c", tone("paving", "base"), roughness=0.80)
 
     # ONE course, deliberately. Two rows was the first attempt and the camera
     # ate it: looking down at 22 degrees, a 0.6-deep band projects to about a
@@ -962,9 +966,9 @@ def town_kerb():
     """
     turn = facing(camera_yaw())
     theta = camera_yaw()
-    stone = material("Kerb stone", "#D9C9A6", roughness=0.80)
-    stone_b = material("Kerb stone b", "#CBB994", roughness=0.82)
-    edge = material("Kerb edge", "#A48F6B", roughness=0.84)
+    stone = material("Kerb stone", tone("paving", "base"), roughness=0.80)
+    stone_b = material("Kerb stone b", tone("paving", "base"), roughness=0.82)
+    edge = material("Kerb edge", tone("paving", "base"), roughness=0.84)
     for i in range(14):
         x = -3.15 + i * 0.46
         bx, by = turn(x, 0.0)
@@ -984,10 +988,10 @@ def town_fountain():
     # a couple of shades off white (#E5BD76 lit, #FFD98A on the sun faces), so
     # the key light finished the job. Deeper sandstone keeps the same read at
     # a chroma the grade can actually pick up.
-    stone = material("Fountain stone", "#F0B440", roughness=0.72)
-    stone_light = material("Fountain stone light", "#FFCB5E", roughness=0.68)
-    stone_dark = material("Fountain stone depth", "#8C5418", roughness=0.78)
-    water = material("Fountain water", "#3DC7EA", roughness=0.18, metallic=0.06, coat=0.30)
+    stone = material("Fountain stone", tone("stone", "base"), roughness=0.72)
+    stone_light = material("Fountain stone light", tone("stone", "lit"), roughness=0.68)
+    stone_dark = material("Fountain stone depth", tone("stone", "deep"), roughness=0.78)
+    water = material("Fountain water", tone("sea", "base"), roughness=0.18, metallic=0.06, coat=0.30)
     contact_shadow(1.46, 0.72)
     torus("lower_basin", (0, 0, 0.55), 0.98, 0.24, stone, scale=(1.25, 0.82, 0.72))
     sphere("lower_water", (0, -0.02, 0.60), (1.13, 0.68, 0.10), water)
@@ -1010,9 +1014,9 @@ def town_lamp():
     # hue under that fill instead of dissolving into it, and it is the same
     # family as townBlueEdge, so the two tallest objects in Town now belong to
     # Town's palette rather than reading as generic street furniture.
-    iron = material("Lamp iron", "#1A6B84", roughness=0.42, metallic=0.10)
-    brass = material("Lamp brass", "#D07B15", roughness=0.30, metallic=0.24)
-    glass = material("Lamp glow glass", "#FFC93B", roughness=0.22, coat=0.26)
+    iron = material("Lamp iron", tone("metal", "base"), roughness=0.42, metallic=0.10)
+    brass = material("Lamp brass", tone("metal", "base"), roughness=0.30, metallic=0.24)
+    glass = material("Lamp glow glass", tone("metal", "base"), roughness=0.22, coat=0.26)
     contact_shadow(0.56, 0.34)
     cylinder("base", (0, 0, 0.20), 0.42, 0.18, iron)
     cylinder("post", (0, 0, 1.72), 0.10, 3.05, iron)
@@ -1023,10 +1027,10 @@ def town_lamp():
 
 
 def town_planter():
-    pot = material("Planter terracotta", "#E36C3C", roughness=0.76)
-    pot_dark = material("Planter depth", "#953922", roughness=0.82)
-    leaf = material("Planter leaf", "#2D984B", roughness=0.78)
-    leaf_light = material("Planter leaf light", "#71D25A", roughness=0.76)
+    pot = material("Planter terracotta", tone("brick", "base"), roughness=0.76)
+    pot_dark = material("Planter depth", tone("brick", "shade"), roughness=0.82)
+    leaf = material("Planter leaf", tone("foliage", "base"), roughness=0.78)
+    leaf_light = material("Planter leaf light", tone("foliage", "lit"), roughness=0.76)
     contact_shadow(0.84, 0.40)
     cone("pot", (0, 0.05, 0.42), 0.64, 0.48, 0.78, pot)
     cylinder("pot_rim", (0, 0.05, 0.80), 0.66, 0.18, pot_dark)
@@ -1035,10 +1039,10 @@ def town_planter():
 
 
 def beach_umbrella():
-    wood = material("Umbrella wood", "#964D20", roughness=0.66)
-    coral = material("Umbrella coral", "#FF5B44", roughness=0.56, coat=0.05)
-    coral_dark = material("Umbrella coral edge", "#D12522", roughness=0.62)
-    yellow = material("Umbrella yellow", "#FFCF4D", roughness=0.58, coat=0.05)
+    wood = material("Umbrella wood", tone("wood", "base"), roughness=0.66)
+    coral = material("Umbrella coral", tone("roof", "base"), roughness=0.56, coat=0.05)
+    coral_dark = material("Umbrella coral edge", tone("roof", "base"), roughness=0.62)
+    yellow = material("Umbrella yellow", tone("roof", "base"), roughness=0.58, coat=0.05)
     contact_shadow(1.22, 0.52)
     cylinder("umbrella_pole", (0, 0.08, 1.62), 0.09, 3.10, wood)
     cone("canopy", (0, 0, 3.44), 1.62, 0.18, 0.74, coral)
@@ -1048,11 +1052,11 @@ def beach_umbrella():
 
 
 def beach_lifeguard():
-    wood = material("Tower warm wood", "#BB6226", roughness=0.66)
-    coral = material("Tower coral", "#F64E3C", roughness=0.62, coat=0.03)
-    cream = material("Tower cream", "#FFDA93", roughness=0.68)
-    aqua = material("Tower aqua", "#39C0D8", roughness=0.56, coat=0.06)
-    glass = material("Tower window", "#8BE0E9", roughness=0.20, coat=0.30)
+    wood = material("Tower warm wood", tone("wood", "base"), roughness=0.66)
+    coral = material("Tower coral", tone("berry", "base"), roughness=0.62, coat=0.03)
+    cream = material("Tower cream", tone("cream", "base"), roughness=0.68)
+    aqua = material("Tower aqua", tone("sea", "lit"), roughness=0.56, coat=0.06)
+    glass = material("Tower window", tone("sea", "pop"), roughness=0.20, coat=0.30)
     contact_shadow(1.45, 0.68)
     for x in (-0.95, 0.95):
         cube(f"stilt_{x}", (x, 0.18, 1.05), (0.13, 0.16, 1.05), wood, 0.07, (0, math.radians(4 if x < 0 else -4), 0))
@@ -1093,10 +1097,10 @@ def beach_headland():
     Camera-facing frame, like every wide band in this pack.
     """
     turn = facing(camera_yaw())
-    far = material("Headland far", "#8FB79C", roughness=0.92)
-    far_b = material("Headland far b", "#9DC3A6", roughness=0.92)
-    far_c = material("Headland far c", "#82AB92", roughness=0.92)
-    rock = material("Headland rock", "#A9AFA6", roughness=0.90)
+    far = material("Headland far", tone("stone", "base"), roughness=0.92)
+    far_b = material("Headland far b", tone("stone", "base"), roughness=0.92)
+    far_c = material("Headland far c", tone("stone", "base"), roughness=0.92)
+    rock = material("Headland rock", tone("stone", "base"), roughness=0.90)
 
     mats = (far, far_b, far_c, far_b, far)
     for i in range(15):
@@ -1125,10 +1129,10 @@ def beach_shells():
     rendered three pale blobs -- ribs pressed INTO a shell do nothing at 58px,
     because at 58px there is no surface, only an outline.
     """
-    shell = material("Shell", "#F3DCC4", roughness=0.58, coat=0.10)
-    shell_warm = material("Shell warm", "#EBCBAF", roughness=0.58, coat=0.10)
-    hinge = material("Shell hinge", "#D9B594", roughness=0.66)
-    pebble = material("Pebble", "#B9A489", roughness=0.86)
+    shell = material("Shell", tone("cream", "base"), roughness=0.58, coat=0.10)
+    shell_warm = material("Shell warm", tone("cream", "base"), roughness=0.58, coat=0.10)
+    hinge = material("Shell hinge", tone("metal", "base"), roughness=0.66)
+    pebble = material("Pebble", tone("stone", "base"), roughness=0.86)
 
     root_x, root_y = -0.26, 0.06
     lobes = 7
@@ -1150,16 +1154,16 @@ def beach_shells():
 def beach_dune_grass():
     """Marram grass, for the dry sand. Sparser and paler than park grass --
     it grows in tufts out of bare sand, not in a lawn."""
-    blade = material("Marram", "#A9BF6E", roughness=0.88)
-    blade_pale = material("Marram pale", "#C6D68C", roughness=0.86)
-    blade_deep = material("Marram deep", "#7E9A4E", roughness=0.90)
+    blade = material("Marram", tone("grass", "lit"), roughness=0.88)
+    blade_pale = material("Marram pale", tone("grass", "pop"), roughness=0.86)
+    blade_deep = material("Marram deep", tone("grass", "base"), roughness=0.90)
     _blades(9, 0.57, 0.30, 1.05, (blade, blade_pale, blade_deep), lean=0.52, thickness=0.026)
 
 
 def beach_dune():
-    sand = material("Dune sand", "#E7B247", roughness=0.92)
-    sand_light = material("Dune light", "#FFC95F", roughness=0.90)
-    grass = material("Dune grass", "#57A335", roughness=0.88)
+    sand = material("Dune sand", tone("sand", "base"), roughness=0.92)
+    sand_light = material("Dune light", tone("sand", "lit"), roughness=0.90)
+    grass = material("Dune grass", tone("grass", "base"), roughness=0.88)
     contact_shadow(1.62, 0.52)
     sphere("dune", (0, 0.16, 0.34), (1.65, 0.66, 0.42), sand)
     sphere("dune_light", (-0.36, -0.30, 0.48), (0.92, 0.22, 0.16), sand_light)
@@ -1168,11 +1172,11 @@ def beach_dune():
 
 
 def beach_castle():
-    sand = material("Castle sand", "#E3AC46", roughness=0.92)
-    sand_light = material("Castle sun face", "#FFC85F", roughness=0.90)
-    sand_dark = material("Castle depth", "#A06B24", roughness=0.94)
-    flag = material("Castle flag", "#FF4A3D", roughness=0.60, coat=0.04)
-    wood = material("Flag pole", "#7C482A", roughness=0.72)
+    sand = material("Castle sand", tone("sand", "base"), roughness=0.92)
+    sand_light = material("Castle sun face", tone("sun", "lit"), roughness=0.90)
+    sand_dark = material("Castle depth", tone("sand", "shade"), roughness=0.94)
+    flag = material("Castle flag", tone("roof", "base"), roughness=0.60, coat=0.04)
+    wood = material("Flag pole", tone("roof", "base"), roughness=0.72)
     contact_shadow(1.32, 0.52)
     cube("castle_base", (0, 0.08, 0.48), (1.10, 0.60, 0.46), sand, 0.16)
     for i, x in enumerate((-0.82, 0, 0.82)):
@@ -1186,10 +1190,10 @@ def beach_castle():
 
 
 def beach_palm():
-    trunk = material("Palm trunk", "#A05A26", roughness=0.78)
-    trunk_light = material("Palm trunk light", "#DB8438", roughness=0.72)
-    leaf = material("Palm leaf", "#2B9751", roughness=0.80)
-    leaf_light = material("Palm leaf light", "#5DC759", roughness=0.76)
+    trunk = material("Palm trunk", tone("foliage", "base"), roughness=0.78)
+    trunk_light = material("Palm trunk light", tone("foliage", "lit"), roughness=0.72)
+    leaf = material("Palm leaf", tone("foliage", "base"), roughness=0.80)
+    leaf_light = material("Palm leaf light", tone("foliage", "lit"), roughness=0.76)
     contact_shadow(1.12, 0.50)
     for i in range(6):
         x = -0.10 + i * 0.08
@@ -1220,10 +1224,10 @@ def home_panelling():
     # that comes from above, so every one of them renders a good step darker
     # than its own hex. The first pass picked colours that matched the wall on
     # paper and rendered as a grey-brown slab against it.
-    field = material("Panel field", "#F2D8B2", roughness=0.74)
-    stile = material("Panel stile", "#F8E3C6", roughness=0.68, coat=0.02)
-    rail = material("Panel rail", "#FAE8D0", roughness=0.66, coat=0.02)
-    shade = material("Panel shade", "#C4915A", roughness=0.80)
+    field = material("Panel field", tone("cream", "lit"), roughness=0.74)
+    stile = material("Panel stile", tone("paving", "base"), roughness=0.68, coat=0.02)
+    rail = material("Panel rail", tone("wood", "base"), roughness=0.66, coat=0.02)
+    shade = material("Panel shade", tone("wood", "lit"), roughness=0.80)
 
     top = 1.28
     for i in range(16):
@@ -1267,9 +1271,9 @@ def home_skirting():
     """
     turn = facing(camera_yaw())
     theta = camera_yaw()
-    board = material("Skirting board", "#E7C79A", roughness=0.62, coat=0.04)
-    board_lit = material("Skirting lit", "#F6DDB6", roughness=0.56, coat=0.06)
-    shadow = material("Skirting shadow", "#A87642", roughness=0.74)
+    board = material("Skirting board", tone("wood", "base"), roughness=0.62, coat=0.04)
+    board_lit = material("Skirting lit", tone("metal", "lit"), roughness=0.56, coat=0.06)
+    shadow = material("Skirting shadow", tone("metal", "shade"), roughness=0.74)
 
     for i in range(16):
         x = -3.20 + i * 0.42
@@ -1282,10 +1286,10 @@ def home_skirting():
 
 
 def home_rug():
-    gold = material("Rug gold", "#FAB521", roughness=0.92)
-    gold_light = material("Rug pile light", "#FFD973", roughness=0.94)
-    gold_dark = material("Rug bound edge", "#BE750D", roughness=0.90)
-    cream = material("Rug inset", "#FFEDC1", roughness=0.96)
+    gold = material("Rug gold", tone("sun", "base"), roughness=0.92)
+    gold_light = material("Rug pile light", tone("sun", "lit"), roughness=0.94)
+    gold_dark = material("Rug bound edge", tone("sun", "shade"), roughness=0.90)
+    cream = material("Rug inset", tone("cream", "pop"), roughness=0.96)
     contact_shadow(1.72, 0.72)
     torus("rug_edge", (0, 0, 0.20), 1.10, 0.24, gold_dark, scale=(1.52, 0.72, 0.34))
     sphere("rug_body", (0, -0.02, 0.22), (1.56, 0.72, 0.18), gold)
@@ -1334,12 +1338,12 @@ def home_care_tray():
     the tray rendered nearly black. If a prop's material list looks like it is
     apologising for the lighting, check the colour space before tuning it.
     """
-    wood = material("Tray wood", "#C0762A", roughness=0.58, coat=0.05)
-    floor = material("Tray floor", "#9B531A", roughness=0.66, coat=0.03)
-    front = material("Tray front", "#7E3D12", roughness=0.62, coat=0.04)
-    rim = material("Tray rim", "#DE9740", roughness=0.50, coat=0.08)
-    shine = material("Tray shine", "#F3C078", roughness=0.40, coat=0.12)
-    brass = material("Tray brass", "#EFBA4A", roughness=0.30, metallic=0.72)
+    wood = material("Tray wood", tone("wood", "base"), roughness=0.58, coat=0.05)
+    floor = material("Tray floor", tone("wood", "base"), roughness=0.66, coat=0.03)
+    front = material("Tray front", tone("wood", "shade"), roughness=0.62, coat=0.04)
+    rim = material("Tray rim", tone("wood", "lit"), roughness=0.50, coat=0.08)
+    shine = material("Tray shine", tone("wood", "pop"), roughness=0.40, coat=0.12)
+    brass = material("Tray brass", tone("sun", "base"), roughness=0.30, metallic=0.72)
 
     # The camera's own yaw, cancelled. See camera_yaw().
     theta = camera_yaw()
@@ -1461,11 +1465,13 @@ def _mound(hex_body, hex_lump, hex_shade, hex_hole, hex_light, ripples=False):
 
 
 def park_dig_mound():
-    return _mound("#AA681F", "#B97826", "#73400E", "#2E1A08", "#E1963D")
+    return _mound(tone("bark", "base"), tone("bark", "lit"), tone("bark", "shade"),
+                  tone("ink", "deep"), tone("sun", "base"))
 
 
 def beach_sand_mound():
-    return _mound("#F8CD8C", "#FFDCA6", "#D09853", "#8B6231", "#FFECCA", ripples=True)
+    return _mound(tone("sand", "lit"), tone("sand", "pop"), tone("sand", "base"),
+                  tone("sand", "shade"), tone("cream", "pop"), ripples=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1478,7 +1484,7 @@ def item_biscuit():
     thumbnail size that stripe read as a plank, and the whole thing looked like
     a little wooden bench. A bone is a silhouette, so it is now only that.
     """
-    dough = material("Biscuit dough", "#D79A4C", roughness=0.78)
+    dough = material("Biscuit dough", tone("wood", "base"), roughness=0.78)
     for x in (-0.34, 0.34):
         for z in (-0.16, 0.16):
             sphere(f"knob_{x}_{z}", (x, 0, 0.58 + z), (0.18, 0.16, 0.17), dough)
@@ -1488,9 +1494,9 @@ def item_biscuit():
 def item_cheese():
     """A wedge. A three-sided cylinder IS a triangular prism; a rotated cube is
     a rhombus, which is what the first pass rendered."""
-    flesh = material("Cheese flesh", "#FFC93F", roughness=0.60, coat=0.05)
-    rind = material("Cheese rind", "#E8A21C", roughness=0.64)
-    hole = material("Cheese hole", "#B4761A", roughness=0.72)
+    flesh = material("Cheese flesh", tone("sun", "lit"), roughness=0.60, coat=0.05)
+    rind = material("Cheese rind", tone("sun", "base"), roughness=0.64)
+    hole = material("Cheese hole", tone("sun", "shade"), roughness=0.72)
     cylinder("wedge", (0, 0, 0.56), 0.52, 0.34, flesh,
              rotation=(math.radians(90), 0, 0), vertices=3)
     cylinder("wedge_rind", (0, -0.18, 0.56), 0.52, 0.03, rind,
@@ -1509,9 +1515,9 @@ def item_steak():
     cream rim, so that is all this is now -- and no bone, because a bone is what
     kept turning it into some other food.
     """
-    meat = material("Steak", "#A93A2A", roughness=0.68)
-    sear = material("Steak sear", "#C9553C", roughness=0.60)
-    fat = material("Steak fat", "#F3DCC0", roughness=0.62)
+    meat = material("Steak", tone("berry", "shade"), roughness=0.68)
+    sear = material("Steak sear", tone("sea", "base"), roughness=0.60)
+    fat = material("Steak fat", tone("cream", "lit"), roughness=0.62)
     sphere("fat_rim", (0, 0.03, 0.56), (0.52, 0.20, 0.36), fat)
     sphere("cut", (0, -0.04, 0.56), (0.46, 0.20, 0.31), meat)
     # The seared face reads as a broad lift across the top of the cut, not a
@@ -1546,8 +1552,8 @@ def item_ball():
     box. The stripe now runs all the way round the equator, which is both what
     a real ball looks like and a shape that cannot be read as a mouth.
     """
-    body = material("Ball body", "#E0452F", roughness=0.42, coat=0.20)
-    band = material("Ball band", "#FFF3E0", roughness=0.44, coat=0.18)
+    body = material("Ball body", tone("berry", "base"), roughness=0.42, coat=0.20)
+    band = material("Ball band", tone("cream", "pop"), roughness=0.44, coat=0.18)
     sphere("ball", (0, 0, 0.58), (0.46, 0.46, 0.46), body)
     sphere("band", (0, 0, 0.58), (0.485, 0.485, 0.14), band)
 
@@ -1561,8 +1567,8 @@ def item_rope():
     proportion -- the knots have to be much fatter than the braid, and the
     frayed ends have to splay.
     """
-    rope = material("Rope", "#D8B36A", roughness=0.88)
-    rope_dark = material("Rope shade", "#A8823F", roughness=0.90)
+    rope = material("Rope", tone("wood", "base"), roughness=0.88)
+    rope_dark = material("Rope shade", tone("wood", "shade"), roughness=0.90)
     cylinder("braid", (0, 0, 0.58), 0.16, 0.88, rope,
              rotation=(0, math.radians(90), 0))
     for i, tw in enumerate((-0.22, 0.0, 0.22)):
@@ -1590,10 +1596,10 @@ def kit_bowl():
     put a disc across the opening at the same height as the kibble, which
     swallowed all four pieces and rendered an empty orange bowl.
     """
-    glaze = material("Bowl glaze", "#F5A704", roughness=0.36, coat=0.22)
-    rim = material("Bowl rim", "#FFC038", roughness=0.34, coat=0.24)
-    inside = material("Bowl inside", "#A9640A", roughness=0.55)
-    kibble = material("Kibble", "#8A4A18", roughness=0.74)
+    glaze = material("Bowl glaze", tone("sun", "base"), roughness=0.36, coat=0.22)
+    rim = material("Bowl rim", tone("wood", "base"), roughness=0.34, coat=0.24)
+    inside = material("Bowl inside", tone("sun", "shade"), roughness=0.55)
+    kibble = material("Kibble", tone("bark", "base"), roughness=0.74)
     cone("bowl", (0, 0, 0.38), 0.30, 0.50, 0.34, glaze)
     sphere("bowl_inside", (0, 0, 0.50), (0.44, 0.44, 0.06), inside)
     torus("bowl_rim", (0, 0, 0.54), 0.48, 0.06, rim, scale=(1, 1, 0.7))
@@ -1615,8 +1621,8 @@ def kit_stick():
     separate brown rods crossing near the middle. A branch reads as a branch
     because it TAPERS and because everything on it grows out of one line.
     """
-    bark = material("Stick bark", "#7A3E15", roughness=0.86)
-    lit = material("Stick lit", "#CF7A2B", roughness=0.80)
+    bark = material("Stick bark", tone("bark", "base"), roughness=0.86)
+    lit = material("Stick lit", tone("wood", "lit"), roughness=0.80)
     cone("limb", (0, 0, 0.58), 0.10, 0.062, 1.06, bark,
          rotation=(0, math.radians(90), 0))
     knot_x = 0.13
@@ -1637,7 +1643,7 @@ def collar(name, hex_body, hex_edge):
     def build():
         body = material(f"{name} collar", hex_body, roughness=0.52, coat=0.08)
         edge = material(f"{name} collar edge", hex_edge, roughness=0.56)
-        brass = material("Collar brass", "#E0A93C", roughness=0.28, metallic=0.74)
+        brass = material("Collar brass", tone("sun", "base"), roughness=0.28, metallic=0.74)
         torus("band", (0, 0, 0.58), 0.42, 0.09, body, scale=(1, 0.55, 1))
         torus("band_edge", (0, 0, 0.52), 0.42, 0.04, edge, scale=(1, 0.55, 1))
         cube("buckle", (0, -0.22, 0.58), (0.11, 0.04, 0.11), brass, 0.03)
@@ -1679,8 +1685,8 @@ def sky_cloud():
     two metres long comes out banked like a paper aeroplane.
     """
     turn = facing(camera_yaw())
-    crown_mat = material("Cloud crown", "#E9F1FF", roughness=0.96, coat=0.0)
-    under_mat = material("Cloud under", "#C6D9EF", roughness=0.98, coat=0.0)
+    crown_mat = material("Cloud crown", tone("sky", "base"), roughness=0.96, coat=0.0)
+    under_mat = material("Cloud under", tone("sky", "shade"), roughness=0.98, coat=0.0)
 
     under = []
     for dx, sx, sz in ((-1.66, 0.44, 0.15), (-0.84, 0.56, 0.17),
@@ -1709,8 +1715,8 @@ def sky_cloud_far():
     because haze eats contrast with distance before it eats anything else.
     """
     turn = facing(camera_yaw())
-    crown_mat = material("Far cloud crown", "#E9F1FF", roughness=0.96, coat=0.0)
-    under_mat = material("Far cloud under", "#D9E6F5", roughness=0.98, coat=0.0)
+    crown_mat = material("Far cloud crown", tone("sky", "base"), roughness=0.96, coat=0.0)
+    under_mat = material("Far cloud under", tone("sky", "shade"), roughness=0.98, coat=0.0)
 
     under = []
     for dx, sx in ((-0.66, 0.30), (-0.02, 0.36), (0.62, 0.28)):
@@ -1759,14 +1765,14 @@ def home_vista():
     # more chroma than its neighbours need for exactly this reason. Measured
     # off the render, not eyeballed: the saturation of the far band has to come
     # back above the grass's before it reads as distance.
-    far = material("Vista far", "#6FAEE0", roughness=0.95)
-    far_b = material("Vista far b", "#83BDE9", roughness=0.95)
-    mid = material("Vista mid", "#79B274", roughness=0.92)
-    mid_b = material("Vista mid b", "#88BE7E", roughness=0.92)
-    near = material("Vista near", "#5FA352", roughness=0.90)
-    near_b = material("Vista near b", "#6DAF5C", roughness=0.90)
-    trunk = material("Vista trunk", "#6B4830", roughness=0.88)
-    leaf = material("Vista leaf", "#3F8440", roughness=0.90)
+    far = material("Vista far", tone("sky", "lit"), roughness=0.95)
+    far_b = material("Vista far b", tone("sky", "pop"), roughness=0.95)
+    mid = material("Vista mid", tone("foliage", "lit"), roughness=0.92)
+    mid_b = material("Vista mid b", tone("foliage", "pop"), roughness=0.92)
+    near = material("Vista near", tone("foliage", "base"), roughness=0.90)
+    near_b = material("Vista near b", tone("foliage", "lit"), roughness=0.90)
+    trunk = material("Vista trunk", tone("bark", "base"), roughness=0.88)
+    leaf = material("Vista leaf", tone("foliage", "base"), roughness=0.90)
 
     # Far: the TALLEST band, and the one furthest back. Hills read as distant
     # because they are pale and high, not because they are small.
@@ -1812,8 +1818,8 @@ def beach_surf():
     ends so the app can hang it off the frame edges.
     """
     turn = facing(camera_yaw())
-    foam = material("Surf foam", "#F4F9FF", roughness=0.94, coat=0.0)
-    wash = material("Surf wash", "#CBE4EE", roughness=0.96, coat=0.0)
+    foam = material("Surf foam", tone("sea", "base"), roughness=0.94, coat=0.0)
+    wash = material("Surf wash", tone("sea", "base"), roughness=0.96, coat=0.0)
 
     # The spent wash: what is left after a wave has broken, low and continuous,
     # so the broken crest above it still has a waterline to sit on.
@@ -1857,12 +1863,12 @@ BUILDERS = {
     # Wide and shallow: it is a horizon, so the ortho box is sized to the run.
     "park/treeline": (park_treeline, 6.6, (0, 0, 0.42), {"displayWidth": 420, "anchor": "bottom"}),
     "park/hedge": (park_hedge, 4.4, (0, 0, 0.72), {"displayWidth": 154, "anchor": "bottom"}),
-    "town/store_coral": (lambda: storefront("Coral", "#E14B45", "#982D32", "#FF6349"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
-    "town/store_aqua": (lambda: storefront("Aqua", "#37B4CD", "#216E84", "#3ED3EB"), 6.6, (0, 0, 2.30), {"displayWidth": 190, "anchor": "bottom"}),
+    "town/store_coral": (lambda: storefront("Coral", tone("roof", "base"), tone("roof", "shade"), tone("roof", "lit")), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
+    "town/store_aqua": (lambda: storefront("Aqua", tone("sea", "base"), tone("sea", "shade"), tone("sea", "lit")), 6.6, (0, 0, 2.30), {"displayWidth": 190, "anchor": "bottom"}),
     # Violet measured the palest of the three storefronts (0.344 against the
     # coral's and aqua's 0.40) -- a warm key on a lilac washes it toward grey,
     # so the base carries more chroma than its neighbours need to.
-    "town/store_violet": (lambda: storefront("Violet", "#8A3FD6", "#4F2189", "#B871F0"), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
+    "town/store_violet": (lambda: storefront("Violet", tone("grape", "base"), tone("grape", "shade"), tone("grape", "lit")), 6.6, (0, 0, 2.30), {"displayWidth": 176, "anchor": "bottom"}),
     # Wide horizon bands: the ortho box is sized to the run, and both are built
     # in the camera-facing frame so they render level rather than sloped.
     "town/rooftops": (town_rooftops, 6.8, (0, 0, 0.62), {"displayWidth": 440, "anchor": "bottom"}),
@@ -1900,10 +1906,10 @@ BUILDERS = {
     "item/toy_rope": (item_rope, 1.9, (0, 0, 0.58), {"displayWidth": 48, "anchor": "center"}),
     "item/kit_bowl": (kit_bowl, 1.6, (0, 0, 0.48), {"displayWidth": 76, "anchor": "center"}),
     "item/kit_stick": (kit_stick, 1.9, (0, 0, 0.60), {"displayWidth": 82, "anchor": "center"}),
-    "item/collar_red": (collar("Red", "#C4432E", "#8E2C1D"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
-    "item/collar_blue": (collar("Blue", "#3E6E9C", "#28496A"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
-    "item/collar_green": (collar("Green", "#4E7A46", "#33512E"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
-    "item/collar_gold": (collar("Gold", "#D9A62B", "#9A711A"), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
+    "item/collar_red": (collar("Red", tone("berry", "base"), tone("berry", "shade")), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
+    "item/collar_blue": (collar("Blue", tone("sea", "shade"), tone("sea", "deep")), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
+    "item/collar_green": (collar("Green", tone("foliage", "shade"), tone("foliage", "deep")), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
+    "item/collar_gold": (collar("Gold", tone("sun", "base"), tone("sun", "shade")), 1.6, (0, 0, 0.52), {"displayWidth": 48, "anchor": "center"}),
 }
 
 

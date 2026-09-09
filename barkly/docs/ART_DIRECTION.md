@@ -1153,3 +1153,35 @@ whatever just took focus. One click on Settings slid the app to (-82, -27),
 the frame's overflow to the pixel. When a gate's verdict changes without the
 code changing, find what SLID before reading the diff again -- and when you
 find it, make the gate say the true thing next time rather than the symptom.
+
+
+## The palette is the art direction (2026-09-09)
+
+`tools/blender/palette.py` is the only place a colour comes from. Before it
+existed the render packs named **255 distinct colours in 274 uses** -- almost
+every colour in the game chosen once, by hand, at the moment somebody wrote
+that prop and never seen beside the others. Saturation across the world ran
+0.04 to 0.98 and value ran 0.18 to 1.00.
+
+The reference is Barkly, because he is the thing that works: 95% of his
+106,338 opaque pixels sit in a **15-degree hue band**, saturation median 0.42,
+value from 0.14 to 0.92. One hue family, a wide value ramp, moderate chroma.
+
+So the world is built the same way. A short list of FAMILIES, each one hue
+plus two dials (`chroma`, `lift`); ONE ramp of five steps shared by all of
+them; and one key and one ambient that every step is pushed toward, so a
+surface in shadow takes the colour of the sky and a surface in light takes the
+colour of the sun -- the same sky and the same sun, everywhere in the game.
+
+Three things follow, and they are the rules:
+
+1. **A new colour is a new FAMILY, argued for here, not a hex at a call site.**
+   `__tests__/palette_source.test.ts` fails on a hex literal in a render pack.
+2. **One light.** The packs used to carry three different suns and three
+   different skies for art composited into the same frame. Scenes lit by
+   different lights cannot look like one game whatever colour anything is
+   painted, and that -- not texture, not composition -- was why the four
+   places never matched.
+3. **Legibility is measured, not assumed.** Putting the biscuit and the rope
+   on `sand.lit` dropped them to 2.1:1 against the sheet panes;
+   `item_renders.test.ts` caught it and both moved to `wood.base` at 3.2:1.

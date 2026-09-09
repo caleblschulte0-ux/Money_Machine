@@ -6,6 +6,11 @@ physical thickness, bevels, and a shared light response for the frame itself.
 """
 from pathlib import Path
 import bpy
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -115,29 +120,29 @@ def setup():
     key = bpy.context.object
     key.data.energy = 845
     key.data.size = 5.0
-    key.data.color = (1.0, 0.76, 0.55)
+    key.data.color = light_rgb("key")
     look_at(key, (0, 0, 1.4))
 
     bpy.ops.object.light_add(type='AREA', location=(4.5, -2.0, 4.0))
     fill = bpy.context.object
     fill.data.energy = 245
     fill.data.size = 5.0
-    fill.data.color = (0.58, 0.78, 1.0)
+    fill.data.color = light_rgb("fill")
     look_at(fill, (0, 0, 1.4))
 
     bpy.ops.object.light_add(type='AREA', location=(0.8, 3.5, 6.4))
     rim = bpy.context.object
     rim.data.energy = 365
     rim.data.size = 3.8
-    rim.data.color = (1.0, 0.86, 0.66)
+    rim.data.color = light_rgb("key")
     look_at(rim, (0, 0, 1.4))
 
 
 def build_window_frame():
-    wood = mat('Honey molded wood', '#BE6014', roughness=0.44, coat=0.09)
-    wood_dark = mat('Recess edge', '#722F0C', roughness=0.56, coat=0.04)
-    sill = mat('Warm sill', '#D37319', roughness=0.42, coat=0.10)
-    brass = mat('Upgrade brass', '#F4A519', roughness=0.30, metallic=0.55, coat=0.05)
+    wood = mat("Honey molded wood", tone("wood", "base"), roughness=0.44, coat=0.09)
+    wood_dark = mat("Recess edge", tone("wood", "shade"), roughness=0.56, coat=0.04)
+    sill = mat("Warm sill", tone("wood", "lit"), roughness=0.42, coat=0.10)
+    brass = mat("Upgrade brass", tone("sun", "base"), roughness=0.30, metallic=0.55, coat=0.05)
 
     # Shadow/recess lip sits behind the brighter frame and makes the window feel
     # cut into a wall even though the live sky is composited by React Native.

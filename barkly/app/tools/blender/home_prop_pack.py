@@ -15,6 +15,10 @@ import os
 from pathlib import Path
 
 import bpy
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -126,7 +130,7 @@ def cylinder(name, loc, radius, depth, material, rotation=(0, 0, 0), vertices=48
 def contact_shadow(rx, ry, z=0.055):
     # A deliberately authored soft-looking footprint. Real cast shadows from the
     # key light reinforce it, but this ensures the sprite never floats in-app.
-    shadow = make_material("Contact shadow", "#2F1E16", roughness=1.0)
+    shadow = make_material("Contact shadow", tone("ink", "shade"), roughness=1.0)
     return sphere("contact_shadow", (0, 0.12, z), (rx, ry, 0.045), shadow)
 
 
@@ -171,7 +175,7 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     key.name = "Barkly key"
     key.data.energy = 790
     key.data.size = 5.0
-    key.data.color = (1.0, 0.77, 0.58)
+    key.data.color = light_rgb("key")
     look_at(key, target)
 
     bpy.ops.object.light_add(type="AREA", location=(5.0, -2.2, 4.0))
@@ -179,7 +183,7 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     fill.name = "Barkly cool fill"
     fill.data.energy = 270
     fill.data.size = 5.5
-    fill.data.color = (0.58, 0.78, 1.0)
+    fill.data.color = light_rgb("fill")
     look_at(fill, target)
 
     bpy.ops.object.light_add(type="AREA", location=(1.8, 4.0, 6.8))
@@ -187,16 +191,16 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     rim.name = "Barkly rim"
     rim.data.energy = 420
     rim.data.size = 4.2
-    rim.data.color = (1.0, 0.84, 0.63)
+    rim.data.color = light_rgb("key")
     look_at(rim, target)
 
 
 def chair():
-    fabric = make_material("Muted coral upholstery", "#F45649", roughness=0.72, coat=0.02)
-    fabric_light = make_material("Seat upholstery", "#FF7F72", roughness=0.78)
-    seam = make_material("Upholstery seam", "#AE2D2A", roughness=0.84)
-    wood = make_material("Warm chair feet", "#733919", roughness=0.56, coat=0.03)
-    pillow = make_material("Butter pillow", "#FFD049", roughness=0.66)
+    fabric = make_material("Muted coral upholstery", tone("berry", "base"), roughness=0.72, coat=0.02)
+    fabric_light = make_material("Seat upholstery", tone("sea", "base"), roughness=0.78)
+    seam = make_material("Upholstery seam", tone("stone", "shade"), roughness=0.84)
+    wood = make_material("Warm chair feet", tone("wood", "base"), roughness=0.56, coat=0.03)
+    pillow = make_material("Butter pillow", tone("sun", "base"), roughness=0.66)
 
     contact_shadow(1.38, 0.70)
     # The shared camera supplies the side plane. A second object-level yaw made
@@ -213,10 +217,10 @@ def chair():
 
 
 def lamp():
-    brass = make_material("Lamp brass", "#CB7D0F", roughness=0.28, metallic=0.72)
-    wood = make_material("Lamp stem wood", "#69371B", roughness=0.52, coat=0.04)
-    shade = make_material("Warm woven shade", "#FFC44D", roughness=0.68)
-    inner = make_material("Lit shade underside", "#FFE09B", roughness=0.62, coat=0.04)
+    brass = make_material("Lamp brass", tone("metal", "base"), roughness=0.28, metallic=0.72)
+    wood = make_material("Lamp stem wood", tone("wood", "base"), roughness=0.52, coat=0.04)
+    shade = make_material("Warm woven shade", tone("sun", "lit"), roughness=0.68)
+    inner = make_material("Lit shade underside", tone("sun", "pop"), roughness=0.62, coat=0.04)
 
     contact_shadow(0.62, 0.38)
     cylinder("lamp_base", (0, 0, 0.22), 0.48, 0.22, brass)
@@ -245,12 +249,12 @@ def bed():
     # floor and at #1DBEE6 it was the brightest thing in the room after the
     # window -- and, measured against the shop panes its own card sits on, it
     # came out at 2.7:1 where 3:1 is the floor. Same colour, less light in it.
-    rim = make_material("Aqua plush rim", "#1596BC", roughness=0.90)
-    rim_lump = make_material("Aqua plush lump", "#1BA9D2", roughness=0.92)
-    rim_dark = make_material("Aqua plush cavity", "#075D75", roughness=0.94)
-    cushion = make_material("Cream plush cushion", "#F2D8A4", roughness=0.94)
-    cushion_shade = make_material("Cream plush shade", "#D6B67F", roughness=0.95)
-    stitch = make_material("Bed stitch", "#D78D43", roughness=0.95)
+    rim = make_material("Aqua plush rim", tone("sea", "base"), roughness=0.90)
+    rim_lump = make_material("Aqua plush lump", tone("sea", "lit"), roughness=0.92)
+    rim_dark = make_material("Aqua plush cavity", tone("sea", "deep"), roughness=0.94)
+    cushion = make_material("Cream plush cushion", tone("cream", "base"), roughness=0.94)
+    cushion_shade = make_material("Cream plush shade", tone("cream", "shade"), roughness=0.95)
+    stitch = make_material("Bed stitch", tone("wood", "lit"), roughness=0.95)
 
     contact_shadow(1.48, 0.76)
     bpy.ops.mesh.primitive_torus_add(major_segments=64, minor_segments=24, location=(0, 0.08, 0.48), major_radius=0.95, minor_radius=0.37)
@@ -286,13 +290,13 @@ def bed():
 
 
 def shelf():
-    wood = make_material("Honey painted wood", "#BC631F", roughness=0.52, coat=0.04)
-    wood_dark = make_material("Shelf recess", "#452216", roughness=0.70)
-    cream = make_material("Cabinet inset", "#FFDBA0", roughness=0.64)
-    brass = make_material("Shelf brass", "#E4981A", roughness=0.30, metallic=0.68)
-    book_red = make_material("Muted red book", "#D03E37", roughness=0.70)
-    book_blue = make_material("Muted blue book", "#389ABB", roughness=0.70)
-    trophy = make_material("Trophy gold", "#F7AC1D", roughness=0.28, metallic=0.72)
+    wood = make_material("Honey painted wood", tone("wood", "base"), roughness=0.52, coat=0.04)
+    wood_dark = make_material("Shelf recess", tone("wood", "base"), roughness=0.70)
+    cream = make_material("Cabinet inset", tone("wood", "base"), roughness=0.64)
+    brass = make_material("Shelf brass", tone("wood", "base"), roughness=0.30, metallic=0.68)
+    book_red = make_material("Muted red book", tone("berry", "base"), roughness=0.70)
+    book_blue = make_material("Muted blue book", tone("sea", "base"), roughness=0.70)
+    trophy = make_material("Trophy gold", tone("sun", "base"), roughness=0.28, metallic=0.72)
 
     contact_shadow(1.05, 0.46)
     # One strong cabinet mass with actual depth and just a few story objects.

@@ -39,6 +39,10 @@ import sys
 from pathlib import Path
 
 import bpy
+
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from palette import light_hex, tone  # noqa: E402  -- the one place a colour comes from
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
@@ -223,14 +227,14 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     fill.name = "Sky bounce"
     fill.data.energy = 220
     fill.data.size = 9.0
-    fill.data.color = pack.rgb("#9EC8FF")
+    fill.data.color = pack.rgb(light_hex("fill"))
     if hasattr(fill.data, "use_shadow"):
         fill.data.use_shadow = False
     pack.look_at(fill, aim)
     return camera
 
 
-def ground(hex_near: str, hex_far: str = "#84CE5E", centre: float = -48.5,
+def ground(hex_near: str, hex_far: str = tone("grass", "lit"), centre: float = -48.5,
            size: float = 183.0, tooth: float = 26.0, bump: float = 0.10):
     """The ground, as geometry. It receives shadow and it occludes.
 
@@ -272,7 +276,7 @@ def park():
     the frame stays clear -- that is where the dog stands, and he is drawn by
     the app on top of this.
     """
-    ground("#6FBF4A")
+    ground(tone("grass", "base"))
     # Where the dog stands, how tall a world unit is there, and the horizon.
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
@@ -288,7 +292,7 @@ def park():
         # units tall, and eight units at this camera is most of the frame. A
         # horizon is made of trees you read as far away, which means small.
         s = 1.05 + ((i * 0.382) % 1.0) * 0.45
-        _tree(x, y, s, canopy="#5FA83C", trunk="#7A5233")
+        _tree(x, y, s, canopy=tone("foliage", "base"), trunk=tone("bark", "base"))
 
     # Then the trees that frame the shot: two near the edges, two mid-distance.
     for x, y, s in ((-7.6, -3.0, 1.6), (8.2, -1.4, 1.5), (-11.5, 11.0, 1.3), (12.5, 9.0, 1.25),
@@ -315,8 +319,8 @@ def park():
     # mass across the middle of the picture where the dog stands, which frames
     # nothing. A proscenium is mostly off-stage -- trunks out of shot, only the
     # inner edge of each canopy reaching in.
-    _tree(-12.2, -12.0, 3.0, canopy="#4FA436", trunk="#7A5233")
-    _tree(12.6, -10.0, 2.9, canopy="#57AC3C", trunk="#83593A")
+    _tree(-12.2, -12.0, 3.0, canopy=tone("foliage", "shade"), trunk=tone("bark", "base"))
+    _tree(12.6, -10.0, 2.9, canopy=tone("foliage", "base"), trunk=tone("bark", "lit"))
 
     # BACK, and off his head. At y 21 it sat directly behind the dog with its
     # roof at his ears, and a wide shallow cone that close reads as a parasol
@@ -336,10 +340,10 @@ def park():
     # the beach carries a red umbrella and a yellow bucket. This had one yellow
     # flower repeated six times, which is not colour, it is a texture.
     beds = (
-        (-4.8, 1.5, 1.2, "#F2557B"), (5.2, 3.4, 1.1, "#FFFFFF"),
-        (-8.2, 6.0, 1.0, "#FFE45C"), (7.6, 6.8, 1.05, "#B06CE0"),
-        (-2.0, 10.0, 0.9, "#F2557B"), (3.4, 12.5, 0.85, "#FFE45C"),
-        (-6.0, 16.0, 0.8, "#FFFFFF"), (6.4, 18.0, 0.8, "#B06CE0"),
+        (-4.8, 1.5, 1.2, tone("berry", "lit")), (5.2, 3.4, 1.1, tone("cream", "pop")),
+        (-8.2, 6.0, 1.0, tone("sun", "lit")), (7.6, 6.8, 1.05, tone("grape", "lit")),
+        (-2.0, 10.0, 0.9, tone("berry", "lit")), (3.4, 12.5, 0.85, tone("sun", "lit")),
+        (-6.0, 16.0, 0.8, tone("cream", "pop")), (6.4, 18.0, 0.8, tone("grape", "lit")),
     )
     for fx, fy, fs, petal_hex in beds:
         _flowers(fx, fy, fs, petal_hex)
@@ -551,8 +555,8 @@ def _hedge(x: float, y: float, length: float, s: float = 1.0):
     Four trees and a bench on open grass gives a scene a back and a front and
     no middle. This is the middle.
     """
-    body = pack.material(f"Hedge{x:.1f}", "#3F8C34", roughness=0.92)
-    top = pack.material(f"HedgeTop{x:.1f}", "#5AA845", roughness=0.90)
+    body = pack.material(f"Hedge{x:.1f}", tone("foliage", "shade"), roughness=0.92)
+    top = pack.material(f"HedgeTop{x:.1f}", tone("foliage", "base"), roughness=0.90)
     n = max(3, int(length / 0.9))
     for i in range(n):
         hx = x - length / 2 + i * (length / (n - 1))
@@ -564,8 +568,8 @@ def _hedge(x: float, y: float, length: float, s: float = 1.0):
 
 def _bush(x: float, y: float, s: float = 1.0):
     """A shrub for the near corners. Foreground is mass, not detail."""
-    dark = pack.material(f"Bush{x:.1f}{y:.1f}", "#3C8A32", roughness=0.92)
-    lit = pack.material(f"BushLit{x:.1f}{y:.1f}", "#57A544", roughness=0.90)
+    dark = pack.material(f"Bush{x:.1f}{y:.1f}", tone("foliage", "shade"), roughness=0.92)
+    lit = pack.material(f"BushLit{x:.1f}{y:.1f}", tone("foliage", "base"), roughness=0.90)
     for i, (dx, dy, dz, r) in enumerate((
         (0.0, 0.0, 0.55, 1.0), (-0.72, 0.18, 0.42, 0.78),
         (0.70, -0.12, 0.46, 0.82), (0.05, -0.35, 0.72, 0.66),
@@ -575,9 +579,9 @@ def _bush(x: float, y: float, s: float = 1.0):
                     (r * s, r * 0.85 * s, r * 0.78 * s), lit if i == 3 else dark)
 
 
-def _flowers(x: float, y: float, s: float = 1.0, petal_hex: str = "#FFE45C"):
+def _flowers(x: float, y: float, s: float = 1.0, petal_hex: str = tone("sun", "lit")):
     petal = pack.material(f"Petal{x:.2f}{y:.2f}", petal_hex, roughness=0.80)
-    stem = pack.material(f"Stem{x:.2f}{y:.2f}", "#4E9B3A", roughness=0.90)
+    stem = pack.material(f"Stem{x:.2f}{y:.2f}", tone("grass", "shade"), roughness=0.90)
     for i in range(7):
         a = i * 1.6 + x
         r = 0.20 + (i % 3) * 0.14
@@ -601,7 +605,7 @@ def _path():
     boxes down the field and rendered a jagged staircase with a hard edge on
     every step -- a path is a shape, and a shape is one polygon.
     """
-    dirt = pack.material("Path", "#8FA766", roughness=0.96)
+    dirt = pack.material("Path", tone("paving", "base"), roughness=0.96)
     left, right = [], []
     for i in range(15):
         t = i / 14.0
@@ -628,11 +632,11 @@ def _bandstand(x: float, y: float, s: float = 1.0):
     size without needing detail. Centre-back, so the dog stands in front of it
     the way he stands in front of BARKLY'S.
     """
-    post = pack.material(f"Band post{x:.1f}", "#FFF3DC", roughness=0.72)
-    roof = pack.material(f"Band roof{x:.1f}", "#E1594C", roughness=0.70)
-    trim = pack.material(f"Band trim{x:.1f}", "#3D8FD1", roughness=0.68)
-    base = pack.material(f"Band base{x:.1f}", "#C9A06A", roughness=0.88)
-    finial = pack.material(f"Band finial{x:.1f}", "#F2C13C", roughness=0.60)
+    post = pack.material(f"Band post{x:.1f}", tone("cream", "pop"), roughness=0.72)
+    roof = pack.material(f"Band roof{x:.1f}", tone("roof", "base"), roughness=0.70)
+    trim = pack.material(f"Band trim{x:.1f}", tone("sea", "base"), roughness=0.68)
+    base = pack.material(f"Band base{x:.1f}", tone("sand", "lit"), roughness=0.88)
+    finial = pack.material(f"Band finial{x:.1f}", tone("sun", "lit"), roughness=0.60)
 
     cx, cy = TURN(x, y)
     pack.cylinder(f"bandbase{x:.1f}", (cx, cy, 0.22 * s), 3.1 * s, 0.44 * s, base, vertices=24)
@@ -652,10 +656,11 @@ def _bandstand(x: float, y: float, s: float = 1.0):
         pack.cylinder(f"bandrail{x:.1f}{i}", (rx, ry, 1.05 * s), 0.10 * s, 0.30 * s, trim, vertices=10)
 
 
-def _tree(x: float, y: float, s: float, canopy: str = "#5CB03A", trunk: str = "#8A5C39"):
+def _tree(x: float, y: float, s: float, canopy: str = tone("foliage", "base"),
+          trunk: str = tone("bark", "base")):
     bark = pack.material(f"Bark{x:.1f}{y:.1f}", trunk, roughness=0.92)
     leaf = pack.material(f"Leaf{x:.1f}{y:.1f}", canopy, roughness=0.88)
-    leaf_hi = pack.material(f"LeafHi{x:.1f}{y:.1f}", "#7BC855", roughness=0.86)
+    leaf_hi = pack.material(f"LeafHi{x:.1f}{y:.1f}", tone("foliage", "lit"), roughness=0.86)
     wx, wy = TURN(x, y)
     pack.cylinder(f"trunk{x:.1f}{y:.1f}", (wx, wy, 1.35 * s), 0.30 * s, 2.7 * s, bark)
     for i, (dx, dy, dz, r) in enumerate((
@@ -670,8 +675,8 @@ def _tree(x: float, y: float, s: float, canopy: str = "#5CB03A", trunk: str = "#
 
 
 def _bench(x: float, y: float):
-    wood = pack.material("Bench wood", "#D2762F", roughness=0.72)
-    iron = pack.material("Bench iron", "#3B3B44", roughness=0.60, metallic=0.4)
+    wood = pack.material("Bench wood", tone("wood", "base"), roughness=0.72)
+    iron = pack.material("Bench iron", tone("wood", "base"), roughness=0.60, metallic=0.4)
     for i, (dz, dy) in enumerate(((0.72, 0.0), (0.98, -0.20), (1.24, -0.34))):
         bx, by = TURN(x, y + dy)
         pack.cube(f"slat{i}", (bx, by, dz), (1.55, 0.10, 0.055), wood, 0.03,
@@ -684,8 +689,8 @@ def _bench(x: float, y: float):
 
 def _tuft(x: float, y: float, s: float):
     mats = (
-        pack.material(f"Blade{x:.2f}{y:.2f}a", "#5FB53A", roughness=0.90),
-        pack.material(f"Blade{x:.2f}{y:.2f}b", "#79C94F", roughness=0.90),
+        pack.material(f"Blade{x:.2f}{y:.2f}a", tone("grass", "base"), roughness=0.90),
+        pack.material(f"Blade{x:.2f}{y:.2f}b", tone("grass", "lit"), roughness=0.90),
     )
     for i in range(5):
         a = (i / 5.0) * math.tau + x
@@ -708,7 +713,7 @@ def beach():
     the surf sits in a place rather than on a picture, and the umbrella throws
     its shadow across the sand it stands on.
     """
-    ground("#DFB877", "#EFD196", tooth=38.0, bump=0.09)
+    ground(tone("sand", "base"), tone("sand", "lit"), tooth=38.0, bump=0.09)
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
     _anchor("horizon", 0.0, 43.0)
@@ -716,11 +721,11 @@ def beach():
     # The sea: its own plane, starting at the tide line and running past the
     # sand's far edge so no seam of bare ground shows between them.
     # Wet sand: the strip the water has just left, darker and slightly damp.
-    wet = pack.material("Wet sand", "#C9A868", roughness=0.72, coat=0.18)
+    wet = pack.material("Wet sand", tone("sand", "base"), roughness=0.72, coat=0.18)
     _band("wet", 20.0, 25.3, 0.006, wet)
 
     # Shallows to deep water, as one continuous ramp.
-    _band("sea", 25.0, 43.0, 0.005, depth_material("Sea", "#8CE0E4", "#2F97AE"))
+    _band("sea", 25.0, 43.0, 0.005, depth_material("Sea", tone("sea", "base"), tone("sea", "shade")))
 
     _surf(25.0)
     _headland(40.0)
@@ -772,8 +777,8 @@ def beach():
 
 def _surf(y: float):
     """Foam where the two surfaces meet. It BREAKS, or it is a kerb."""
-    foam = pack.material("Foam", "#F4F9FF", roughness=0.94)
-    wash = pack.material("Foam wash", "#D8ECF2", roughness=0.96)
+    foam = pack.material("Foam", tone("cream", "base"), roughness=0.94)
+    wash = pack.material("Foam wash", tone("cream", "base"), roughness=0.96)
     _poly("wash", [(-70.0, y - 1.4), (70.0, y - 1.4), (70.0, y + 0.5), (-70.0, y + 0.5)], 0.008, wash)
     groups = ((-26.0, 7.0), (-14.0, 9.0), (-1.0, 6.0), (7.0, 8.0), (18.0, 7.0))
     for gi, (gx, glen) in enumerate(groups):
@@ -786,8 +791,8 @@ def _surf(y: float):
 
 
 def _headland(y: float):
-    far = pack.material("Headland", "#8FB79C", roughness=0.94)
-    far_b = pack.material("Headland b", "#9DC3A6", roughness=0.94)
+    far = pack.material("Headland", tone("stone", "base"), roughness=0.94)
+    far_b = pack.material("Headland b", tone("stone", "base"), roughness=0.94)
     for i in range(23):
         x = -34.0 + i * 3.0
         wx, wy = TURN(x, y + ((i * 0.618) % 1.0) * 2.0)
@@ -805,8 +810,8 @@ def _dune(x: float, y: float, s: float = 1.0):
     """A sand dune. The first beach pass reused the park's shrub for these and
     put four green bushes on a beach, which is what happens when a builder is
     borrowed for its shape and not its material."""
-    sand = pack.material(f"Dune{x:.1f}{y:.1f}", "#DFC085", roughness=0.95)
-    lit = pack.material(f"DuneLit{x:.1f}{y:.1f}", "#EDD3A0", roughness=0.94)
+    sand = pack.material(f"Dune{x:.1f}{y:.1f}", tone("sand", "base"), roughness=0.95)
+    lit = pack.material(f"DuneLit{x:.1f}{y:.1f}", tone("sand", "lit"), roughness=0.94)
     for i, (dx, dy, dz, r) in enumerate((
         (0.0, 0.0, 0.30, 1.0), (-0.9, 0.2, 0.22, 0.75),
         (0.85, -0.15, 0.24, 0.8), (0.1, 0.5, 0.34, 0.62),
@@ -819,9 +824,9 @@ def _dune(x: float, y: float, s: float = 1.0):
 
 
 def _lifeguard(x: float, y: float, s: float = 1.0):
-    post = pack.material("Tower post", "#B0703C", roughness=0.86)
-    body = pack.material("Tower body", "#E1594C", roughness=0.74)
-    roof = pack.material("Tower roof", "#5FC7C7", roughness=0.70)
+    post = pack.material("Tower post", tone("wood", "base"), roughness=0.86)
+    body = pack.material("Tower body", tone("roof", "base"), roughness=0.74)
+    roof = pack.material("Tower roof", tone("roof", "base"), roughness=0.70)
     for dx, dy in ((-1.0, -0.8), (1.0, -0.8), (-1.0, 0.8), (1.0, 0.8)):
         lx, ly = TURN(x + dx * s, y + dy * s)
         pack.cylinder(f"post{dx}{dy}{x:.1f}", (lx, ly, 0.85 * s), 0.17 * s, 1.7 * s, post)
@@ -830,8 +835,8 @@ def _lifeguard(x: float, y: float, s: float = 1.0):
               rotation=(0, 0, THETA))
     pack.cube(f"roof{x:.1f}", (bx, by, 3.72 * s), (1.65 * s, 1.45 * s, 0.13 * s), roof, 0.07,
               rotation=(0, 0, THETA))
-    glass = pack.material(f"Tower glass{x:.1f}", "#BFE7EE", roughness=0.30, coat=0.30)
-    rail = pack.material(f"Tower rail{x:.1f}", "#F0DCC0", roughness=0.80)
+    glass = pack.material(f"Tower glass{x:.1f}", tone("sea", "pop"), roughness=0.30, coat=0.30)
+    rail = pack.material(f"Tower rail{x:.1f}", tone("cream", "lit"), roughness=0.80)
     gx, gy = TURN(x, y - 1.2 * s)
     pack.cube(f"glass{x:.1f}", (gx, gy, 2.75 * s), (0.95 * s, 0.06 * s, 0.55 * s), glass, 0.05,
               rotation=(0, 0, THETA))
@@ -842,9 +847,9 @@ def _lifeguard(x: float, y: float, s: float = 1.0):
 
 
 def _umbrella(x: float, y: float, s: float = 1.0):
-    pole = pack.material("Umbrella pole", "#8A5C39", roughness=0.85)
-    canopy = pack.material("Umbrella canopy", "#F0705C", roughness=0.70)
-    knob = pack.material("Umbrella knob", "#FFD34E", roughness=0.60)
+    pole = pack.material("Umbrella pole", tone("roof", "base"), roughness=0.85)
+    canopy = pack.material("Umbrella canopy", tone("foliage", "base"), roughness=0.70)
+    knob = pack.material("Umbrella knob", tone("roof", "base"), roughness=0.60)
     px, py = TURN(x, y)
     pack.cylinder(f"upole{x:.1f}", (px, py, 1.5 * s), 0.09 * s, 3.0 * s, pole)
     pack.cone(f"ucan{x:.1f}", (px, py, 3.15 * s), 2.1 * s, 0.10 * s, 0.62 * s, canopy)
@@ -863,10 +868,10 @@ def _palm(x: float, y: float, s: float = 1.0):
 
     The trunk is one tapered cylinder with a lean, not a stack of segments.
     """
-    trunk = pack.material(f"Palm trunk{x:.1f}", "#B08454", roughness=0.90)
-    trunk_hi = pack.material(f"Palm trunk hi{x:.1f}", "#C79A66", roughness=0.88)
-    frond = pack.material(f"Palm frond{x:.1f}", "#4E9E4A", roughness=0.86)
-    frond_hi = pack.material(f"Palm frond hi{x:.1f}", "#63B658", roughness=0.84)
+    trunk = pack.material(f"Palm trunk{x:.1f}", tone("bark", "lit"), roughness=0.90)
+    trunk_hi = pack.material(f"Palm trunk hi{x:.1f}", tone("bark", "pop"), roughness=0.88)
+    frond = pack.material(f"Palm frond{x:.1f}", tone("foliage", "base"), roughness=0.86)
+    frond_hi = pack.material(f"Palm frond hi{x:.1f}", tone("foliage", "lit"), roughness=0.84)
 
     lean = 0.10
     height = 5.6 * s
@@ -896,9 +901,9 @@ def _palm(x: float, y: float, s: float = 1.0):
 
 
 def _castle(x: float, y: float, s: float = 1.0):
-    sand = pack.material("Castle sand", "#D8B476", roughness=0.94)
-    flag = pack.material("Castle pennant cloth", "#E1594C", roughness=0.70)
-    stick = pack.material("Castle stick", "#4E9E4A", roughness=0.88)
+    sand = pack.material("Castle sand", tone("sand", "base"), roughness=0.94)
+    flag = pack.material("Castle pennant cloth", tone("cream", "base"), roughness=0.70)
+    stick = pack.material("Castle stick", tone("wood", "base"), roughness=0.88)
     for dx, dy, h in ((-0.85, 0.0, 1.15), (0.85, 0.0, 1.05), (0.0, -0.6, 1.45)):
         cx, cy = TURN(x + dx * s, y + dy * s)
         pack.cylinder(f"tw{x:.1f}{dx}", (cx, cy, h * 0.5 * s), 0.42 * s, h * s, sand, vertices=12)
@@ -909,8 +914,8 @@ def _castle(x: float, y: float, s: float = 1.0):
 
 def _towel(x: float, y: float, s: float = 1.0):
     """A towel laid on the sand. The middle of the frame was bare."""
-    stripe_a = pack.material(f"Towel a{x:.1f}", "#E85C6B", roughness=0.88)
-    stripe_b = pack.material(f"Towel b{x:.1f}", "#FFF1DC", roughness=0.88)
+    stripe_a = pack.material(f"Towel a{x:.1f}", tone("berry", "lit"), roughness=0.88)
+    stripe_b = pack.material(f"Towel b{x:.1f}", tone("cream", "pop"), roughness=0.88)
     for i in range(4):
         wx, wy = TURN(x, y - 1.35 * s + i * 0.9 * s)
         pack.cube(f"towel{x:.1f}{i}", (wx, wy, 0.045 * s), (1.7 * s, 0.45 * s, 0.045 * s),
@@ -918,8 +923,8 @@ def _towel(x: float, y: float, s: float = 1.0):
 
 
 def _bucket(x: float, y: float, s: float = 1.0):
-    body = pack.material(f"Bucket{x:.1f}", "#F2C13C", roughness=0.70)
-    handle = pack.material(f"Bucket handle{x:.1f}", "#3D8FD1", roughness=0.66)
+    body = pack.material(f"Bucket{x:.1f}", tone("sun", "lit"), roughness=0.70)
+    handle = pack.material(f"Bucket handle{x:.1f}", tone("sea", "base"), roughness=0.66)
     bx, by = TURN(x, y)
     pack.cone(f"bucket{x:.1f}", (bx, by, 0.42 * s), 0.46 * s, 0.34 * s, 0.84 * s, body, vertices=20)
     pack.torus(f"bhandle{x:.1f}", (bx, by, 0.86 * s), 0.42 * s, 0.045 * s, handle,
@@ -927,13 +932,13 @@ def _bucket(x: float, y: float, s: float = 1.0):
 
 
 def _pebble(x: float, y: float, s: float = 1.0):
-    tone = pack.material(f"Pebble{x:.2f}{y:.2f}", "#E4D2AE" if (int(x * 7) % 2) else "#D3BE95", roughness=0.86)
+    pebble = pack.material(f"Pebble{x:.2f}{y:.2f}", tone("stone", "lit") if (int(x * 7) % 2) else tone("stone", "base"), roughness=0.86)
     px, py = TURN(x, y)
-    pack.sphere(f"peb{x:.2f}{y:.2f}", (px, py, 0.08 * s), (0.3 * s, 0.22 * s, 0.1 * s), tone)
+    pack.sphere(f"peb{x:.2f}{y:.2f}", (px, py, 0.08 * s), (0.3 * s, 0.22 * s, 0.1 * s), pebble)
 
 
 def _marram(x: float, y: float, s: float = 1.0):
-    blade = pack.material(f"Marram{x:.2f}{y:.2f}", "#8FB25C", roughness=0.90)
+    blade = pack.material(f"Marram{x:.2f}{y:.2f}", tone("grass", "lit"), roughness=0.90)
     for i in range(4):
         a = i * 1.7 + x
         lean = 0.30 + ((i * 0.618) % 1.0) * 0.22
@@ -945,8 +950,8 @@ def _marram(x: float, y: float, s: float = 1.0):
 
 
 SCENES = {
-    "park": (park, 18.5, (0.0, 20.0, 1.0), 4.2, "#FFE2B4", "#7FA8C8"),
-    "beach": (beach, 18.5, (0.0, 20.0, 1.0), 4.6, "#FFE9C4", "#8FC0DC"),
+    "park": (park, 18.5, (0.0, 20.0, 1.0), 4.2, light_hex("key"), light_hex("fill")),
+    "beach": (beach, 18.5, (0.0, 20.0, 1.0), 4.6, light_hex("key"), light_hex("fill")),
 }
 
 
