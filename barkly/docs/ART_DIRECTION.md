@@ -1185,3 +1185,148 @@ Three things follow, and they are the rules:
 3. **Legibility is measured, not assumed.** Putting the biscuit and the rope
    on `sand.lit` dropped them to 2.1:1 against the sheet panes;
    `item_renders.test.ts` caught it and both moved to `wood.base` at 3.2:1.
+
+## Two things the palette could not fix (2026-09-09)
+
+The palette pass made the four places share a colour and a light, and the
+answer to "does it look like one game now?" was still no. Holding a Brawl
+Stars screenshot next to ours, the note was:
+
+> imagine you took a tree from the park or a gondola from the park or one of
+> the storefronts, and you put it in one of those images, it would look
+> significantly out of place. Right? Why?
+
+Two answers, and neither of them is colour.
+
+### 1. A dark contour on everything
+
+Every form in the reference is separated from what is behind it by an ink
+edge. Nothing in ours had one. That is most of why our props floated against
+their backgrounds instead of sitting on them, and it is the single cheapest
+thing on this list to fix, because it belongs at PROMOTION rather than in any
+builder:
+
+- `scripts/promote-props.py` grows the shipped PNG's alpha with a `MaxFilter`
+  and floods `tone("ink", "deep")` underneath it. The width is **1.1% of the
+  render, floor 3px** -- proportional, so a 2200px storefront and a 224px
+  biscuit get an edge of the same visual weight rather than the same pixel
+  count.
+- Sky, shadow, haze, glow and surf are **exempt**. A hard edge on a soft field
+  is a ring.
+- The cast gets the same edge from the same helper, via
+  `scripts/outline-cast.py` writing `assets/barkly/outlined/`.
+  `assets/barkly/renders/` stays byte-identical, so the rig gate still
+  reproduces `front.png` pixel-for-pixel and the character is untouched.
+  Collars and the face are overlays: padded to match, never outlined, or they
+  carry an edge through the body they sit on.
+
+`npm run check:outlines` re-derives the outlined cast and fails on drift.
+
+**The park needed a different answer.** It is the one location rendered as a
+single composed PLATE, so it is opaque edge to edge and there is no alpha
+silhouette to dilate -- which would have left the park as the only place in
+the world without the line every other place has, which is exactly the "two
+games" read this pass is about. Freestyle draws it from the geometry instead,
+in the same ink, in `world_scene_pack.py:setup()`. Two things it needed:
+
+- **The line thins with distance.** The scene runs eighty units deep, so one
+  weight puts the same stroke on a bench four metres away and on a distant
+  treeline; the first attempt rendered the horizon as a solid band of ink with
+  green holes in it. A `DISTANCE_FROM_CAMERA` thickness modifier runs 2.4 down
+  to 0.35 over 16..80 units.
+- **Grass opts out.** A blade is thinner than the line, so an outline on a
+  tuft fills it in solid -- every tuft along the path came out as a black
+  clump. `no_ink()` links a form into a collection the lineset excludes.
+
+### 2. Proportions that are honest instead of exaggerated
+
+This is the bigger one and it is not a filter -- it is authoring.
+
+Our forms measured correctly. A lamp post was a 0.10-radius cylinder three
+units tall, which is what a lamp post is. A bench had three back slats and
+three seat slats, evenly spaced. A tree trunk tapered gently into five
+same-sized canopy balls, alternating light and dark. Every one of those is
+wrong in the same direction: **the reference does not draw what a thing
+measures, it draws what a thing reads as at thumbnail size.**
+
+`tools/blender/proportion.py` is the one place that read lives, and both
+packs import it -- `world_prop_pack.py` for town, beach and the items, and
+`world_scene_pack.py` for the park, which is rendered as a single composed
+plate and therefore has its own tree and its own bench. A park tree
+proportioned differently from the modular tree is exactly the drift that makes
+one game look like two.
+
+| dial | value | what it says |
+|---|---|---|
+| `OVERHANG` | 2.2 | the mass on top is at least this much wider than its support |
+| `TAPER` | 0.46 | a support narrows to under half its base radius |
+| `FLARE` | 1.55 | and lands on a foot wider than the shaft, so it looks planted |
+| `BITE` | 0.26 | parts sink into each other; a part that RESTS shows a seam |
+| `STOUT` | 0.055 | nothing is a wire: the waist is at least this share of the height |
+
+Measured before and after. `stout` is the narrowest slice through the middle
+of the prop over its own height; `overhang` is how much wider the top of it is
+than that slice. Both are read off the silhouette profile -- the union extent
+of a horizontal slice -- not off individual parts, because the first version
+of the metric reported a storefront's waist as 0.15, which was the doorknob.
+
+| prop | stout | overhang |
+|---|---|---|
+| park/tree | 0.237 → **0.380** | 3.06 → 2.48 |
+| park/bench | 1.273 → 1.436 | — |
+| park/hedge | 2.713 → 1.796 | — |
+| town/lamp | **0.054** → 0.133 | 4.99 → 2.78 |
+| town/planter | 0.612 → 0.669 | — |
+| town/fountain | 0.195 → **0.357** | 3.77 → 2.07 |
+| town/store_aqua | 0.763 → 0.739 | — |
+| beach/umbrella | **0.050** → 0.085 | 16.38 → 9.32 |
+| beach/palm | 0.085 → **0.115** | 6.55 → 5.18 |
+| beach/lifeguard | 0.557 → 0.567 | — |
+| beach/castle | 0.279 → 0.361 | 2.54 → 2.01 |
+
+The palm took three passes and is worth recording, because the first two were
+the same mistake in different sizes. A leaning cylinder has a FLAT TOP, so a
+trunk built as a stack of them shows a shelf everywhere the next segment
+climbs on -- and alternating a light and a dark bark tone across those shelves
+draws a ladder. Widening the segments made the ladder bigger. The fix was to
+stop stacking: `metablob` fuses the segments into one bending surface (it is
+the same helper that stopped the clouds reading as bunches of grapes), and the
+rings that make it read as a palm are banded ON that surface, sized 0.07
+PROUD of it -- sized to the blob radius they were swallowed whole, which is
+worse than no rings, because a detail that is in the file and not in the
+picture looks handled. The fronds were cubes rotated about Z, which turns a
+frond in the GROUND plane: on a front-weighted camera that draws six spokes
+lying flat, which is why the old palm read as a letter T. They rotate about Y
+now, and each is two tapered cones so the outer half falls away from the
+inner half.
+
+**The overhang numbers going DOWN is the point.** They were high because the
+support was a hairline, not because the top was generous: an umbrella whose
+canopy is sixteen times its pole is not well proportioned, it is a cocktail
+umbrella. The lamp post and the umbrella pole were both under the STOUT floor
+outright -- 0.054 and 0.050 against 0.075 -- which is to say the two tallest
+things in two of the four places were, measurably, wires.
+
+`python3 scripts/proportion.py` reports every standing prop against the dials
+and `--check` fails the build on drift. It reads a `form` block that each
+builder records from its own geometry -- not from the shipped PNG, because the
+contact shadow is real opaque geometry wider than most props that cast it, and
+an alpha silhouette therefore says every object in the game is bottom-heavy.
+Ground courses, horizon bands, clouds and inventory items are exempt and the
+report prints the exemption list, so it stays a decision rather than a default.
+
+### The bug this pass uncovered
+
+Eleven standing props each had a hand-picked WIDTH and a hand-picked HEIGHT.
+Nothing tied either to the render, so every one of them was being stretched by
+whatever those two numbers happened to imply -- the lamp shipped at 0.285 and
+was drawn at 0.356, a 25% horizontal squeeze, and the sandcastle was drawn 43%
+too wide. Only the width is chosen now; the height comes from an `*_ASPECT`
+lock that `npm run check:aspects` restates from the file on disk.
+
+That gate also had a hole worth recording: it resolved a lock's asset by
+BASENAME, and two files in this game are called `lamp.png` (town and home). It
+found both, called the lock ambiguous, and skipped it -- so the one lock this
+pass most needed to update was the one it left alone, on the run that existed
+to catch exactly that. It resolves by require path now, and `DUNE_GRASS` and
+the two mounds were renamed so that nothing is left unresolved at all.

@@ -63,7 +63,7 @@ describe('scene surface renders', () => {
     ['HEADLAND_ASPECT', 'beach', 'headland.png'],
     ['SHELLS_ASPECT', 'beach', 'shells.png'],
     ['NEAR_SAND_ASPECT', 'beach', 'near_sand.png'],
-    ['MARRAM_ASPECT', 'beach', 'dune_grass.png'],
+    ['DUNE_GRASS_ASPECT', 'beach', 'dune_grass.png'],
     ['SURF_ASPECT', 'beach', 'surf.png'],
   ];
 
@@ -102,8 +102,8 @@ describe('scene surface renders', () => {
   it('the stage draws the dig mound and the ball at the shape they are', () => {
     const src = readFileSync(join(ROOT, 'src', 'ui', 'StageProps.tsx')).toString();
     const pairs: [string, string[]][] = [
-      ['MOUND_ASPECT', ['assets', 'world', 'park', 'props', 'dig_mound.png']],
-      ['MOUND_ASPECT', ['assets', 'world', 'beach', 'props', 'sand_mound.png']],
+      ['DIG_MOUND_ASPECT', ['assets', 'world', 'park', 'props', 'dig_mound.png']],
+      ['SAND_MOUND_ASPECT', ['assets', 'world', 'beach', 'props', 'sand_mound.png']],
       ['BALL_ASPECT', ['assets', 'world', 'item', 'toy_ball.png']],
     ];
     for (const [name, asset] of pairs) {
@@ -392,7 +392,7 @@ describe('scene surface renders', () => {
     const DOG_TOP = 387;
     const MARGIN = 12;
     const shells = declaredAspect('SHELLS_ASPECT');
-    const marram = declaredAspect('MARRAM_ASPECT');
+    const marram = declaredAspect('DUNE_GRASS_ASPECT');
 
     const clashes: string[] = [];
     for (let horizon = 172; horizon <= 210; horizon += 2) {
@@ -448,7 +448,7 @@ describe('scene surface renders', () => {
       flower: Boolean(m[4]),
     }));
     const shells = declaredAspect('SHELLS_ASPECT');
-    const marram = declaredAspect('MARRAM_ASPECT');
+    const marram = declaredAspect('DUNE_GRASS_ASPECT');
     const buried: string[] = [];
     for (let horizon = 172; horizon <= 210; horizon += 2) {
       const sandTop = horizon + 135;

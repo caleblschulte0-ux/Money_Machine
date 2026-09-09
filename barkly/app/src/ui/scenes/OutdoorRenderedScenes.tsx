@@ -239,11 +239,35 @@ const BEACH_SHELLS = require('../../../assets/world/beach/props/shells.png');
 const BEACH_NEAR_SAND = require('../../../assets/world/beach/props/near_sand.png');
 const BEACH_SURF = require('../../../assets/world/beach/props/surf.png');
 const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png');
+/*
+ * EVERY STANDING PROP'S SHAPE, FROM THE FILE ON DISK.
+ *
+ * These eleven props each had a hand-picked width AND a hand-picked height,
+ * which means the sprite was stretched to whatever those two numbers happened
+ * to imply. It was already wrong before this change -- the lamp shipped at
+ * 0.285 and was drawn at 0.356, a 25% horizontal stretch nobody had noticed --
+ * and re-proportioning the pack would have made every one of them wrong at
+ * once. Only the WIDTH is chosen now; the height comes from the render, so a
+ * re-render can never distort a prop again. `npm run check:aspects` restates
+ * these from the real PNGs.
+ */
+const TREE_ASPECT = 471 / 512;
+const BENCH_ASPECT = 491 / 307;
+const HEDGE_ASPECT = 506 / 279;
+const LAMP_ASPECT = 207 / 557;
+const FOUNTAIN_ASPECT = 498 / 420;
+const PLANTER_ASPECT = 332 / 402;
+const UMBRELLA_ASPECT = 390 / 489;
+const PALM_ASPECT = 400 / 547;
+const DUNE_ASPECT = 468 / 244;
+const CASTLE_ASPECT = 406 / 489;
+const LIFEGUARD_ASPECT = 391 / 442;
+const STORE_AQUA_ASPECT = 475 / 514;
 const HEADLAND_ASPECT = 654 / 82;
 const SURF_ASPECT = 640 / 55;
 const SHELLS_ASPECT = 280 / 150;
 const NEAR_SAND_ASPECT = 618 / 52;
-const MARRAM_ASPECT = 212 / 249;
+const DUNE_GRASS_ASPECT = 221 / 256;
 
 /**
  * WHAT GOES ON THE SAND.
@@ -675,8 +699,8 @@ function ParkSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = C
    * brush runs off both frame edges, which is the strongest distance cue
    * available and was simply absent).
    */
-  const treeW = 204 * scale;
-  const treeH = 292 * scale;
+  const treeW = 269 * scale;
+  const treeH = treeW / TREE_ASPECT;
   // The far tree. Smaller AND higher: both, or it reads as a small tree
   // standing next to a big one rather than the same tree further away.
   const farTree = 0.76;
@@ -688,10 +712,10 @@ function ParkSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = C
    * centre, where it crosses the FAR tree's trunk and reads as standing in
    * front of it.
    */
-  const benchW = 128 * scale;
-  const benchH = 94 * scale;
-  const hedgeW = 142 * scale;
-  const hedgeH = 72 * scale;
+  const benchW = 150 * scale;
+  const benchH = benchW / BENCH_ASPECT;
+  const hedgeW = 131 * scale;
+  const hedgeH = hedgeW / HEDGE_ASPECT;
   /*
    * The foreground tier, and it is DELIBERATELY narrow.
    *
@@ -1106,17 +1130,17 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
   // modules crop like a street continuing off-screen instead of three icons
   // floating in the middle of the sky.
   const shopW = 248 * scale;
-  const shopH = shopW * (519 / 422);
-  const lampW = 62 * scale;
-  const lampH = 174 * scale;
+  const shopH = shopW / STORE_AQUA_ASPECT;
+  const lampW = 65 * scale;
+  const lampH = lampW / LAMP_ASPECT;
   // Where the lamp SPRITE's top edge lands -- the same expression the sprite
   // itself is positioned with, so the lit pane can be placed off the prop's
   // own measured geometry instead of guessed from the sprite's centre.
   const lampSpriteTop = sidewalk - lampH + 16;
-  const fountainW = 112 * scale;
-  const fountainH = 102 * scale;
-  const planterW = 72 * scale;
-  const planterH = 92 * scale;
+  const fountainW = 121 * scale;
+  const fountainH = fountainW / FOUNTAIN_ASPECT;
+  const planterW = 76 * scale;
+  const planterH = planterW / PLANTER_ASPECT;
   const centerStoreLeft = width / 2 - shopW * 0.48;
   const sideStoreInset = centerStoreLeft - shopW * 0.78;
   /*
@@ -1499,10 +1523,10 @@ function BeachSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = 
   const sandB = night ? DIORAMA.sandNightNear : DIORAMA.sandDayNear;
   // sandEdge is gone with the dead View it fed; see the sand gradient below.
 
-  const lifeguardW = 148 * scale;
-  const lifeguardH = 230 * scale;
-  const umbrellaW = 142 * scale;
-  const umbrellaH = 194 * scale;
+  const lifeguardW = 203 * scale;
+  const lifeguardH = lifeguardW / LIFEGUARD_ASPECT;
+  const umbrellaW = 155 * scale;
+  const umbrellaH = umbrellaW / UMBRELLA_ASPECT;
   /*
    * The palm was 67% inside the lifeguard tower -- the same defect as the park
    * bench in the tree, found by scripts/blocking.mjs the first time it was
@@ -1536,12 +1560,17 @@ function BeachSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = 
    * this prop is the one that does not fit in it.
    */
   const showPalm = width >= 600;
-  const palmW = 126 * scale;
-  const palmH = 264 * scale;
+  const palmW = 193 * scale;
+  const palmH = palmW / PALM_ASPECT;
+  // The dune keeps its WIDTH, not its height. It was the one prop in this
+  // batch whose render did not change shape -- it was simply being drawn 18%
+  // squashed -- so un-squashing it by widening pushed it over SIFT's name
+  // plate. A background mound is allowed to be shorter; it is not allowed to
+  // sit on a label. (scripts/blocking.mjs, beach, 390x844.)
   const duneW = 146 * scale;
-  const duneH = 90 * scale;
-  const castleW = 104 * scale;
-  const castleH = 92 * scale;
+  const duneH = duneW / DUNE_ASPECT;
+  const castleW = 76 * scale;
+  const castleH = castleW / CASTLE_ASPECT;
   const wideInset = Math.max(18, (width - 700 * scale) / 2);
   const palmLeft = width >= 600 ? wideInset - 24 : COMPOSITION.beach.palmLeft;
   const towerLeft = width >= 600 ? wideInset + 104 * scale : COMPOSITION.beach.towerLeft;
@@ -1665,7 +1694,7 @@ function BeachSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = 
             about where it lies, not about which layer it was filed under. */}
         {BEACH_COVER.map((c, i) => {
           const w = (c.flower ? 54 : 58) * c.s * scale;
-          const h = w / (c.flower ? MARRAM_ASPECT : SHELLS_ASPECT);
+          const h = w / (c.flower ? DUNE_GRASS_ASPECT : SHELLS_ASPECT);
           return (
             <WorldObject
               key={`shore-${c.fx}-${c.dy}`}
@@ -1726,7 +1755,7 @@ function BeachSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = 
           on both sides and runs off the bottom.
         */}
         <WorldObject source={BEACH_NEAR_SAND} left={-0.10 * width} top={ground + 108} width={width * 1.2} height={(width * 1.2) / NEAR_SAND_ASPECT} night={night} depth={1} />
-        <WorldObject source={BEACH_MARRAM} left={-78 * scale} top={ground + 92} width={196 * scale} height={(196 * scale) / MARRAM_ASPECT} night={night} depth={1} ambient="sway" motionDelay={240} />
+        <WorldObject source={BEACH_MARRAM} left={-78 * scale} top={ground + 92} width={196 * scale} height={(196 * scale) / DUNE_GRASS_ASPECT} night={night} depth={1} ambient="sway" motionDelay={240} />
         <WorldObject source={BEACH_SHELLS} right={-30 * scale} top={ground + 86} width={252 * scale} height={(252 * scale) / SHELLS_ASPECT} night={night} depth={1} />
       </WorldLayer>
       <WorldLayer name="fx"><BeachMotion night={night} tide={tide} /></WorldLayer>

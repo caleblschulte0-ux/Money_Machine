@@ -23,7 +23,7 @@
  *   node scripts/sync-aspects.mjs --check   # list what is stale, change nothing
  */
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
-import { join, resolve, basename } from 'node:path';
+import { join, resolve, basename, dirname } from 'node:path';
 
 const ROOT = resolve(process.cwd());
 const check = process.argv.includes('--check');
@@ -52,16 +52,24 @@ const assets = walk(join(ROOT, 'assets'));
 function assetFor(constant, sourceFile) {
   const stem = constant.replace(/_ASPECT$/, '').toLowerCase();
   const src = readFileSync(sourceFile, 'utf8');
-  const required = [...src.matchAll(/require\('([^']+\.png)'\)/g)].map((m) => basename(m[1], '.png'));
-  const named = required.filter((f) => f === stem || f.endsWith(`_${stem}`) || f.endsWith(stem));
+  // The REQUIRE PATH, not the basename. Two files in this game are called
+  // lamp.png -- town/props and home/props -- so resolving a stem against the
+  // whole asset tree found both and gave up, leaving TOWN's lamp lock stale on
+  // a pass that was run precisely to catch that. The source file already says
+  // which one it means.
+  const required = [...src.matchAll(/require\('([^']+\.png)'\)/g)].map((m) => m[1]);
+  const named = required.filter((f) => {
+    const b = basename(f, '.png');
+    return b === stem || b.endsWith(`_${stem}`) || b.endsWith(stem);
+  });
   // An exact stem beats a suffix: `paving` locks paving.png, and
   // `near_paving.png` also ends in "paving". Without this the tool called it
   // ambiguous and left the one lock a rendered course actually needed.
-  const exact = named.filter((f) => f === stem);
+  const exact = named.filter((f) => basename(f, '.png') === stem);
   const unique = [...new Set(exact.length ? exact : named)];
   if (unique.length !== 1) return null;
-  const hits = assets.filter((p) => basename(p, '.png') === unique[0]);
-  return hits.length === 1 ? hits[0] : null;
+  const resolved = resolve(dirname(sourceFile), unique[0]);
+  return assets.includes(resolved) ? resolved : null;
 }
 
 const SOURCES = [

@@ -21,6 +21,7 @@ import bpy
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
+from proportion import BITE, OVERHANG, crown, flare, shaft, stack  # noqa: E402
 from mathutils import Vector
 
 
@@ -65,6 +66,7 @@ def rgb(value: str):
 
 
 def clean_scene():
+    FORMS.clear()
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
     for block in list(bpy.data.materials):
@@ -294,6 +296,92 @@ def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None)
     return mat
 
 
+# ---------------------------------------------------------------------------
+# THE FORM LOG.
+#
+# Every primitive a builder makes records its world bounding box here, so the
+# proportions a prop was authored with can be CHECKED instead of eyeballed --
+# see `tools/blender/proportion.py` for what the rules are and
+# `scripts/proportion.py` for the gate that enforces them.
+#
+# Measured from the geometry, not from the shipped PNG, for two reasons. The
+# contact shadow is real opaque geometry sitting on the ground and it is wider
+# than most of the props that cast it, so an alpha silhouette says every prop
+# in the game is bottom-heavy. And the promoted PNG is trimmed, quantised and
+# now carries a contour, none of which are the author's decisions. The bbox is.
+# ---------------------------------------------------------------------------
+FORMS: list[dict] = []
+
+
+def _record(obj):
+    """Log `obj`'s world-space bounding box. Returns the object unchanged."""
+    corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
+    lo = [min(c[i] for c in corners) for i in range(3)]
+    hi = [max(c[i] for c in corners) for i in range(3)]
+    FORMS.append({
+        "name": obj.name,
+        "lo": [round(v, 4) for v in lo],
+        "hi": [round(v, 4) for v in hi],
+    })
+    return obj
+
+
+def measure_form(slices=32):
+    """The proportion numbers for whatever is currently built.
+
+    A SILHOUETTE PROFILE, not a list of part sizes. The first version took the
+    narrowest individual part crossing the middle of the prop and called that
+    the waist, which made a storefront's waist 0.15 -- the doorknob. What the
+    eye reads as the waist is how wide the whole thing is at that height, so
+    every measurement here is the union x-extent of a horizontal slice.
+
+    x only, deliberately: the camera is front-weighted, so depth in y barely
+    changes the shape on screen and including it makes a deep, narrow prop
+    look chunky in the numbers and thin in the game.
+
+    The contact shadow is excluded by name. It is a lighting cue lying on the
+    floor, wider than most of the props that cast it, and counting it says
+    every object in the game is bottom-heavy.
+    """
+    parts = [f for f in FORMS if "contact_shadow" not in f["name"]]
+    if not parts:
+        return None
+    top = max(f["hi"][2] for f in parts)
+    base = min(f["lo"][2] for f in parts)
+    height = top - base
+    if height <= 0:
+        return None
+
+    profile = []
+    for i in range(slices):
+        z0 = base + height * i / slices
+        z1 = base + height * (i + 1) / slices
+        here = [f for f in parts if f["lo"][2] < z1 and f["hi"][2] > z0]
+        span = 0.0
+        if here:
+            span = max(f["hi"][0] for f in here) - min(f["lo"][0] for f in here)
+        profile.append(round(span, 3))
+
+    def widest(lo_share, hi_share):
+        lo = int(slices * lo_share)
+        hi = max(lo + 1, int(slices * hi_share))
+        return max(profile[lo:hi])
+
+    def narrowest(lo_share, hi_share):
+        lo = int(slices * lo_share)
+        hi = max(lo + 1, int(slices * hi_share))
+        return min(profile[lo:hi])
+
+    return {
+        "height": round(height, 3),
+        "parts": len(parts),
+        "widest": round(max(profile), 3),
+        "foot": round(widest(0.0, 0.15), 3),
+        "waist": round(narrowest(0.25, 0.65), 3),
+        "crown": round(widest(0.55, 1.0), 3),
+    }
+
+
 def _wobble(name, amount=1.0):
     """A small, DETERMINISTIC tilt, seeded by the object's own name.
 
@@ -352,7 +440,7 @@ def cube(name, loc, scale, mat, bevel_width=None, rotation=(0, 0, 0), lean=1.0):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     bevel(obj, _edge_for(scale) if bevel_width is None else bevel_width)
     obj.data.materials.append(mat)
-    return obj
+    return _record(obj)
 
 
 def sphere(name, loc, scale, mat, swell=1.0):
@@ -373,7 +461,7 @@ def sphere(name, loc, scale, mat, swell=1.0):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     obj.data.materials.append(mat)
     bpy.ops.object.shade_smooth()
-    return obj
+    return _record(obj)
 
 
 def cylinder(name, loc, radius, depth, mat, rotation=(0, 0, 0), vertices=48,
@@ -399,7 +487,7 @@ def cylinder(name, loc, radius, depth, mat, rotation=(0, 0, 0), vertices=48,
     obj.name = name
     obj.data.materials.append(mat)
     bevel(obj, min(radius * 0.24, 0.09), 3)
-    return obj
+    return _record(obj)
 
 
 def cone(name, loc, radius1, radius2, depth, mat, rotation=(0, 0, 0), vertices=64,
@@ -416,7 +504,7 @@ def cone(name, loc, radius1, radius2, depth, mat, rotation=(0, 0, 0), vertices=6
     obj.name = name
     obj.data.materials.append(mat)
     bevel(obj, _edge_for((radius1, radius2 if radius2 > 0.02 else radius1, depth), 0.20, 0.10), 3)
-    return obj
+    return _record(obj)
 
 
 def torus(name, loc, major_radius, minor_radius, mat, scale=(1, 1, 1), rotation=(0, 0, 0)):
@@ -434,7 +522,7 @@ def torus(name, loc, major_radius, minor_radius, mat, scale=(1, 1, 1), rotation=
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     obj.data.materials.append(mat)
     bpy.ops.object.shade_smooth()
-    return obj
+    return _record(obj)
 
 
 def metablob(name, parts, mat, resolution=0.026, stiffness=2.0, threshold=0.25):
@@ -476,7 +564,7 @@ def metablob(name, parts, mat, resolution=0.026, stiffness=2.0, threshold=0.25):
     obj.name = name
     obj.data.materials.append(mat)
     bpy.ops.object.shade_smooth()
-    return obj
+    return _record(obj)
 
 
 def camera_yaw():
@@ -614,18 +702,31 @@ def park_tree():
     # and half a tree at crevice value renders as holes in the crown.
     leaf_dark = material("Leaf depth", tone("foliage", "shade"), roughness=0.80)
 
-    contact_shadow(1.50, 0.74)
-    cone("trunk", (0, 0.12, 1.45), 0.54, 0.28, 2.9, bark)
-    cylinder("trunk_glint", (-0.22, -0.43, 1.52), 0.08, 2.1, bark_light, rotation=(math.radians(-4), 0, math.radians(-4)))
-    for i, (x, y, z, sx, sy, sz) in enumerate([
-        (-0.72, 0.16, 3.05, 0.92, 0.72, 0.78),
-        (0.03, 0.26, 3.40, 1.12, 0.84, 0.92),
-        (0.82, 0.12, 3.10, 0.90, 0.70, 0.76),
-        (-0.30, -0.12, 3.88, 0.82, 0.67, 0.68),
-        (0.50, -0.06, 3.82, 0.80, 0.64, 0.66),
-    ]):
-        sphere(f"crown_{i}", (x, y, z), (sx, sy, sz), leaf if i % 2 else leaf_dark)
-    sphere("crown_highlight", (-0.48, -0.48, 3.76), (0.62, 0.28, 0.34), leaf_light)
+    # PROPORTION, not detail. See tools/blender/proportion.py: the old tree was
+    # a gentle 0.54->0.28 cone under five same-sized balls alternating light and
+    # dark, which is a botanically reasonable tree and reads, at 190pt on a
+    # phone, as a lollipop with a rash. Reference trees are one enormous canopy
+    # dropped over a trunk that is nearly twice as fat at the roots as it is at
+    # the shoulder, and their dark tone is on the UNDERSIDE, never every other
+    # lobe.
+    contact_shadow(1.78, 0.84)
+    # Roots. A trunk that meets the ground at its own diameter looks pushed in.
+    for i, (x, y) in enumerate(((-0.66, 0.28), (0.62, 0.32), (-0.06, -0.36))):
+        sphere(f"root_{i}", (x, y, 0.15), (0.46, 0.36, 0.21), bark)
+    cone("trunk", (0, 0.12, 1.28), 0.95, shaft(0.95, 0.32), 2.56, bark)
+    cylinder("trunk_glint", (-0.30, -0.52, 1.26), 0.12, 1.96, bark_light,
+             rotation=(math.radians(-4), 0, math.radians(-5)), taper=0.44)
+    # ONE canopy mass, sunk over the trunk's shoulder rather than balanced on
+    # it, then bitten into by four bumps that only break the silhouette.
+    crown_z = stack(2.56, 1.16)
+    sphere("crown_mass", (0.02, 0.16, crown_z), (crown(0.95), 1.34, 1.16), leaf)
+    for name, (x, y, z, sx, sy, sz), mat in (
+        ("crown_sun", (-0.42, -0.30, crown_z + 0.86, 1.06, 0.86, 0.70), leaf_light),
+        ("crown_right", (1.52, 0.18, crown_z + 0.14, 0.86, 0.72, 0.74), leaf),
+        ("crown_left", (-1.58, 0.22, crown_z - 0.28, 0.80, 0.68, 0.68), leaf_dark),
+        ("crown_under", (0.56, 0.42, crown_z - 0.62, 1.02, 0.72, 0.56), leaf_dark),
+    ):
+        sphere(name, (x, y, z), (sx, sy, sz), mat)
 
 
 def park_bench():
@@ -633,24 +734,32 @@ def park_bench():
     wood_light = material("Bench sun-face wood", tone("wood", "lit"), roughness=0.52, coat=0.06)
     metal = material("Bench iron", tone("metal", "shade"), roughness=0.36, metallic=0.64)
 
-    contact_shadow(1.65, 0.52)
-    for z in (1.15, 1.52, 1.88):
-        cube(f"back_slats_{z}", (0, 0.28, z), (1.52, 0.15, 0.13), wood, 0.12, (math.radians(-5), 0, 0))
-    for y in (-0.36, 0.00, 0.34):
-        cube(f"seat_slats_{y}", (0, y, 0.88), (1.52, 0.15, 0.12), wood_light, 0.10)
-    for x in (-1.25, 1.25):
-        cube(f"leg_{x}", (x, 0.18, 0.42), (0.13, 0.18, 0.52), metal, 0.08)
-        cube(f"arm_{x}", (x, -0.04, 1.13), (0.12, 0.58, 0.10), metal, 0.08, (0, math.radians(-5), 0))
+    # Six thin slats and four straight legs is what a bench IS. What a bench
+    # READS as at 136pt is a thick plank on stubby splayed legs with a back
+    # leaning well past vertical -- fewer parts, each one much fatter, and the
+    # seat overhanging the legs so it sits on them instead of in line with them.
+    contact_shadow(1.78, 0.58)
+    for z in (1.26, 1.70):
+        cube(f"back_slats_{z}", (0, 0.34, z), (1.46, 0.19, 0.21), wood, 0.17, (math.radians(-11), 0, 0))
+    cube("seat", (0, -0.02, 0.86), (1.58, 0.56, 0.17), wood_light, 0.15)
+    cube("seat_lip", (0, -0.56, 0.78), (1.58, 0.10, 0.13), wood, 0.09)
+    for x in (-1.22, 1.22):
+        cube(f"leg_{x}", (x, 0.16, 0.36), (0.21, 0.27, 0.41), metal, 0.13, (0, math.radians(9 if x < 0 else -9), 0))
+        cube(f"arm_{x}", (x * 0.96, -0.10, 1.14), (0.17, 0.62, 0.14), metal, 0.11, (0, math.radians(-6), 0))
+        sphere(f"arm_cap_{x}", (x * 0.96, -0.68, 1.16), (0.19, 0.18, 0.17), wood)
 
 
 def park_hedge():
     leaf = material("Hedge green", tone("foliage", "base"), roughness=0.82)
     leaf_light = material("Hedge light", tone("foliage", "lit"), roughness=0.78)
     earth = material("Hedge earth", tone("bark", "shade"), roughness=0.94)
-    contact_shadow(1.60, 0.48)
-    sphere("earth", (0, 0.18, 0.25), (1.50, 0.52, 0.20), earth)
-    for i, x in enumerate((-1.18, -0.58, 0, 0.58, 1.18)):
-        sphere(f"hedge_{i}", (x, 0, 0.72 + 0.07 * (i % 2)), (0.61, 0.50, 0.58), leaf if i % 2 else leaf_light)
+    # Five equal lumps in a row read as five bushes. One mass with three
+    # unequal bumps bitten into its top reads as a hedge.
+    contact_shadow(1.72, 0.52)
+    sphere("earth", (0, 0.20, 0.22), (1.62, 0.56, 0.18), earth)
+    sphere("hedge_mass", (0, 0, 0.74), (1.52, 0.56, 0.60), leaf)
+    for i, (x, z, s) in enumerate(((-0.94, 1.00, 0.62), (0.08, 1.16, 0.74), (0.98, 0.96, 0.56))):
+        sphere(f"hedge_{i}", (x, -0.04, z), (s, s * 0.80, s * 0.84), leaf_light if i == 1 else leaf)
 
 
 # ---------------------------------------------------------------------------
@@ -1006,9 +1115,15 @@ def storefront(accent_name, body_hex, edge_hex, awning_hex):
     wood = material("Display wood", tone("wood", "base"), roughness=0.62)
     brass = material("Store brass", tone("sun", "base"), roughness=0.28, metallic=0.68)
 
-    contact_shadow(2.05, 0.62)
-    cube("store_body", (0, 0.48, 2.25), (1.78, 0.64, 2.22), body, 0.24)
-    cube("store_crown", (0, 0.30, 4.46), (1.96, 0.78, 0.24), edge, 0.18)
+    # A shop that is one width from pavement to parapet is a box with windows
+    # in it. The reference always gives it a plinth wider than the wall and a
+    # crown wider than both, so the silhouette steps out at the ground and
+    # again at the sky, and the awning hangs past the whole thing.
+    contact_shadow(2.26, 0.68)
+    cube("plinth", (0, 0.44, 0.30), (2.02, 0.72, 0.30), edge, 0.16)
+    cube("store_body", (0, 0.48, 2.32), (1.78, 0.64, 2.10), body, 0.26)
+    cube("store_crown", (0, 0.26, 4.34), (2.28, 0.90, 0.34), edge, 0.22)
+    cube("store_cornice", (0, 0.24, 4.68), (2.00, 0.80, 0.15), body, 0.12)
     cube("sign", (0, -0.28, 3.70), (1.40, 0.16, 0.36), cream, 0.16)
     cube("sign_inset", (0, -0.47, 3.70), (0.94, 0.035, 0.07), awning, 0.04)
     cube("window_depth", (-0.54, -0.21, 1.83), (0.82, 0.20, 1.30), glass_dark, 0.14)
@@ -1020,8 +1135,12 @@ def storefront(accent_name, body_hex, edge_hex, awning_hex):
     sphere("display_round", (-0.83, -0.61, 1.20), (0.25, 0.11, 0.25), awning)
     cube("display_box", (-0.25, -0.62, 1.22), (0.24, 0.10, 0.30), cream, 0.08)
     for i in range(7):
-        x = -1.56 + i * 0.52
-        cube(f"awning_{i}", (x, -0.72, 3.10), (0.25, 0.58, 0.15), awning if i % 2 == 0 else cream, 0.10, (math.radians(7), 0, 0))
+        x = -1.68 + i * 0.56
+        stripe = awning if i % 2 == 0 else cream
+        cube(f"awning_{i}", (x, -0.86, 3.16), (0.28, 0.72, 0.17), stripe, 0.11, (math.radians(9), 0, 0))
+        # The scalloped hem. It is the single most recognisable shape on a
+        # cartoon shopfront and we were shipping a flat cut edge.
+        sphere(f"awning_scallop_{i}", (x, -1.44, 3.00), (0.28, 0.17, 0.21), stripe)
 
 
 def town_rooftops():
@@ -1168,13 +1287,17 @@ def town_fountain():
     stone_light = material("Fountain stone light", tone("stone", "lit"), roughness=0.68)
     stone_dark = material("Fountain stone depth", tone("stone", "deep"), roughness=0.78)
     water = material("Fountain water", tone("sea", "base"), roughness=0.18, metallic=0.06, coat=0.30)
-    contact_shadow(1.46, 0.72)
-    torus("lower_basin", (0, 0, 0.55), 0.98, 0.24, stone, scale=(1.25, 0.82, 0.72))
-    sphere("lower_water", (0, -0.02, 0.60), (1.13, 0.68, 0.10), water)
-    cylinder("column", (0, 0.10, 1.38), 0.20, 1.30, stone_dark)
-    torus("upper_basin", (0, 0.02, 1.82), 0.50, 0.14, stone_light, scale=(1.18, 0.82, 0.65))
-    sphere("upper_water", (0, -0.02, 1.86), (0.55, 0.33, 0.08), water)
-    sphere("finial", (0, 0.05, 2.20), (0.19, 0.17, 0.24), stone_light)
+    # A 0.20 stem carrying a basin looks like a birdbath somebody could tip
+    # over. Fat column, a plinth wider than the basin above it, and a heavier
+    # lip on both bowls: the same fountain, drawn as a toy.
+    contact_shadow(1.68, 0.80)
+    cone("plinth", (0, 0, 0.17), 1.34, 1.16, 0.34, stone_dark)
+    torus("lower_basin", (0, 0, 0.62), 1.04, 0.30, stone, scale=(1.22, 0.84, 0.66))
+    sphere("lower_water", (0, -0.02, 0.66), (1.20, 0.72, 0.10), water)
+    cone("column", (0, 0.08, 1.24), 0.46, shaft(0.46, 0.60), 1.10, stone_dark)
+    torus("upper_basin", (0, 0.02, 1.82), 0.62, 0.20, stone_light, scale=(1.16, 0.84, 0.62))
+    sphere("upper_water", (0, -0.02, 1.86), (0.66, 0.38, 0.08), water)
+    sphere("finial", (0, 0.05, 2.24), (0.24, 0.21, 0.30), stone_light)
 
 
 def town_lamp():
@@ -1193,13 +1316,19 @@ def town_lamp():
     iron = material("Lamp iron", tone("metal", "base"), roughness=0.42, metallic=0.10)
     brass = material("Lamp brass", tone("sun", "base"), roughness=0.30, metallic=0.24)
     glass = material("Lamp glow glass", tone("sun", "pop"), roughness=0.22, coat=0.26)
-    contact_shadow(0.56, 0.34)
-    cylinder("base", (0, 0, 0.20), 0.42, 0.18, iron)
-    cylinder("post", (0, 0, 1.72), 0.10, 3.05, iron)
-    cylinder("collar", (0, 0, 3.02), 0.22, 0.18, brass)
-    cube("lantern", (0, 0, 3.55), (0.42, 0.34, 0.52), iron, 0.12)
-    cube("lantern_glass", (0, -0.36, 3.55), (0.29, 0.04, 0.38), glass, 0.08)
-    cone("cap", (0, 0, 4.12), 0.56, 0.14, 0.34, iron)
+    # The post was a 0.10-radius pipe 3 units tall -- 5.4% of the prop's own
+    # height, under the STOUT floor, and at 70pt on screen that is a hairline.
+    # It is now a cone flaring 0.30 -> 0.14 onto a bell foot, under a lantern
+    # half again as big as it was, and the whole thing reads at thumbnail size.
+    contact_shadow(0.74, 0.40)
+    cone("base", (0, 0, 0.17), flare(0.30), 0.30, 0.34, iron)
+    cone("post", (0, 0, 1.59), 0.30, shaft(0.30), 2.50, iron)
+    cylinder("collar", (0, 0, 2.90), 0.28, 0.22, brass, taper=0.74)
+    lantern_z = stack(3.01, 0.60)
+    cube("lantern", (0, 0, lantern_z), (0.62, 0.50, 0.60), iron, 0.16)
+    cube("lantern_glass", (0, -0.50, lantern_z), (0.44, 0.05, 0.44), glass, 0.10)
+    cone("cap", (0, 0, lantern_z + 0.72), 0.86, 0.16, 0.42, iron)
+    sphere("finial", (0, 0, lantern_z + 1.02), (0.13, 0.12, 0.17), brass)
 
 
 def town_planter():
@@ -1207,11 +1336,17 @@ def town_planter():
     pot_dark = material("Planter depth", tone("brick", "shade"), roughness=0.82)
     leaf = material("Planter leaf", tone("foliage", "base"), roughness=0.78)
     leaf_light = material("Planter leaf light", tone("foliage", "lit"), roughness=0.76)
-    contact_shadow(0.84, 0.40)
-    cone("pot", (0, 0.05, 0.42), 0.64, 0.48, 0.78, pot)
-    cylinder("pot_rim", (0, 0.05, 0.80), 0.66, 0.18, pot_dark)
-    for i, (x, z) in enumerate(((-0.34, 1.18), (0, 1.40), (0.34, 1.20), (-0.15, 1.55), (0.18, 1.64))):
-        sphere(f"plant_{i}", (x, 0, z), (0.43, 0.34, 0.47), leaf if i % 2 else leaf_light)
+    # A pot that is nearly the same width top and bottom is a bucket. This one
+    # stands on a foot half the width of its mouth and wears a rim that
+    # overhangs both, which is the shape every planter in the reference is.
+    contact_shadow(0.96, 0.46)
+    cone("pot", (0, 0.05, 0.44), 0.42, 0.80, 0.88, pot)
+    cylinder("pot_rim", (0, 0.05, 0.94), 0.90, 0.22, pot_dark, taper=0.94)
+    plant_z = stack(1.05, 0.52)
+    sphere("plant_mass", (0, 0.02, plant_z), (0.80, 0.60, 0.52), leaf)
+    for i, (x, z, s) in enumerate(((-0.44, 0.16, 0.40), (0.10, 0.54, 0.44), (0.46, 0.06, 0.36))):
+        sphere(f"plant_{i}", (x, -0.04, plant_z + z), (s, s * 0.80, s * 0.88),
+               leaf_light if i == 1 else leaf)
 
 
 def beach_umbrella():
@@ -1219,12 +1354,16 @@ def beach_umbrella():
     coral = material("Umbrella coral", tone("roof", "base"), roughness=0.56, coat=0.05)
     coral_dark = material("Umbrella coral edge", tone("roof", "shade"), roughness=0.62)
     yellow = material("Umbrella yellow", tone("sun", "base"), roughness=0.58, coat=0.05)
-    contact_shadow(1.22, 0.52)
-    cylinder("umbrella_pole", (0, 0.08, 1.62), 0.09, 3.10, wood)
-    cone("canopy", (0, 0, 3.44), 1.62, 0.18, 0.74, coral)
-    torus("canopy_edge", (0, 0, 3.12), 1.43, 0.10, coral_dark, scale=(1.0, 0.72, 0.65))
-    cone("canopy_inset", (0, -0.18, 3.45), 0.88, 0.10, 0.65, yellow)
-    sphere("cap", (0, 0, 3.88), (0.16, 0.14, 0.16), yellow)
+    # A 0.09 pole under a 1.62 canopy is a cocktail umbrella. Fatter, tapered,
+    # planted in a heap of sand, under a canopy that is a DOME rather than a
+    # disc -- deeper cone, heavier hem.
+    contact_shadow(1.40, 0.58)
+    sphere("sand_heap", (0, 0.06, 0.10), (0.44, 0.32, 0.15), wood)
+    cylinder("umbrella_pole", (0, 0.08, 1.62), 0.17, 3.10, wood, taper=0.58)
+    cone("canopy", (0, 0, 3.40), 1.66, 0.20, 0.92, coral)
+    torus("canopy_edge", (0, 0, 2.98), 1.48, 0.14, coral_dark, scale=(1.0, 0.72, 0.65))
+    cone("canopy_inset", (0, -0.18, 3.42), 0.92, 0.11, 0.78, yellow)
+    sphere("cap", (0, 0, 3.94), (0.18, 0.16, 0.20), yellow)
 
 
 def beach_lifeguard():
@@ -1234,9 +1373,12 @@ def beach_lifeguard():
     aqua = material("Tower aqua", tone("sea", "lit"), roughness=0.56, coat=0.06)
     glass = material("Tower window", tone("sea", "pop"), roughness=0.20, coat=0.30)
     contact_shadow(1.45, 0.68)
-    for x in (-0.95, 0.95):
-        cube(f"stilt_{x}", (x, 0.18, 1.05), (0.13, 0.16, 1.05), wood, 0.07, (0, math.radians(4 if x < 0 else -4), 0))
-    cube("platform", (0, 0.05, 1.92), (1.38, 0.78, 0.16), wood, 0.12)
+    # Stilts at 0.13 under a hut 1.20 wide is a table, not a tower. Fatter and
+    # splayed twice as hard, so the whole thing stands in an A rather than a
+    # pair of parallels, and a deck that overhangs them.
+    for x in (-1.02, 1.02):
+        cube(f"stilt_{x}", (x, 0.18, 1.02), (0.20, 0.23, 1.08), wood, 0.12, (0, math.radians(9 if x < 0 else -9), 0))
+    cube("platform", (0, 0.05, 1.94), (1.52, 0.86, 0.20), wood, 0.15)
     # A LIFEGUARD TOWER IS RED AND WHITE, not cream on cream. The hut is the
     # biggest mass in this prop and it was the same family as the sand it
     # stands on, so on the contact sheet the whole tower read as a pale smudge
@@ -1246,7 +1388,7 @@ def beach_lifeguard():
     cube("window", (0, -0.50, 3.04), (0.62, 0.05, 0.38), glass, 0.10)
     cube("window_frame_top", (0, -0.58, 3.45), (0.72, 0.05, 0.07), cream, 0.05)
     cube("window_frame_bottom", (0, -0.58, 2.63), (0.72, 0.05, 0.07), cream, 0.05)
-    cube("roof", (0, 0.18, 3.93), (1.46, 0.88, 0.17), aqua, 0.15, (0, math.radians(-4), 0))
+    cube("roof", (0, 0.18, 3.86), (1.74, 1.02, 0.22), aqua, 0.18, (0, math.radians(-5), 0))
     # Ladder remains a separate readable sub-form inside the tower sprite.
     for x in (-0.43, 0.43):
         cube(f"ladder_rail_{x}", (x, -0.50, 0.94), (0.07, 0.08, 0.92), wood, 0.05, (math.radians(-7), 0, 0))
@@ -1354,9 +1496,11 @@ def beach_castle():
     flag = material("Castle flag", tone("berry", "base"), roughness=0.60, coat=0.04)
     wood = material("Flag pole", tone("cream", "lit"), roughness=0.72)
     contact_shadow(1.32, 0.52)
-    cube("castle_base", (0, 0.08, 0.48), (1.10, 0.60, 0.46), sand, 0.16)
-    for i, x in enumerate((-0.82, 0, 0.82)):
-        cylinder(f"tower_{i}", (x, -0.02, 1.04 + (0.28 if i == 1 else 0)), 0.38 if i != 1 else 0.44, 1.18 if i != 1 else 1.50, sand_light if i == 1 else sand, vertices=40)
+    cube("castle_base", (0, 0.08, 0.42), (1.30, 0.68, 0.42), sand, 0.18)
+    for i, x in enumerate((-0.86, 0, 0.86)):
+        cylinder(f"tower_{i}", (x, -0.02, 0.98 + (0.30 if i == 1 else 0)),
+                 0.50 if i != 1 else 0.58, 1.26 if i != 1 else 1.60,
+                 sand_light if i == 1 else sand, vertices=40, taper=0.72)
         for j in range(4):
             angle = j * math.pi / 2
             cube(f"battlement_{i}_{j}", (x + math.cos(angle) * 0.25, math.sin(angle) * 0.22, 1.68 + (0.42 if i == 1 else 0)), (0.10, 0.10, 0.12), sand, 0.04)
@@ -1369,16 +1513,70 @@ def beach_palm():
     trunk = material("Palm trunk", tone("bark", "base"), roughness=0.78)
     trunk_light = material("Palm trunk light", tone("bark", "lit"), roughness=0.72)
     leaf = material("Palm leaf", tone("foliage", "base"), roughness=0.80)
-    leaf_light = material("Palm leaf light", tone("foliage", "pop"), roughness=0.76)
-    contact_shadow(1.12, 0.50)
-    for i in range(6):
-        x = -0.10 + i * 0.08
-        z = 0.36 + i * 0.62
-        cylinder(f"trunk_{i}", (x, 0, z), 0.19 - i * 0.012, 0.72, trunk_light if i % 2 else trunk, rotation=(0, math.radians(-8), 0), vertices=32)
-    crown = (0.42, 0, 4.05)
-    sphere("palm_crown", crown, (0.34, 0.30, 0.28), trunk)
-    for i, angle in enumerate((-70, -35, 0, 35, 70, 145)):
-        cube(f"frond_{i}", (crown[0] + math.sin(math.radians(angle)) * 0.76, -0.02, crown[2] + math.cos(math.radians(angle)) * 0.24), (0.92, 0.11, 0.16), leaf_light if i % 2 else leaf, 0.12, (0, math.radians(angle * 0.18), math.radians(angle)))
+    leaf_light = material("Palm leaf light", tone("foliage", "lit"), roughness=0.76)
+    # The trunk drifted 0.08 per segment and shed a twelfth of its radius --
+    # near enough to a vertical pipe. A palm in the reference is a THICK base
+    # that bends away hard and thins to a third of itself under the crown, with
+    # the segments overlapping so it reads as one bending mass, not a stack.
+    # THE TRUNK IS ONE BENDING MASS, NOT A STACK.
+    #
+    # Two attempts read as a staircase of blocks on the contact sheet -- the
+    # thin original and a fattened version of the same idea. The shape was
+    # never the problem: a leaning cylinder has a FLAT TOP, so every segment
+    # showed a shelf where the next one climbed onto it, and alternating a
+    # light and a dark tone across those shelves drew a ladder. `metablob`
+    # already exists for exactly this (it is what stopped the clouds reading as
+    # bunches of grapes) so the trunk is one fused surface, and the rings that
+    # make it read as a palm are banded ON it rather than being the joins.
+    contact_shadow(1.30, 0.56)
+
+    def arc(t):
+        """(x, z) along the trunk, and the slope there in radians."""
+        return -0.10 + 0.72 * t * t, 0.22 + t * 3.42, math.atan2(1.44 * t, 3.42)
+
+    blobs = []
+    for i in range(16):
+        t = i / 15.0
+        x, z, _ = arc(t)
+        r = 0.34 - 0.20 * t
+        blobs.append(((x, 0.0, z), (r, r * 0.92, r)))
+    metablob("palm_trunk", blobs, trunk, resolution=0.05, threshold=0.3)
+    # PROUD OF THE SURFACE, not level with it. The first pass sized the rings
+    # to the blob radius and the fused surface swallowed all six -- a detail
+    # that is present in the file and absent from the picture is worse than no
+    # detail, because it looks handled.
+    for i in range(7):
+        t = 0.06 + i * 0.13
+        x, z, slope = arc(t)
+        cylinder(f"trunk_ring_{i}", (x, 0, z), 0.41 - 0.20 * t, 0.12, trunk_light,
+                 rotation=(0, slope, 0), vertices=28, taper=0.98, lean=0)
+
+    crown_x, crown_z, _ = arc(1.0)
+    crown = (crown_x + 0.06, 0, crown_z + 0.12)
+    sphere("palm_crown", crown, (0.30, 0.28, 0.24), trunk)
+    for i, (dx, dz) in enumerate(((-0.26, -0.26), (0.22, -0.30))):
+        sphere(f"coconut_{i}", (crown[0] + dx, -0.26, crown[2] + dz), (0.16, 0.15, 0.15), trunk)
+
+    # FRONDS DROOP, AND THEY TAPER.
+    #
+    # They were cubes rotated about Z, which turns a frond in the GROUND plane
+    # -- on a front-weighted camera that draws six spokes lying flat, which is
+    # why the old palm read as a T. Rotating about Y turns them in the plane
+    # the camera sees. Cones rather than boxes, so a frond comes to a point,
+    # and two segments each so the outer half falls away from the inner half.
+    def along(deg, length, base, tip, name, mat, start_at):
+        a = math.radians(deg)
+        ux, uz = math.cos(a), math.sin(a) * 0.88
+        centre = (start_at[0] + ux * length / 2, -0.02, start_at[1] + uz * length / 2)
+        cone(name, centre, base, tip, length, mat,
+             rotation=(0, math.pi / 2 - a, 0), vertices=20, lean=0)
+        return (start_at[0] + ux * length, start_at[1] + uz * length)
+
+    for i, phi in enumerate((198, 156, 122, 58, 24, -14)):
+        mat = leaf_light if i % 2 else leaf
+        tip_at = along(phi, 1.16, 0.20, 0.13, f"frond_{i}", mat, (crown[0], crown[2]))
+        along(phi - (34 if math.cos(math.radians(phi)) > 0 else -34),
+              0.78, 0.13, 0.02, f"frond_tip_{i}", mat, tip_at)
 
 
 def home_panelling():
@@ -2089,16 +2287,25 @@ BUILDERS = {
 }
 
 
-def render_prop(path, builder, ortho_scale, target):
+def build_prop(path, builder, ortho_scale, target, render=True):
+    """Build a prop, optionally render it, and return its measured form.
+
+    The build always happens even when the render is skipped: it costs
+    milliseconds, and it is what keeps the manifest's proportion block
+    complete under `PROP_ONLY`. A manifest that forgets a prop is the exact
+    bug the filter's own comment below is about.
+    """
     clean_scene()
     setup_camera_and_lights(ortho_scale=ortho_scale, target=target)
     builder()
-    file_path = OUT / f"{path}.png"
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    scene = bpy.context.scene
-    scene.render.filepath = str(file_path)
-    bpy.ops.render.render(write_still=True)
-    print(f"rendered {file_path}")
+    if render:
+        file_path = OUT / f"{path}.png"
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        scene = bpy.context.scene
+        scene.render.filepath = str(file_path)
+        bpy.ops.render.render(write_still=True)
+        print(f"rendered {file_path}")
+    return measure_form()
 
 
 def main():
@@ -2121,10 +2328,13 @@ def main():
     only = [p.strip() for p in only]
     rendered = 0
     for path, (builder, scale, target, metadata) in BUILDERS.items():
-        if not only or any(path.startswith(prefix) for prefix in only):
-            render_prop(path, builder, scale, target)
-            rendered += 1
-        manifest["assets"][path] = {"file": f"{path}.png", **metadata}
+        wanted = not only or any(path.startswith(prefix) for prefix in only)
+        form = build_prop(path, builder, scale, target, render=wanted)
+        rendered += 1 if wanted else 0
+        entry = {"file": f"{path}.png", **metadata}
+        if form:
+            entry["form"] = form
+        manifest["assets"][path] = entry
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     if only:
         if not rendered:

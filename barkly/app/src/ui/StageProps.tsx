@@ -26,7 +26,8 @@ const SAND_MOUND = require('../../assets/world/beach/props/sand_mound.png');
  * against the real files by __tests__/scene_surfaces.test.ts.
  */
 const MOUND_W = 118;
-const MOUND_ASPECT = 542 / 181;
+const DIG_MOUND_ASPECT = 542 / 181;
+const SAND_MOUND_ASPECT = 542 / 181;
 const BALL_W = 50;
 const BALL_ASPECT = 224 / 209;
 
@@ -190,7 +191,7 @@ export function Ball() {
 export function DigMound({ active = false }: { active?: boolean }) {
   return (
     <>
-      <Image source={DIG_MOUND} style={styles.mound} resizeMode="contain" />
+      <Image source={DIG_MOUND} style={styles.digMound} resizeMode="contain" />
       {active && <DigSparks />}
     </>
   );
@@ -200,7 +201,7 @@ export function DigMound({ active = false }: { active?: boolean }) {
 export function WetSandMound({ active = false }: { active?: boolean }) {
   return (
     <>
-      <Image source={SAND_MOUND} style={styles.mound} resizeMode="contain" />
+      <Image source={SAND_MOUND} style={styles.sandMound} resizeMode="contain" />
       {active && <DigSparks />}
     </>
   );
@@ -208,7 +209,12 @@ export function WetSandMound({ active = false }: { active?: boolean }) {
 
 const styles = StyleSheet.create({
   /* The sparks ride over the top of this. */
-  mound: { width: MOUND_W, height: MOUND_W / MOUND_ASPECT },
+  // One shape per FILE. The two mounds come off the same builder and have
+  // always measured the same, but a single MOUND_ASPECT could not be resolved
+  // to a render by `npm run check:aspects` -- it matched both -- so it was the
+  // one lock in the app nothing was checking.
+  digMound: { width: MOUND_W, height: MOUND_W / DIG_MOUND_ASPECT },
+  sandMound: { width: MOUND_W, height: MOUND_W / SAND_MOUND_ASPECT },
   digSparks: { position: 'absolute', top: -18, left: 3 },
   ballArt: { width: BALL_W, height: BALL_W / BALL_ASPECT },
   /*

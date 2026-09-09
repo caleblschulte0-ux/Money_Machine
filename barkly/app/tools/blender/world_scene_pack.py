@@ -43,6 +43,7 @@ import bpy
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import light_hex, tone  # noqa: E402  -- the one place a colour comes from
+from proportion import crown, shaft, stack  # noqa: E402  -- and the one place a SHAPE comes from
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
@@ -136,6 +137,16 @@ def clean():
             bpy.data.materials.remove(block)
 
 
+NO_INK = None
+
+
+def no_ink(obj):
+    """Keep this form out of the Freestyle ink pass. See `setup()`."""
+    if NO_INK is not None:
+        NO_INK.objects.link(obj)
+    return obj
+
+
 def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str):
     """One sun, real shadows, real occlusion -- the whole point of this pack.
 
@@ -182,6 +193,55 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
                 setattr(eevee, attr, value)
             except (TypeError, ValueError):
                 pass
+
+    # THE INK EDGE, ON THE ONE LOCATION THAT IS NOT MADE OF PROPS.
+    #
+    # Every prop in the game gets a dark contour at PROMOTION, grown off its
+    # own alpha (`scripts/promote-props.py`). A plate cannot: it is opaque
+    # edge to edge, so there is no silhouette to dilate -- which would have
+    # left the park as the one place in the world drawn without the line that
+    # every other place has, and that is precisely the "these are two games"
+    # read this whole pass is about.
+    #
+    # Freestyle draws it in the render instead, from the geometry. Same ink
+    # (`tone("ink", "deep")`, the colour promote-props floods), and 5px at
+    # 768 wide lands at roughly the same weight on screen as a promoted prop's
+    # edge does once the plate is cover-scaled onto a phone.
+    scene.render.use_freestyle = True
+    scene.render.line_thickness_mode = "ABSOLUTE"
+    scene.render.line_thickness = 1.0
+    view_layer = bpy.context.view_layer
+    view_layer.use_freestyle = True
+    settings = view_layer.freestyle_settings
+    while settings.linesets:
+        settings.linesets.remove(settings.linesets[0])
+    # ...and it skips the grass. A blade is thinner than the line, so an ink
+    # outline on a tuft fills it in solid: the first pass drew every tuft along
+    # the path as a black clump. `no_ink()` is how a builder opts a form out.
+    global NO_INK
+    NO_INK = bpy.data.collections.new("Barkly no ink")
+    scene.collection.children.link(NO_INK)
+
+    lineset = settings.linesets.new("Barkly ink")
+    lineset.select_by_collection = True
+    lineset.collection = NO_INK
+    lineset.collection_negation = "EXCLUSIVE"
+    lineset.select_silhouette = True
+    lineset.select_border = True
+    lineset.select_crease = False       # interior creases turn a park into a sketch
+    lineset.select_edge_mark = False
+    lineset.select_contour = False
+    lineset.linestyle.color = pack.rgb(tone("ink", "deep"))
+    lineset.linestyle.thickness = 2.4
+    # AND IT THINS WITH DISTANCE. A constant line is what a plate cannot
+    # afford: this scene runs eighty units deep, so one weight puts the same
+    # stroke on a bench four metres away and on a tuft of grass at the far
+    # treeline, and the horizon fills in solid. The first attempt did exactly
+    # that -- the treeline rendered as a band of ink with green holes in it.
+    fade = lineset.linestyle.thickness_modifiers.new("depth", type="DISTANCE_FROM_CAMERA")
+    fade.range_min, fade.range_max = 16.0, 80.0
+    fade.value_min, fade.value_max = 2.4, 0.35
+    fade.mapping = "LINEAR"
 
     # Ambient light stands in for the sky the app will draw behind this.
     scene.world.use_nodes = False
@@ -587,8 +647,8 @@ def _flowers(x: float, y: float, s: float = 1.0, petal_hex: str = tone("sun", "l
         r = 0.20 + (i % 3) * 0.14
         fx, fy = TURN(x + math.cos(a) * r, y + math.sin(a) * r)
         h = (0.32 + ((i * 0.618) % 1.0) * 0.16) * s
-        pack.cylinder(f"stem{x:.2f}{y:.2f}{i}", (fx, fy, h / 2), 0.022 * s, h, stem, vertices=8)
-        pack.sphere(f"bud{x:.2f}{y:.2f}{i}", (fx, fy, h), (0.10 * s, 0.10 * s, 0.06 * s), petal)
+        no_ink(pack.cylinder(f"stem{x:.2f}{y:.2f}{i}", (fx, fy, h / 2), 0.022 * s, h, stem, vertices=8))
+        no_ink(pack.sphere(f"bud{x:.2f}{y:.2f}{i}", (fx, fy, h), (0.10 * s, 0.10 * s, 0.06 * s), petal))
 
 
 def _path():
@@ -644,7 +704,8 @@ def _bandstand(x: float, y: float, s: float = 1.0):
     for i in range(6):
         a = i / 6.0 * math.tau + 0.26
         px, py = TURN(x + math.cos(a) * 2.5 * s, y + math.sin(a) * 2.5 * s)
-        pack.cylinder(f"bandpost{x:.1f}{i}", (px, py, 1.75 * s), 0.16 * s, 2.7 * s, post, vertices=12)
+        pack.cone(f"bandpost{x:.1f}{i}", (px, py, 1.78 * s), 0.28 * s, shaft(0.28 * s), 2.76 * s, post, vertices=12)
+        pack.cylinder(f"bandfoot{x:.1f}{i}", (px, py, 0.52 * s), 0.40 * s, 0.30 * s, post, vertices=12, taper=0.78)
     pack.cylinder(f"bandring{x:.1f}", (cx, cy, 3.18 * s), 2.72 * s, 0.22 * s, trim, vertices=24)
     pack.cone(f"bandroof{x:.1f}", (cx, cy, 4.05 * s), 2.95 * s, 0.22 * s, 1.65 * s, roof, vertices=6)
     pack.sphere(f"bandfin{x:.1f}", (cx, cy, 5.05 * s), (0.20 * s, 0.20 * s, 0.28 * s), finial)
@@ -653,7 +714,7 @@ def _bandstand(x: float, y: float, s: float = 1.0):
     for i in range(6):
         a = i / 6.0 * math.tau + 0.26
         rx, ry = TURN(x + math.cos(a) * 2.5 * s, y + math.sin(a) * 2.5 * s)
-        pack.cylinder(f"bandrail{x:.1f}{i}", (rx, ry, 1.05 * s), 0.10 * s, 0.30 * s, trim, vertices=10)
+        pack.cylinder(f"bandrail{x:.1f}{i}", (rx, ry, 1.08 * s), 0.19 * s, 0.44 * s, trim, vertices=10, taper=0.92)
 
 
 def _tree(x: float, y: float, s: float, canopy: str = tone("foliage", "base"),
@@ -661,29 +722,46 @@ def _tree(x: float, y: float, s: float, canopy: str = tone("foliage", "base"),
     bark = pack.material(f"Bark{x:.1f}{y:.1f}", trunk, roughness=0.92)
     leaf = pack.material(f"Leaf{x:.1f}{y:.1f}", canopy, roughness=0.88)
     leaf_hi = pack.material(f"LeafHi{x:.1f}{y:.1f}", tone("foliage", "lit"), roughness=0.86)
+    # THE SAME TREE AS park/tree.png, at plate scale.
+    #
+    # The park is the one location drawn as a single composed plate, so it has
+    # its own tree -- and a tree here that is proportioned differently from the
+    # modular one is exactly the drift that makes a game look like two games.
+    # Both now flare the same amount from the same dial and hang one canopy
+    # mass over the shoulder instead of balancing lobes on top of it.
     wx, wy = TURN(x, y)
-    pack.cylinder(f"trunk{x:.1f}{y:.1f}", (wx, wy, 1.35 * s), 0.30 * s, 2.7 * s, bark)
+    base_r = 0.62 * s
+    pack.cone(f"trunk{x:.1f}{y:.1f}", (wx, wy, 1.28 * s), base_r, shaft(base_r, 0.32), 2.56 * s, bark)
+    crown_z = stack(2.56 * s, 1.16 * s)
+    pack.sphere(f"leaf{x:.1f}{y:.1f}_mass", (wx, wy, crown_z),
+                (crown(base_r), crown(base_r) * 0.94, 1.16 * s), leaf)
     for i, (dx, dy, dz, r) in enumerate((
-        (0.0, 0.0, 3.3, 1.45), (-0.85, 0.15, 3.0, 1.05),
-        (0.9, -0.1, 3.05, 1.0), (0.1, 0.5, 3.75, 0.95),
+        (-0.42, -0.30, 0.86, 0.96), (1.46, 0.18, 0.14, 0.80),
+        (-1.52, 0.22, -0.28, 0.74),
     )):
         lx, ly = TURN(x + dx * s, y + dy * s)
         pack.sphere(f"leaf{x:.1f}{y:.1f}_{i}",
-                    (lx, ly, dz * s),
-                    (r * s, r * s, r * 0.85 * s),
-                    leaf_hi if i == 3 else leaf)
+                    (lx, ly, crown_z + dz * s),
+                    (r * s, r * 0.86 * s, r * 0.78 * s),
+                    leaf_hi if i == 0 else leaf)
 
 
 def _bench(x: float, y: float):
     wood = pack.material("Bench wood", tone("wood", "base"), roughness=0.72)
     iron = pack.material("Bench iron", tone("metal", "shade"), roughness=0.60, metallic=0.4)
-    for i, (dz, dy) in enumerate(((0.72, 0.0), (0.98, -0.20), (1.24, -0.34))):
+    # Same argument as _tree: this is park/bench.png at plate scale, so it gets
+    # the same plank-on-stubby-legs proportions. 0.055 of thickness on a slat
+    # is a sheet of paper at this camera.
+    sx_, sy_ = TURN(x, y - 0.06)
+    pack.cube("bench seat", (sx_, sy_, 0.86), (1.58, 0.56, 0.17), wood, 0.15,
+              rotation=(0, 0, THETA))
+    for i, (dz, dy) in enumerate(((1.26, 0.34), (1.70, 0.34))):
         bx, by = TURN(x, y + dy)
-        pack.cube(f"slat{i}", (bx, by, dz), (1.55, 0.10, 0.055), wood, 0.03,
+        pack.cube(f"slat{i}", (bx, by, dz), (1.46, 0.19, 0.21), wood, 0.17,
                   rotation=(0, 0, THETA))
-    for i, sx in enumerate((-1.3, 1.3)):
-        lx, ly = TURN(x + sx, y)
-        pack.cube(f"leg{i}", (lx, ly, 0.36), (0.07, 0.09, 0.36), iron, 0.02,
+    for i, sx in enumerate((-1.22, 1.22)):
+        lx, ly = TURN(x + sx, y + 0.16)
+        pack.cube(f"leg{i}", (lx, ly, 0.36), (0.21, 0.27, 0.41), iron, 0.13,
                   rotation=(0, 0, THETA))
 
 
@@ -697,9 +775,9 @@ def _tuft(x: float, y: float, s: float):
         lean = 0.22 + ((i * 0.618) % 1.0) * 0.18
         h = (0.42 + ((i * 0.382) % 1.0) * 0.30) * s
         bx, by = TURN(x + math.cos(a) * 0.12, y + math.sin(a) * 0.12)
-        blade = pack.cone(f"bl{x:.2f}{y:.2f}{i}", (bx, by, h / 2),
-                          0.045 * s, 0.004, h, mats[i % 2],
-                          rotation=(math.cos(a) * lean, math.sin(a) * lean, 0), vertices=8)
+        blade = no_ink(pack.cone(f"bl{x:.2f}{y:.2f}{i}", (bx, by, h / 2),
+                                 0.045 * s, 0.004, h, mats[i % 2],
+                                 rotation=(math.cos(a) * lean, math.sin(a) * lean, 0), vertices=8))
         blade.scale = (1.0, 0.34, 1.0)
 
 

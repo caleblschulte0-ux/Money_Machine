@@ -6,247 +6,639 @@
     "park/tree": {
       "file": "park/tree.png",
       "displayWidth": 190,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 5.01,
+        "parts": 10,
+        "widest": 4.729,
+        "foot": 2.178,
+        "waist": 1.904,
+        "crown": 4.729
+      }
     },
     "park/bench": {
       "file": "park/bench.png",
       "displayWidth": 136,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 2.04,
+        "parts": 10,
+        "widest": 3.165,
+        "foot": 2.969,
+        "waist": 2.93,
+        "crown": 3.165
+      }
     },
     "park/grass_tuft": {
       "file": "park/grass_tuft.png",
       "displayWidth": 46,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.86,
+        "parts": 13,
+        "widest": 0.917,
+        "foot": 0.917,
+        "waist": 0.908,
+        "crown": 0.917
+      }
     },
     "park/grass_clump": {
       "file": "park/grass_clump.png",
       "displayWidth": 130,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.601,
+        "parts": 23,
+        "widest": 2.355,
+        "foot": 2.355,
+        "waist": 2.355,
+        "crown": 2.355
+      }
     },
     "park/near_grass": {
       "file": "park/near_grass.png",
       "displayWidth": 430,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.38,
+        "parts": 112,
+        "widest": 2.726,
+        "foot": 2.726,
+        "waist": 2.726,
+        "crown": 2.726
+      }
     },
     "beach/near_sand": {
       "file": "beach/near_sand.png",
       "displayWidth": 430,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.236,
+        "parts": 29,
+        "widest": 9.935,
+        "foot": 9.756,
+        "waist": 8.766,
+        "crown": 9.758
+      }
     },
     "town/near_paving": {
       "file": "town/near_paving.png",
       "displayWidth": 430,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.277,
+        "parts": 44,
+        "widest": 13.232,
+        "foot": 13.232,
+        "waist": 12.858,
+        "crown": 12.863
+      }
     },
     "home/near_floor": {
       "file": "home/near_floor.png",
       "displayWidth": 430,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.153,
+        "parts": 8,
+        "widest": 12.836,
+        "foot": 12.836,
+        "waist": 12.546,
+        "crown": 12.546
+      }
     },
     "park/wildflowers": {
       "file": "park/wildflowers.png",
       "displayWidth": 50,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.896,
+        "parts": 20,
+        "widest": 0.788,
+        "foot": 0.788,
+        "waist": 0.778,
+        "crown": 0.778
+      }
     },
     "park/treeline": {
       "file": "park/treeline.png",
       "displayWidth": 420,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.146,
+        "parts": 39,
+        "widest": 6.695,
+        "foot": 6.695,
+        "waist": 6.653,
+        "crown": 6.663
+      }
     },
     "park/hedge": {
       "file": "park/hedge.png",
       "displayWidth": 154,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.763,
+        "parts": 5,
+        "widest": 3.412,
+        "foot": 3.412,
+        "waist": 3.167,
+        "crown": 3.167
+      }
     },
     "town/store_coral": {
       "file": "town/store_coral.png",
       "displayWidth": 176,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 4.907,
+        "parts": 28,
+        "widest": 4.572,
+        "foot": 4.053,
+        "waist": 3.625,
+        "crown": 4.572
+      }
     },
     "town/store_aqua": {
       "file": "town/store_aqua.png",
       "displayWidth": 190,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 4.907,
+        "parts": 28,
+        "widest": 4.572,
+        "foot": 4.053,
+        "waist": 3.625,
+        "crown": 4.572
+      }
     },
     "town/store_violet": {
       "file": "town/store_violet.png",
       "displayWidth": 176,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 4.907,
+        "parts": 28,
+        "widest": 4.572,
+        "foot": 4.053,
+        "waist": 3.625,
+        "crown": 4.572
+      }
     },
     "town/rooftops": {
       "file": "town/rooftops.png",
       "displayWidth": 440,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.557,
+        "parts": 30,
+        "widest": 7.642,
+        "foot": 6.976,
+        "waist": 6.976,
+        "crown": 7.642
+      }
     },
     "town/paving": {
       "file": "town/paving.png",
       "displayWidth": 440,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.05,
+        "parts": 27,
+        "widest": 6.715,
+        "foot": 6.715,
+        "waist": 6.715,
+        "crown": 6.715
+      }
     },
     "town/kerb": {
       "file": "town/kerb.png",
       "displayWidth": 440,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.24,
+        "parts": 28,
+        "widest": 6.288,
+        "foot": 6.288,
+        "waist": 6.287,
+        "crown": 6.287
+      }
     },
     "town/fountain": {
       "file": "town/fountain.png",
       "displayWidth": 114,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 2.58,
+        "parts": 7,
+        "widest": 3.27,
+        "foot": 2.688,
+        "waist": 0.921,
+        "crown": 1.902
+      }
     },
     "town/lamp": {
       "file": "town/lamp.png",
       "displayWidth": 70,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 4.658,
+        "parts": 7,
+        "widest": 1.722,
+        "foot": 0.935,
+        "waist": 0.62,
+        "crown": 1.722
+      }
     },
     "town/planter": {
       "file": "town/planter.png",
       "displayWidth": 74,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 2.378,
+        "parts": 6,
+        "widest": 1.803,
+        "foot": 1.618,
+        "waist": 1.59,
+        "crown": 1.616
+      }
     },
     "beach/umbrella": {
       "file": "beach/umbrella.png",
       "displayWidth": 152,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 4.2,
+        "parts": 6,
+        "widest": 3.345,
+        "foot": 0.884,
+        "waist": 0.359,
+        "crown": 3.345
+      }
     },
     "beach/lifeguard": {
       "file": "beach/lifeguard.png",
       "displayWidth": 170,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 4.277,
+        "parts": 15,
+        "widest": 3.502,
+        "foot": 2.752,
+        "waist": 2.423,
+        "crown": 3.502
+      }
     },
     "sky/cloud": {
       "file": "sky/cloud.png",
       "displayWidth": 168,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.157,
+        "parts": 2,
+        "widest": 4.241,
+        "foot": 4.241,
+        "waist": 3.376,
+        "crown": 3.376
+      }
     },
     "sky/cloud_far": {
       "file": "sky/cloud_far.png",
       "displayWidth": 96,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.478,
+        "parts": 2,
+        "widest": 1.976,
+        "foot": 1.976,
+        "waist": 1.443,
+        "crown": 1.443
+      }
     },
     "home/vista": {
       "file": "home/vista.png",
       "displayWidth": 200,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.628,
+        "parts": 23,
+        "widest": 5.557,
+        "foot": 5.557,
+        "waist": 5.091,
+        "crown": 5.091
+      }
     },
     "beach/headland": {
       "file": "beach/headland.png",
       "displayWidth": 420,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.666,
+        "parts": 31,
+        "widest": 6.722,
+        "foot": 6.722,
+        "waist": 6.34,
+        "crown": 6.716
+      }
     },
     "beach/surf": {
       "file": "beach/surf.png",
       "displayWidth": 440,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.572,
+        "parts": 8,
+        "widest": 7.26,
+        "foot": 5.516,
+        "waist": 5.516,
+        "crown": 5.516
+      }
     },
     "beach/shells": {
       "file": "beach/shells.png",
       "displayWidth": 58,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.176,
+        "parts": 10,
+        "widest": 0.817,
+        "foot": 0.817,
+        "waist": 0.817,
+        "crown": 0.817
+      }
     },
     "beach/dune_grass": {
       "file": "beach/dune_grass.png",
       "displayWidth": 54,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.027,
+        "parts": 9,
+        "widest": 0.952,
+        "foot": 0.952,
+        "waist": 0.952,
+        "crown": 0.952
+      }
     },
     "beach/dune": {
       "file": "beach/dune.png",
       "displayWidth": 158,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.629,
+        "parts": 7,
+        "widest": 3.093,
+        "foot": 3.093,
+        "waist": 2.603,
+        "crown": 2.603
+      }
     },
     "beach/castle": {
       "file": "beach/castle.png",
       "displayWidth": 112,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 3.331,
+        "parts": 19,
+        "widest": 2.725,
+        "foot": 2.725,
+        "waist": 1.204,
+        "crown": 2.424
+      }
     },
     "beach/palm": {
       "file": "beach/palm.png",
       "displayWidth": 142,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 5.217,
+        "parts": 23,
+        "widest": 3.701,
+        "foot": 1.294,
+        "waist": 1.294,
+        "crown": 3.701
+      }
     },
     "park/dig_mound": {
       "file": "park/dig_mound.png",
       "displayWidth": 118,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.7,
+        "parts": 16,
+        "widest": 3.574,
+        "foot": 3.574,
+        "waist": 3.124,
+        "crown": 3.124
+      }
     },
     "beach/sand_mound": {
       "file": "beach/sand_mound.png",
       "displayWidth": 118,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.7,
+        "parts": 20,
+        "widest": 3.574,
+        "foot": 3.574,
+        "waist": 3.124,
+        "crown": 3.124
+      }
     },
     "home/panelling": {
       "file": "home/panelling.png",
       "displayWidth": 440,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 1.333,
+        "parts": 64,
+        "widest": 6.554,
+        "foot": 6.554,
+        "waist": 6.554,
+        "crown": 6.554
+      }
     },
     "home/skirting": {
       "file": "home/skirting.png",
       "displayWidth": 440,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.356,
+        "parts": 48,
+        "widest": 6.516,
+        "foot": 6.516,
+        "waist": 6.509,
+        "crown": 6.515
+      }
     },
     "home/rug": {
       "file": "home/rug.png",
       "displayWidth": 188,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.355,
+        "parts": 4,
+        "widest": 4.074,
+        "foot": 3.063,
+        "waist": 4.074,
+        "crown": 4.074
+      }
     },
     "home/care_tray": {
       "file": "home/care_tray.png",
       "displayWidth": 330,
-      "anchor": "bottom"
+      "anchor": "bottom",
+      "form": {
+        "height": 0.498,
+        "parts": 10,
+        "widest": 5.661,
+        "foot": 5.66,
+        "waist": 5.66,
+        "crown": 5.661
+      }
     },
     "item/treat_biscuit": {
       "file": "item/treat_biscuit.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.657,
+        "parts": 5,
+        "widest": 1.044,
+        "foot": 1.044,
+        "waist": 1.031,
+        "crown": 1.031
+      }
     },
     "item/treat_cheese": {
       "file": "item/treat_cheese.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.803,
+        "parts": 5,
+        "widest": 0.92,
+        "foot": 0.92,
+        "waist": 0.92,
+        "crown": 0.92
+      }
     },
     "item/treat_steak": {
       "file": "item/treat_steak.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.706,
+        "parts": 6,
+        "widest": 1.049,
+        "foot": 1.049,
+        "waist": 1.049,
+        "crown": 1.049
+      }
     },
     "item/toy_ball": {
       "file": "item/toy_ball.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.957,
+        "parts": 2,
+        "widest": 1.027,
+        "foot": 0.902,
+        "waist": 0.902,
+        "crown": 1.027
+      }
     },
     "item/toy_rope": {
       "file": "item/toy_rope.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.513,
+        "parts": 14,
+        "widest": 1.536,
+        "foot": 1.455,
+        "waist": 1.534,
+        "crown": 1.536
+      }
     },
     "item/kit_bowl": {
       "file": "item/kit_bowl.png",
       "displayWidth": 76,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.531,
+        "parts": 8,
+        "widest": 1.08,
+        "foot": 1.007,
+        "waist": 1.007,
+        "crown": 1.08
+      }
     },
     "item/kit_stick": {
       "file": "item/kit_stick.png",
       "displayWidth": 82,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.352,
+        "parts": 4,
+        "widest": 1.062,
+        "foot": 1.062,
+        "waist": 0.273,
+        "crown": 1.062
+      }
     },
     "item/collar_red": {
       "file": "item/collar_red.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.505,
+        "parts": 4,
+        "widest": 1.02,
+        "foot": 0.24,
+        "waist": 0.0,
+        "crown": 1.02
+      }
     },
     "item/collar_blue": {
       "file": "item/collar_blue.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.505,
+        "parts": 4,
+        "widest": 1.02,
+        "foot": 0.24,
+        "waist": 0.0,
+        "crown": 1.02
+      }
     },
     "item/collar_green": {
       "file": "item/collar_green.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.505,
+        "parts": 4,
+        "widest": 1.02,
+        "foot": 0.24,
+        "waist": 0.0,
+        "crown": 1.02
+      }
     },
     "item/collar_gold": {
       "file": "item/collar_gold.png",
       "displayWidth": 48,
-      "anchor": "center"
+      "anchor": "center",
+      "form": {
+        "height": 0.505,
+        "parts": 4,
+        "widest": 1.02,
+        "foot": 0.24,
+        "waist": 0.0,
+        "crown": 1.02
+      }
     }
   }
 }
