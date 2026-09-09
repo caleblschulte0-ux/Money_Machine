@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import math
+import zlib
 import os
 from pathlib import Path
 
@@ -293,6 +294,34 @@ def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None)
     return mat
 
 
+def _wobble(name, amount=1.0):
+    """A small, DETERMINISTIC tilt, seeded by the object's own name.
+
+    Nothing in the reference art is perfectly upright. Everything in ours was:
+    every cube, cylinder and cone in the game was axis-aligned unless a builder
+    passed an explicit rotation, so a park of trees stood like a bar chart and
+    six gazebo posts were six identical verticals. A degree and a half of lean
+    is invisible as a decision and unmistakable as an absence.
+
+    Seeded by name rather than random because the renders are COMPARED -- CI
+    re-renders the pack and `promote-props.py` diffs the result. A random tilt
+    would make every build a fresh set of assets and every diff meaningless.
+    """
+    h = zlib.crc32(name.encode("utf-8"))
+    ax = ((h & 0xFFFF) / 65535.0 - 0.5) * 2.0
+    ay = (((h >> 16) & 0xFFFF) / 65535.0 - 0.5) * 2.0
+    lean = math.radians(1.6) * amount
+    return ax * lean, ay * lean
+
+
+def _leaned(name, rotation, amount=1.0):
+    """`rotation` with the wobble added. Pass amount=0 to stay square."""
+    if amount == 0:
+        return rotation
+    dx, dy = _wobble(name, amount)
+    return (rotation[0] + dx, rotation[1] + dy, rotation[2])
+
+
 def bevel(obj, width=0.10, segments=4):
     modifier = obj.modifiers.new("Barkly molded edge", "BEVEL")
     modifier.width = width
@@ -300,21 +329,46 @@ def bevel(obj, width=0.10, segments=4):
     return obj
 
 
-def cube(name, loc, scale, mat, bevel_width=0.10, rotation=(0, 0, 0)):
-    bpy.ops.mesh.primitive_cube_add(location=loc, rotation=rotation)
+def _edge_for(size, share=0.17, cap=0.26):
+    """How fat the moulded edge is, FROM THE FORM'S OWN SIZE.
+
+    Every cube in the game took a 0.10 bevel whatever its size, so a 6-unit
+    storefront and a 0.3-unit doorknob had the same edge weight -- which reads
+    as a set of parts cut on the same machine rather than as objects. In the
+    reference art the edge weight is proportional: big forms carry a heavy
+    round, small details stay crisp, and that variation is most of what makes
+    a silhouette look sculpted instead of extruded.
+    """
+    smallest = max(1e-4, min(abs(v) for v in size))
+    return max(0.012, min(cap, smallest * share))
+
+
+def cube(name, loc, scale, mat, bevel_width=None, rotation=(0, 0, 0), lean=1.0):
+    obj_rotation = _leaned(name, rotation, lean)
+    bpy.ops.mesh.primitive_cube_add(location=loc, rotation=obj_rotation)
     obj = bpy.context.object
     obj.name = name
     obj.scale = scale
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    bevel(obj, bevel_width)
+    bevel(obj, _edge_for(scale) if bevel_width is None else bevel_width)
     obj.data.materials.append(mat)
     return obj
 
 
-def sphere(name, loc, scale, mat):
+def sphere(name, loc, scale, mat, swell=1.0):
+    """A sphere, DENTED. A perfect ellipsoid is the giveaway of a primitive.
+
+    The swell is deterministic per name and small -- up to 7% on each axis --
+    which is enough that a row of hedge lumps or beach pebbles stops reading as
+    the same ball copied along a line.
+    """
     bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, location=loc)
     obj = bpy.context.object
     obj.name = name
+    if swell:
+        h = zlib.crc32(name.encode("utf-8"))
+        f = [1.0 + (((h >> (i * 7)) & 0xFF) / 255.0 - 0.5) * 0.14 * swell for i in range(3)]
+        scale = (scale[0] * f[0], scale[1] * f[1], scale[2] * f[2])
     obj.scale = scale
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     obj.data.materials.append(mat)
@@ -322,34 +376,46 @@ def sphere(name, loc, scale, mat):
     return obj
 
 
-def cylinder(name, loc, radius, depth, mat, rotation=(0, 0, 0), vertices=48):
-    bpy.ops.mesh.primitive_cylinder_add(
+def cylinder(name, loc, radius, depth, mat, rotation=(0, 0, 0), vertices=48,
+             taper=0.88, lean=1.0):
+    """A post that FLARES. There are no parallel-sided objects in the reference.
+
+    Every cylinder in this game was a constant radius top to bottom -- gazebo
+    posts, tree trunks, lamp columns, fence rails, the fountain stem -- which
+    is the single most primitive-looking thing a 3D toy can do. A cylinder is
+    now a shallow cone: 12% narrower at the top, so it reads as moulded and
+    catches the key light differently along its length. `taper=1.0` opts out
+    for the few things that really are pipes.
+    """
+    bpy.ops.mesh.primitive_cone_add(
         vertices=vertices,
-        radius=radius,
+        radius1=radius,
+        radius2=radius * taper,
         depth=depth,
         location=loc,
-        rotation=rotation,
+        rotation=_leaned(name, rotation, lean),
     )
     obj = bpy.context.object
     obj.name = name
     obj.data.materials.append(mat)
-    bevel(obj, min(radius * 0.20, 0.08), 3)
+    bevel(obj, min(radius * 0.24, 0.09), 3)
     return obj
 
 
-def cone(name, loc, radius1, radius2, depth, mat, rotation=(0, 0, 0), vertices=64):
+def cone(name, loc, radius1, radius2, depth, mat, rotation=(0, 0, 0), vertices=64,
+         lean=1.0):
     bpy.ops.mesh.primitive_cone_add(
         vertices=vertices,
         radius1=radius1,
         radius2=radius2,
         depth=depth,
         location=loc,
-        rotation=rotation,
+        rotation=_leaned(name, rotation, lean),
     )
     obj = bpy.context.object
     obj.name = name
     obj.data.materials.append(mat)
-    bevel(obj, 0.06, 3)
+    bevel(obj, _edge_for((radius1, radius2 if radius2 > 0.02 else radius1, depth), 0.20, 0.10), 3)
     return obj
 
 
@@ -544,7 +610,9 @@ def park_tree():
     bark_light = material("Tree bark light", tone("bark", "lit"), roughness=0.66)
     leaf = material("Leaf green", tone("foliage", "base"), roughness=0.76, coat=0.02)
     leaf_light = material("Leaf light", tone("foliage", "lit"), roughness=0.72, coat=0.03)
-    leaf_dark = material("Leaf depth", tone("foliage", "deep"), roughness=0.80)
+    # `shade`, not `deep`: this alternates with `leaf` over HALF the canopy,
+    # and half a tree at crevice value renders as holes in the crown.
+    leaf_dark = material("Leaf depth", tone("foliage", "shade"), roughness=0.80)
 
     contact_shadow(1.50, 0.74)
     cone("trunk", (0, 0.12, 1.45), 0.54, 0.28, 2.9, bark)
@@ -805,7 +873,7 @@ def town_near_paving():
     weed_lit = material("Near weed lit", tone("grass", "base"), roughness=0.88)
 
     bx, by = turn(0.0, 0.10)
-    cube("near_base", (bx, by, 0.02), (6.4, 1.30, 0.02), grout, 0.02, (0, 0, theta))
+    cube("near_base", (bx, by, 0.02), (6.4, 1.30, 0.02), grout, 0.02, (0, 0, theta), lean=0)
 
     # Two courses, offset like real paving, so the joints make a grid and not
     # a row of stripes.
@@ -818,9 +886,9 @@ def town_near_paving():
 
     # The kerb lip at the very front, cropped by the bottom edge.
     kx, ky = turn(0.0, -0.98)
-    cube("near_kerb", (kx, ky, 0.10), (6.6, 0.26, 0.10), kerb, 0.04, (0, 0, theta))
+    cube("near_kerb", (kx, ky, 0.10), (6.6, 0.26, 0.10), kerb, 0.04, (0, 0, theta), lean=0)
     tx, ty = turn(0.0, -0.86)
-    cube("near_kerb_top", (tx, ty, 0.19), (6.6, 0.16, 0.03), kerb_top, 0.02, (0, 0, theta))
+    cube("near_kerb_top", (tx, ty, 0.19), (6.6, 0.16, 0.03), kerb_top, 0.02, (0, 0, theta), lean=0)
 
     for i, (ox, oy, r) in enumerate((
         (-4.4, -0.62, 0.075), (-2.9, -0.56, 0.055), (-1.2, -0.66, 0.085),
@@ -854,7 +922,7 @@ def home_near_floor():
     seam = material("Near board seam", tone("stone", "shade"), roughness=0.86)
 
     bx, by = turn(0.0, 0.10)
-    cube("near_floor_base", (bx, by, 0.02), (6.4, 0.94, 0.02), seam, 0.02, (0, 0, theta))
+    cube("near_floor_base", (bx, by, 0.02), (6.4, 0.94, 0.02), seam, 0.02, (0, 0, theta), lean=0)
     tones = (board, board_b, board_c, board_b)
     for i, ox in enumerate((-5.4, -3.6, -1.8, 0.0, 1.8, 3.6, 5.4)):
         cx, cy = turn(ox, 0.10)

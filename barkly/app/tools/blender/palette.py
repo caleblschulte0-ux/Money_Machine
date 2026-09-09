@@ -76,9 +76,15 @@ KEY = (1.00, 0.94, 0.74)       # warm sun, what lands on the tops
 # So the ramp spans what theirs spans. `deep` is a real dark, `pop` is a real
 # highlight, and the chroma stays high through the middle because the reference
 # runs sat 0.54 median with a 0.91 top end.
+#
+# ...but `deep` is a CREVICE value, not a surface one. The first pass put it at
+# 0.16 and a park tree came back with two of its three canopy lumps reading as
+# black holes -- a third of a tree is not a crevice. 0.23 keeps a real dark end
+# without swallowing whole forms, and anything that wants a genuine shadow gets
+# it from ambient occlusion, which is what AO is for.
 STEPS = {
-    "deep":  (0.94, 0.16, -0.34),
-    "shade": (0.88, 0.34, -0.18),
+    "deep":  (0.94, 0.23, -0.30),
+    "shade": (0.88, 0.43, -0.16),
     "base":  (0.80, 0.60,  0.00),
     "lit":   (0.62, 0.82,  0.16),
     "pop":   (0.34, 0.97,  0.30),
