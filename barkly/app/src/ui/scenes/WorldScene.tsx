@@ -653,21 +653,32 @@ const GRADE: Record<SkyBand, {
     vignette: 'rgba(46,34,64,0.09)',
   },
   /*
-   * Day is a LIGHT pass, not a darkening pass. The first cut of this graded
-   * with a 0.16 vignette and a 0.11 cool floor and cost the whole app a step
-   * of brightness for its trouble: home's mean value fell 0.808 -> 0.714 and
-   * Town's dead-pixel share went UP. Warm high, barely-there cool low, and a
-   * vignette you can only see when you look for it.
+   * DAY WAS A LIGHT PASS AND THAT WAS THE MISTAKE.
+   *
+   * This carried a note saying an earlier cut graded with a 0.16 vignette and
+   * a 0.11 cool floor, "cost the whole app a step of brightness", and dropped
+   * home's mean value 0.808 -> 0.714 -- treating a falling mean as the defect
+   * and backing it out. Measured against the reference art the operator asked
+   * for, that reading was exactly backwards:
+   *
+   *                      value p05   p50    range   frame below 0.25
+   *     Brawl Stars         0.12     0.52    0.87        18.8%
+   *     Barkly park         0.47     0.81    0.53         0.1%
+   *
+   * Their midpoint IS 0.52. Ours was 0.81 -- the whole world sitting in the
+   * top third of the range with nothing to fall away from, which is what
+   * "washed out" means. A mean that falls toward theirs is the fix, not the
+   * cost of it. Warm high and a cool floor with some weight in it.
    */
   day: {
     key: 'rgba(255,203,116,0.17)',
     keyFade: 'rgba(255,236,196,0)',
     top: 'rgba(255,208,128,0.15)',
     mid: 'rgba(255,247,226,0)',
-    bottom: 'rgba(78,52,110,0.07)',
+    bottom: 'rgba(58,38,96,0.20)',
     pool: DIORAMA.goldGlowSoft,
     poolOpacity: 0.15,
-    vignette: 'rgba(46,30,58,0.09)',
+    vignette: 'rgba(38,24,52,0.20)',
   },
   /*
    * Golden hour. The one band allowed to be loud: a low orange key, a long

@@ -85,12 +85,27 @@ describe('the palette itself', () => {
     expect(values).toEqual([...values].sort((a, b) => a - b)); // dark to light
   });
 
-  test('the ramp spans the character it was measured from', () => {
-    // Barkly runs 0.14 to 0.92 in value with a median of 0.70. The world's
-    // floor is lifted because his darks are an eye and a nose.
+  test('the ramp reaches a real dark and a real highlight', () => {
+    /*
+     * THIS TEST USED TO ASSERT THE OPPOSITE and it was wrong.
+     *
+     * It required `Math.min(values) >= 0.3`, freezing in the belief that a
+     * floor kept the world out of the mud. Measured against the reference art
+     * the operator asked for -- a Brawl Stars loading screen -- that belief is
+     * what was making everything look washed out:
+     *
+     *                      value p05   range   below 0.25   sat p95
+     *     Brawl Stars         0.12      0.87      18.8%      0.91
+     *     Barkly park         0.56      0.44       0.1%      0.67
+     *
+     * A picture with no darks has no contrast. The ramp has to REACH.
+     */
     const values = steps.map((m) => Number(m[3]));
-    expect(Math.min(...values)).toBeGreaterThanOrEqual(0.3);
-    expect(Math.max(...values)).toBeGreaterThanOrEqual(0.9);
+    expect(Math.min(...values)).toBeLessThanOrEqual(0.2);
+    expect(Math.max(...values)).toBeGreaterThanOrEqual(0.95);
+    // ...and the chroma has to reach too: theirs tops out at 0.91.
+    const sats = steps.map((m) => Number(m[2]));
+    expect(Math.max(...sats)).toBeGreaterThanOrEqual(0.9);
   });
 });
 

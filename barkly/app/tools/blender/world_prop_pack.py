@@ -512,7 +512,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(-4.8, -5.0, 8.4))
     key = bpy.context.object
     key.name = "Barkly warm key"
-    key.data.energy = 880
+    key.data.energy = 1040
     key.data.size = 5.0
     key.data.color = light_rgb("key")
     look_at(key, target)
@@ -520,7 +520,12 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(5.0, -2.2, 4.0))
     fill = bpy.context.object
     fill.name = "Barkly cool fill"
-    fill.data.energy = 300
+    # ONE THIRD OF THE KEY IS NOT A FILL, IT IS A SECOND KEY. At 300 against
+    # 880 -- with a 408 rim on top -- the non-key light outweighed the key and
+    # nothing in the world could go dark: measured, 0.1% of a park frame fell
+    # below value 0.25 where the reference art puts 18.8% there. A fill exists
+    # to keep shadow READABLE, not to erase it.
+    fill.data.energy = 110
     fill.data.size = 5.5
     fill.data.color = light_rgb("fill")
     look_at(fill, target)
@@ -528,7 +533,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     bpy.ops.object.light_add(type="AREA", location=(1.8, 4.0, 6.8))
     rim = bpy.context.object
     rim.name = "Barkly warm rim"
-    rim.data.energy = 408
+    rim.data.energy = 330
     rim.data.size = 4.2
     rim.data.color = light_rgb("key")
     look_at(rim, target)

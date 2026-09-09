@@ -58,18 +58,30 @@ KEY = (1.00, 0.94, 0.74)       # warm sun, what lands on the tops
 # Five steps, and every family gets all five: saturation, value, and how far
 # the step is pushed toward AMBIENT (negative) or KEY (positive).
 #
-# The value spread is Barkly's own. Measured over his 106,338 opaque pixels he
-# runs 0.14 to 0.92 with a median of 0.70; the world's floor is lifted to 0.34
-# because his darks are an eye and a nose, and a whole scene down there reads
-# as mud. Saturation stays HIGH through the midtones -- 0.72 at base -- because
-# the reference games in docs/VISUAL_DIRECTION_KIDS_GAME.md are saturated toys,
-# and the first version of this ramp came out at 0.52 and looked like wet felt.
+# THE FIRST VERSION OF THIS RAMP HAD NO DARKS AND THAT WAS THE WHOLE PROBLEM.
+# It floored value at 0.34 on the theory that a whole scene down there reads as
+# mud. Measured against the reference art the operator actually wants -- a
+# Brawl Stars loading screen and card -- that theory is simply wrong:
+#
+#                        value p05   range   frame below 0.25   sat p95
+#   Brawl Stars             0.12      0.87        18.8%          0.91
+#   Barkly park             0.56      0.44         0.1%          0.67
+#
+# A fifth of their frame is genuinely dark. A thousandth of ours was. Our
+# median sat at 0.84 where theirs sits at 0.52 -- the whole world was
+# over-exposed, every surface in the top half of the range, and no amount of
+# hue or texture work reaches that. A picture with no darks has no contrast,
+# and contrast is what "pop" is.
+#
+# So the ramp spans what theirs spans. `deep` is a real dark, `pop` is a real
+# highlight, and the chroma stays high through the middle because the reference
+# runs sat 0.54 median with a 0.91 top end.
 STEPS = {
-    "deep":  (0.86, 0.34, -0.30),
-    "shade": (0.80, 0.52, -0.15),
-    "base":  (0.72, 0.72,  0.00),
-    "lit":   (0.56, 0.86,  0.15),
-    "pop":   (0.34, 0.96,  0.28),
+    "deep":  (0.94, 0.16, -0.34),
+    "shade": (0.88, 0.34, -0.18),
+    "base":  (0.80, 0.60,  0.00),
+    "lit":   (0.62, 0.82,  0.16),
+    "pop":   (0.34, 0.97,  0.30),
 }
 
 # --- the families -------------------------------------------------------
