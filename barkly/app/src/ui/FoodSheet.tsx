@@ -1,10 +1,11 @@
 import React from 'react';
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ItemIcon, { BowlIcon, ItemStand } from './ItemIcon';
 import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import { STORE, Wallet } from '../game/progression';
 import { useAmbientLoop, useReduceMotion } from './motion';
+import { SheetScrim, useSheetBounds } from './sheetStage';
 
 interface Props {
   visible: boolean;
@@ -66,6 +67,7 @@ function FloatingIcon({ index, still, children }: { index: number; still: boolea
 
 export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, onOpenShop }: Props) {
   const reduceMotion = useReduceMotion();
+  const bounds = useSheetBounds();
   const treats = STORE.filter((item) => item.slot === 'treat')
     .map((item) => ({ item, count: wallet.pantry[item.id] ?? 0 }))
     .filter((row) => row.count > 0);
@@ -78,7 +80,8 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
-        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+        <SheetScrim />
+        <Pressable style={[styles.sheet, bounds]} testID="sheet-panel" onPress={() => {}} accessible={false}>
           <View style={styles.hero} pointerEvents="none">
             <View style={styles.heroGloss} />
             <View style={styles.heroEdge} />
@@ -94,73 +97,79 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
             </Pressable>
           </View>
 
-          <Pressable
-            style={({ pressed }) => [styles.meal, pressed && styles.pressed]}
-            onPress={() => choose()}
-            accessibilityRole="button"
-            accessibilityLabel="Regular dinner"
-            accessibilityHint="Feed him his ordinary food."
+          <ScrollView
+            style={styles.body}
+            contentContainerStyle={styles.bodyContent}
+            showsVerticalScrollIndicator={false}
           >
-            <View style={[styles.itemRail, { backgroundColor: color.pop }]} pointerEvents="none" />
-            <View style={[styles.iconWell, { backgroundColor: color.popPane, borderColor: color.pop }]}>
-              <View style={styles.iconStand} pointerEvents="none"><ItemStand width={34} /></View>
-              <FloatingIcon index={0} still={reduceMotion}><BowlIcon /></FloatingIcon>
-            </View>
-            <View style={styles.copy}>
-              <Text style={styles.name}>Regular dinner</Text>
-              <Text style={styles.detail}>The dependable option. He will survive the indignity.</Text>
-            </View>
-            <View style={styles.feedPod}>
-              <View style={styles.feedGloss} pointerEvents="none" />
-              <Text style={styles.feedWord}>FEED</Text>
-            </View>
-          </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.meal, pressed && styles.pressed]}
+              onPress={() => choose()}
+              accessibilityRole="button"
+              accessibilityLabel="Regular dinner"
+              accessibilityHint="Feed him his ordinary food."
+            >
+              <View style={[styles.itemRail, { backgroundColor: color.pop }]} pointerEvents="none" />
+              <View style={[styles.iconWell, { backgroundColor: color.popPane, borderColor: color.pop }]}>
+                <View style={styles.iconStand} pointerEvents="none"><ItemStand width={34} /></View>
+                <FloatingIcon index={0} still={reduceMotion}><BowlIcon /></FloatingIcon>
+              </View>
+              <View style={styles.copy}>
+                <Text style={styles.name}>Regular dinner</Text>
+                <Text style={styles.detail}>The dependable option. He will survive the indignity.</Text>
+              </View>
+              <View style={styles.feedPod}>
+                <View style={styles.feedGloss} pointerEvents="none" />
+                <Text style={styles.feedWord}>FEED</Text>
+              </View>
+            </Pressable>
 
-          <View style={styles.sectionTab}><Text style={styles.section}>THE GOOD STUFF</Text></View>
+            <View style={styles.sectionTab}><Text style={styles.section}>THE GOOD STUFF</Text></View>
 
-          {treats.length === 0 ? (
-            <View style={styles.empty}>
-              <View style={styles.emptyRail} pointerEvents="none" />
-              <Text style={styles.emptyTitle}>Cupboard's empty.</Text>
-              <Text style={styles.emptyText}>Biscuits, cheese and the unreasonable steak are over in Barkly's Stuff.</Text>
-              <Pressable
-                style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
-                onPress={() => { onClose(); onOpenShop(); }}
-                accessibilityRole="button"
-                accessibilityLabel="Go to the shop"
-                accessibilityHint="Buy treats for him."
-              >
-                <Text style={styles.emptyCtaText}>GET SNACKS</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.treatGrid}>
-              {treats.map(({ item, count }, index) => {
-                const accent = treatSurface(index);
-                return (
-                  <Pressable
-                    key={item.id}
-                    style={({ pressed }) => [styles.treat, pressed && styles.pressed]}
-                    onPress={() => choose(item.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${item.name}, ${count} left`}
-                    accessibilityHint="Give him this instead of dinner."
-                  >
-                    <View style={[styles.itemRail, { backgroundColor: accent }]} pointerEvents="none" />
-                    <View style={[styles.iconWell, { backgroundColor: treatPane(index), borderColor: accent }]}>
-                      <View style={styles.iconStand} pointerEvents="none"><ItemStand width={34} /></View>
-                      <FloatingIcon index={index + 1} still={reduceMotion}><ItemIcon id={item.id} tint={item.color} /></FloatingIcon>
-                    </View>
-                    <View style={styles.copy}>
-                      <Text style={styles.name}>{item.name}</Text>
-                      <Text style={styles.detail}>{item.blurb}</Text>
-                    </View>
-                    <View style={styles.countPod}><Text style={styles.count}>×{count}</Text></View>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
+            {treats.length === 0 ? (
+              <View style={styles.empty}>
+                <View style={styles.emptyRail} pointerEvents="none" />
+                <Text style={styles.emptyTitle}>Cupboard's empty.</Text>
+                <Text style={styles.emptyText}>Biscuits, cheese and the unreasonable steak are over in Barkly's Stuff.</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
+                  onPress={() => { onClose(); onOpenShop(); }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go to the shop"
+                  accessibilityHint="Buy treats for him."
+                >
+                  <Text style={styles.emptyCtaText}>GET SNACKS</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.treatGrid}>
+                {treats.map(({ item, count }, index) => {
+                  const accent = treatSurface(index);
+                  return (
+                    <Pressable
+                      key={item.id}
+                      style={({ pressed }) => [styles.treat, pressed && styles.pressed]}
+                      onPress={() => choose(item.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${item.name}, ${count} left`}
+                      accessibilityHint="Give him this instead of dinner."
+                    >
+                      <View style={[styles.itemRail, { backgroundColor: accent }]} pointerEvents="none" />
+                      <View style={[styles.iconWell, { backgroundColor: treatPane(index), borderColor: accent }]}>
+                        <View style={styles.iconStand} pointerEvents="none"><ItemStand width={34} /></View>
+                        <FloatingIcon index={index + 1} still={reduceMotion}><ItemIcon id={item.id} tint={item.color} /></FloatingIcon>
+                      </View>
+                      <View style={styles.copy}>
+                        <Text style={styles.name}>{item.name}</Text>
+                        <Text style={styles.detail}>{item.blurb}</Text>
+                      </View>
+                      <View style={styles.countPod}><Text style={styles.count}>×{count}</Text></View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -168,7 +177,11 @@ export default function FoodSheet({ visible, onClose, wallet, hungry, onFeed, on
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
+  // The tray scrolls; the header and the hero band do not, so 'Barkly's bowl'
+  // stays put while four treats move under it.
+  body: { flexGrow: 0 },
+  bodyContent: { paddingBottom: space.xs },
   sheet: {
     backgroundColor: color.paper,
     borderTopLeftRadius: radius.xl,

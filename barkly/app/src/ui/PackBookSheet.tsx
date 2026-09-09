@@ -7,6 +7,7 @@ import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import { NPC_ART } from './npcArt';
 import TreasureIcon from './TreasureIcon';
+import { SheetScrim, useSheetBounds } from './sheetStage';
 
 const BARKLY_FACE = require('../../assets/barkly/renders/face.png');
 
@@ -142,12 +143,14 @@ function loreLabel(item: RelationshipLore): string {
 }
 
 export default function PackBookSheet({ visible, onClose, profile, stash, story }: Props) {
+  const bounds = useSheetBounds();
   const stageDots = Array.from({ length: 5 }, (_, i) => i < profile.stage.level);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
-        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+        <SheetScrim />
+        <Pressable style={[styles.sheet, bounds]} testID="sheet-panel" onPress={() => {}} accessible={false}>
           <View style={styles.header}>
             <View>
               <Text style={styles.eyebrow}>THE PACK BOOK</Text>
@@ -374,9 +377,8 @@ export default function PackBookSheet({ visible, onClose, profile, stash, story 
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    maxHeight: '93%',
     backgroundColor: color.paper,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,

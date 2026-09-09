@@ -19,6 +19,7 @@ import { color } from './theme';
 import { TAP_MIN } from './layout';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ParentalGate from './ParentalGate';
+import { SheetScrim, useSheetBounds } from './sheetStage';
 
 
 interface Props {
@@ -47,6 +48,7 @@ export default function PrivacySheet({
   micAvailable,
   onForgetEverything,
 }: Props) {
+  const bounds = useSheetBounds();
   // The two things a child must not be able to do by tapping around.
   const [gate, setGate] = useState<'delete' | 'policy' | null>(null);
 
@@ -62,7 +64,8 @@ export default function PrivacySheet({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <SheetScrim />
+        <View style={[styles.sheet, bounds]} testID="sheet-panel">
           <View style={styles.header}>
             <Text style={styles.title}>For parents</Text>
             <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
@@ -157,8 +160,8 @@ export default function PrivacySheet({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(40,32,22,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.well, borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: '92%' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { backgroundColor: color.well, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

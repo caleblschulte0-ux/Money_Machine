@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { RadialGlow, SCENE_CAMERA, sceneLight, SceneLight } from './scenes/WorldScene';
+import { peekShift } from './sheetStage';
 import { useBarkly } from '../hooks/useBarkly';
 import { playLabelFor, playRoutineFor } from '../game/play';
 import AdventureSheet from './AdventureSheet';
@@ -991,6 +992,63 @@ export default function BarklyRoom() {
   const { setWorldPaused } = barkly;
   useEffect(() => { setWorldPaused(sheetOpen); }, [sheetOpen, setWorldPaused]);
 
+  /*
+   * THE ROOM COMES TO THE WINDOW.
+   *
+   * A sheet leaves a band of world uncovered (ui/sheetStage), and that band
+   * used to be sky: he stands two thirds of the way down the frame, so the
+   * only thing visible over an open food sheet was the top of a tree. Opening
+   * dinner removed the dog from a game about a dog.
+   *
+   * So the world PANS. One animated value moves the scene layer and the actor
+   * layer by the same number of points, which is the only reason his feet stay
+   * on the ground line while both of them travel; `peekShift` works out how
+   * far from where his feet actually are and how tall he actually renders in
+   * this scene, so it is right for every camera and every screen rather than
+   * tuned on one phone. It is clamped to the shortest a sheet may be, so the
+   * ground can never rise above the panel that is meant to be covering it.
+   */
+  const peekTarget = peekShift(groundY, SPRITE_HEIGHT * spriteScale, screenH);
+  const peekY = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const to = sheetOpen ? -peekTarget : 0;
+    if (worldMotion === 'sleep') { peekY.setValue(to); return; }
+    Animated.timing(peekY, {
+      toValue: to,
+      // Slower than the modal's own slide, on purpose: the panel arrives and
+      // the room settles behind it, rather than the two sliding as one plate.
+      duration: sheetOpen ? 420 : 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [sheetOpen, peekTarget, peekY, worldMotion]);
+  const peekTransform = { transform: [{ translateY: peekY }] };
+
+  /*
+   * ...and the CONTROLS get out of his way.
+   *
+   * The first version of the pan put his ears through the destination tray:
+   * HOME/PARK/TOWN/BEACH read straight across his head, and the care dock --
+   * which travels with the stage, because it stands on the same floor he does
+   * -- ended up a shelf floating in the middle of the room. None of it is
+   * usable while a modal is up, so none of it should be drawn. The panel is
+   * the interface for as long as it is open; the world behind it is scenery
+   * and a dog.
+   *
+   * Faded rather than unmounted: a control that vanishes on the same frame the
+   * sheet arrives reads as a glitch, and unmounting the tray would re-run its
+   * entry animation on every close.
+   */
+  const chromeFade = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.timing(chromeFade, {
+      toValue: sheetOpen ? 0 : 1,
+      duration: sheetOpen ? 220 : 320,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [sheetOpen, chromeFade]);
+
   const [beat, setBeat] = useState<{ kind: 'pet' | 'refuse' | 'arrive' | 'delight'; at: number } | null>(null);
   /*
    * A beat, and the sound that goes with it. `arrive` and `refuse` are already
@@ -1123,7 +1181,7 @@ export default function BarklyRoom() {
   return (
     <View style={styles.room}>
       <Animated.View
-        style={[styles.sceneLayer, { opacity: sceneFade }]}
+        style={[styles.sceneLayer, { opacity: sceneFade }, peekTransform]}
       >
         {location === 'home' && <HomeScene hour={hour} upgrades={barkly.placedHome} asleep={asleep} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} biography={barkly.biography} />}
         {location === 'park' && <ParkScene hour={hour} bandHeight={sceneBand} groundY={groundY} chromeBottom={topPad + chromeBottomPx} motion={worldMotion} />}
@@ -1148,6 +1206,7 @@ export default function BarklyRoom() {
         style={[styles.content, { maxWidth: frameW, paddingHorizontal: landscape ? 12 : widePortrait ? 20 : 16 }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
+        <Animated.View style={{ opacity: chromeFade }}>
         <ToyChromeRow
           coins={barkly.wallet.coins}
           level={barkly.level}
@@ -1163,6 +1222,7 @@ export default function BarklyRoom() {
           planComplete={planComplete}
           hasPlan={Boolean(barkly.adventure)}
         />
+        </Animated.View>
 
         {notice && (
           <View
@@ -1223,7 +1283,9 @@ export default function BarklyRoom() {
           order since 2026-08-29; the tiles came from ToyHud.tsx, which had been
           sitting unwired the whole time.
         */}
-        <View style={[styles.places, landscape && styles.placesLandscape, landscape && { width: navW }]}>
+        <Animated.View
+          style={[styles.places, landscape && styles.placesLandscape, landscape && { width: navW }, { opacity: chromeFade }]}
+        >
           <DestinationTray
             location={location}
             locked={locked || fetching}
@@ -1231,15 +1293,16 @@ export default function BarklyRoom() {
             onLocation={(loc) => { react('arrive'); barkly.goTo(loc); }}
             vertical={landscape}
           />
-        </View>
+        </Animated.View>
 
-        <View
+        <Animated.View
           style={[
             styles.stageArea,
             { height: stageH },
             landscape
               ? { marginLeft: navW + 8, marginRight: interactionW + 8 }
               : { width: '100%', maxWidth: stageW, alignSelf: 'center' },
+            peekTransform,
           ]}
         >
           {!asleep && <GroundShadow location={location} width={196 * spriteScale} style={{ bottom: 20 }} />}
@@ -1343,14 +1406,19 @@ export default function BarklyRoom() {
           {night && <View pointerEvents="none" style={styles.stageNight} />}
 
           <HeartBurst burst={heartBurst} headY={CARE_DOCK_CLEARANCE + SPRITE_HEIGHT * spriteScale * 0.66} />
-          <BarklyKit
-            toyId={barkly.toy?.id ?? null}
-            playLabel={playLabel}
-            asleep={asleep}
-            wants={wants}
-            disabled={locked || fetching || tugging || digging}
-            onPress={onKit}
-          />
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: chromeFade }]}
+            pointerEvents="box-none"
+          >
+            <BarklyKit
+              toyId={barkly.toy?.id ?? null}
+              playLabel={playLabel}
+              asleep={asleep}
+              wants={wants}
+              disabled={locked || fetching || tugging || digging}
+              onPress={onKit}
+            />
+          </Animated.View>
 
           {(stateLabel || showcase) && (
             <View style={styles.chip}>
@@ -1358,7 +1426,7 @@ export default function BarklyRoom() {
               <Text style={styles.chipText}>{stateLabel || 'listening'}</Text>
             </View>
           )}
-        </View>
+        </Animated.View>
 
         <View
           style={[
@@ -1633,8 +1701,41 @@ const SHOWCASE_PROMOTION = {
 };
 
 const styles = StyleSheet.create({
-  room: { flex: 1, backgroundColor: color.well },
-  sceneLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  /*
+   * THE FRAME CLIPS. The scenes deliberately bleed props off every edge --
+   * `world-composite` starts at x -70 on a 390pt phone, a hedge ends at 460,
+   * the near-ground band runs to y 1002 -- which is how the diorama avoids
+   * looking like a diagram with everything tucked politely inside. Nothing was
+   * clipping them, so on the web the DOCUMENT grew to fit: measured 572x1120
+   * inside a 390x844 viewport.
+   *
+   * That is not cosmetic. A page bigger than its viewport can be SCROLLED, and
+   * anything that focuses an element -- typing a name in onboarding, a modal
+   * taking focus -- can scroll it without asking. The composition harness
+   * caught this as a phantom: one viewport per run, chosen at random, would
+   * report the entire interface shifted 90px left and 79px up, off the frame
+   * and off the screen, and re-running would move the failure to a different
+   * size. It read as a layout bug in whatever had just changed. It was the
+   * page under it sliding.
+   *
+   * `overflow: hidden` on the outermost frame is what a phone screen actually
+   * does: art may hang off the edge, the edge still ends the picture.
+   */
+  room: { flex: 1, backgroundColor: color.well, overflow: 'hidden' },
+  /*
+   * ...and the SCENE clips itself, which is the half that actually mattered.
+   *
+   * `overflow: hidden` on the room stops the DOCUMENT growing, but a
+   * hidden-overflow box is still scrollable programmatically -- and the
+   * browser scrolls it whenever something inside takes focus. Measured at
+   * 390x844: the room's scrollable content ran 82pt wider and 27pt taller than
+   * the frame, and one click on Settings slid the entire interface to exactly
+   * (-82, -27). Every chrome button then measured off the top of the screen.
+   * Moving the clip INTO the scene layer, which is inset to the frame anyway,
+   * means the props that hang off the edge never become overflow for anything
+   * that can scroll.
+   */
+  sceneLayer: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, overflow: 'hidden' },
   chromeScrim: { position: 'absolute', left: 0, right: 0, top: 0 },
   horizon: {
     position: 'absolute',

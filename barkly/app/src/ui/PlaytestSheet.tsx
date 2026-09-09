@@ -22,6 +22,7 @@ import { TAP_MIN } from './layout';
 import { PRESETS } from '../dev/presets';
 import { ActiveSlot, activeSlot, canRestart, hasBackup, loadPreset, restart, restoreBackup } from '../dev/saveSlots';
 import { asyncStorageStore } from '../storage/asyncStorageStore';
+import { SheetScrim, useSheetBounds } from './sheetStage';
 
 interface Props {
   visible: boolean;
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export default function PlaytestSheet({ visible, onClose }: Props) {
+  const bounds = useSheetBounds();
   const [active, setActive] = useState<ActiveSlot | null>(null);
   const [backup, setBackup] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -73,7 +75,8 @@ export default function PlaytestSheet({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <View style={styles.sheet}>
+        <SheetScrim />
+        <View style={[styles.sheet, bounds]} testID="sheet-panel">
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Playtest save slots</Text>
@@ -151,8 +154,8 @@ export default function PlaytestSheet({ visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(40,32,22,0.45)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.well, borderTopLeftRadius: 26, borderTopRightRadius: 26, maxHeight: '92%' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { backgroundColor: color.well, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

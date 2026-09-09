@@ -1141,3 +1141,15 @@ changed most, and the rule is that you look at that crop. If the difference is
 not obvious there it is not obvious to anybody, and asking someone else to
 adjudicate it spends their attention to tell you something you could have told
 yourself.
+
+**7. A failure that moves between runs is not in the diff.** The composition
+harness failed one viewport per run, a different one each time, reporting the
+entire interface off the frame and off the screen. Two runs were spent
+suspecting the change that happened to be in flight. Nothing had moved: the
+scenes bleed props past every edge on purpose and nothing clipped them, so the
+scene box measured 476x876 inside a 390x844 frame -- and an oversized box is a
+scrollable box even at `overflow: hidden`, which the browser scrolls to reveal
+whatever just took focus. One click on Settings slid the app to (-82, -27),
+the frame's overflow to the pixel. When a gate's verdict changes without the
+code changing, find what SLID before reading the diff again -- and when you
+find it, make the gate say the true thing next time rather than the symptom.

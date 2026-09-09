@@ -331,7 +331,7 @@ export function WorldScene({
   // effect competing with Barkly or shifting the HUD.
   return (
     <AtmosphereContext.Provider value={atmosphere ?? null}>
-      <View style={styles.fill} pointerEvents="none" testID={testID}>
+      <View style={styles.frame} pointerEvents="none" testID={testID}>
         <Animated.View
           style={[
             styles.camera,
@@ -1037,6 +1037,19 @@ export function worldScale(viewportWidth: number, viewportHeight = 844): number 
 
 const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
+  /*
+   * The scene's outer edge, and it CLIPS.
+   *
+   * A camera crops; a scene that spills past its frame is not a camera, it is
+   * a bigger picture with the edges showing. Props are placed to hang off the
+   * sides on purpose and the zoom pushes more of them out, so without this the
+   * scene box measured 476x876 inside a 390x844 frame -- and an oversized box
+   * is a SCROLLABLE box, which the browser will happily scroll the moment
+   * anything inside the app takes focus. On 2026-09-08 that slid the entire
+   * interface to (-82, -27) and read as a layout bug in whatever had most
+   * recently changed.
+   */
+  frame: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, overflow: 'hidden' },
   camera: { position: 'absolute', left: -5, right: -5, top: -5, bottom: -5 },
   object: { position: 'absolute' },
   objectImage: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, width: '100%', height: '100%' },

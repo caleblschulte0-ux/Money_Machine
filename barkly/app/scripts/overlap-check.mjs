@@ -102,6 +102,44 @@ for (const size of sizes) {
 
   await walkOnboarding(page, { settle: 800 });
 
+  /*
+   * NOTHING UNDER THE INTERFACE MAY HAVE SCROLLED.
+   *
+   * Every box below is measured relative to the viewport, so if any ancestor
+   * has scrolled, all of them are wrong together and the report is fiction.
+   * That is not hypothetical: on 2026-09-08 this harness failed one viewport
+   * per run, a different one each time, with `coin-pill 66px past the left`
+   * and four chrome buttons `OFF SCREEN` at negative y -- and it read as a
+   * layout bug in whatever had most recently changed.
+   *
+   * Nothing had moved. The scenes bleed props off every edge on purpose and
+   * the place camera's zoom pushes more of them out, so the scene box measured
+   * 476x876 inside a 390x844 frame with nothing clipping it. An oversized box
+   * is a SCROLLABLE box even at `overflow: hidden`, and the browser scrolls it
+   * to reveal whatever has just taken focus -- one click on Settings slid the
+   * whole app to exactly (-82, -27), which is the frame's overflow to the pixel.
+   * The fix is in the app (WorldScene clips at its frame, the room clips at
+   * its own); this is the assertion that makes it say so next time instead of
+   * sending someone hunting through a diff that was innocent.
+   */
+  const slid = await page.evaluate(() => {
+    const out = [];
+    for (const n of document.querySelectorAll('*')) {
+      if (n.scrollTop || n.scrollLeft) {
+        const cs = getComputedStyle(n);
+        if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') continue; // a real list
+        out.push(`${n.tagName}[${n.getAttribute('data-testid') || n.className}] by ${n.scrollLeft},${n.scrollTop}`);
+      }
+    }
+    return out.slice(0, 4);
+  });
+  if (slid.length) {
+    failures++;
+    console.log(
+      `${size.width}x${size.height} — THE INTERFACE HAS SLID: ${slid.join('; ')}. ` +
+        `Every box below is measured relative to the viewport, so they are all suspect.`,
+    );
+  }
   await page.getByLabel('Settings').first().click();
   await page.waitForTimeout(700);
   const toggle = page.getByLabel(/Everything at once/i).first();

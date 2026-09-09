@@ -24,6 +24,7 @@ import {
   storeFor,
   Wallet,
 } from '../game/progression';
+import { SheetScrim, useSheetBounds } from './sheetStage';
 
 interface Props {
   visible: boolean;
@@ -99,6 +100,7 @@ export function CoinPill({ coins, level, frac }: { coins: number; level: number;
 }
 
 export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, devMode }: Props) {
+  const bounds = useSheetBounds();
   const { width } = useWindowDimensions();
   /*
    * A SHOP IS A GRID OF THINGS, not a list of rows.
@@ -174,7 +176,8 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
-        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+        <SheetScrim />
+        <Pressable style={[styles.sheet, bounds]} testID="sheet-panel" onPress={() => {}} accessible={false}>
           <LinearGradient
             colors={[color.violet, color.fill]}
             start={{ x: 0, y: 0 }}
@@ -312,12 +315,11 @@ export default function StoreSheet({ visible, onClose, wallet, onBuy, onEquip, d
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: color.paper,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    maxHeight: '92%',
     /*
      * The sheet is capped and centred because the GRID is capped: card widths
      * are computed from `Math.min(width, 700)`, and without the same cap here

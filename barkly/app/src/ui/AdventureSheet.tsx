@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { AdventureState, adventureProgress, PLAN_REWARD } from '../game/adventure';
 import { color, elevation, glyph, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
+import { SheetScrim, useSheetBounds } from './sheetStage';
 
 interface Props {
   visible: boolean;
@@ -19,6 +20,7 @@ function goalColor(index: number): string {
 
 /** Barkly's plan is an object he made, not a retention dashboard. */
 export default function AdventureSheet({ visible, onClose, adventure }: Props) {
+  const bounds = useSheetBounds();
   if (!adventure) return null;
   const progress = adventureProgress(adventure);
   const done = Boolean(adventure.completedAt);
@@ -26,7 +28,8 @@ export default function AdventureSheet({ visible, onClose, adventure }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
-        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+        <SheetScrim />
+        <Pressable style={[styles.sheet, bounds]} testID="sheet-panel" onPress={() => {}} accessible={false}>
           <View style={styles.handle} />
 
           <View style={styles.note}>
@@ -101,8 +104,11 @@ export default function AdventureSheet({ visible, onClose, adventure }: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: color.scrim, justifyContent: 'flex-end' },
-  sheet: { maxHeight: '92%', paddingHorizontal: space.lg, paddingBottom: space.xl },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
+  // Height comes from ui/sheetStage -- see the note there. Nothing in this
+  // file states a percentage of the screen; that number is shared with the
+  // room, which pans the world up by exactly what the sheet leaves.
+  sheet: { paddingHorizontal: space.lg, paddingBottom: space.xl },
   scrollBody: { paddingBottom: space.xs },
   handle: { alignSelf: 'center', width: 54, height: 5, borderRadius: radius.pill, backgroundColor: color.inkOn, opacity: 0.75, marginBottom: space.md },
   note: {

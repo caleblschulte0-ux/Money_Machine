@@ -17,6 +17,7 @@ import PrivacySheet from './PrivacySheet';
 import { MemoryState } from '../barkly/memory';
 import { BarklyStats } from '../barkly/types';
 import { DEFAULT_SHAPE, PITCH_RANGE, RATE_RANGE, VoiceShape } from '../providers/tts/expoSpeechTts';
+import { SheetScrim, useSheetBounds } from './sheetStage';
 
 /**
  * Dev tools are OPT-OUT, not opt-in.
@@ -155,6 +156,7 @@ function StatBar({ label, value, invert }: { label: string; value: number; inver
 }
 
 export default function SettingsSheet(props: Props) {
+  const bounds = useSheetBounds();
   const {
     visible,
     onClose,
@@ -202,7 +204,8 @@ export default function SettingsSheet(props: Props) {
         ✕ is the labelled way out.
       */}
       <Pressable style={styles.backdrop} onPress={onClose} accessible={false}>
-        <Pressable style={styles.sheet} onPress={() => {}} accessible={false}>
+        <SheetScrim />
+        <Pressable style={[styles.sheet, bounds]} testID="sheet-panel" onPress={() => {}} accessible={false}>
           <View style={styles.header}>
             <Text style={styles.title}>Settings</Text>
             <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close settings">
@@ -544,12 +547,11 @@ export default function SettingsSheet(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: color.paper,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '75%',
     padding: 20,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

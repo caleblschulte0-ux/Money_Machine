@@ -92,6 +92,27 @@ character is gone; you are reading a well-formatted document. In a game about
 a relationship with an animal, the animal leaves the screen for most
 interactions.
 
+> **Half of this is built, 2026-09-09.** The covering half. Sheets no longer
+> state their own height -- `src/ui/sheetStage.tsx` owns one contract and all
+> seven of them ask it: a sheet may take the screen MINUS a window the world
+> keeps (a third, floored at 216pt so a small phone still gets a dog-sized
+> band), and never less than 62% of that, because the room now pans UP behind
+> an open sheet and the panel is what covers the risen ground. The flat 50%
+> scrim is a gradient that is clear over the window. The chrome -- coin row,
+> destination tray, care dock -- fades out while a sheet is up, because none
+> of it is usable behind a modal and it was drawing the place names across his
+> ears.
+>
+> Measured by `scripts/sheet-window.mjs` on three phone sizes, four sheets
+> each: **78-100% of him stays clear of the panel**, on every one. It was 0%.
+> The park with the food sheet open is now a better composition than the park
+> without it -- him centred, Biscuit and Duke flanking, the whole diorama
+> above the tray.
+>
+> The other half -- the two visual languages, the flat cards against the
+> rendered world, four different accent systems -- is NOT built. That is a
+> redesign of the sheets themselves and it is still open.
+
 ### 4. One face, everywhere
 
 > **Corrected 2026-09-08.** This originally said he wears one expression
@@ -173,9 +194,10 @@ subtraction rather than a different lighting situation.
    expressions — and take Barkly's collar off them. The rig supports it.
 3. **Resting expression variation.** Let mood, time and recent events pick
    among the faces that already exist before authoring new ones.
-4. **Bring the sheets into the world.** Not a redesign for its own sake: keep
-   the dog on screen behind them, use the rendered material language for their
-   surfaces, and settle on one accent system.
+4. **Bring the sheets into the world.** ~~Keep the dog on screen behind
+   them~~ (done 2026-09-09 -- 78-100% of him stays clear, measured), use the
+   rendered material language for their surfaces, and settle on one accent
+   system.
 5. **Widen the value range.** Deeper darks in shadow and true highlights where
    the key hits, per scene, so there is somewhere for the eye to go.
 6. **Rebuild the three weak items** to the standard of the ball.
