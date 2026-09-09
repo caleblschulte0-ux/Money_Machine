@@ -5,7 +5,7 @@ import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { DIORAMA } from './artPalette';
 import { radius } from '../theme';
 
-const FACE = require('../../../assets/barkly/renders/face.png');
+const FACE = require('../../../assets/barkly/outlined/face.png');
 
 type SkyBand = 'morning' | 'day' | 'evening' | 'night';
 

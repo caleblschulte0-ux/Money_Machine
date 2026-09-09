@@ -22,13 +22,13 @@
 import React from 'react';
 import { Image, View } from 'react-native';
 
-const FRONT = require('../../assets/barkly/renders/front.png');
+const FRONT = require('../../assets/barkly/outlined/front.png');
 
 const COLLAR: Record<string, ReturnType<typeof require>> = {
-  collar_red: require('../../assets/barkly/renders/collars/front_red.png'),
-  collar_blue: require('../../assets/barkly/renders/collars/front_blue.png'),
-  collar_green: require('../../assets/barkly/renders/collars/front_green.png'),
-  collar_gold: require('../../assets/barkly/renders/collars/front_gold.png'),
+  collar_red: require('../../assets/barkly/outlined/collars/front_red.png'),
+  collar_blue: require('../../assets/barkly/outlined/collars/front_blue.png'),
+  collar_green: require('../../assets/barkly/outlined/collars/front_green.png'),
+  collar_gold: require('../../assets/barkly/outlined/collars/front_gold.png'),
 };
 
 export function hasCollarPreview(id: string): boolean {

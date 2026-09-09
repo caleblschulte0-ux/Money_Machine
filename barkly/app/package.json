@@ -41,7 +41,7 @@
     "brain": "BARKLY_BRAIN=cli node ../server/index.mjs",
     "real": "EXPO_PUBLIC_BARKLY_BACKEND_URL=http://localhost:8787 expo start",
     "check:a11y": "node scripts/build-artifact.mjs && node scripts/a11y-check.mjs --size 360x568 && node scripts/a11y-check.mjs --size 390x844 && node scripts/a11y-check.mjs --size 430x932",
-    "check:ui": "node scripts/build-artifact.mjs && node scripts/overlap-check.mjs && node scripts/a11y-check.mjs --size 360x568 && node scripts/a11y-check.mjs --size 390x844 && node scripts/a11y-check.mjs --size 430x932 && node scripts/voice-bank.mjs check && node scripts/speech-fit-check.mjs && node scripts/voice-check.mjs && npm run check:nav && node scripts/payload-budget.mjs dist && node scripts/prop-clear-check.mjs && node scripts/blocking.mjs all --fail && node scripts/sheet-window.mjs --fail && python3 scripts/npc-distinct.py && python3 scripts/promote-props.py --check",
+    "check:ui": "node scripts/build-artifact.mjs && node scripts/overlap-check.mjs && node scripts/a11y-check.mjs --size 360x568 && node scripts/a11y-check.mjs --size 390x844 && node scripts/a11y-check.mjs --size 430x932 && node scripts/voice-bank.mjs check && node scripts/speech-fit-check.mjs && node scripts/voice-check.mjs && npm run check:nav && node scripts/payload-budget.mjs dist && node scripts/prop-clear-check.mjs && node scripts/blocking.mjs all --fail && node scripts/sheet-window.mjs --fail && python3 scripts/outline-cast.py --check && node scripts/sync-aspects.mjs --check && python3 scripts/npc-distinct.py && python3 scripts/promote-props.py --check",
     "voice:harvest": "node scripts/voice-bank.mjs harvest",
     "voice:record": "python3 scripts/render-voice-bank.py",
     "voice:link": "node scripts/voice-bank.mjs link",
@@ -57,6 +57,8 @@
     "render:world": "scripts/render-world.sh",
     "check:composition": "node scripts/composition.mjs",
     "check:sheets": "node scripts/sheet-window.mjs --fail",
+    "check:outlines": "python3 scripts/outline-cast.py --check",
+    "check:aspects": "node scripts/sync-aspects.mjs --check",
     "check:visible": "node scripts/visible-change.mjs"
   },
   "private": true,

@@ -1,6 +1,6 @@
 /**
  * Photo renderer — displays the ACTUAL approved renders of Barkly, cut from
- * the concept sheet (assets/barkly/renders/*, sourced from
+ * the concept sheet (assets/barkly/outlined/*, sourced from
  * assets/barkly/concept/barkly-concept.png). This is the default renderer:
  * it looks exactly like the character because it IS the character.
  *
@@ -24,22 +24,22 @@ import { BarklyState, BodyAction, BarklyStats } from '../barkly/types';
 import BarklyRig from './BarklyRig';
 
 const RENDERS = {
-  front: require('../../assets/barkly/renders/front.png'),
-  sideLie: require('../../assets/barkly/renders/side_lie.png'), // settled, lying down
-  threeQuarter: require('../../assets/barkly/renders/three_quarter.png'),
-  threeQuarterR: require('../../assets/barkly/renders/three_quarter_r.png'),      // mirrored: facing right
-  threeQuarterBall: require('../../assets/barkly/renders/three_quarter_ball.png'), // carrying the ball, facing left
-  face: require('../../assets/barkly/renders/face.png'),
+  front: require('../../assets/barkly/outlined/front.png'),
+  sideLie: require('../../assets/barkly/outlined/side_lie.png'), // settled, lying down
+  threeQuarter: require('../../assets/barkly/outlined/three_quarter.png'),
+  threeQuarterR: require('../../assets/barkly/outlined/three_quarter_r.png'),      // mirrored: facing right
+  threeQuarterBall: require('../../assets/barkly/outlined/three_quarter_ball.png'), // carrying the ball, facing left
+  face: require('../../assets/barkly/outlined/face.png'),
 } as const;
 
 // Facial variants derived from the front render (see assets README):
 // real jaw-flap while speaking, real blinks while idle.
-const FRONT_MOUTH_OPEN = require('../../assets/barkly/renders/front_mouth_open.png');
-const FRONT_BLINK = require('../../assets/barkly/renders/front_blink.png');
-const FRONT_WIDE = require('../../assets/barkly/renders/front_wide.png');   // listening
-const FRONT_SMILE = require('../../assets/barkly/renders/front_smile.png'); // happy
-const FRONT_SQUINT = require('../../assets/barkly/renders/front_squint.png'); // annoyed
-const FRONT_HALF = require('../../assets/barkly/renders/front_half.png');     // mid-blink / heavy-lidded
+const FRONT_MOUTH_OPEN = require('../../assets/barkly/outlined/front_mouth_open.png');
+const FRONT_BLINK = require('../../assets/barkly/outlined/front_blink.png');
+const FRONT_WIDE = require('../../assets/barkly/outlined/front_wide.png');   // listening
+const FRONT_SMILE = require('../../assets/barkly/outlined/front_smile.png'); // happy
+const FRONT_SQUINT = require('../../assets/barkly/outlined/front_squint.png'); // annoyed
+const FRONT_HALF = require('../../assets/barkly/outlined/front_half.png');     // mid-blink / heavy-lidded
 
 type Pose = keyof typeof RENDERS;
 
@@ -507,10 +507,10 @@ export default function BarklyPhotoView({ state, actions, location, variant, col
  * silently breaking every lookup. An id is an id.
  */
 const COLLAR_ART: Record<string, ReturnType<typeof require>> = {
-  collar_red: require('../../assets/barkly/renders/collars/front_red.png'),
-  collar_blue: require('../../assets/barkly/renders/collars/front_blue.png'),
-  collar_green: require('../../assets/barkly/renders/collars/front_green.png'),
-  collar_gold: require('../../assets/barkly/renders/collars/front_gold.png'),
+  collar_red: require('../../assets/barkly/outlined/collars/front_red.png'),
+  collar_blue: require('../../assets/barkly/outlined/collars/front_blue.png'),
+  collar_green: require('../../assets/barkly/outlined/collars/front_green.png'),
+  collar_gold: require('../../assets/barkly/outlined/collars/front_gold.png'),
 };
 
 /**

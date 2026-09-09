@@ -53,16 +53,16 @@ const PARK_NEAR_GRASS = require('../../../assets/world/park/props/near_grass.png
  */
 /* The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds these
    against the real PNGs, the same way the shop's item art is held. */
-const TREELINE_ASPECT = 640 / 119;
-const TUFT_ASPECT = 295 / 296;
-const FLOWERS_ASPECT = 238 / 280;
-const CLUMP_ASPECT = 403 / 295;
+const TREELINE_ASPECT = 654 / 133;
+const TUFT_ASPECT = 300 / 303;
+const FLOWERS_ASPECT = 246 / 285;
+const CLUMP_ASPECT = 410 / 302;
 /*
  * THE NEAR-GROUND BANDS. Wide strips of ground cover rendered for the plane
  * closest to the viewer, spanning the whole width and hung off the bottom.
  * `__tests__/scene_surfaces.test.ts` holds these against the real PNGs.
  */
-const NEAR_GRASS_ASPECT = 618 / 87;
+const NEAR_GRASS_ASPECT = 631 / 101;
 
 type Cover = { fx: number; dy: number; s: number; depth: number; flip?: boolean; flower?: boolean };
 const PARK_COVER: readonly Cover[] = [
@@ -189,10 +189,10 @@ const TOWN_KERB = require('../../../assets/world/town/props/kerb.png');
 const TOWN_PAVING = require('../../../assets/world/town/props/paving.png');
 const TOWN_NEAR_PAVING = require('../../../assets/world/town/props/near_paving.png');
 /* Trimmed renders' own aspects; __tests__/scene_surfaces.test.ts holds them. */
-const ROOFTOPS_ASPECT = 640 / 144;
-const KERB_ASPECT = 605 / 33;
-const NEAR_PAVING_ASPECT = 640 / 58;
-const PAVING_ASPECT = 638 / 21;
+const ROOFTOPS_ASPECT = 654 / 159;
+const KERB_ASPECT = 620 / 48;
+const NEAR_PAVING_ASPECT = 654 / 72;
+const PAVING_ASPECT = 652 / 37;
 
 /**
  * COURSES OF PAVING, RECEDING.
@@ -222,7 +222,11 @@ const PAVING_ASPECT = 638 / 21;
 const TOWN_PAVING_COURSES: readonly { dy: number; w: number; phase: number; opacity: number }[] = [
   { dy: 4, w: 1.06, phase: 0.0, opacity: 0.30 },
   { dy: 26, w: 1.22, phase: 0.34, opacity: 0.38 },
-  { dy: 56, w: 1.44, phase: 0.08, opacity: 0.46 },
+  // 46, not 56: the contour pass re-cut paving.png from 638x21 to 652x37, and
+  // a course's HEIGHT comes from that render's aspect -- so the deepest one
+  // grew downward into the band the NPC name plates sit in. A prop getting an
+  // edge moves everything sized from it, which is what this test is for.
+  { dy: 46, w: 1.44, phase: 0.08, opacity: 0.46 },
 ];
 
 const BEACH_UMBRELLA = require('../../../assets/world/beach/props/umbrella.png');
@@ -235,10 +239,10 @@ const BEACH_SHELLS = require('../../../assets/world/beach/props/shells.png');
 const BEACH_NEAR_SAND = require('../../../assets/world/beach/props/near_sand.png');
 const BEACH_SURF = require('../../../assets/world/beach/props/surf.png');
 const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png');
-const HEADLAND_ASPECT = 640 / 67;
+const HEADLAND_ASPECT = 654 / 82;
 const SURF_ASPECT = 640 / 55;
-const SHELLS_ASPECT = 272 / 142;
-const NEAR_SAND_ASPECT = 604 / 38;
+const SHELLS_ASPECT = 280 / 150;
+const NEAR_SAND_ASPECT = 618 / 52;
 const MARRAM_ASPECT = 212 / 249;
 
 /**

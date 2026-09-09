@@ -5,7 +5,7 @@
  * the world stage. The Pack Book needs the same faces — a rivalry receipt that
  * says "Duke: Nemesis" in words next to a photograph of Duke is a different
  * screen from one that only says it — and a second `require` map in the sheet
- * would be two lists to keep in step with `assets/barkly/renders/npcs/`.
+ * would be two lists to keep in step with `assets/barkly/outlined/npcs/`.
  */
 
 import { NpcId } from '../world/npcs';
@@ -49,7 +49,7 @@ const FRONT = 520 / 416;
 const THREE_QUARTER = 480 / 416;
 
 export const NPC_ART: Record<NpcId, NpcArt> = {
-  biscuit: { source: require('../../assets/barkly/renders/npcs/biscuit_front.png'), aspect: FRONT },
-  pepper: { source: require('../../assets/barkly/renders/npcs/pepper_tq.png'), aspect: THREE_QUARTER },
-  duke: { source: require('../../assets/barkly/renders/npcs/duke_tq.png'), aspect: THREE_QUARTER },
+  biscuit: { source: require('../../assets/barkly/outlined/npcs/biscuit_front.png'), aspect: FRONT },
+  pepper: { source: require('../../assets/barkly/outlined/npcs/pepper_tq.png'), aspect: THREE_QUARTER },
+  duke: { source: require('../../assets/barkly/outlined/npcs/duke_tq.png'), aspect: THREE_QUARTER },
 };

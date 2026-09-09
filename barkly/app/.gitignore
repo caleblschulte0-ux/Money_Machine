@@ -78,3 +78,7 @@ art-review/first-ten-minutes.txt
 
 # Throwaway capture harnesses for looking at a screen during a session.
 scripts/zz-*.mjs
+
+# Python bytecode (tools/ and scripts/ are run with python3 directly)
+__pycache__/
+*.pyc

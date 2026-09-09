@@ -31,7 +31,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageFilter
+
+# The contour's colour comes from the same palette as everything else it will
+# sit next to. `ink.deep` is the world's darkest neutral.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools" / "blender"))
+from palette import tone  # noqa: E402
+
+_ink = tone("ink", "deep")
+CONTOUR_RGB = tuple(int(_ink[i:i + 2], 16) for i in (1, 3, 5))
 
 ROOT = Path(__file__).resolve().parents[1]
 PACK = ROOT / "tools" / "blender" / "world_prop_pack.py"
@@ -71,6 +79,64 @@ ITEM_WIDTH = 224
 PALETTE = 256
 
 
+# THE CONTOUR.
+#
+# The operator's reference art -- Brawl Stars -- carries a dark contour around
+# every object, and our world had none anywhere. It is the single biggest
+# remaining reason a prop of ours dropped into one of their frames reads as
+# belonging to a different game: theirs are drawn objects with an edge, ours
+# were untrimmed renders floating on whatever is behind them.
+#
+# Baked here rather than drawn in the app because this is the ONE place that
+# knows the shipping recipe, and because an outline stacked at runtime is four
+# extra draws per prop on a phone. Baked, it costs nothing and it cannot drift
+# from prop to prop.
+#
+# Soft things are exempt. A hard edge on a cloud, a haze or a contact shadow is
+# not a contour, it is a mistake -- those are atmosphere, and atmosphere has no
+# edge.
+CONTOUR_EXEMPT = ("sky/",)
+CONTOUR_EXEMPT_WORDS = ("shadow", "haze", "glow", "surf")
+
+
+def contour_width(width: int) -> int:
+    """How heavy the edge is, from the asset's own width.
+
+    A constant pixel count would give the storefront a hairline and the
+    treat icon a bruise: they ship at 640 and 224. Proportional keeps the
+    weight even once the app has scaled them back to the same world.
+    """
+    return max(3, round(width * 0.011))
+
+
+def padded(image: "Image.Image", pad: int) -> "Image.Image":
+    """The image on a canvas `pad` bigger on every side.
+
+    Separated from `outlined` because some art has to GROW WITHOUT AN EDGE: the
+    collar overlays and the face patch are composited on top of the body, so
+    they must take exactly the same padding the body takes or they slide, and
+    they must not take a contour or the dog wears a dark ring on his chest.
+    """
+    canvas = Image.new("RGBA", (image.width + pad * 2, image.height + pad * 2), (0, 0, 0, 0))
+    canvas.paste(image, (pad, pad))
+    return canvas
+
+
+def outlined(image: "Image.Image", path: str, pad: int | None = None) -> "Image.Image":
+    """The image over a dilated dark copy of its own alpha."""
+    if path.startswith(CONTOUR_EXEMPT) or any(w in path for w in CONTOUR_EXEMPT_WORDS):
+        return image
+    if pad is None:
+        pad = contour_width(image.width)
+    canvas = padded(image, pad)
+    alpha = canvas.getchannel("A")
+    # MaxFilter takes an odd window; a pad of n needs 2n+1 to reach n pixels.
+    grown = alpha.filter(ImageFilter.MaxFilter(pad * 2 + 1))
+    ink = Image.new("RGBA", canvas.size, CONTOUR_RGB + (255,))
+    ink.putalpha(grown)
+    return Image.alpha_composite(ink, canvas)
+
+
 def destination(path: str) -> Path:
     """Where a builder's render is loaded from by the app."""
     location, name = path.split("/", 1)
@@ -95,9 +161,19 @@ def build(render: Path, path: str, into: Path) -> tuple[int, int]:
     if box is None:
         raise ValueError(f"{path} rendered empty")
     trimmed = image.crop(box)
-    if path.startswith("item/") and trimmed.width != ITEM_WIDTH:
-        height = round(trimmed.height * ITEM_WIDTH / trimmed.width)
-        trimmed = trimmed.resize((ITEM_WIDTH, height), Image.LANCZOS)
+    if path.startswith("item/"):
+        # ITEM_WIDTH is the width of the SHIPPED file, and the contour is part
+        # of the shipped file -- so the art is resized to leave room for it.
+        # Resizing to ITEM_WIDTH and then adding the edge shipped 230px icons
+        # from a table that says 224, which is the sort of drift that ends up
+        # in an aspect lock and a layout constant six weeks later.
+        inner = ITEM_WIDTH - contour_width(ITEM_WIDTH) * 2
+        if trimmed.width != inner:
+            height = round(trimmed.height * inner / trimmed.width)
+            trimmed = trimmed.resize((inner, height), Image.LANCZOS)
+    # The contour goes on AFTER the icon resize, so its weight is measured in
+    # the pixels that actually ship rather than in the 640 canvas they came off.
+    trimmed = outlined(trimmed, path, pad=contour_width(ITEM_WIDTH) if path.startswith("item/") else None)
     trimmed.save(into)
     subprocess.run(
         ["convert", str(into), "-strip", "+dither", "-colors", str(PALETTE),

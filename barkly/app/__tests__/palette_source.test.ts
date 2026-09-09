@@ -101,7 +101,11 @@ describe('the palette itself', () => {
      * A picture with no darks has no contrast. The ramp has to REACH.
      */
     const values = steps.map((m) => Number(m[3]));
-    expect(Math.min(...values)).toBeLessThanOrEqual(0.2);
+    // 0.25, not 0.2: `deep` is a CREVICE value, and the first pass put it at
+    // 0.16, where a park tree -- which alternates it with `base` across half
+    // its canopy -- came back with two of three crown lumps reading as holes.
+    // The ramp still has to REACH; it does not have to swallow whole forms.
+    expect(Math.min(...values)).toBeLessThanOrEqual(0.25);
     expect(Math.max(...values)).toBeGreaterThanOrEqual(0.95);
     // ...and the chroma has to reach too: theirs tops out at 0.91.
     const sats = steps.map((m) => Number(m[2]));

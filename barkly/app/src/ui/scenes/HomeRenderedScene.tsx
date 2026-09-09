@@ -18,13 +18,13 @@ const WINDOW_FRAME = require('../../../assets/world/home/architecture/window_fra
 const SKIRTING = require('../../../assets/world/home/props/skirting.png');
 const NEAR_FLOOR = require('../../../assets/world/home/props/near_floor.png');
 /** The near-ground band's own aspect. __tests__/scene_surfaces.test.ts holds it. */
-const NEAR_FLOOR_ASPECT = 640 / 45;
+const NEAR_FLOOR_ASPECT = 654 / 61;
 const PANELLING = require('../../../assets/world/home/props/panelling.png');
 const VISTA = require('../../../assets/world/home/props/vista.png');
 /** The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds them. */
-const SKIRTING_ASPECT = 633 / 35;
-const PANELLING_ASPECT = 635 / 119;
-const VISTA_ASPECT = 640 / 263;
+const SKIRTING_ASPECT = 647 / 50;
+const PANELLING_ASPECT = 650 / 134;
+const VISTA_ASPECT = 654 / 273;
 /**
  * Window sun/moon geometry, as FRACTIONS of the aperture.
  *

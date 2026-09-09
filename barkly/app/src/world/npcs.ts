@@ -1,6 +1,6 @@
 /**
  * The other dogs in Barkly's world. Art: recolored variants of the approved
- * renders (assets/barkly/renders/npcs/) so everyone shares the toy style.
+ * renders (assets/barkly/outlined/npcs/) so everyone shares the toy style.
  *
  * Personality text feeds the dialogue prompt so Claude-Barkly gossips about
  * them accurately; the line pools drive the on-screen bark exchanges.

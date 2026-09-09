@@ -9,7 +9,7 @@ import { NPC_ART } from './npcArt';
 import TreasureIcon from './TreasureIcon';
 import { SheetScrim, useSheetBounds } from './sheetStage';
 
-const BARKLY_FACE = require('../../assets/barkly/renders/face.png');
+const BARKLY_FACE = require('../../assets/barkly/outlined/face.png');
 
 /** Read from the list, never typed: adding a treasure must move the total. */
 const TREASURE_TOTAL = TREASURES.length;
