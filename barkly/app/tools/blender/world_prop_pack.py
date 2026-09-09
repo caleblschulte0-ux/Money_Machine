@@ -966,11 +966,19 @@ def town_rooftops():
     # pitched roofs on a monochrome run read as peaks. A little warm in the
     # walls and a little terracotta in the roofs is all it takes to make the
     # same silhouette read as buildings.
+    # DISTANCE IS NOT FOG. Measured against the park at the same hour: the
+    # treeline is drawn at depth 0.14 / opacity 0.92 and the rooftops at 0.10 /
+    # 0.86 -- effectively the same aerial perspective -- and yet the park's far
+    # edge read as trees while the town's read as weather. The difference was
+    # not the distance, it was that these were painted at `lit` and `base`
+    # while the treeline is foliage at `base` and `lit`: a pale colour plus a
+    # haze pass is a ghost. Distance takes a step DOWN the ramp so the haze has
+    # something to lift.
     slate = material("Roof slate", tone("roof", "base"), roughness=0.86)
-    slate_b = material("Roof tile", tone("paving", "base"), roughness=0.86)
-    wall = material("Far wall", tone("brick", "base"), roughness=0.84)
-    wall_b = material("Far wall warm", tone("brick", "lit"), roughness=0.84)
-    trim = material("Far trim", tone("metal", "lit"), roughness=0.86)
+    slate_b = material("Roof tile", tone("roof", "shade"), roughness=0.86)
+    wall = material("Far wall", tone("brick", "shade"), roughness=0.84)
+    wall_b = material("Far wall warm", tone("brick", "base"), roughness=0.84)
+    trim = material("Far trim", tone("metal", "base"), roughness=0.86)
 
     blocks = (
         (-3.05, 0.62, 0.86, wall, slate),

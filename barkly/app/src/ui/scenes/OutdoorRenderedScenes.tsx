@@ -156,52 +156,26 @@ const CLOUD_FAR_W = (width: number) => Math.min(94, width * 0.23);
  * street reads as continuing past both edges, and it gives the eye something
  * at the top of a scene whose interest was all in the lower half.
  */
-function TownBunting({ top, night }: { top: number; night: boolean }) {
-  const FLAGS = [
-    DIORAMA.coral, DIORAMA.lemon, DIORAMA.aqua, DIORAMA.violet, DIORAMA.mint,
-    DIORAMA.coral, DIORAMA.lemon, DIORAMA.aqua, DIORAMA.violet, DIORAMA.mint,
-    DIORAMA.coral, DIORAMA.lemon,
-  ];
-  const W = 420;
-  const SAG = 26;
-  const H = SAG + 34;
-  const step = W / (FLAGS.length - 1);
-  // Its own box, at its own height. Drawing this into a `styles.fill` SVG
-  // stretched the viewBox over the whole scene and put the flags somewhere
-  // nobody asked for -- with preserveAspectRatio="none" a 204-unit box mapped
-  // onto 844px moves every coordinate by a factor of four.
-  return (
-    <View style={{ position: 'absolute', left: 0, right: 0, top, height: H }} pointerEvents="none">
-      <Svg width="100%" height="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-        <Path
-          d={`M 0 2 Q ${W / 2} ${2 + SAG * 1.9} ${W} 2`}
-          stroke={night ? DIORAMA.woodDeep : DIORAMA.woodWarm}
-          strokeWidth={2.4}
-          fill="none"
-          opacity={night ? 0.5 : 0.85}
-        />
-        {FLAGS.map((fill, i) => {
-          const t = i / (FLAGS.length - 1);
-          // The point on that same curve, so each flag hangs from the string
-          // rather than from a straight line pretending to be one.
-          const y = 2 + 4 * (SAG * 0.95) * t * (1 - t);
-          const x = i * step;
-          const w = 13;
-          const h = 19;
-          const lean = (t - 0.5) * 13;
-          return (
-            <Path
-              key={i}
-              d={`M ${x - w / 2} ${y} L ${x + w / 2} ${y} L ${x + lean * 0.35} ${y + h} Z`}
-              fill={fill}
-              opacity={night ? 0.44 : 0.95}
-            />
-          );
-        })}
-      </Svg>
-    </View>
-  );
-}
+/*
+ * THE BUNTING IS GONE, and it is the only thing ever removed from a scene for
+ * being the wrong MEDIUM rather than the wrong colour.
+ *
+ * Everything else in the four places is rendered geometry lit by one sun. The
+ * bunting was flat SVG triangles in raw palette fills, strung across the
+ * topmost band of the town -- so the first thing a player's eye reached in
+ * that scene was the one element drawn in a different language from the rest
+ * of the game. No amount of palette work reaches that; it was not a colour
+ * problem.
+ *
+ * It was also eating the sky. Town stacked bunting at `horizon - 62` over
+ * rooftops at `horizon - 34` over the shops, so where the park shows about a
+ * fifth of the frame as sky and the beach about a quarter, the town showed
+ * roughly a tenth -- three places under the same sky showing three different
+ * amounts of it.
+ *
+ * If the town wants festival flags again, they get rendered like everything
+ * else: cloth with a light on it, in `world_prop_pack.py`.
+ */
 
 
 const TOWN_STORE_CORAL = require('../../../assets/world/town/props/store_coral.png');
@@ -342,6 +316,26 @@ const COMPOSITION = {
  * Order is top-to-bottom because that is what LinearGradient does with no
  * start/end, which is how the inversion survived: nothing about
  * `[skyMorningA, skyMorningB]` says which end is the ground.
+ */
+/*
+ * THE HORIZON IS NOT SHARED, AND THE ATTEMPT IS WORTH RECORDING.
+ *
+ * Three places, three recipes: park `ground - 416` clamped 148..184, town
+ * `ground - 458` clamped 116..154, beach `ground - 386` clamped 172..210. On a
+ * 390x844 phone all three clamp, so the town's horizon sat 56 points above the
+ * beach's -- and the town showed roughly a tenth of the frame as sky where the
+ * beach showed a quarter. That looked like exactly the kind of drift that
+ * makes three places feel like three games, so it was unified.
+ *
+ * `blocking.mjs` refused it. Dropping the town's horizon 42 points moved the
+ * shopfronts down with it -- they are anchored to the horizon and sized from a
+ * fixed 519/422 aspect, so they cannot get shorter -- and their bases landed
+ * 44 points from the planters standing on the pavement in front of them. Two
+ * props at the same distance in the same place, which reads as clipping.
+ *
+ * A place's horizon is where its buildings stand. The town's sky came back
+ * from deleting the bunting that was strung across it, which was the actual
+ * problem: a 2D object in a rendered world, drawn above everything else.
  */
 const SKY: Record<SkyBand, readonly [ColorValue, ColorValue, ColorValue]> = {
   morning: [DIORAMA.skyMorningZenith, DIORAMA.skyMorningB, DIORAMA.skyMorningA],
@@ -1180,10 +1174,6 @@ export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHRO
           gives them the light kiss a building five metres away should take,
           and keeps the ramp honest between the rooftops and the fountain.
         */}
-      </WorldLayer>
-      {/* Strung in front of the shopfronts, clear of the chrome above. */}
-      <WorldLayer name="distant">
-        <TownBunting top={Math.max(CHROME_CLEAR + 14, horizon - 62)} night={night} />
       </WorldLayer>
       {/*
         THE PAVEMENT IS PAVED.

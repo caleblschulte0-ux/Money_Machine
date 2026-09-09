@@ -62,3 +62,36 @@ export async function reachPlace(page, place, attempts = 3) {
   }
   return false;
 }
+
+/**
+ * PIN THE CLOCK BEFORE YOU JUDGE THE ART.
+ *
+ * The app reads `new Date().getHours()` and grades the whole world from it --
+ * sky band, key colour, the pools, the night wash. Nothing in this repo ever
+ * controlled that, so every scene capture ever taken here was shot at whatever
+ * hour the runner happened to be in, and a contact sheet built by walking the
+ * four places could put the park at 2pm next to the town at 6pm.
+ *
+ * On 2026-09-09 that produced the exact confusion it sounds like: three
+ * consecutive measurement passes comparing sat/val "between scenes" were
+ * partly comparing TIMES OF DAY, and the conclusion "the places do not match"
+ * was measured against a moving target. A place is allowed to look different
+ * at six than at two. It has to be the same six.
+ *
+ * Call this BEFORE `page.goto`. It patches the constructor and getHours so a
+ * clock read at any point in the session answers with the hour you asked for.
+ */
+export async function pinHour(page, hour) {
+  /*
+   * Playwright's own clock, not a hand-rolled `Date` override. The first
+   * version of this replaced the global Date class, which the app's animation
+   * loop also reads: every scene rendered as a bare cream field with no dog in
+   * it. `page.clock.install` fakes the wall clock at the browser level and
+   * `resume` lets it tick normally from there, so requestAnimationFrame and
+   * Animated keep working while `new Date().getHours()` answers what we asked.
+   */
+  const at = new Date();
+  at.setHours(hour, 0, 0, 0);
+  await page.clock.install({ time: at });
+  await page.clock.resume();
+}
