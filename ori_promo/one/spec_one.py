@@ -28,6 +28,22 @@
 #    empty. render_one.py's era-compositing code is already fully data-
 #    driven off those dicts, so it goes inert on its own -- nothing in
 #    render_one.py needed touching for this.
+#
+# V33 ADDENDUM (r145) -- THE ABOVE CALL WAS OVERRULED BY THE OPERATOR.
+# "That one film fucked that. I didn't like how it was looking." The
+# theory that fewer graphics reads more like an Apple ad did not survive
+# contact with the actual operator watching the actual cut. `dak` is back
+# (a full generated plate, same non-compositing approach `ice` used --
+# see its BEATS entry below), and a new `table` beat adds the Apple
+# product-reveal moment asked for by name. This is not v31 re-skinned
+# either: no full era walkthrough, no "then vs now" reveal, no tagline
+# change -- one AR-overlay example placed where the anchoring claim it
+# illustrates already sits in the film, plus one new product beat. The
+# "one continuous experience" idea above is UNCHANGED: on/lock/anchor is
+# still one unbroken take with zero cuts inside it. What v33 rejects is
+# the idea that AR content and restraint were the same thing -- they
+# aren't, and the operator was the one who caught that they'd been
+# treated as if they were.
 #  - No mid-film title card ("ONE PLACE / EVERY TIME" is GONE). The only
 #    text card in the whole film is the location card at the open and the
 #    wordmark at the close. Zero chapter cards in between.
@@ -126,7 +142,7 @@
 #    runway at in-point 48.0. render_one.py's footage gate re-confirms
 #    this numerically at every render regardless of this note.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 41.1
+TOTAL = 60.1
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
@@ -226,19 +242,59 @@ BEATS = [
  ("on",     "6806",  8.4, 13.0, 2.5, "he raises a hand to the temple — switching it on"),
  ("lock",   "6806", 10.9, 15.5, 3.8, "recognises the falls, and (in VO) who he's with"),
  ("anchor", "6806", 14.7, 19.3, 5.0, "anchored to the real place, and (in VO) how you get a pair"),
- ("reach",  "6797", 40.0, 24.3, 4.0, "he keeps walking; the capability keeps up with him"),
+ # ---- `dak`, REINSTATED v33 (r145, operator override -- see the file
+ # header). v31/v32 threw every historical-era beat out; the operator
+ # rejected that whole direction outright and asked for AR-overlay content
+ # back, pushed toward photorealism. dak_family_chatgpt.jpg is a v29 asset
+ # that never got deleted, just stopped being referenced -- a COMPLETE
+ # generated photograph (family + a Falls-Park-like background baked into
+ # one image by ChatGPT itself, not a cutout composited by ai/place.py
+ # onto real footage), same treatment `ice` used before the restart. It
+ # goes back in verbatim, no new request needed. Positioned right after
+ # the anchor/lock take resolves -- the film has just told you the glasses
+ # anchor to the real place around you; this is the first concrete example
+ # of what that means. 7.0s (trimmed from ai/dak/build_dak_plate.py's own
+ # 8.0s default -- the plate itself is still built at 8.0s, frames_of()
+ # just reads the first 7.0s of it) to leave room for `mam` immediately
+ # after without two back-to-back generated-plate beats running 14s+ and
+ # starting to read as a slideshow.
+ ("dak", "DAK1", 0.0, 24.3, 7.0, "an AR reconstruction of who stood at these falls before — VISUALIZATION, not a photograph"),
+ # ---- `mam`, NEW v33 (r145, operator override): the other AR-overlay
+ # example asked for by name ("woolly man[m]oth[s]... whatever it is
+ # that they'll look at at the falls"). ai/mam/mammoth_falls_chatgpt.png
+ # (r146) is the SAME kind of asset as dak_family_chatgpt.jpg -- one
+ # complete generated photograph, the mammoth and the real Falls Park
+ # riverbed/mill-ruins/bridge baked into a single image against the
+ # pinned real-location reference, not a separate stylized environment
+ # the way the old, unused ai/ice/ pollinations attempt was. Runs right
+ # after `dak` -- two concrete examples of what "anchored to the real
+ # place" can show you, back to back, then the film moves on.
+ ("mam", "MAM1", 0.0, 31.3, 6.0, "an AR reconstruction of how this ground looked before — VISUALIZATION, not a photograph"),
+ ("reach",  "6797", 40.0, 37.3, 4.0, "he keeps walking; the capability keeps up with him"),
  # ---- THE CLOSE. No mid-film title card exists in this cut at all.
  # `off` EXTENDED 3.0 -> 3.8 (still inside the ~3.5-4.0s footage-safety cap
  # noted above) to give its own well-liked, unedited line more room.
- ("off",  "6803",  2.5, 28.3, 3.8, "glasses off, the real place, nothing drawn on it"),
+ ("off",  "6803",  2.5, 41.3, 3.8, "glasses off, the real place, nothing drawn on it"),
+ # ---- `table`, NEW v33 (r145, operator override): "have a scene where
+ # the glasses come off of his face, and then they come into their own
+ # scene where it's just the glasses, spinning on a table" -- an Apple
+ # product-reveal beat, distinct from `hero`'s brief early glance.
+ # ai/table/build_table_turntable.py: a REAL turntable, four r146
+ # ChatGPT-generated angles of the same glasses_hero_chatgpt.jpg design
+ # (front three-quarter, right profile, rear three-quarter, front/top),
+ # cross-dissolved in sequence -- not a synthesized spin out of one flat
+ # image (build_table_plate.py's now-superseded first pass; see that
+ # script's own header for why that would have failed the operator's
+ # "obviously real" standard).
+ ("table", "TABLE1", 0.0, 45.1, 6.0, "the hardware alone, turning through four real angles — the full reveal this time, not a glance"),
  # `walk` v32b: IMG_6805, a much wider plaza/path composition (93.7s
  # long -- picked in-point 48.0 for a clean, unpopulated frame with the
  # falls visible in the background) instead of IMG_6807's tighter path
  # shot every prior version used. Duration held at 5.0s (grew from 4.0s
  # on the first v32 pass for the same reason as before -- the closing
  # line was running into the silent end card at 4.0s).
- ("walk", "6805", 48.0, 32.1, 5.0, "a wider path/plaza, the falls in the background -- the closing line"),
- ("end",   None,   0.0, 37.1, 4.0, "held from walk's last frame — which is PRESENT DAY"),
+ ("walk", "6805", 48.0, 51.1, 5.0, "a wider path/plaza, the falls in the background -- the closing line"),
+ ("end",   None,   0.0, 56.1, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # No beat needs the ice-age wearer mask -- there is no ice grade in this
@@ -250,7 +306,7 @@ WEARER_BEATS = set()
 # a HUD over either would claim the glasses are on when they are not. The
 # continuous on/lock/anchor take is deliberately EXCLUDED from this set:
 # that is where the UI lives.
-UI_OFF = {"sign", "past", "prod", "hero", "reach", "off", "walk"}
+UI_OFF = {"sign", "past", "prod", "hero", "dak", "mam", "reach", "off", "table", "walk"}
 
 # beat: (title, subtitle, appear_t[, scale]) — the film's own voice, drawn
 # bottom-left with a scrim, no reticle and no leader line. Only ONE card
@@ -287,6 +343,21 @@ LABELS = {
  # graphic on `anchor`, so the continuous take reads as one recognition
  # holding steady, not a slideshow of capabilities.
  "lock": ((880, 560), "THE FALLS", "BIG SIOUX RIVER", 0.9, (250, -330), 0.80),
+ # REINSTATED v33 (r145). Same disclosure discipline as `hero` -- a
+ # generated plate always carries "VISUALIZATION", no exceptions, even
+ # though this one is a full reconstruction rather than a product photo.
+ # "THE DAKOTA" states who, nothing else -- no date, no headcount, no
+ # claim about where or how they lived beyond standing at this river,
+ # which the image itself shows. y=900 matches `hero`'s own position,
+ # inside filmlook.safe_area()'s bottom bound (942 for this frame height).
+ "dak": ((96, 900), "THE DAKOTA", "VISUALIZATION", 0.4, (0, 0)),
+ # NEW v33 (r146 asset). Same disclosure discipline as `dak` right before
+ # it -- names WHAT (a single animal, no headcount, no date), same
+ # "VISUALIZATION" subtitle every generated image in this film carries.
+ "mam": ((96, 900), "WOOLLY MAMMOTH", "VISUALIZATION", 0.4, (0, 0)),
+ # NEW v33 (r145). Same label text as `hero` -- it is deliberately the
+ # same object shown a second, fuller time, not a different product.
+ "table": ((150, 900), "THE HARDWARE", "VISUALIZATION", 0.4, (0, 0)),
 }
 
 # Optional per-beat pre-scale crop: beat -> (x, y, w, h) in the SOURCE

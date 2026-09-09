@@ -112,6 +112,16 @@ LINES = [
     # with no cut between them.
     ("lock", 0.20, "They know where you're standing, what you're looking at — and who you're with."),
     ("anchor", 0.20, "Anchored to the real place around you. Picked up where you're going, not owned."),
+    # NEW v33 (r145, operator override -- reinstates the AR-overlay content
+    # v31/v32 cut). Second person, matching every other line in the film.
+    # No date, no headcount, no claim about how or how long -- just who,
+    # which the `dak` beat's own on-screen "THE DAKOTA" label and
+    # VISUALIZATION tag already carry.
+    ("dak", 0.5, "Look again, and it can show you who stood here first."),
+    # NEW v33 (r146 asset). Second `mam` follows `dak` immediately, same
+    # camera idea (look again, see something else) so the two don't need
+    # separate framing devices -- "or" carries that on its own.
+    ("mam", 0.4, "Or how different this ground looked, long before any of us."),
     # REWRITTEN. The old line ("He walks. The place answers where he
     # stops.") was a setup line for the historical reveal that used to
     # follow it -- there is no reveal to set up any more. This says what's
@@ -125,6 +135,12 @@ LINES = [
     # the voice the rest of the film already uses.
     ("reach", 0.25, "You keep walking. It keeps working."),
     ("off",  0.20, "No tour group. No phone in your face. You just look."),
+    # NEW v33 (r145, operator override -- the product-reveal beat asked
+    # for by name: "glasses come off... their own scene where it's just
+    # the glasses"). Ties directly back to `prod`'s line ("we build what
+    # runs on them") now that the object itself is on screen alone for
+    # the second, fuller time.
+    ("table", 0.4, "The glasses aren't the product. What they show you is."),
     # REWRITTEN. "See the story where you stand" promised a narrative
     # payoff (the eras) that this cut doesn't have. The new line closes on
     # the actual capability -- look closer at the real place you're
