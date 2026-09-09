@@ -45,11 +45,17 @@ file put both adults' head-tops at ~27-30% of frame height, comfortably
 clear of the 12.8% line, with full bodies and feet inside the frame. No
 inset, no seam, no synthesized content -- one photograph.
 
-Static hold (cap=1.0, no push-in) carried over from the r149 fix even
-though the border reason for it no longer applies -- a slow push-in on a
-generated plate is a legitimate look this project uses elsewhere (`mam`
-still does it), so re-adding it here is a fair future call, just not
-bundled into this fix.
+PUSH-IN RESTORED (operator: still marking "the AI overlays don't look
+real/premium enough" as a live problem after the crop and border were
+both fixed). A static hold next to `mam`'s slow push-in and every real
+handheld beat's own camera motion made `dak` the one moment in the film
+that visibly doesn't move -- which reads as "obviously a still image
+being shown to you," working against realism rather than for it. Same
+cap=1.06 as `mam`, verified safe against the NEW plate's real headroom
+margin before shipping: at max zoom the crop removes ~2.83% off the top,
+and dak_family_v2_chatgpt.jpg's head-top sits at ~27-30% -- miles clear
+of both the 12.8% letterbox line and the push-in's own crop, unlike the
+original asset this would have been unsafe on.
 """
 import os
 import subprocess
@@ -64,15 +70,15 @@ DST = os.path.join(RAW, "IMG_DAK1.MOV")
 
 def build(dur=8.0, fps=30):
     n = int(dur * fps)
-    cap = 1.0  # static hold -- see file header
-    rate = (cap - 1.0) / (n * 0.5)  # 0.0 -- zoom stays exactly 1.0 for the whole plate
+    cap = 1.06  # matches ai/mam/build_mam_plate.py -- see file header for the safety check
+    rate = (cap - 1.0) / (n * 0.5)  # cap reached at ~50% of the beat
     vf = (f"scale=2688:1512:flags=lanczos,"
           f"zoompan=z='min(1.0+{rate}*on,{cap})':d={n}:x='iw/2-(iw/zoom/2)':"
           f"y='ih/2-(ih/zoom/2)':s=1920x1080:fps={fps}")
     subprocess.run(
         ["ffmpeg", "-y", "-v", "error", "-loop", "1", "-i", SRC, "-t", str(dur),
          "-vf", vf, "-r", str(fps), "-pix_fmt", "yuv420p", DST], check=True)
-    print(f"  wrote {DST} ({dur}s, static hold, no push-in)")
+    print(f"  wrote {DST} ({dur}s, slow push-in)")
 
 
 if __name__ == "__main__":

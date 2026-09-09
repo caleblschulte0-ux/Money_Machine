@@ -142,7 +142,7 @@
 #    runway at in-point 48.0. render_one.py's footage gate re-confirms
 #    this numerically at every render regardless of this note.
 W, H, FPS = 1920, 1080, 30
-TOTAL = 60.1
+TOTAL = 55.6
 
 # beat, clip, in-point, start, dur, what the beat does
 BEATS = [
@@ -253,12 +253,15 @@ BEATS = [
  # goes back in verbatim, no new request needed. Positioned right after
  # the anchor/lock take resolves -- the film has just told you the glasses
  # anchor to the real place around you; this is the first concrete example
- # of what that means. 7.0s (trimmed from ai/dak/build_dak_plate.py's own
- # 8.0s default -- the plate itself is still built at 8.0s, frames_of()
- # just reads the first 7.0s of it) to leave room for `mam` immediately
- # after without two back-to-back generated-plate beats running 14s+ and
- # starting to read as a slideshow.
- ("dak", "DAK1", 0.0, 24.3, 7.0, "an AR reconstruction of who stood at these falls before — VISUALIZATION, not a photograph"),
+ # of what that means. TRIMMED 7.0 -> 4.5s (operator, after the crop/border
+ # and ghosting were both fixed: "the pacing/edit rhythm is off"). Measured
+ # the actual VO against it -- the line runs ~2.9-3.1s, so 7.0s was leaving
+ # 3.5-4s of pure silent hold on a beat with two other, still-static
+ # generated beats sitting right next to it. dak+mam together were eating
+ # 13.0s of a 60.1s film on two largely still images back to back; that is
+ # very likely what "rhythm feels off" was actually describing. 4.5s still
+ # clears the VO with real margin, it just stops lingering after it.
+ ("dak", "DAK1", 0.0, 24.3, 4.5, "an AR reconstruction of who stood at these falls before — VISUALIZATION, not a photograph"),
  # ---- `mam`, NEW v33 (r145, operator override): the other AR-overlay
  # example asked for by name ("woolly man[m]oth[s]... whatever it is
  # that they'll look at at the falls"). ai/mam/mammoth_falls_chatgpt.png
@@ -269,12 +272,13 @@ BEATS = [
  # the way the old, unused ai/ice/ pollinations attempt was. Runs right
  # after `dak` -- two concrete examples of what "anchored to the real
  # place" can show you, back to back, then the film moves on.
- ("mam", "MAM1", 0.0, 31.3, 6.0, "an AR reconstruction of how this ground looked before — VISUALIZATION, not a photograph"),
- ("reach",  "6797", 40.0, 37.3, 4.0, "he keeps walking; the capability keeps up with him"),
+ # TRIMMED 6.0 -> 4.0s, same pacing fix and same reasoning as `dak` above.
+ ("mam", "MAM1", 0.0, 28.8, 4.0, "an AR reconstruction of how this ground looked before — VISUALIZATION, not a photograph"),
+ ("reach",  "6797", 40.0, 32.8, 4.0, "he keeps walking; the capability keeps up with him"),
  # ---- THE CLOSE. No mid-film title card exists in this cut at all.
  # `off` EXTENDED 3.0 -> 3.8 (still inside the ~3.5-4.0s footage-safety cap
  # noted above) to give its own well-liked, unedited line more room.
- ("off",  "6803",  2.5, 41.3, 3.8, "glasses off, the real place, nothing drawn on it"),
+ ("off",  "6803",  2.5, 36.8, 3.8, "glasses off, the real place, nothing drawn on it"),
  # ---- `table`, NEW v33 (r145, operator override): "have a scene where
  # the glasses come off of his face, and then they come into their own
  # scene where it's just the glasses, spinning on a table" -- an Apple
@@ -290,15 +294,15 @@ BEATS = [
  # image (build_table_plate.py's now-superseded first pass; see that
  # script's own header for why that would have failed the operator's
  # "obviously real" standard).
- ("table", "TABLE1", 0.0, 45.1, 6.0, "the hardware alone, turning through four real angles — the full reveal this time, not a glance"),
+ ("table", "TABLE1", 0.0, 40.6, 6.0, "the hardware alone, turning through four real angles — the full reveal this time, not a glance"),
  # `walk` v32b: IMG_6805, a much wider plaza/path composition (93.7s
  # long -- picked in-point 48.0 for a clean, unpopulated frame with the
  # falls visible in the background) instead of IMG_6807's tighter path
  # shot every prior version used. Duration held at 5.0s (grew from 4.0s
  # on the first v32 pass for the same reason as before -- the closing
  # line was running into the silent end card at 4.0s).
- ("walk", "6805", 48.0, 51.1, 5.0, "a wider path/plaza, the falls in the background -- the closing line"),
- ("end",   None,   0.0, 56.1, 4.0, "held from walk's last frame — which is PRESENT DAY"),
+ ("walk", "6805", 48.0, 46.6, 5.0, "a wider path/plaza, the falls in the background -- the closing line"),
+ ("end",   None,   0.0, 51.6, 4.0, "held from walk's last frame — which is PRESENT DAY"),
 ]
 
 # No beat needs the ice-age wearer mask -- there is no ice grade in this
