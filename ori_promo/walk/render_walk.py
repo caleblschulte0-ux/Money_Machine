@@ -196,13 +196,34 @@ def build_recognize():
     return out
 
 
+def _bridge(clip, tin, dur, beat_start, t0):
+    """r177 fix (per r176's review): a short, plain real-footage cut
+    between EXPERIENCE examples -- "no new claim or large overlay", just
+    the route continuing. No caption, no disclosure tag (nothing
+    generated is on screen), progress line only."""
+    frames = read_clip(clip, tin, dur)
+    out = []
+    for i, f in enumerate(frames):
+        t = i / FPS
+        img = to_pil_rgba(natural_grade(f))
+        G.progress_line(img, _progress_frac(beat_start + t0 + t))
+        out.append(from_pil(img))
+    return out
+
+
 def build_experience():
-    seg = 16.0 / 3
+    # r177 fix: r176 rejected the three equal 5.33s holds as a "slideshow
+    # rhythm" -- r174's own brief already said "avoid three equal
+    # slideshow holds", missed on the first pass. Replaced with the exact
+    # unequal, movement-led timing r176 specified: 4.2 + 0.5(bridge) + 5.5
+    # + 0.5(bridge) + 5.3 = 16.0s, same total, same three examples, same
+    # captions/disclosures -- only the internal rhythm changes.
     out = []
     beat_start = _BEAT_START["experience"]
     t0 = 0.0
 
     # a) historical reconstruction -- dak plate, already-disclosed asset
+    seg = 4.2
     dak_frames = read_plate(os.path.join(RAW, "IMG_DAK1.MOV"), seg)
     for i, f in enumerate(dak_frames):
         t = i / FPS
@@ -213,8 +234,22 @@ def build_experience():
         out.append(from_pil(img))
     t0 += seg
 
+    # bridge 1 -- real location footage: 60.0s was tried first and
+    # rejected on inspection (a bystander -- NOT our recurring visitor,
+    # a different person -- walks through that window, visible at
+    # full render resolution though not at the low-res thumbnail this
+    # was first scouted at). Re-scouted 84-91.5s at full resolution:
+    # confirmed genuinely empty of any person, real continuous water
+    # motion -- a location bridge, the alternative r176's own wording
+    # explicitly allows ("real walking/location bridge"). Distinct from
+    # every other beat's use of this clip (walk: 38-48, return: 48-58,
+    # close: 70-78, spatial-audio still: 80.0).
+    out += _bridge("6805", 85.0, 0.5, beat_start, t0)
+    t0 += 0.5
+
     # b) ice-age -- r172's supplied plate, explicitly named for reuse by
     # r174 itself. Restrained push-in, same cap as v34's own treatment.
+    seg = 5.5
     iceage_src = os.path.join(_HERE, "..", "ai", "iceage", "iceage_falls_visualization_r172_chatgpt.jpg")
     ice_frames = build_photo_zoom(iceage_src, seg, cap=1.03)
     for i, f in enumerate(ice_frames):
@@ -226,10 +261,15 @@ def build_experience():
         out.append(from_pil(img))
     t0 += seg
 
+    # bridge 2 -- second in-point, same clean stretch, same reasoning
+    out += _bridge("6805", 89.0, 0.5, beat_start, t0)
+    t0 += 0.5
+
     # c) spatial audio -- a diagram, not a photo; real (dimmed) footage,
     # no disclosure tag needed (same reasoning as field/render_field.py's
     # own spatial-audio segment: a drawn diagram over real footage is not
     # fabricated imagery standing in for something real)
+    seg = 5.3
     still = read_clip("6805", 80.0, 0.1)[0]
     still = natural_grade(still) * 0.6 + solid_bg((28, 26, 24)) * 0.4
     n = int(round(seg * FPS))
