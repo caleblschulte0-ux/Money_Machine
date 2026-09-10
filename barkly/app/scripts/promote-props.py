@@ -31,6 +31,27 @@ about twelve minutes. Take the twelve minutes.
 
   python3 scripts/promote-props.py            # promote everything that is fresh
   python3 scripts/promote-props.py --check    # report only, change nothing
+
+ON THE CI CHURN, because it looks like a bug and is not one. CI re-renders on
+a pack change and commits what it gets, and its renders are not byte-identical
+to a laptop's -- so a pack edit produces a bot commit, and the next local
+promote may write some of those files back. That was investigated on
+2026-09-10 and it is NOT PNG encoding: comparing every prop's shipped file
+against a freshly built candidate, six differed in bytes and ZERO of the six
+were pixel-identical. Blender itself lands on slightly different pixels --
+store_aqua at up to 19/255 on one channel across 0.42% of the image, planter
+at 4/255 across 0.026% -- and the 256-colour reduction then amplifies a hair
+into a palette-index flip.
+
+A comparison that decodes both PNGs and compares pixels was written for this
+and deleted again, because it would have caught none of them: a helper that
+does nothing while its docstring says it fixes the churn is worse than the
+churn. A tolerance ("close enough") was considered and refused: any threshold
+loose enough to admit 19/255 is picked to fit the case in front of it, and
+would then hide a genuine small material change. The fix, if it is ever worth
+it, is to pin the renderer -- not to soften the comparison. It is bounded
+either way: the workflow only fires on a pack change, and the two workflows
+that used to overwrite each other's art are now one.
 """
 from __future__ import annotations
 
