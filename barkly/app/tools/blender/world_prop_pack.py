@@ -222,6 +222,28 @@ def _shift(linear_rgb, amount):
 # app level, not on the plate.
 
 
+# NO PER-PART VALUE LADDER, and this is the record of why it was tried.
+#
+# The idea: give every material a gradient down its own part -- darker toward
+# the base, lighter toward the top -- anchored to Generated coordinates so it
+# is per object and survives any camera angle. It is a standard stylised-mobile
+# trick and it was one of the ten style probes.
+#
+# Measured on the bench at strength 0.30: mean difference 0.67 of 255, max 13,
+# and only 8.9% of pixels moved by more than 4. It does nothing, and the reason
+# is geometric: most of what you SEE of a prop is the top faces of its parts,
+# and a top face sits at the top of its own bounding box, so every one of them
+# takes the same multiplier. The gradient only shows on vertical faces, which
+# are the minority of the visible area.
+#
+# Deleted rather than shipped quiet, for the same reason the SHEEN coat floor
+# was: a knob that measures as doing nothing, with a comment saying it fixes
+# something, is worse than the thing it does not fix.
+#
+# WHAT DID WORK was per-prop tone re-specs -- see park_bench, which had no
+# material darker than value 0.45 and now runs 0.31 to 0.83.
+
+
 def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
@@ -897,9 +919,17 @@ def park_tree():
     bark_light = material("Tree bark light", tone("bark", "lit"), roughness=0.66)
     leaf = material("Leaf green", tone("foliage", "base"), roughness=0.76, coat=0.02)
     leaf_light = material("Leaf light", tone("foliage", "lit"), roughness=0.72, coat=0.03)
-    # `shade`, not `deep`: this alternates with `leaf` over HALF the canopy,
-    # and half a tree at crevice value renders as holes in the crown.
-    leaf_dark = material("Leaf depth", tone("foliage", "shade"), roughness=0.80)
+    # `deep` NOW, not `shade`, and the old note explains why it was not: it
+    # alternated with `leaf` over HALF the canopy, and half a tree at crevice
+    # value renders as holes in the crown. That stopped being true when the
+    # canopy became a cluster -- `deep` is on the low TWO lobes only, which is
+    # the underside, and an underside is meant to be dark.
+    #
+    # The bench measurement applies here too: the tree's darkest material was
+    # value 0.35 on a prop whose lit face is 0.80, so it lived in the top half
+    # of the ramp with the chroma turned up to compensate. 0.19 gives it a
+    # real floor.
+    leaf_dark = material("Leaf depth", tone("foliage", "deep"), roughness=0.80)
 
     # PROPORTION, not detail. See tools/blender/proportion.py: the old tree was
     # a gentle 0.54->0.28 cone under five same-sized balls alternating light and
@@ -965,9 +995,23 @@ def park_tree():
 
 
 def park_bench():
+    # A LADDER, not two neighbouring steps. This was wood.base (value 0.58),
+    # wood.lit (0.83) and metal.shade (0.45) on thin legs -- so the darkest
+    # thing on the bench was a mid tone, and the whole prop lived in the top
+    # half of the ramp. Measured, it held a value spread of 0.213 where the
+    # fountain, which the operator picked out as right, holds 0.264: the
+    # fountain runs a cream basin against a near-black column and the bench ran
+    # three browns of nearly the same value with the chroma turned up.
+    #
+    # Saturation standing in for contrast is the same mistake the world made at
+    # midday, one scale down. So: a real dark at the bottom of the ramp with
+    # real area (the frame), the back slats a step down because they ARE in
+    # shadow behind the seat, and the seat left up at lit so the ladder spans
+    # 0.31 to 0.83 instead of 0.45 to 0.83.
     wood = material("Bench honey wood", tone("wood", "base"), roughness=0.58, coat=0.05)
+    wood_shade = material("Bench back wood", tone("wood", "shade"), roughness=0.62, coat=0.04)
     wood_light = material("Bench sun-face wood", tone("wood", "lit"), roughness=0.52, coat=0.06)
-    metal = material("Bench iron", tone("metal", "shade"), roughness=0.36, metallic=0.64)
+    metal = material("Bench iron", tone("metal", "deep"), roughness=0.36, metallic=0.64)
 
     # Six thin slats and four straight legs is what a bench IS. What a bench
     # READS as at 136pt is a thick plank on stubby splayed legs with a back
@@ -975,7 +1019,7 @@ def park_bench():
     # seat overhanging the legs so it sits on them instead of in line with them.
     contact_shadow(1.78, 0.58)
     for z in (1.26, 1.70):
-        cube(f"back_slats_{z}", (0, 0.34, z), (1.46, 0.19, 0.21), wood, 0.17, (math.radians(-11), 0, 0))
+        cube(f"back_slats_{z}", (0, 0.34, z), (1.46, 0.19, 0.21), wood_shade, 0.17, (math.radians(-11), 0, 0))
     cube("seat", (0, -0.02, 0.86), (1.58, 0.56, 0.17), wood_light, 0.15)
     cube("seat_lip", (0, -0.56, 0.78), (1.58, 0.10, 0.13), wood, 0.09)
     for x in (-1.22, 1.22):

@@ -2161,3 +2161,67 @@ real face to catch light on) overhanging the posts by 0.55 instead of 0.23.
 The first attempt widened the cone and kept its depth, which made a saucer: a
 roof reads as a roof by its SLOPE, and the eave is what it slopes down to. The
 cone is deeper and slightly narrower than that attempt, so it has both.
+
+### The style question, answered by measuring instead of choosing
+
+The operator, given four style variants and then six more: *"I really don't
+know."* That is a fair answer to a badly-framed question, and the framing was
+the defect — ten props on a neutral square is not how anyone sees them.
+
+Composited into a real park frame next to Barkly and measured at the size a
+bench is actually drawn (180px), every one of the ten lands within **2.2%** mean
+pixel difference of the shipping look:
+
+| style | bench | lamp |
+|---|---|---|
+| B chunky | 2.1% | 1.8% |
+| D painted | 1.9% | 1.8% |
+| F vinyl | 2.2% | 1.7% |
+| G clay | 1.2% | 1.4% |
+| H contrast | 0.9% | 1.9% |
+| I tone ramp | 1.2% | 1.7% |
+
+Ten variations of the same picture. The style was never the lever, and the
+right response to "I don't know" was to stop asking.
+
+**Two of them were ruled out on a constraint rather than taste.** The app draws
+Barkly from `assets/barkly/outlined/` — he carries a baked ink contour and
+smooth shading, and he is locked canon. So the no-outline style would leave him
+the only outlined thing in frame and the cel styles the only smoothly-shaded
+thing: the "two art styles in one picture" complaint, reintroduced from the
+other side.
+
+### And a metric that was wrong, which nearly steered the whole pass
+
+The direction this pointed at was per-prop VALUE SPREAD, on the evidence that
+the two props the operator picked out hold the widest:
+
+| prop | value spread | saturation |
+|---|---|---|
+| fountain — "wow" | 0.264 | 0.28 |
+| lamp — "wow" | 0.231 | 0.28 |
+| bench | 0.213 | 0.53 |
+| tree | 0.203 | 0.57 |
+
+That reading — saturation standing in for contrast — is right, and the METRIC
+is not. Standard deviation of value over a prop's opaque pixels disagreed with
+the picture in both directions:
+
+* the per-part gradient *raised* it (fountain 0.264 → 0.275) while changing the
+  render by 0.67 of 255, i.e. nothing;
+* giving the bench a genuine dark frame and shaded back slats *lowered* it
+  (0.213 → 0.208) while visibly improving the prop.
+
+So the instrument was dropped rather than trusted, and the pass proceeded on
+the picture. Writing this down because steering by a number that does not
+track the thing it claims to is the failure this repo's whole method exists to
+avoid, and it nearly happened here on a metric I invented in the same session.
+
+**What actually worked** was per-prop tone re-specs. The bench's darkest
+material was `metal.shade` at value 0.45 on thin legs; it now runs `metal.deep`
+(0.31) on the frame with the back slats at `wood.shade`, so the prop spans 0.31
+to 0.83 instead of 0.45 to 0.83. The tree's darkest was `foliage.shade` (0.35);
+its two low lobes are `foliage.deep` (0.19) now, which is the underside, and an
+underside is meant to be dark. The old note forbidding `deep` there was written
+when the tone alternated over half the canopy — true then, and not true once
+the canopy became a cluster.
