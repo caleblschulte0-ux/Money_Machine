@@ -106,7 +106,12 @@ LINES = [
     ("prod", 0.20, "Open Range Interactive doesn't build the glasses. We build what runs on them."),
     # `hero` carries NO VO -- a brief glance at the product alone, with the
     # on-screen label already reading "THE HARDWARE." Let it be looked at.
-    ("on",   0.20, "You put them on."),
+    # MOVED r164 (was on `on`): `worn` (spec_one.py, new beat) is now the
+    # first time the film shows the product actually on a face, so this
+    # is where "you put them on" belongs -- the words and the image
+    # finally agree, instead of the line playing over real footage shot
+    # from behind that never shows the product at all.
+    ("worn", 0.20, "You put them on."),
     # This and `anchor` below are the SAME UNBROKEN SHOT (spec_one.py) --
     # one continuous take carrying two capability statements back to back,
     # with no cut between them.

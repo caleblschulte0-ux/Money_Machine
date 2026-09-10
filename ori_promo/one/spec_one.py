@@ -227,19 +227,48 @@ BEATS = [
  # catch-up. 4.0s gives it real quiet at the end without pretending to be
  # v31's 5.0s chapter again.
  ("hero", "HERO1", 0.0, 9.0, 4.0, "the product itself, nothing else on screen, a glance not a chapter"),
+ # ---- `worn`, NEW r164 (ChatGPT asset delivery, r163: "the current film
+ # does not show the glasses worn"). The single biggest structural gap a
+ # direct operator lead-review pass named (r162) and code alone could not
+ # fix -- `on`/`lock`/`anchor` is shot from behind the whole way through,
+ # so the film never once shows the product on a face. ChatGPT's
+ # `product_worn_falls_park_plate` closes it: a generated photograph of a
+ # visitor wearing this film's own glasses design at this film's own
+ # location, sensor panel visible. "You put them on." (the VO line
+ # previously spoken over `on`'s real footage) now plays HERE instead --
+ # the words and the image finally agree.
+ #
+ # REPLACES, DOES NOT EXTEND (r164's explicit correction to this session's
+ # first attempt, which simply inserted 1.5s and let the whole film run
+ # 1.5s longer -- ChatGPT's review: "replacing—not extending—the current
+ # footage for those 1.500 seconds"). `on`'s own in-point and duration
+ # below are adjusted so the film's total runtime is UNCHANGED at 55.6s:
+ # `worn` takes the 1.5s that used to be the first 1.5s of `on`'s real
+ # footage, and `on` now starts 1.5s later on IMG_6806's own clock and
+ # runs 1.5s shorter -- ending at EXACTLY the same source frame (9.9+1.0
+ # = 10.9) `lock` was already picking up at. Zero gap, zero overlap,
+ # same as before this beat existed; the "one continuous take, zero cuts
+ # inside it" rule (below) is about not interrupting the MIDDLE of that
+ # real footage, and this doesn't -- it trims the very front of it,
+ # before `on` begins, the same way `sign`'s in-point or any other beat's
+ # in-point is chosen. `lock` and `anchor` are completely untouched --
+ # same in-points, same starts, same durations as every round before this
+ # one.
+ ("worn", "WORN1", 0.0, 13.0, 1.5, "the product actually on a face, for the first time in the film — PRODUCT VISUALIZATION, not documentary footage"),
  # ---- ONE CONTINUOUS TAKE, THREE BEAT NAMES, ZERO CUTS. In-points run
- # back to back on IMG_6806's own clock (8.4 -> 10.9 -> 14.7): this is
- # literally one unbroken take with three different things drawn over it
- # in sequence, which is the whole "one continuous experience" idea made
- # technical rather than just a marketing phrase. `lock` and `anchor` are
- # EXTENDED from the first pass (3.0->3.8, 3.5->5.0): both carry a full
- # sentence of real capability information (recognition; anchoring + the
- # rental model) and the first render's shorter durations ran the VO
- # 1.2-2.2s past their own beat. Since this is one continuous real shot
- # with 59.5s of total runway, giving the two capability statements more
- # of it costs nothing structurally -- it does not add a cut, a new beat,
- # or any of the DNA this restart is throwing out.
- ("on",     "6806",  8.4, 13.0, 2.5, "he raises a hand to the temple — switching it on"),
+ # back to back on IMG_6806's own clock (9.9 -> 10.9 -> 14.7 -- `on`'s
+ # in-point moved +1.5s, r164, see `worn` above; `lock`/`anchor` unmoved):
+ # this is literally one unbroken take with three different things drawn
+ # over it in sequence, which is the whole "one continuous experience"
+ # idea made technical rather than just a marketing phrase. `lock` and
+ # `anchor` are EXTENDED from the first pass (3.0->3.8, 3.5->5.0): both
+ # carry a full sentence of real capability information (recognition;
+ # anchoring + the rental model) and the first render's shorter durations
+ # ran the VO 1.2-2.2s past their own beat. Since this is one continuous
+ # real shot with 59.5s of total runway, giving the two capability
+ # statements more of it costs nothing structurally -- it does not add a
+ # cut, a new beat, or any of the DNA this restart is throwing out.
+ ("on",     "6806",  9.9, 14.5, 1.0, "he raises a hand to the temple — switching it on"),
  ("lock",   "6806", 10.9, 15.5, 3.8, "recognises the falls, and (in VO) who he's with"),
  ("anchor", "6806", 14.7, 19.3, 5.0, "anchored to the real place, and (in VO) how you get a pair"),
  # ---- `dak`, REINSTATED v33 (r145, operator override -- see the file
@@ -294,7 +323,7 @@ BEATS = [
  # image (build_table_plate.py's now-superseded first pass; see that
  # script's own header for why that would have failed the operator's
  # "obviously real" standard).
- ("table", "TABLE1", 0.0, 40.6, 6.0, "the hardware alone, turning through four real angles — the full reveal this time, not a glance"),
+ ("table", "TABLE1", 0.0, 40.6, 6.0, "the hardware alone, turning through eleven real angles plus an active-hardware hero insert — the full reveal this time, not a glance"),
  # `walk` v32b: IMG_6805, a much wider plaza/path composition (93.7s
  # long -- picked in-point 48.0 for a clean, unpopulated frame with the
  # falls visible in the background) instead of IMG_6807's tighter path
@@ -313,7 +342,11 @@ WEARER_BEATS = set()
 # The first act is the world BEFORE the product; the last act is after --
 # a HUD over either would claim the glasses are on when they are not. The
 # continuous on/lock/anchor take is deliberately EXCLUDED from this set:
-# that is where the UI lives.
+# that is where the UI lives. `worn` (r164) joins that exclusion, not the
+# inclusion list -- it IS the moment the product goes on, same category
+# as on/lock/anchor, just one beat earlier. (frame_cue() is a documented
+# no-op either way -- this membership is about keeping the semantic story
+# straight, not about anything actually drawn differently.)
 UI_OFF = {"sign", "past", "prod", "hero", "dak", "mam", "reach", "off", "table", "walk"}
 
 # beat: (title, subtitle, appear_t[, scale]) — the film's own voice, drawn
@@ -342,6 +375,35 @@ LABELS = {
  # brevity -- still under half of v31's 5.0s hold -- and no leader line
  # already does the "glance not a chapter" work.)
  "hero": ((150, 900), "THE HARDWARE", "VISUALIZATION", 0.35, (0, 0)),
+ # NEW r164 (ChatGPT asset delivery, r163; corrected r164 after review).
+ # Same recon_block style as every generated plate -- no leader line, no
+ # tracking graphics, no HUD brackets. Subtitle is the EXACT phrase
+ # ChatGPT specified for this asset, "PRODUCT VISUALIZATION" -- not a
+ # copy of the plain "VISUALIZATION" every other plate carries, because
+ # this one is not just a reconstruction of something absent, it is a
+ # generated stand-in for the product's own current state, and the more
+ # specific wording was requested for exactly that reason. Anchor
+ # position matches dak/mam (96, 900) -- same composition logic: subject
+ # on the right two-thirds of frame, open space bottom-left.
+ #
+ # 7TH FIELD (color override, render_one.py): r164's review required
+ # "the dim neutral disclosure color, never the cyan recognition color"
+ # for this specific plate -- unlike dak/mam (an AR RECONSTRUCTION of
+ # something absent, using recon_block's shared accent color already),
+ # `worn` stands in for the product's CURRENT, real state and should read
+ # as plainly, neutrally generated, not dressed in any accent this film
+ # uses elsewhere for "the system is recognising something." (198, 201,
+ # 203) is render_one.py's own DIM constant, given here as a literal
+ # tuple since spec_one.py does not import render_one.py's color names.
+ #
+ # 4TH FIELD (appear_t) IS NEGATIVE, ON PURPOSE: r164 required the
+ # disclosure cover "the first frame through the last frame" of this
+ # 1.5s beat, not fade in over the shared 0.5s ease every other label
+ # uses. render_one.py's label timing is `k = ease((t - t0) / 0.5)` --
+ # t0 <= -0.5 makes that ratio already >= 1.0 at t=0, so the label is at
+ # full opacity from frame 0 without touching the shared ease code every
+ # other beat's label also depends on.
+ "worn": ((96, 900), "THE HARDWARE", "PRODUCT VISUALIZATION", -1.0, (0, 0), 1.0, (198, 201, 203)),
  # RECOGNITION -- names a real waterfall in an unmodified frame; the
  # device identifying where the wearer is. No date, no history, no claim
  # beyond a place name and a river name, both visible in the frame. This
@@ -365,7 +427,14 @@ LABELS = {
  "mam": ((96, 900), "WOOLLY MAMMOTH", "VISUALIZATION", 0.4, (0, 0)),
  # NEW v33 (r145). Same label text as `hero` -- it is deliberately the
  # same object shown a second, fuller time, not a different product.
- "table": ((150, 900), "THE HARDWARE", "VISUALIZATION", 0.4, (0, 0)),
+ # SUBTITLE UPGRADED r164: this beat now includes the active-hardware
+ # hero plate (ChatGPT, r163) alongside the real-photography orbit
+ # angles. One persistent label covers the whole beat, so it needs
+ # wording true for its entire run -- "PRODUCT VISUALIZATION" (ChatGPT's
+ # own exact phrase for the new plate) is at least as accurate for the
+ # orbit's studio renders as the plain "VISUALIZATION" it replaces, and
+ # is required for the new plate's own on-screen duration.
+ "table": ((150, 900), "THE HARDWARE", "PRODUCT VISUALIZATION", 0.4, (0, 0)),
 }
 
 # Optional per-beat pre-scale crop: beat -> (x, y, w, h) in the SOURCE

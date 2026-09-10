@@ -452,7 +452,14 @@ FIGURE_MAX_DRIFT = 0.03  # a plate carrying a figure must be this static
 # ghosting into `past`'s wide valley, and `past`'s wide valley ghosts into
 # `prod`'s medium wearer shot the same way. Long-standing does not mean
 # verified -- these get the same fix as every other case here.
-DIP_TO_BLACK = {"past", "prod", "hero", "on", "reach", "off", "walk"}
+# "worn" ADDED r164: it now sits where `on` used to enter directly from
+# `hero` (a tight product-alone shot -> a close generated portrait is
+# still a real scale jump), and `on` KEEPS its membership for the new
+# worn -> on boundary, which is an even bigger jump (close portrait ->
+# wide real handheld). Both are exactly the "translucent object over the
+# wrong background" scale-mismatch case this project already fixed once
+# before (see DISSOLVE's own comment further down in this file).
+DIP_TO_BLACK = {"past", "prod", "hero", "worn", "on", "reach", "off", "walk"}
 
 
 SAFE_T, SAFE_B = FL.safe_area(H, W)
@@ -617,16 +624,27 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
 
         if lab and lpath:
             # 6th field is an optional label SCALE; absent means 1.0, so
-            # the three era labels are untouched.
+            # the three era labels are untouched. 7th field is an optional
+            # COLOR override (r164, `worn`): absent means the shared
+            # default (CYAN, this project's one reserved "the system is
+            # actively recognising something" accent) -- ChatGPT's r164
+            # review required the worn plate's disclosure use "the dim
+            # neutral disclosure color, never the cyan recognition color"
+            # specifically, since unlike dak/mam (an AR RECONSTRUCTION,
+            # still using recon_block's own dropped-leader-line but same
+            # accent-colored vocabulary) `worn` is a stand-in for the
+            # product's CURRENT state and should read as plainly generated,
+            # not as anything resembling a live recognition event.
             (_, title, sub, t0, off) = lab[:5]
             lscale = lab[5] if len(lab) > 5 else 1.0
+            lcol = lab[6] if len(lab) > 6 else CYAN
             cx, cy = lpath[min(i, len(lpath) - 1)]
             if t >= t0:
                 k = AR.ease(min(1.0, (t - t0) / 0.5))
                 k *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
                 if k > 0:
                     draw_label(d, (cx, cy), (cx + off[0], cy + off[1]), title, sub, k,
-                               beat, scale=lscale)
+                               beat, col=lcol, scale=lscale)
 
         # THE HONESTY TAG FOLLOWS THE FIGURES, NOT THE BEAT.
         # It used to be drawn whenever the BEAT contained figures, which on
