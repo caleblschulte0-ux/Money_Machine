@@ -44,6 +44,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import light_hex, tone  # noqa: E402  -- the one place a colour comes from
 from proportion import crown, shaft, stack  # noqa: E402  -- and the one place a SHAPE comes from
+from ink import INK  # noqa: E402  -- and the one place an EDGE comes from
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
@@ -204,9 +205,15 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     # read this whole pass is about.
     #
     # Freestyle draws it in the render instead, from the geometry. Same ink
-    # (`tone("ink", "deep")`, the colour promote-props floods), and 5px at
-    # 768 wide lands at roughly the same weight on screen as a promoted prop's
-    # edge does once the plate is cover-scaled onto a phone.
+    # (`ink.INK`, the one colour every edge in this game is), at a weight that
+    # lands where a promoted prop's edge does once the plate is cover-scaled
+    # onto a phone.
+    #
+    # The PROP pack draws its internal edges this way too now, with one
+    # difference that is not a style choice: a prop is a turntable shot a fixed
+    # distance from the camera, so its line is a constant; this scene runs
+    # eighty units deep, so its line has to thin with distance or the treeline
+    # fills in solid.
     scene.render.use_freestyle = True
     scene.render.line_thickness_mode = "ABSOLUTE"
     scene.render.line_thickness = 1.0
@@ -231,7 +238,7 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     lineset.select_crease = False       # interior creases turn a park into a sketch
     lineset.select_edge_mark = False
     lineset.select_contour = False
-    lineset.linestyle.color = pack.rgb(tone("ink", "deep"))
+    lineset.linestyle.color = pack.rgb(INK)
     lineset.linestyle.thickness = 2.4
     # AND IT THINS WITH DISTANCE. A constant line is what a plate cannot
     # afford: this scene runs eighty units deep, so one weight puts the same

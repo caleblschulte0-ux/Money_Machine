@@ -23,6 +23,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
 from proportion import BITE, OVERHANG, crown, flare, shaft, stack  # noqa: E402
+from ink import INK, takes_ink  # noqa: E402  -- the one place an edge is decided
 from mathutils import Vector
 
 
@@ -68,6 +69,8 @@ def rgb(value: str):
 
 def clean_scene():
     FORMS.clear()
+    global NO_INK
+    NO_INK = None
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
     for block in list(bpy.data.materials):
@@ -314,8 +317,29 @@ def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None)
 FORMS: list[dict] = []
 
 
+#: Names that are a HIGHLIGHT rather than a part. A glint is a bright patch
+#: laid on a surface to say the key light hits it there; an ink line around it
+#: turns it into a separate object stuck to the prop -- the tree's trunk glint
+#: came out as a crack running down the bark.
+#: ...and names that are THINNER THAN THE LINE. A grass blade is a few pixels
+#: wide at the render size; an ink edge on both sides of it fills it in solid,
+#: and `park/near_grass` came out as a row of black spikes. The same happened
+#: on the park plate and is handled there the same way. Anything in this list
+#: keeps its ambient occlusion, which is the right amount of separation for a
+#: thing that small.
+INK_SKIP_WORDS = (
+    "glint", "gloss", "sheen", "highlight",
+    "blade", "stem", "grass", "bud", "petal",
+)
+
+
 def _record(obj):
-    """Log `obj`'s world-space bounding box. Returns the object unchanged."""
+    """Log `obj`'s world-space bounding box, and keep highlights out of the ink.
+
+    Returns the object unchanged.
+    """
+    if any(word in obj.name for word in INK_SKIP_WORDS):
+        no_ink(obj)
     corners = [obj.matrix_world @ Vector(c) for c in obj.bound_box]
     lo = [min(c[i] for c in corners) for i in range(3)]
     hi = [max(c[i] for c in corners) for i in range(3)]
@@ -590,9 +614,67 @@ def facing(theta):
     return turn
 
 
+NO_INK = None
+
+
+def no_ink(obj):
+    """Keep this form out of the Freestyle pass. See `use_ink()`."""
+    if NO_INK is not None:
+        NO_INK.objects.link(obj)
+    return obj
+
+
 def contact_shadow(rx, ry, z=0.045):
     shadow = material("Contact shadow", tone("ink", "shade"), roughness=1.0, coat=0.0)
-    return sphere("contact_shadow", (0, 0.18, z), (rx, ry, 0.035), shadow)
+    # Never inked. It is a lighting cue lying on the floor, and a hard line
+    # around it reads as a puddle the object is standing in.
+    return no_ink(sphere("contact_shadow", (0, 0.18, z), (rx, ry, 0.035), shadow))
+
+
+def use_ink(enabled):
+    """Draw the edges BETWEEN a prop's parts, from the geometry.
+
+    `scripts/promote-props.py` grows an edge off the shipped PNG's alpha, and
+    an alpha dilation can only ever see the OUTSIDE of a thing. So a lamp post
+    -- foot, shaft, collar, lantern, cap, each a hard break in a different
+    material -- came out looking like the reference, and a tree came out as one
+    smooth green mass with its lobes melted together, because the only line it
+    had was around the silhouette. That was the operator's read on the first
+    contact sheet, and it is the whole reason this exists.
+
+    Silhouette and border only. `select_crease` turns a prop into a pencil
+    sketch -- it draws every bevel on every cube -- which was tried on the park
+    plate and reverted there for the same reason.
+    """
+    scene = bpy.context.scene
+    global NO_INK
+    NO_INK = bpy.data.collections.new("Barkly no ink")
+    scene.collection.children.link(NO_INK)
+
+    scene.render.use_freestyle = bool(enabled)
+    if not enabled:
+        return
+    scene.render.line_thickness_mode = "ABSOLUTE"
+    scene.render.line_thickness = 1.0
+    view_layer = bpy.context.view_layer
+    view_layer.use_freestyle = True
+    settings = view_layer.freestyle_settings
+    while settings.linesets:
+        settings.linesets.remove(settings.linesets[0])
+    lineset = settings.linesets.new("Barkly ink")
+    lineset.select_silhouette = True
+    lineset.select_border = True
+    lineset.select_crease = False
+    lineset.select_edge_mark = False
+    lineset.select_contour = False
+    lineset.select_by_collection = True
+    lineset.collection = NO_INK
+    lineset.collection_negation = "EXCLUSIVE"
+    lineset.linestyle.color = rgb(INK)
+    # 3.2 at 640, against the promoted outer edge's 1.1% of the shipped width.
+    # An internal line lighter than the outer one reads as a scratch; heavier
+    # and the prop looks like a colouring book.
+    lineset.linestyle.thickness = 5.4
 
 
 def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640, 640)):
@@ -2375,6 +2457,7 @@ def build_prop(path, builder, ortho_scale, target, render=True):
     """
     clean_scene()
     setup_camera_and_lights(ortho_scale=ortho_scale, target=target)
+    use_ink(takes_ink(path))
     builder()
     if render:
         file_path = OUT / f"{path}.png"

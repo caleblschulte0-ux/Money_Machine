@@ -1475,3 +1475,60 @@ The refusal message changed with it. It used to hand back a `PROP_ONLY=` line
 listing every stale prop, which cannot work -- a narrowed run does not stamp
 the directory, so the next promote refuses again with the same wall of text. A
 fix command that does not fix it is worse than no fix command.
+
+
+## Ink INSIDE the silhouette (2026-09-10)
+
+The operator, holding the before/after contact sheet:
+
+> the two that stick out to me really well, especially the main one, is the
+> fountain. The fountain and the lamppost are like, wow. That's what I'm going
+> for. The rest of the images just don't hit the same way.
+
+That is a precise note and it points at one thing. The lamp and the fountain
+are **tiered** -- foot, shaft, collar, lantern, cap, finial; plinth, basin,
+column, upper basin, finial -- and every tier meets the next at a hard
+geometric break in a different material. That break reads as a dark line. The
+tree, the hedge and the potted plant are smooth continuous masses: their lobes
+melt into one blob, because the only ink they had was a dilation of their
+own alpha, and **an alpha dilation can only ever see the outside of a thing.**
+
+So the props draw their internal edges with Freestyle now, at render time --
+the same mechanism the park plate already used, for the same reason. Silhouette
+and border only; `select_crease` draws every bevel on every cube and turns a
+prop into a pencil sketch, which was tried on the plate and reverted there too.
+
+Two exclusions, both found by looking at the render:
+
+- **Highlights.** The tree's `trunk_glint` is a bright patch laid on the bark
+  to say the key hits it there. Inked, it became a crack running down the
+  trunk. Anything named glint/gloss/sheen/highlight is kept out.
+- **Anything thinner than the line.** A grass blade is a few pixels wide at
+  render size; an edge on both sides of it fills it in solid, and
+  `park/near_grass` came out as a row of black spikes. Blades, stems, buds and
+  petals keep their ambient occlusion, which is the right amount of separation
+  for something that small.
+
+### One ink, and three places that draw it
+
+Three steps put a dark edge on this art, for three good reasons, and they must
+not each hold an opinion about what "dark" is:
+
+| where | what it draws | why it has to be there |
+|---|---|---|
+| `scripts/promote-props.py` | the OUTER edge, off the shipped alpha | only that step knows the final pixel size |
+| the prop packs | the INTERNAL edges, with Freestyle | only they know where one part stops |
+| `world_scene_pack.py` | both | a plate is opaque; there is no alpha to dilate |
+
+`tools/blender/ink.py` holds the colour, the width rule and the exemption list,
+and all three import it. A test fails if any of them names an edge colour of
+its own.
+
+### And the paving course moved for the third time
+
+`town/paving` went 638x21 -> 652x37 -> 654x43 as it gained first an outer
+contour and then internal ink, and a course's height comes from that aspect,
+so the deepest one keeps being pushed down into the band the NPC name plates
+occupy: `dy` 56 -> 46 -> 42. The perspective spread is being squeezed a little
+each time. If it has to move again the answer is to widen the band's own height
+budget, not to flatten the courses further.

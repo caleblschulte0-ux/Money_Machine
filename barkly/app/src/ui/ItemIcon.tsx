@@ -39,17 +39,17 @@ import { BALL, BRASS, DIORAMA, ITEM } from './scenes/artPalette';
  * and removing one cannot leave a hole.
  */
 const RENDERED: Record<string, { source: number; aspect: number }> = {
-  treat_biscuit: { source: require('../../assets/world/item/treat_biscuit.png'), aspect: 224 / 155 },
-  treat_cheese: { source: require('../../assets/world/item/treat_cheese.png'), aspect: 224 / 219 },
-  treat_steak: { source: require('../../assets/world/item/treat_steak.png'), aspect: 224 / 155 },
-  toy_ball: { source: require('../../assets/world/item/toy_ball.png'), aspect: 224 / 209 },
-  toy_rope: { source: require('../../assets/world/item/toy_rope.png'), aspect: 224 / 88 },
-  collar_red: { source: require('../../assets/world/item/collar_red.png'), aspect: 224 / 142 },
-  collar_blue: { source: require('../../assets/world/item/collar_blue.png'), aspect: 224 / 142 },
-  collar_green: { source: require('../../assets/world/item/collar_green.png'), aspect: 224 / 142 },
-  collar_gold: { source: require('../../assets/world/item/collar_gold.png'), aspect: 224 / 142 },
-  kit_bowl: { source: require('../../assets/world/item/kit_bowl.png'), aspect: 224 / 129 },
-  kit_stick: { source: require('../../assets/world/item/kit_stick.png'), aspect: 224 / 101 },
+  treat_biscuit: { source: require('../../assets/world/item/treat_biscuit.png'), aspect: 224 / 156 },
+  treat_cheese: { source: require('../../assets/world/item/treat_cheese.png'), aspect: 224 / 218 },
+  treat_steak: { source: require('../../assets/world/item/treat_steak.png'), aspect: 224 / 157 },
+  toy_ball: { source: require('../../assets/world/item/toy_ball.png'), aspect: 224 / 210 },
+  toy_rope: { source: require('../../assets/world/item/toy_rope.png'), aspect: 224 / 90 },
+  collar_red: { source: require('../../assets/world/item/collar_red.png'), aspect: 224 / 144 },
+  collar_blue: { source: require('../../assets/world/item/collar_blue.png'), aspect: 224 / 144 },
+  collar_green: { source: require('../../assets/world/item/collar_green.png'), aspect: 224 / 144 },
+  collar_gold: { source: require('../../assets/world/item/collar_gold.png'), aspect: 224 / 144 },
+  kit_bowl: { source: require('../../assets/world/item/kit_bowl.png'), aspect: 224 / 130 },
+  kit_stick: { source: require('../../assets/world/item/kit_stick.png'), aspect: 224 / 103 },
   home_bed: { source: require('../../assets/world/home/props/bed.png'), aspect: 546 / 193 },
 };
 

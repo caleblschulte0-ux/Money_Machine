@@ -37,13 +37,13 @@ const LAMP_ASPECT = 244 / 515;
 const BED_ASPECT = 546 / 193;
 const SHELF_ASPECT = 292 / 439;
 
-const NEAR_FLOOR_ASPECT = 654 / 61;
+const NEAR_FLOOR_ASPECT = 654 / 66;
 const PANELLING = require('../../../assets/world/home/props/panelling.png');
 const VISTA = require('../../../assets/world/home/props/vista.png');
 /** The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds them. */
-const SKIRTING_ASPECT = 647 / 50;
-const PANELLING_ASPECT = 650 / 134;
-const VISTA_ASPECT = 654 / 273;
+const SKIRTING_ASPECT = 649 / 55;
+const PANELLING_ASPECT = 653 / 139;
+const VISTA_ASPECT = 654 / 279;
 /**
  * Window sun/moon geometry, as FRACTIONS of the aperture.
  *

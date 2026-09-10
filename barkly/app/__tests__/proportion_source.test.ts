@@ -75,3 +75,65 @@ describe('both render packs proportion from one file', () => {
     }
   });
 });
+
+/*
+ * ONE INK, AND EVERY PLACE THAT DRAWS IT READS THE SAME FILE.
+ *
+ * Three different steps put a dark edge on this game's art, for three good
+ * reasons: `scripts/promote-props.py` grows the OUTER edge off a shipped
+ * PNG's alpha (only that step knows the final pixel size), the prop packs draw
+ * the INTERNAL edges with Freestyle at render time (only they know where one
+ * part of a prop stops and the next begins), and the scene pack draws both
+ * because a plate is opaque edge to edge with no alpha to dilate.
+ *
+ * Three steps is fine. Three opinions about the colour, the width, and what
+ * counts as atmosphere is not -- that is how the world ends up with two darks
+ * in it. `tools/blender/ink.py` holds the rules and this holds everyone to it.
+ *
+ * The internal edges exist because of the operator's read on the first contact
+ * sheet: the lamp post and the fountain hit the target and the rest did not.
+ * Those two are tiered, and every tier meets the next at a hard break in a
+ * different material, which reads as a line. A tree was one smooth green mass,
+ * because an alpha dilation can only ever see the outside of a thing.
+ */
+describe('one ink, read from one file', () => {
+  const readTool = (f: string) => readFileSync(join(DIR, f), 'utf8');
+  const readScript = (f: string) =>
+    readFileSync(join(DIR, '..', '..', 'scripts', f), 'utf8');
+
+  test.each(['world_prop_pack.py', 'world_scene_pack.py'])(
+    '%s takes the ink from ink.py',
+    (file: string) => {
+      expect(readTool(file)).toMatch(/^from ink import /m);
+    },
+  );
+
+  it('promote-props takes the colour, the width and the exemptions from it', () => {
+    const src = readScript('promote-props.py');
+    expect(src).toMatch(/^from ink import /m);
+    // ...and states none of them itself.
+    expect(src).not.toMatch(/^CONTOUR_EXEMPT/m);
+    expect(src).not.toMatch(/^def contour_width/m);
+  });
+
+  it('ink.py is the only file that names the edge colour', () => {
+    expect(readTool('ink.py')).toMatch(/^INK = tone\("ink", "deep"\)$/m);
+    for (const file of ['world_prop_pack.py', 'world_scene_pack.py', 'home_prop_pack.py']) {
+      const src = readTool(file);
+      const lines = src.split('\n').filter((l: string) => /linestyle\.color|CONTOUR_RGB/.test(l));
+      for (const line of lines) {
+        expect({ file, line, usesShared: /\bINK\b/.test(line) }).toEqual({ file, line, usesShared: true });
+      }
+    }
+  });
+
+  it('the things thinner than the line are kept out of it', () => {
+    // A grass blade is a few pixels wide at render size; inked on both sides
+    // it fills in solid, and near_grass came out as a row of black spikes.
+    const src = readTool('world_prop_pack.py');
+    const list = src.slice(src.indexOf('INK_SKIP_WORDS = ('), src.indexOf(')', src.indexOf('INK_SKIP_WORDS = (')));
+    for (const word of ['glint', 'blade', 'stem', 'grass']) {
+      expect({ word, listed: list.includes(`"${word}"`) }).toEqual({ word, listed: true });
+    }
+  });
+});

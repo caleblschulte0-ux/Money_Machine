@@ -64,13 +64,13 @@ from pathlib import Path
 
 from PIL import Image, ImageFilter
 
-# The contour's colour comes from the same palette as everything else it will
-# sit next to. `ink.deep` is the world's darkest neutral.
+# The edge's colour, its width rule and the list of things that do not get one
+# all live in `tools/blender/ink.py`, because three different places draw ink
+# and they must not each hold an opinion: this script grows the OUTER edge off
+# a shipped PNG's alpha, the prop packs draw the INTERNAL edges with Freestyle
+# at render time, and the scene pack draws both. See that file for why.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools" / "blender"))
-from palette import tone  # noqa: E402
-
-_ink = tone("ink", "deep")
-CONTOUR_RGB = tuple(int(_ink[i:i + 2], 16) for i in (1, 3, 5))
+from ink import INK_RGB as CONTOUR_RGB, contour_width, takes_ink  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 PACK = ROOT / "tools" / "blender" / "world_prop_pack.py"
@@ -134,34 +134,13 @@ ITEM_WIDTH = 224
 PALETTE = 256
 
 
-# THE CONTOUR.
-#
-# The operator's reference art -- Brawl Stars -- carries a dark contour around
-# every object, and our world had none anywhere. It is the single biggest
-# remaining reason a prop of ours dropped into one of their frames reads as
-# belonging to a different game: theirs are drawn objects with an edge, ours
-# were untrimmed renders floating on whatever is behind them.
+# THE CONTOUR. See `tools/blender/ink.py` for the colour, the width rule and
+# the exemptions; this is where the OUTER edge is actually grown.
 #
 # Baked here rather than drawn in the app because this is the ONE place that
 # knows the shipping recipe, and because an outline stacked at runtime is four
 # extra draws per prop on a phone. Baked, it costs nothing and it cannot drift
 # from prop to prop.
-#
-# Soft things are exempt. A hard edge on a cloud, a haze or a contact shadow is
-# not a contour, it is a mistake -- those are atmosphere, and atmosphere has no
-# edge.
-CONTOUR_EXEMPT = ("sky/",)
-CONTOUR_EXEMPT_WORDS = ("shadow", "haze", "glow", "surf")
-
-
-def contour_width(width: int) -> int:
-    """How heavy the edge is, from the asset's own width.
-
-    A constant pixel count would give the storefront a hairline and the
-    treat icon a bruise: they ship at 640 and 224. Proportional keeps the
-    weight even once the app has scaled them back to the same world.
-    """
-    return max(3, round(width * 0.011))
 
 
 def padded(image: "Image.Image", pad: int) -> "Image.Image":
@@ -179,7 +158,7 @@ def padded(image: "Image.Image", pad: int) -> "Image.Image":
 
 def outlined(image: "Image.Image", path: str, pad: int | None = None) -> "Image.Image":
     """The image over a dilated dark copy of its own alpha."""
-    if path.startswith(CONTOUR_EXEMPT) or any(w in path for w in CONTOUR_EXEMPT_WORDS):
+    if not takes_ink(path):
         return image
     if pad is None:
         pad = contour_width(image.width)

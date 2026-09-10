@@ -53,9 +53,9 @@ const PARK_NEAR_GRASS = require('../../../assets/world/park/props/near_grass.png
  */
 /* The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds these
    against the real PNGs, the same way the shop's item art is held. */
-const TREELINE_ASPECT = 654 / 133;
+const TREELINE_ASPECT = 654 / 138;
 const TUFT_ASPECT = 300 / 303;
-const FLOWERS_ASPECT = 246 / 285;
+const FLOWERS_ASPECT = 246 / 288;
 const CLUMP_ASPECT = 410 / 302;
 /*
  * THE NEAR-GROUND BANDS. Wide strips of ground cover rendered for the plane
@@ -189,10 +189,10 @@ const TOWN_KERB = require('../../../assets/world/town/props/kerb.png');
 const TOWN_PAVING = require('../../../assets/world/town/props/paving.png');
 const TOWN_NEAR_PAVING = require('../../../assets/world/town/props/near_paving.png');
 /* Trimmed renders' own aspects; __tests__/scene_surfaces.test.ts holds them. */
-const ROOFTOPS_ASPECT = 654 / 159;
-const KERB_ASPECT = 620 / 48;
-const NEAR_PAVING_ASPECT = 654 / 72;
-const PAVING_ASPECT = 652 / 37;
+const ROOFTOPS_ASPECT = 654 / 166;
+const KERB_ASPECT = 624 / 54;
+const NEAR_PAVING_ASPECT = 654 / 78;
+const PAVING_ASPECT = 654 / 43;
 
 /**
  * COURSES OF PAVING, RECEDING.
@@ -222,11 +222,15 @@ const PAVING_ASPECT = 652 / 37;
 const TOWN_PAVING_COURSES: readonly { dy: number; w: number; phase: number; opacity: number }[] = [
   { dy: 4, w: 1.06, phase: 0.0, opacity: 0.30 },
   { dy: 26, w: 1.22, phase: 0.34, opacity: 0.38 },
-  // 46, not 56: the contour pass re-cut paving.png from 638x21 to 652x37, and
-  // a course's HEIGHT comes from that render's aspect -- so the deepest one
-  // grew downward into the band the NPC name plates sit in. A prop getting an
-  // edge moves everything sized from it, which is what this test is for.
-  { dy: 46, w: 1.44, phase: 0.08, opacity: 0.46 },
+  // 42, and this is the THIRD time it has moved: 56 -> 46 -> 42, as paving.png
+  // went 638x21 -> 652x37 -> 654x43 gaining first an outer contour and then
+  // internal ink. A course's HEIGHT comes from that render's aspect, so every
+  // pixel the prop gains pushes the deepest course down into the band the NPC
+  // name plates sit in. The perspective spread is being squeezed each time;
+  // if this has to move again, widen the band's own height budget rather than
+  // flattening the courses further.
+  // (__tests__/scene_surfaces.test.ts is what catches it.)
+  { dy: 42, w: 1.44, phase: 0.08, opacity: 0.46 },
 ];
 
 const BEACH_UMBRELLA = require('../../../assets/world/beach/props/umbrella.png');
@@ -251,22 +255,22 @@ const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png')
  * re-render can never distort a prop again. `npm run check:aspects` restates
  * these from the real PNGs.
  */
-const TREE_ASPECT = 471 / 512;
-const BENCH_ASPECT = 491 / 307;
-const HEDGE_ASPECT = 506 / 279;
-const LAMP_ASPECT = 207 / 557;
-const FOUNTAIN_ASPECT = 498 / 420;
-const PLANTER_ASPECT = 332 / 402;
-const UMBRELLA_ASPECT = 390 / 489;
-const PALM_ASPECT = 400 / 547;
+const TREE_ASPECT = 477 / 517;
+const BENCH_ASPECT = 491 / 312;
+const HEDGE_ASPECT = 506 / 282;
+const LAMP_ASPECT = 213 / 562;
+const FOUNTAIN_ASPECT = 498 / 425;
+const PLANTER_ASPECT = 332 / 408;
+const UMBRELLA_ASPECT = 396 / 492;
+const PALM_ASPECT = 403 / 553;
 const DUNE_ASPECT = 468 / 244;
-const CASTLE_ASPECT = 406 / 489;
-const LIFEGUARD_ASPECT = 391 / 442;
-const STORE_AQUA_ASPECT = 475 / 514;
-const HEADLAND_ASPECT = 654 / 82;
+const CASTLE_ASPECT = 412 / 493;
+const LIFEGUARD_ASPECT = 396 / 448;
+const STORE_AQUA_ASPECT = 480 / 519;
+const HEADLAND_ASPECT = 654 / 86;
 const SURF_ASPECT = 640 / 55;
-const SHELLS_ASPECT = 280 / 150;
-const NEAR_SAND_ASPECT = 618 / 52;
+const SHELLS_ASPECT = 286 / 155;
+const NEAR_SAND_ASPECT = 624 / 57;
 const DUNE_GRASS_ASPECT = 221 / 256;
 
 /**
