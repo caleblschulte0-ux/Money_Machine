@@ -345,7 +345,7 @@ def build_recognize():
         img = G.full_bleed(world[i])
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)
-            G.primary_label(img, "WHEN THE PLACE RECOGNIZES YOU", k=k, y_frac=0.12, font_size=62)
+            G.primary_label(img, "WHEN THE PLACE RECOGNIZES YOU", k=k, y_frac=0.12, font_size=72)
         if t >= 1.8:
             k = G.fade_k(t - 1.8, dur - 1.8, in_t=0.5, out_margin=0.0, no_out=True)
             G.zone_trace(img, ZONE_CX, ZONE_CY, ZONE_W, ZONE_H, k=k)

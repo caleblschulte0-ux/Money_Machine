@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""r185 evidence pack: full-film contact sheet for v37 "The World / The
-Layer". Approximately one frame every 1.4s across the 74.0s master
-(within r184's own requested 1.3-1.5s density), plus EXTRA_BOUNDS at
-every disclosure entry/exit, every real-to-layer reset, every section
-(and examples sub-part) transition, and the literal final frame -- all
-per r184's own explicit contact-sheet requirement.
+"""r187 evidence pack: full-film contact sheet for v37 "The World / The
+Layer", pass 2 (r186's sole correction: the recognize section's primary
+label raised 62px -> 72px). Approximately one frame every 1.4s across
+the 74.0s master (within r184's own requested 1.3-1.5s density), plus
+EXTRA_BOUNDS at every disclosure entry/exit, every real-to-layer reset,
+every section (and examples sub-part) transition, the recognize label's
+own entry/hold/exit, and the literal final frame -- all per r184's own
+explicit contact-sheet requirement and r186's own explicit request for
+dense coverage of the corrected label's interval.
 """
 import subprocess
 
@@ -17,6 +20,7 @@ SECTION_BOUNDS = [0.0, 8.0, 20.0, 32.0, 40.0, 49.5, 54.0, 66.0, 74.0]
 EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
     9.5, 12.2, 15.0, 19.0, 20.0,                # borrow: hardware in/hold, software swap, software out
+    20.0, 20.2, 21.0, 21.9,                     # recognize: label entry / full 72px hold / exit (r186)
     21.8, 23.0, 24.6,                           # recognize: zone-trace in, anchor-pulse in, captions
     33.0, 36.0, 40.0,                           # examples: historical disclosure in, hold, part boundary
                                                  # (IMG_DAK1.MOV is exactly 8.0s -- hist is 32.0-40.0, not
@@ -57,7 +61,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r185__claude__v37_world_layer__contact.png", sheet)
+    cv2.imwrite("r187__claude__v37_world_layer_pass2__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

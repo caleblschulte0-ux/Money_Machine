@@ -62,7 +62,8 @@ STRUCTURE = {
         "(one small, consistently-distant background pedestrian, "
         "judged acceptable, disclosed there and still true here)",
         "0.2-1.9s   primary_label \"WHEN THE PLACE RECOGNIZES YOU\" "
-        "(62px)",
+        "(72px -- r187, was 62px; r186 caught this against r184's own "
+        "72px primary-label minimum, the only miss in that review)",
         "1.8-12.0s  zone_trace: four coral corner brackets mark a "
         "bounded zone -- camera-autofocus/AR-bounding-box language, "
         "deliberately NOT v36's node/path rig, which r184 asks this "
@@ -147,7 +148,7 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v37 -- "THE WORLD / THE LAYER" (r185)')
+    L.append('ORI v37 -- "THE WORLD / THE LAYER" (pass 2, r187)')
     L.append("Fifth and final execution in the operator-ordered five-style "
              "slate (r145__operator__five_style_variants.md); v33/r167, "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
@@ -155,7 +156,12 @@ def main():
              "r184's own review. r184 assigns this style: a bright "
              "editorial transformation film -- the real place is one "
              "visual world, and a decisive landscape-motivated wipe "
-             "opens a second, story-bearing layer over that exact place.")
+             "opens a second, story-bearing layer over that exact place. "
+             "r186 passed everything except one number: the recognize "
+             "section's primary label was 62px against r184's own 72px "
+             "minimum. r187 is that single correction -- every other "
+             "element (footage, wipes, disclosures, captions, narration, "
+             "runtime, end card) is unchanged.")
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps, full 16:9, no scope crop")
     L.append("")
     L.append("SECTION LIST -- generated from spec_layer.py, not retyped")
