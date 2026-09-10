@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""r179 evidence pack: full-film contact sheet for v36 "How the System
-Works". Every ~1.3s across the 74.0s master, plus every node-arrival,
-disclosure, and end-card boundary -- same standard set every round in
-this handoff has used (r167, r171, r175, r177, ...).
+"""r181 evidence pack: full-film contact sheet for v36 "How the System
+Works", pass 2 (r180's mobile-legibility rescale of hwsw/examples/loop).
+Every ~1.3s across the 74.0s master, plus every node-arrival, disclosure,
+and end-card boundary -- same standard set every round in this handoff
+has used (r167, r171, r175, r177, ...). EXTRA_BOUNDS adds r180's own
+explicit requirement: "dense timestamp coverage of the active HARDWARE
+and SOFTWARE states; all three large example states and their disclosure
+boundaries; each operating-loop node arrival; and the literal final
+frame" -- place/zone/close (untouched, all PASSED) keep their r179
+boundary density.
 """
 import subprocess
 
@@ -13,12 +19,14 @@ W, H = 1920, 1080
 MASTER = "../out/ORI_SystemMap_master.mp4"
 SECTION_BOUNDS = [0.0, 7.0, 18.0, 31.0, 49.0, 63.0, 74.0]
 EXTRA_BOUNDS = [
-    2.0, 6.0,                                # place: map begins / node appears
-    10.0, 14.5,                               # hwsw: HARDWARE / SOFTWARE arrivals
+    2.0, 6.0,                                  # place: map begins / node appears
+    10.0, 11.5, 12.5, 14.5, 16.0, 17.0,         # hwsw: dense HARDWARE + SOFTWARE coverage
     21.0, 24.5,                                # zone: ZONE arrival / caption swap
-    36.0, 43.5, 48.5,                          # examples: hist->ice, ice->audio, end
-    52.5, 56.0, 59.5,                          # loop: EXPERIENCE/RETURN/UPDATE arrivals
-    70.5,                                      # close: end card appears
+    33.0, 34.5, 36.0, 39.0, 41.5, 43.5, 45.5, 47.5, 48.5,
+    # examples: dense coverage of all three large states + both disclosure boundaries
+    49.0, 50.5, 52.5, 54.0, 56.0, 57.5, 59.5, 61.0, 62.8,
+    # loop: every node arrival + the final caption
+    70.5, 73.9,                                # close: end card appears / literal final frame
 ]
 
 
@@ -51,7 +59,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r179__claude__v36_system_map__contact.png", sheet)
+    cv2.imwrite("r181__claude__v36_system_map_pass2__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

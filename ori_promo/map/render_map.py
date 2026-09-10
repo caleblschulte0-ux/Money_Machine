@@ -148,24 +148,11 @@ def spine_state(node, t):
     return "done"
 
 
-def draw_persistent_place_inset(img, place_frames, local_t, k=1.0):
-    f = place_frames[min(int(round(local_t * FPS)), len(place_frames) - 1)]
-    G.small_aperture(img, dark_doc_grade(f), NODE_PLACE[0], NODE_PLACE[1], 66, G.AMBER, k=k)
-
-
-def draw_spine_and_nodes(img, t, upto="zone"):
-    """Draws the spine path lit up to global time t, plus every SPINE node
-    at its own state. `upto` limits which nodes are eligible to render
-    (e.g. during hwsw, ZONE shouldn't light even though its arrival time
-    is in the future -- spine_lit_frac already handles the path length,
-    this only guards node draw-calls before their own section)."""
-    lit = spine_lit_frac(t)
-    G.draw_path(img, SPINE_PTS, lit, k=1.0)
-    for node in SPINE:
-        if node is NODE_PLACE:
-            continue  # drawn separately as the small footage inset
-        st = spine_state(node, t)
-        G.draw_node(img, node, st, k=1.0, pulse=t * 1.6)
+# r181: draw_persistent_place_inset() and draw_spine_and_nodes() (the
+# small-circle PLACE inset and the full HARDWARE/SOFTWARE/ZONE spine
+# overlay) were removed here -- build_hwsw() no longer uses them, per
+# r180's relayout (a rounded-rect PLACE window and a single big shared
+# aperture slot replace them). Removed rather than left unused.
 
 
 def build_place():
@@ -185,6 +172,22 @@ def build_place():
     return out
 
 
+# r181 (per r180's mobile-legibility review): the hwsw/examples/loop
+# geometry below is a genuine relayout, not a font tweak -- apertures
+# at r180's exact minimum sizes (460px/620px diameter, 1050x620/600x338
+# rects), so a mobile-width preview reads the imagery and labels without
+# zooming. place/zone/close are untouched (all three PASSED).
+HW_BIG_CENTER = (960, 430)
+HW_BIG_R = 240                    # 480px diameter > r180's 460px minimum
+# top-left, not bottom-left: the 52px-font caption ("PLACE-BASED
+# EXPERIENCE — SOFTWARE" is wide) is centered at x=960 and needed
+# vertical room below the big aperture -- a bottom-left rect collided
+# with the caption box in testing. Top-left leaves the whole bottom
+# band clear, and doesn't touch the aperture (620<720, disjoint in x
+# regardless of y).
+HW_PLACE_RECT = (60, 60, 560, 320)   # x0,y0,w,h -- 560x320 > 520x292 minimum
+
+
 def build_hwsw():
     dur = 11.0
     beat_start = _SEC_START["hwsw"]
@@ -196,28 +199,32 @@ def build_hwsw():
     sw_t0, sw_t1 = 14.5, 18.0
     hero_frames = build_photo_zoom(hero_src, hw_t1 - hw_t0, cap=1.05)
     worn_frames = build_photo_zoom(worn_src, sw_t1 - sw_t0, cap=1.06)
+    px, py, pw, ph = HW_PLACE_RECT
+    path_pts = [(px + pw, py + ph // 2), HW_BIG_CENTER]
     out = []
     for i in range(int(round(dur * FPS))):
         t = i / FPS
         gt = beat_start + t
         img = G.background()
-        draw_persistent_place_inset(img, place_frames, t)
-        draw_spine_and_nodes(img, gt)
-        G.system_diagram_tag(img, k=1.0)
+        f = place_frames[min(i, len(place_frames) - 1)]
+        G.rect_aperture(img, dark_doc_grade(f), px + pw // 2, py + ph // 2, pw, ph, G.AMBER)
+        lit = min(1.0, t / 1.0)
+        G.draw_path(img, path_pts, lit, k=1.0, width=3)
+        G.system_diagram_tag(img, k=1.0, font_size=26)
         if hw_t0 <= gt < hw_t1:
             lt = gt - hw_t0
             k = G.fade_k(lt, hw_t1 - hw_t0, in_t=0.3, out_margin=0.3)
-            f = hero_frames[min(int(round(lt * FPS)), len(hero_frames) - 1)]
-            G.small_aperture(img, f, NODE_HARDWARE[0], NODE_HARDWARE[1], 90, G.CYAN, k=k)
-            G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr")
-            G.caption(img, lt, hw_t1 - hw_t0, CAPTIONS["hardware"])
+            f2 = hero_frames[min(int(round(lt * FPS)), len(hero_frames) - 1)]
+            G.small_aperture(img, f2, HW_BIG_CENTER[0], HW_BIG_CENTER[1], HW_BIG_R, G.CYAN, k=k)
+            G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr", font_size=38)
+            G.caption(img, lt, hw_t1 - hw_t0, CAPTIONS["hardware"], y_frac=0.75, font_size=52)
         elif sw_t0 <= gt < sw_t1:
             lt = gt - sw_t0
             k = G.fade_k(lt, sw_t1 - sw_t0, in_t=0.3, out_margin=0.3)
-            f = worn_frames[min(int(round(lt * FPS)), len(worn_frames) - 1)]
-            G.small_aperture(img, f, NODE_SOFTWARE[0], NODE_SOFTWARE[1], 90, G.CYAN, k=k)
-            G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr")
-            G.caption(img, lt, sw_t1 - sw_t0, CAPTIONS["software"])
+            f2 = worn_frames[min(int(round(lt * FPS)), len(worn_frames) - 1)]
+            G.small_aperture(img, f2, HW_BIG_CENTER[0], HW_BIG_CENTER[1], HW_BIG_R, G.CYAN, k=k)
+            G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr", font_size=38)
+            G.caption(img, lt, sw_t1 - sw_t0, CAPTIONS["software"], y_frac=0.75, font_size=52)
         out.append(from_pil(img))
     return out
 
@@ -253,17 +260,40 @@ def build_zone():
 # the combined build kept getting killed by the harness's background
 # wall-clock limit at 540 frames with per-frame branch-path work; three
 # ~5-7.5s renders each finish well inside it.
+#
+# r181 (per r180): the three small branch apertures (r130/170/95) read
+# as "icons in a diagram", not proof-of-concept images. Replaced with a
+# single shared big-aperture slot (>=620px diameter, comfortably over
+# r180's minimum) that each example occupies in turn -- entry direction
+# still differs per example (a slide-in offset from left/top/right,
+# eased over the first 0.5s), which is what "distinct entry direction"
+# actually asks for; it doesn't require three separate static branch
+# positions. The small ZONE origin marker moves to a corner with r180's
+# own explicit permission ("the inactive branch map may shrink or move
+# aside"), connected to the big slot by one thin line.
 EX_START = _SEC_START["examples"]
 HIST_T0, HIST_T1 = EX_START + 0.0, EX_START + 5.0
 ICE_T0, ICE_T1 = EX_START + 5.0, EX_START + 12.5
 AUDIO_T0, AUDIO_T1 = EX_START + 12.5, EX_START + 18.0
 
+EX_ZONE_MARKER = (160, 150, "ZONE", "amber", "zone")
+EX_BIG_CENTER = (1280, 470)
+EX_BIG_R = 315  # 630px diameter > r180's 620px minimum
+
 
 def _examples_base(img):
-    G.system_diagram_tag(img, k=1.0)
-    G.draw_node(img, NODE_ZONE, "done", k=0.9)
-    for br in BRANCHES:
-        G.draw_path(img, [(NODE_ZONE[0], NODE_ZONE[1]), (br[0], br[1])], 0.0, k=0.5, width=2)
+    G.system_diagram_tag(img, k=1.0, font_size=26)
+    G.draw_node(img, EX_ZONE_MARKER, "done", k=0.9, font_size=30)
+    G.draw_path(img, [(EX_ZONE_MARKER[0], EX_ZONE_MARKER[1]), EX_BIG_CENTER], 1.0, k=0.5, width=2, glow=False)
+
+
+def _example_entry_aperture(img, f, seg_dur, lt, dx, dy):
+    k = G.fade_k(lt, seg_dur, in_t=0.3, out_margin=0.3)
+    e = G.ease(min(1.0, lt / 0.5))
+    cx = int(EX_BIG_CENTER[0] + dx * (1 - e))
+    cy = int(EX_BIG_CENTER[1] + dy * (1 - e))
+    G.small_aperture(img, f, cx, cy, EX_BIG_R, G.CYAN, k=k)
+    return k
 
 
 def build_examples_hist():
@@ -274,14 +304,10 @@ def build_examples_hist():
         lt = i / FPS
         img = G.background()
         _examples_base(img)
-        lit = min(1.0, lt / 0.6)
-        G.draw_path(img, [(NODE_ZONE[0], NODE_ZONE[1]), (NODE_HISTORICAL[0], NODE_HISTORICAL[1])], lit, k=1.0, width=2)
-        k = G.fade_k(lt, seg_dur, in_t=0.3, out_margin=0.3)
         f = dak_frames[min(i, len(dak_frames) - 1)]
-        r = 130  # larger scale, entering from the branch line (left)
-        G.small_aperture(img, f, NODE_HISTORICAL[0], NODE_HISTORICAL[1], r, G.CYAN, k=k)
-        G.disclosure(img, "VISUALIZATION", corner="tr")
-        G.caption(img, lt, seg_dur, CAPTIONS["historical"])
+        _example_entry_aperture(img, f, seg_dur, lt, dx=-260, dy=0)  # enters from the left
+        G.disclosure(img, "VISUALIZATION", corner="tr", font_size=38)
+        G.caption(img, lt, seg_dur, CAPTIONS["historical"], y_frac=0.82, font_size=52)
         out.append(from_pil(img))
     return out
 
@@ -295,15 +321,10 @@ def build_examples_ice():
         lt = i / FPS
         img = G.background()
         _examples_base(img)
-        G.draw_path(img, [(NODE_ZONE[0], NODE_ZONE[1]), (NODE_HISTORICAL[0], NODE_HISTORICAL[1])], 1.0, k=0.6, width=2)
-        lit = min(1.0, lt / 0.6)
-        G.draw_path(img, [(NODE_ZONE[0], NODE_ZONE[1]), (NODE_ICEAGE[0], NODE_ICEAGE[1])], lit, k=1.0, width=2)
-        k = G.fade_k(lt, seg_dur, in_t=0.3, out_margin=0.3)
         f = ice_frames[min(i, len(ice_frames) - 1)]
-        r = 170  # largest of the three -- longest hold, biggest scale
-        G.small_aperture(img, f, NODE_ICEAGE[0], NODE_ICEAGE[1], r, G.CYAN, k=k)
-        G.disclosure(img, "VISUALIZATION", corner="tr")
-        G.caption(img, lt, seg_dur, CAPTIONS["iceage"])
+        _example_entry_aperture(img, f, seg_dur, lt, dx=0, dy=-260)  # enters from the top
+        G.disclosure(img, "VISUALIZATION", corner="tr", font_size=38)
+        G.caption(img, lt, seg_dur, CAPTIONS["iceage"], y_frac=0.82, font_size=52)
         out.append(from_pil(img))
     return out
 
@@ -317,20 +338,40 @@ def build_examples_audio():
         lt = i / FPS
         img = G.background()
         _examples_base(img)
-        G.draw_path(img, [(NODE_ZONE[0], NODE_ZONE[1]), (NODE_HISTORICAL[0], NODE_HISTORICAL[1])], 1.0, k=0.6, width=2)
-        G.draw_path(img, [(NODE_ZONE[0], NODE_ZONE[1]), (NODE_ICEAGE[0], NODE_ICEAGE[1])], 1.0, k=0.6, width=2)
-        lit = min(1.0, lt / 0.4)
-        G.draw_path(img, [(NODE_ZONE[0], NODE_ZONE[1]), (NODE_AUDIO[0], NODE_AUDIO[1])], lit, k=1.0, width=2)
-        k = G.fade_k(lt, seg_dur, in_t=0.25, out_margin=0.3)
-        r = 95  # smallest, fastest of the three
-        G.small_aperture(img, still_dim, NODE_AUDIO[0], NODE_AUDIO[1], r, G.CYAN, k=k)
-        G.caption(img, lt, seg_dur, CAPTIONS["audio"])
+        _example_entry_aperture(img, still_dim, seg_dur, lt, dx=260, dy=0)  # enters from the right
+        G.caption(img, lt, seg_dur, CAPTIONS["audio"], y_frac=0.82, font_size=52)
         out.append(from_pil(img))
     return out
 
 
 def build_examples():
     return build_examples_hist() + build_examples_ice() + build_examples_audio()
+
+
+# r181 (per r180): the loop diamond and its PLACE inset were "physically
+# too small" and read as decoration. loop_lit_frac() (built from
+# spec_map.py's small-scale LOOP_PTS) still supplies the correct
+# fraction-of-travel at each moment -- it only depends on the shape's
+# segment-length RATIOS, which are identical at any scale -- so it's
+# reused unchanged and simply applied to this larger geometry.
+LG_CENTER = (760, 460)
+LG_RX, LG_RY = 530, 315               # bounding box 1060x630 > r180's 1050x620 minimum
+LG_BORROW = (LG_CENTER[0] - LG_RX, LG_CENTER[1], "BORROW", "neutral", "loop")
+LG_EXPERIENCE = (LG_CENTER[0], LG_CENTER[1] - LG_RY, "EXPERIENCE", "neutral", "loop")
+LG_RETURN = (LG_CENTER[0] + LG_RX, LG_CENTER[1], "RETURN", "neutral", "loop")
+LG_UPDATE = (LG_CENTER[0], LG_CENTER[1] + LG_RY, "UPDATE", "neutral", "loop")
+LG_NODES = [LG_BORROW, LG_EXPERIENCE, LG_RETURN, LG_UPDATE]
+LG_PTS = [(n[0], n[1]) for n in LG_NODES] + [(LG_BORROW[0], LG_BORROW[1])]
+LG_SUB = {"BORROW": "Reusable hardware", "EXPERIENCE": "Place-based story",
+          "RETURN": "Destination-managed", "UPDATE": "Software changes"}
+# PLACE window: top-right, clear of every node's label zone AND the
+# final "BORROW -> EXPERIENCE -> RETURN -> UPDATE" caption (which sits
+# at the bottom, y~965-1043) -- a bottom-right placement was tried first
+# and collided with that caption's box (both wide, both right-of-center
+# at the sizes r180 requires). Top-right only grazes RETURN's ring by a
+# few px at the very corner, which its own rounded-rect mask corner
+# radius (28px) cuts away.
+LG_PLACE_RECT = (1600, 270, 600, 338)  # cx, cy, w, h -- 600x338 == r180's minimum exactly
 
 
 def build_loop():
@@ -342,16 +383,28 @@ def build_loop():
         t = i / FPS
         gt = beat_start + t
         img = G.background()
-        G.system_diagram_tag(img, k=1.0)
-        draw_persistent_place_inset(img, place_frames, t)
+        G.system_diagram_tag(img, k=1.0, font_size=26)
+        f = place_frames[min(i, len(place_frames) - 1)]
+        cx, cy, w, h = LG_PLACE_RECT
+        G.rect_aperture(img, dark_doc_grade(f), cx, cy, w, h, G.AMBER)
         lit = loop_lit_frac(gt)
-        G.draw_path(img, LOOP_PTS, lit, k=1.0, width=3)
-        for idx, node in enumerate(LOOP_NODES):
+        G.draw_path(img, LG_PTS, lit, k=1.0, width=4)
+        for idx, node in enumerate(LG_NODES):
             arrive = LOOP_ARRIVALS[idx]
             st = "pending" if gt < arrive - 1.0 else ("active" if gt < arrive else "done")
-            G.draw_node(img, node, st, k=1.0, pulse=gt * 1.6)
+            # the supporting phrase shows only near its own node's arrival
+            # (each ~2.1s window, spaced >=3.5s apart -- never two at once)
+            # rather than all four simultaneously: reads as "explained one
+            # at a time" as the path reaches each node, and keeps every
+            # label box clear of the persistent PLACE window at every gt,
+            # not just most of the section.
+            show_sub = (arrive - 0.3) <= gt <= (arrive + 1.8)
+            G.draw_node(img, node, st, k=1.0, pulse=gt * 1.6, font_size=52,
+                        sub_label=LG_SUB[node[2]] if show_sub else None,
+                        sub_font_size=38, ring_r=26)
         if gt >= LOOP_ARRIVALS[-1] - 0.3:
-            G.caption(img, gt - (LOOP_ARRIVALS[-1] - 0.3), 3.3, "BORROW → EXPERIENCE → RETURN → UPDATE")
+            G.caption(img, gt - (LOOP_ARRIVALS[-1] - 0.3), 3.3,
+                      "BORROW → EXPERIENCE → RETURN → UPDATE", y_frac=0.93, font_size=52)
         out.append(from_pil(img))
     return out
 

@@ -25,25 +25,28 @@ STRUCTURE = {
         "mistaken for evidence of a deployed interface)",
     ],
     "hwsw": [
-        "0.0-11.0s  dark map field (graphics_map.background()); a small "
-        "persistent circular PLACE inset (real IMG_6790 @10.0s footage, "
-        "continuous motion, not frozen) stays visible bottom-left for the "
-        "whole section, satisfying r178's acceptance criterion #4 (real "
-        "footage in every major section)",
-        "0.0-11.0s  the spine path (PLACE->HARDWARE->SOFTWARE->ZONE) lit up "
-        "to the current global time; each node's ring state (pending/"
-        "active/done) is driven by the same arrival times -- the literal "
-        "mechanism behind r178's \"transitions motivated by the path "
-        "reaching the next node\"",
-        "3.0-7.5s   HARDWARE node active: small aperture shows "
-        "ai/hero/glasses_hero_chatgpt.jpg (the WHOLE plate scaled to fit "
-        "the circle, not a crop -- see graphics_map.py's small_aperture() "
-        "docstring for a real bug this caught and fixed), disclosure "
-        "\"PRODUCT VISUALIZATION\" held continuously, caption "
-        "\"BORROWED GLASSES — HARDWARE\"",
-        "7.5-11.0s  SOFTWARE node active: small aperture shows "
-        "ai/worn/product_worn_falls_park_plate_chatgpt.jpg, same "
-        "disclosure, caption \"PLACE-BASED EXPERIENCE — SOFTWARE\"",
+        "r181 (per r180's mobile-legibility review): the small circular "
+        "PLACE inset (r=66) and HARDWARE/SOFTWARE apertures (r=90) read "
+        "as portholes in an empty field. Relaid out at r180's own "
+        "minimum sizes.",
+        "0.0-11.0s  dark map field; a rounded-rectangle PLACE window "
+        "(real IMG_6790 @10.0s footage, continuous motion, not frozen), "
+        "560x320px > r180's 520x292 minimum, top-left",
+        "0.0-1.0s   a path segment lights from the PLACE window's edge to "
+        "the big aperture slot, held afterward -- \"transitions motivated "
+        "by the path reaching the next node\"",
+        "3.0-7.5s   HARDWARE active: one shared big aperture slot "
+        "(cx=960,cy=430, r=240 -- 480px diameter > r180's 460px minimum) "
+        "shows ai/hero/glasses_hero_chatgpt.jpg (the WHOLE plate scaled "
+        "to fit the circle, not a crop), disclosure \"PRODUCT "
+        "VISUALIZATION\" at 38px (was 22px), caption \"BORROWED GLASSES "
+        "— HARDWARE\" at 52px (was 40px)",
+        "7.5-11.0s  SOFTWARE active: same big-aperture slot now shows "
+        "ai/worn/product_worn_falls_park_plate_chatgpt.jpg -- a hard cut "
+        "at the content swap (not a new geometric position) is the "
+        "node-to-node transition here, since r180 asks for \"the active "
+        "aperture\" (singular) at this size, same disclosure/caption "
+        "treatment",
     ],
     "zone": [
         "0.0-13.0s  IMG_6805 @20.0s real footage, full-bleed -- a clean, "
@@ -68,34 +71,55 @@ STRUCTURE = {
         "independent parts (examples_hist/ice/audio), each its own "
         "process -- the combined 540-frame single build kept exceeding "
         "the harness's background wall-clock limit; concatenated after.",
-        "0.0-5.0s   HISTORICAL: IMG_DAK1.MOV plate, aperture r=130 "
-        "(larger scale), branch line from ZONE lighting in ~0.6s, "
-        "disclosure \"VISUALIZATION\" held continuously, caption "
-        "\"HISTORICAL RECONSTRUCTION\"",
+        "r181 (per r180): the three branch apertures (r=130/170/95) read "
+        "as \"icons in a diagram\", not proof-of-concept images. Replaced "
+        "with a single shared big-aperture slot (cx=1280,cy=470, r=315 -- "
+        "630px diameter > r180's 620px minimum) that each example "
+        "occupies in turn, entering from a different direction (left / "
+        "top / right, eased over 0.5s) -- that difference in entry "
+        "direction is what \"distinct entry direction\" actually asks "
+        "for, not three separate static positions. The ZONE origin "
+        "marker shrinks to a corner (160,150) with one thin connecting "
+        "line -- r180's own explicit permission (\"the inactive branch "
+        "map may shrink or move aside\").",
+        "0.0-5.0s   HISTORICAL: IMG_DAK1.MOV plate fills the big slot, "
+        "entering from the left, disclosure \"VISUALIZATION\" at 38px "
+        "(was 22px) held continuously, caption \"HISTORICAL "
+        "RECONSTRUCTION\" at 52px (was 40px)",
         "5.0-12.5s  ICE AGE: ai/iceage/iceage_falls_visualization_r172_"
-        "chatgpt.jpg, push-in 1.04x, aperture r=170 (largest of the three "
-        "-- longest hold, biggest scale), same disclosure discipline, "
-        "caption \"ICE AGE VISUALIZATION\"",
+        "chatgpt.jpg, push-in 1.04x, entering from the top, same "
+        "disclosure/caption treatment, caption \"ICE AGE VISUALIZATION\"",
         "12.5-18.0s AUDIO: real footage still (IMG_6805 @33.0s, dimmed), "
-        "aperture r=95 (smallest, fastest of the three), sync_glyph-style "
-        "treatment folded into the small aperture itself, no disclosure "
-        "tag (a diagram over real footage, not fabricated imagery), "
-        "caption \"SPATIAL AUDIO, SYNCHRONIZED\"",
-        "Durations 5.0 / 7.5 / 5.5s and apertures 130 / 170 / 95px are "
-        "all distinct -- satisfies \"vary duration, scale, and entry "
-        "direction\" as three genuinely different numbers, not two "
-        "matching one different.",
+        "entering from the right, no disclosure tag (a real-footage "
+        "still, not fabricated imagery), caption \"SPATIAL AUDIO, "
+        "SYNCHRONIZED\"",
+        "Durations 5.0 / 7.5 / 5.5s are still distinct -- the unequal "
+        "rhythm r176 required for v35 and r178 required here is "
+        "unchanged; only the apertures' size/position/entry changed.",
     ],
     "loop": [
-        "0.0-14.0s  dark map field; persistent PLACE inset continues "
-        "(same technique as hwsw)",
-        "0.0-14.0s  the loop closes progressively: BORROW (already at the "
-        "entry point) -> EXPERIENCE (arrives 3.5s in) -> RETURN (7.0s) -> "
-        "UPDATE (10.5s) -> closes back to BORROW (14.0s, this section's "
-        "own end) -- r178's \"operating loop\" collapsed into a simple "
-        "4-node closed diagram",
-        "13.7-14.0s caption \"BORROW → EXPERIENCE → RETURN → UPDATE\" "
-        "appears once the loop is fully closed",
+        "r181 (per r180): the loop diamond (bounding ~300x300) and its "
+        "PLACE inset (r=66 circle) were \"physically too small\" and "
+        "read as decoration. Relaid out at r180's own minimum dimensions.",
+        "0.0-14.0s  dark map field; a rounded-rectangle PLACE window "
+        "(same real footage as hwsw), 600x338px == r180's minimum "
+        "exactly, top-right -- positioned clear of every node's label "
+        "zone and the final caption at every point in the section (see "
+        "report for the exact collision-avoidance geometry)",
+        "0.0-14.0s  the loop diamond now bounds 1060x630px > r180's "
+        "1050x620 minimum. It closes progressively: BORROW (already at "
+        "the entry point) -> EXPERIENCE (arrives 3.5s in) -> RETURN "
+        "(7.0s) -> UPDATE (10.5s) -> closes back to BORROW (14.0s, this "
+        "section's own end)",
+        "primary node labels at 52px (was 24px); each node also carries "
+        "a supporting phrase (\"Reusable hardware\" / \"Place-based "
+        "story\" / \"Destination-managed\" / \"Software changes\") at "
+        "38px, shown only in a ~2.1s window around that node's own "
+        "arrival -- reads as \"explained one at a time\" as the path "
+        "reaches each node, rather than four labels cluttering the "
+        "frame simultaneously",
+        "13.7-14.0s caption \"BORROW → EXPERIENCE → RETURN → UPDATE\" at "
+        "52px (was 40px), appears once the loop is fully closed",
     ],
     "close": [
         "0.0-11.0s  IMG_6790 @20.0s real footage, full-bleed, continuous "
@@ -115,11 +139,13 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v36 -- "HOW THE SYSTEM WORKS"')
+    L.append('ORI v36 -- "HOW THE SYSTEM WORKS" (pass 2, r181)')
     L.append("Fourth execution in the operator-ordered five-style slate "
              "(r145__operator__five_style_variants.md); v33/r167 and "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
-             "only an operator audio spot-check.")
+             "only an operator audio spot-check. r181 rescales hwsw/"
+             "examples/loop for mobile legibility per r180's review; "
+             "place/zone/close are unchanged (all three PASSED).")
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps, full 16:9, no scope crop")
     L.append("")
     L.append("SECTION LIST -- generated from spec_map.py, not retyped")
@@ -159,13 +185,14 @@ def main():
              "reconstruction plate and the ice-age plate (examples). All "
              "four held CONTINUOUSLY for their complete on-screen interval "
              "(disclosure() defaults to fixed k=1.0, no fade envelope at "
-             "all -- same discipline v35's r175 established). The "
-             "spatial-audio example carries no tag because it is a real "
-             "footage still with a drawn diagram overlay, not fabricated "
+             "all -- same discipline v35's r175 established), now at "
+             "38px (r181, was 22px). The spatial-audio example carries no "
+             "tag because it is a real footage still, not fabricated "
              "imagery. \"SYSTEM DIAGRAM\" is held continuously across "
              "every section per r178's own explicit instruction, so the "
              "animated map is never mistaken for a recording of a "
-             "deployed interface.")
+             "deployed interface -- 26px within hwsw/examples/loop (r181), "
+             "20px (unchanged) in place/zone/close.")
     L.append("")
     L.append("SOUND")
     L.append("  Narration only -- no score, no sound effects. r178's "

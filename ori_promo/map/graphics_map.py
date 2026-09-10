@@ -136,29 +136,50 @@ def node_state_color(color_key, state):
     return base
 
 
-def draw_node(img, node, state, k=1.0, label_side="below", pulse=0.0):
+def draw_node(img, node, state, k=1.0, label_side="below", pulse=0.0,
+              font_size=24, sub_label=None, sub_font_size=38, ring_r=20):
     """state: 'pending' (dim, no label) | 'active' (bright, pulsing ring)
-    | 'done' (steady bright, label shown)."""
+    | 'done' (steady bright, label shown).
+
+    r180's mobile-legibility pass: font_size and ring_r are now callable
+    parameters (were hardcoded 24 / 20) so the loop section can draw
+    52px primary node labels with an optional 30px sub_label ("reusable
+    hardware" etc.) beneath, without changing any other section's
+    call sites, which still get the original defaults."""
     x, y, label, color_key, kind = node
     d = ImageDraw.Draw(img, "RGBA")
     color = node_state_color(color_key, state)
-    r = 20
+    r = ring_r
     if state == "active":
-        r = 20 + int(6 * (0.5 + 0.5 * math.sin(pulse * math.pi * 2)))
+        r = ring_r + int(6 * (0.5 + 0.5 * math.sin(pulse * math.pi * 2)))
     a = int(235 * k)
     d.ellipse([x - r, y - r, x + r, y + r], outline=color + (a,), width=3)
     if state in ("active", "done"):
         d.ellipse([x - 4, y - 4, x + 4, y + 4], fill=color + (a,))
     if state == "done":
-        f = font("SemiBold", 24)
+        f = font("SemiBold", font_size)
+        fs = font("Medium", sub_font_size) if sub_label else None
         ly = y + r + 14 if label_side == "below" else y - r - 14
         anchor = "ma" if label_side == "below" else "md"
         w = d.textlength(label.upper(), font=f)
-        pad = 8
-        d.rectangle([x - w / 2 - pad, ly - (2 if label_side == "below" else 26),
-                     x + w / 2 + pad, ly + (26 if label_side == "below" else 2)],
-                    fill=(8, 9, 11, int(150 * k)))
-        _shadow_text(d, (x, ly), label.upper(), f, OFFWHITE + (a,), anchor=anchor)
+        sw = d.textlength(sub_label, font=fs) if sub_label else 0
+        bw = max(w, sw)
+        pad = 10
+        box_h = font_size + 10 + (sub_font_size + 8 if sub_label else 0)
+        if label_side == "below":
+            d.rectangle([x - bw / 2 - pad, ly - 4, x + bw / 2 + pad, ly + box_h],
+                        fill=(8, 9, 11, int(160 * k)))
+            _shadow_text(d, (x, ly + font_size * 0.5 + 2), label.upper(), f, OFFWHITE + (a,), anchor="mm")
+            if sub_label:
+                _shadow_text(d, (x, ly + font_size + 12 + sub_font_size * 0.5), sub_label, fs,
+                             CYAN + (int(a * 0.9),), anchor="mm")
+        else:
+            d.rectangle([x - bw / 2 - pad, ly - box_h, x + bw / 2 + pad, ly + 4],
+                        fill=(8, 9, 11, int(160 * k)))
+            _shadow_text(d, (x, ly - box_h + font_size * 0.5 + 2), label.upper(), f, OFFWHITE + (a,), anchor="mm")
+            if sub_label:
+                _shadow_text(d, (x, ly - 8 - int(font_size * 0.275)), sub_label, fs,
+                             CYAN + (int(a * 0.9),), anchor="mm")
 
 
 def small_aperture(img, content_rgb_float, cx, cy, r, ring_color, k=1.0):
@@ -193,6 +214,36 @@ def small_aperture(img, content_rgb_float, cx, cy, r, ring_color, k=1.0):
     d.ellipse([cx - r, cy - r, cx + r, cy + r], outline=ring_color + (int(235 * k),), width=2)
 
 
+def rect_aperture(img, content_rgb_float, cx, cy, w, h, ring_color, k=1.0, radius=28):
+    """A rounded-rectangle real-footage inset -- r180's replacement for
+    the persistent PLACE circle, which the review judged too small/
+    decorative ("a tiny persistent location circle does not satisfy
+    real Falls Park footage appears in every major section and does not
+    become decorative background"). Same cover-scale-then-crop logic as
+    small_aperture, just a rounded rect instead of a circle."""
+    content = Image.fromarray(np.clip(content_rgb_float, 0, 255).astype(np.uint8)[:, :, ::-1])
+    cw, ch = content.size
+    scale = max(w / cw, h / ch)
+    rw, rh = int(round(cw * scale)), int(round(ch * scale))
+    content = content.resize((rw, rh), Image.LANCZOS)
+    left, top = (rw - w) // 2, (rh - h) // 2
+    content = content.crop((left, top, left + w, top + h))
+
+    x0, y0 = cx - w // 2, cy - h // 2
+    mask = Image.new("L", (w, h), 0)
+    md = ImageDraw.Draw(mask)
+    md.rounded_rectangle([0, 0, w, h], radius=radius, fill=int(255 * k))
+    glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.rounded_rectangle([x0 - 4, y0 - 4, x0 + w + 4, y0 + h + 4], radius=radius + 4,
+                          outline=ring_color + (int(220 * k),), width=4)
+    glow = glow.filter(ImageFilter.GaussianBlur(3))
+    img.paste(content.convert("RGBA"), (x0, y0), mask)
+    img.alpha_composite(glow)
+    d = ImageDraw.Draw(img, "RGBA")
+    d.rounded_rectangle([x0, y0, x0 + w, y0 + h], radius=radius, outline=ring_color + (int(235 * k),), width=2)
+
+
 def full_bleed(content_rgb_float):
     """Edge-to-edge real footage -- map elements are drawn ON TOP of this
     by the caller, not masked into it."""
@@ -206,54 +257,65 @@ def dim_overlay(img, k):
     d.rectangle([0, 0, W, H], fill=(6, 7, 8, int(140 * k)))
 
 
-def system_diagram_tag(img, k=1.0):
+def system_diagram_tag(img, k=1.0, font_size=20):
     """"SYSTEM DIAGRAM" -- r178's own explicit instruction: label the
     map sequence so it cannot be mistaken for evidence of a deployed
     interface. Held continuously while the map is dominant, discreet
     corner, same "no shared fade envelope" discipline as a disclosure
-    tag."""
+    tag. font_size is now callable -- r180's rule 5 explicitly names
+    this tag as needing to stay "mobile-legible"; default 20 is
+    unchanged so place/zone/close render exactly as before."""
     d = ImageDraw.Draw(img, "RGBA")
     text = "SYSTEM DIAGRAM"
-    f = font("Medium", 20)
+    f = font("Medium", font_size)
+    lh = int(font_size * 1.1)
     tw = d.textlength(text, font=f)
-    x, y = W - 36 - tw, H - 52
+    x, y = W - 36 - tw, H - 32 - lh
     a = int(190 * k)
-    d.rectangle([x - 4, y - 4, x + tw + 4, y + 22 + 4], fill=(8, 9, 11, int(120 * k)))
+    d.rectangle([x - 4, y - 4, x + tw + 4, y + lh + 4], fill=(8, 9, 11, int(120 * k)))
     _shadow_text(d, (x, y), text, f, OFFWHITE + (a,))
 
 
-def disclosure(img, text="PRODUCT VISUALIZATION", corner="tr", k=1.0):
+def disclosure(img, text="PRODUCT VISUALIZATION", corner="tr", k=1.0, font_size=22):
     """Held continuously by construction (k defaults to 1.0, no fade
-    envelope) -- same discipline as graphics_walk.py's disclosure()."""
+    envelope) -- same discipline as graphics_walk.py's disclosure().
+    font_size is now callable (r180's mobile-legibility pass wants
+    disclosures at least 38px in the dark-field sections); default 22
+    is unchanged so place/zone/close render exactly as before."""
     d = ImageDraw.Draw(img, "RGBA")
-    f = font("SemiBold", 22)
+    f = font("SemiBold", font_size)
+    lh = int(font_size * 1.05)
     tw = d.textlength(text, font=f)
-    pad = 4
+    pad = max(4, int(font_size * 0.18))
     if corner == "tr":
         x, y = W - 40 - tw, 40
     elif corner == "tl":
         x, y = 40, 40
     else:
-        x, y = W - 40 - tw, H - 60
+        x, y = W - 40 - tw, H - 40 - lh
     a = int(230 * k)
-    d.rectangle([x - pad, y - pad, x + tw + pad, y + 22 + pad], fill=(0, 0, 0, int(150 * k)))
+    d.rectangle([x - pad, y - pad, x + tw + pad, y + lh + pad], fill=(0, 0, 0, int(150 * k)))
     _shadow_text(d, (x, y), text, f, OFFWHITE + (a,))
-    d.line([(x, y + 27), (x + tw, y + 27)], fill=CYAN + (int(200 * k),), width=1)
+    d.line([(x, y + lh + 5), (x + tw, y + lh + 5)], fill=CYAN + (int(200 * k),), width=1)
 
 
-def caption(img, t, dur, text, k=None, y_frac=0.88):
+def caption(img, t, dur, text, k=None, y_frac=0.88, font_size=40):
+    """font_size is now callable (r180 wants primary captions at least
+    52px in the dark-field sections); default 40 is unchanged so
+    place/zone/close render exactly as before."""
     if k is None:
         k = fade_k(t, dur)
     if k <= 0:
         return
     d = ImageDraw.Draw(img, "RGBA")
-    f = font("SemiBold", 40)
+    f = font("SemiBold", font_size)
     s = text.upper()
     tw = d.textlength(s, font=f)
     x, y = W / 2, H * y_frac
     pad = 14
+    box_h = font_size * 0.75
     a = int(240 * k)
-    d.rectangle([x - tw / 2 - pad, y - 30, x + tw / 2 + pad, y + 30], fill=(8, 9, 11, int(150 * k)))
+    d.rectangle([x - tw / 2 - pad, y - box_h, x + tw / 2 + pad, y + box_h], fill=(8, 9, 11, int(150 * k)))
     _shadow_text(d, (x, y), s, f, OFFWHITE + (a,), anchor="mm")
 
 
