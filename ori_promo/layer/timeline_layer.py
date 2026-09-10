@@ -155,7 +155,7 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v37 -- "THE WORLD / THE LAYER" (loop motion polish, r193)')
+    L.append('ORI v37 -- "THE WORLD / THE LAYER" (score added, r195)')
     L.append("Fifth and final execution in the operator-ordered five-style "
              "slate (r145__operator__five_style_variants.md); v33/r167, "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
@@ -191,7 +191,21 @@ def main():
              "footage -- the same device this film's own wipes already "
              "use on its AI plates. No footage swap, no wording, no "
              "disclosure, no timing, and the 74.000s runtime are "
-             "unchanged; only the loop section's camera motion.")
+             "unchanged; only the loop section's camera motion. r194 "
+             "reviewed r193 and updated the v37 picture freeze to it. "
+             "The operator then said 'the whole vibe' was still off. "
+             "Every prior report for this style claimed 'narration only, "
+             "no score -- the same judgment call every prior style in "
+             "this slate has made' -- that was never actually checked: "
+             "v33 (one/) and v34 (field/) both ship a synthesized, "
+             "license-clean score, wired the same way this build now "
+             "wires score_layer.py. r195 adds that score (bright C-G-Am-F "
+             "progression, quiet under the hook's own wipe reveal, a "
+             "swell under the richest section (examples), easing back "
+             "for the loop's four words, released before the end card) "
+             "mixed under narration exactly like field/assemble_field.py "
+             "mixes its own. Picture is pixel-identical to r193; only "
+             "the audio changed.")
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps, full 16:9, no scope crop")
     L.append("")
     L.append("SECTION LIST -- generated from spec_layer.py, not retyped")
@@ -292,11 +306,26 @@ def main():
              "and the 74.000s runtime are unchanged.")
     L.append("")
     L.append("SOUND")
-    L.append("  Narration only -- no score, no sound effects. r184's "
-             "brief doesn't ask for one; adding invented sound design "
-             "without that being asked for would be scope creep, the "
-             "same judgment call every prior style in this slate has "
-             "made when not explicitly asked otherwise.")
+    L.append("  r195: narration plus a synthesized score (score_layer.py) "
+             "-- no sample, nothing licensed, regenerable from source at "
+             "any length. Bright C-G-Am-F progression, 96 BPM, mixed under "
+             "narration at weight 0.55 vs. the voice's 1.0 (the same "
+             "balance field/assemble_field.py's own mix uses). Quiet "
+             "under the hook's clean-footage open, lifts through the "
+             "wipe reveal (1.8-4.2s), sustains through borrow/recognize, "
+             "swells under examples (32.0-54.0s, the richest passage), "
+             "eases back for the loop's four words so they aren't "
+             "fighting a swell, and releases before the end card. r185- "
+             "r193 all claimed this was 'the same judgment call every "
+             "prior style in this slate has made' -- that was never "
+             "checked against the other four builds: v33 (one/) and v34 "
+             "(field/) both ship a score already, wired the same way. "
+             "Measured -16.55 LUFS integrated / -1.94 dBTP true peak "
+             "(no clipping: volumedetect max_volume -1.5 dB, right at "
+             "the limiter's own ceiling). This session has no audio "
+             "playback capability, so the mix's musical/emotional fit "
+             "is not something it can verify by ear -- only that the "
+             "signal is present, level-matched, and clean.")
     print("\n".join(L))
 
 

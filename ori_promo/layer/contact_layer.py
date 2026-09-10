@@ -1,17 +1,10 @@
 #!/usr/bin/env python3
-"""r193 evidence pack: full-film contact sheet for v37 "The World / The
-Layer", motion polish (v37 froze at r191/r192 on ChatGPT's rubric; this
-round is a further self-directed craft pass per the operator's own
-"keep making it look good" note, not a response to a flagged review
-finding). The loop section (54.0-66.0s) was the one full-bleed section
-in the film with literally zero camera motion for its whole 12s --
-every other full-bleed section's source footage carries some camera
-movement, this one is close to a locked-off tripod shot, and sampling
-it read as a frozen slide across all four word beats. build_loop() now
-applies a gentle continuous push-in (1.00x -> 1.07x over the section,
-the same "gentle continuous push-in" language this file already uses
-for its AI plates) directly on the real footage. Same 1.4s base
-density plus every standing EXTRA_BOUNDS range from r187/r189/r190.
+"""r195 evidence pack: full-film contact sheet for v37 "The World / The
+Layer" -- audio only round (score added, see score_layer.py and
+assemble_layer.py). The picture is pixel-identical to r193/r194 (same
+section renders, same push-in, same typography); this contact sheet is
+regenerated only so the evidence pack has a matching round number, not
+because anything visual changed. Same density/EXTRA_BOUNDS as r193.
 """
 import subprocess
 
@@ -71,7 +64,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r193__claude__v37_world_layer_loop_motion__contact.png", sheet)
+    cv2.imwrite("r195__claude__v37_world_layer_score__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

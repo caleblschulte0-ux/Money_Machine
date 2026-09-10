@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """v37 "THE WORLD / THE LAYER" -- concat, sound, master.
 
-Narration only -- no score, no sound effects. r184's brief doesn't ask
-for one; adding invented sound design without that being asked for would
-be scope creep, the same judgment call every prior style in this slate
-has made when not explicitly asked otherwise.
+r194 (operator: "the whole vibe"): every prior report for this style
+claimed "narration only, no score -- the same judgment call every prior
+style in this slate has made." That was never actually verified against
+the other four builds -- v33 (one/) and v34 (field/) both ship a
+synthesized score (score_one.py/score_field.py), wired into their own
+assemble scripts exactly like this. Only v35/v36/v37 shipped silent. A
+narrated video over bare nature sound reads flatter next to a scored one
+-- score_layer.py adds the same license-clean synthesized bed (no
+sample, nothing licensed) the other two builds already use, mixed under
+the narration the same way field/assemble_field.py mixes its own.
 """
 import json
 import os
@@ -27,9 +33,13 @@ def master(dst):
                     "-i", "concat_layer.txt", "-r", str(FPS), "-fps_mode", "cfr",
                     "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p",
                     f"{OUT}/_picture.mp4"], check=True)
+    # Music under narration -- the voice stays on top (weight 1.0 vs 0.55),
+    # same balance field/assemble_field.py's own mix uses.
+    mix = ("[1:a][2:a]amix=inputs=2:normalize=0:weights=0.55 1.0,"
+           "alimiter=limit=0.80:attack=4:release=90:level=disabled")
     p = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", f"{OUT}/_picture.mp4",
-                        "-i", f"{OUT}/_vo.wav", "-filter_complex",
-                        "[1:a]loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json[a]",
+                        "-i", f"{OUT}/_music.wav", "-i", f"{OUT}/_vo.wav", "-filter_complex",
+                        mix + ",loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json[a]",
                         "-map", "[a]", "-f", "null", "-"], capture_output=True, text=True)
     m = re.findall(r"\{[^{}]*input_i[^{}]*\}", p.stderr, re.S)
     if not m:
@@ -37,15 +47,17 @@ def master(dst):
     j = json.loads(m[-1])
     print("  measured", j["input_i"], j["input_tp"])
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", f"{OUT}/_picture.mp4",
-                    "-i", f"{OUT}/_vo.wav", "-filter_complex",
-                    (f"[1:a]loudnorm=I=-16:TP=-1.5:LRA=11:linear=true:measured_I={j['input_i']}:"
-                     f"measured_TP={j['input_tp']}:measured_LRA={j['input_lra']}:"
-                     f"measured_thresh={j['input_thresh']},aresample={SR}[a]"),
+                    "-i", f"{OUT}/_music.wav", "-i", f"{OUT}/_vo.wav", "-filter_complex",
+                    mix + (f",loudnorm=I=-16:TP=-1.5:LRA=11:linear=true:measured_I={j['input_i']}:"
+                           f"measured_TP={j['input_tp']}:measured_LRA={j['input_lra']}:"
+                           f"measured_thresh={j['input_thresh']},aresample={SR}[a]"),
                     "-map", "0:v", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
                     "-ar", str(SR), "-movflags", "+faststart", dst], check=True)
 
 
 if __name__ == "__main__":
+    import score_layer
+    score_layer.main()
     import vo_layer
     vo_layer.main()
     print("  sound")
