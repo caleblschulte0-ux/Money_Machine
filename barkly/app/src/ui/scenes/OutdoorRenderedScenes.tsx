@@ -255,7 +255,7 @@ const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png')
  * re-render can never distort a prop again. `npm run check:aspects` restates
  * these from the real PNGs.
  */
-const TREE_ASPECT = 477 / 517;
+const TREE_ASPECT = 482 / 417;
 const BENCH_ASPECT = 491 / 312;
 const HEDGE_ASPECT = 506 / 282;
 const LAMP_ASPECT = 213 / 562;
