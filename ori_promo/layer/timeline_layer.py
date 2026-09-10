@@ -125,7 +125,11 @@ STRUCTURE = {
         "0.0-12.0s  IMG_6805 @26.0s real footage, full-bleed, "
         "continuous -- no wipe, no text-heavy diagram, \"real footage "
         "and two or three large words at a time\" per r184's own "
-        "explicit instruction",
+        "explicit instruction. r193: a gentle continuous push-in "
+        "(1.00x -> 1.07x across the section, center-crop on the "
+        "already-loaded frame) -- the source clip is close to "
+        "locked-off, and this was the only full-bleed section with no "
+        "camera motion at all across a full 12s.",
         "0.0-3.0s   \"BORROW\" / \"the hardware\"",
         "3.0-6.0s   \"EXPERIENCE\" / \"the story\"",
         "6.0-9.0s   \"RETURN\" / \"the hardware\"",
@@ -151,7 +155,7 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v37 -- "THE WORLD / THE LAYER" (typography pass 2, r191)')
+    L.append('ORI v37 -- "THE WORLD / THE LAYER" (loop motion polish, r193)')
     L.append("Fifth and final execution in the operator-ordered five-style "
              "slate (r145__operator__five_style_variants.md); v33/r167, "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
@@ -173,9 +177,21 @@ def main():
              "crisp keyline stroke under the halo on every disclosure and "
              "caption, plus the end card (now white on both lines, coral "
              "reserved for the separator rule) -- still boxless, now "
-             "legible over any background. No footage, wipe, disclosure "
-             "wording, caption wording, narration, timing, or the 74.000s "
-             "runtime changed; only how the type renders.")
+             "legible over any background. r192 reviewed r191 and froze "
+             "v37's picture on ChatGPT's own rubric. r193 is a further "
+             "self-directed craft pass, not a response to a flagged "
+             "review finding: the operator asked to keep improving the "
+             "look, and this session's own fresh re-watch found the loop "
+             "section (54.0-66.0s) was the one full-bleed section in the "
+             "film with zero camera motion for its whole 12s -- every "
+             "other full-bleed section's footage carries some inherent "
+             "camera movement, this one reads close to locked-off. "
+             "build_loop() now applies a gentle continuous push-in "
+             "(1.00x -> 1.07x across the section) directly on the real "
+             "footage -- the same device this film's own wipes already "
+             "use on its AI plates. No footage swap, no wording, no "
+             "disclosure, no timing, and the 74.000s runtime are "
+             "unchanged; only the loop section's camera motion.")
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps, full 16:9, no scope crop")
     L.append("")
     L.append("SECTION LIST -- generated from spec_layer.py, not retyped")

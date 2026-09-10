@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-"""r191 evidence pack: full-film contact sheet for v37 "The World / The
-Layer", typography legibility pass 2 (r190's finding on r189: removing
-the hard boxes was the right direction, but plain white type with only
-a soft halo washed out over pale sky/snow/bright concrete/bright hair.
-graphics_layer.py's disclosure()/caption()/end_card() gained a stronger
-local feathered scrim, a front-loaded bottom-edge gradient, and a crisp
-keyline stroke under the soft halo -- still boxless, now legible over
-any background). Same 1.4s base density plus the standing EXTRA_BOUNDS
-from r187/r189, PLUS r190's own requested dense samples at every
-timestamp its review flagged: 5.6/7.0 (hook disclosure), 16.8/18.2
-(borrow disclosure over hair/sky), 22.8/24.0/30.8 (recognize captions
-over grass), 33.6/39.2 (historical disclosure/caption), 42.8/49.0 (ice
-age disclosure over sky/snow), 66.0/69.2 (close caption over concrete),
-70.6/73.9 (end card, including the literal final frame).
+"""r193 evidence pack: full-film contact sheet for v37 "The World / The
+Layer", motion polish (v37 froze at r191/r192 on ChatGPT's rubric; this
+round is a further self-directed craft pass per the operator's own
+"keep making it look good" note, not a response to a flagged review
+finding). The loop section (54.0-66.0s) was the one full-bleed section
+in the film with literally zero camera motion for its whole 12s --
+every other full-bleed section's source footage carries some camera
+movement, this one is close to a locked-off tripod shot, and sampling
+it read as a frozen slide across all four word beats. build_loop() now
+applies a gentle continuous push-in (1.00x -> 1.07x over the section,
+the same "gentle continuous push-in" language this file already uses
+for its AI plates) directly on the real footage. Same 1.4s base
+density plus every standing EXTRA_BOUNDS range from r187/r189/r190.
 """
 import subprocess
 
@@ -37,7 +36,7 @@ EXTRA_BOUNDS = [
     41.0, 44.5, 49.5,                           # examples: ice disclosure in, hold, part boundary
     42.8, 49.0,                                  # examples: ice disclosure over pale sky/snow (r190)
     50.5, 52.0,                                 # examples: audio (no disclosure) reset + pulse
-    57.0, 60.0, 63.0,                           # loop: word beats
+    54.5, 57.0, 60.0, 63.0, 65.5,                # loop: word beats + push-in start/end samples (r193)
     66.0, 69.2,                                  # close: definition caption over sunlit concrete (r190)
     70.5, 70.6, 73.9,                            # close: end card appears / literal final frame
 ]
@@ -72,7 +71,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r191__claude__v37_world_layer_typography_pass2__contact.png", sheet)
+    cv2.imwrite("r193__claude__v37_world_layer_loop_motion__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

@@ -143,6 +143,24 @@ def from_pil(img):
     return rgb[:, :, ::-1].astype(np.float32)
 
 
+def _zoom_frame(frame_bgr, scale):
+    """Center-crop push-in on an already-loaded real-footage frame --
+    the same "gentle continuous push-in" language this file already
+    uses for the AI plates, applied to loop_world so it isn't the one
+    section in the film with zero camera motion for a full 12 seconds
+    (every other full-bleed section's own footage carries some camera
+    movement; this clip is close to locked-off). scale<=1.0 is a no-op."""
+    if scale <= 1.0001:
+        return frame_bgr
+    h, w = frame_bgr.shape[:2]
+    img = Image.fromarray(np.clip(frame_bgr, 0, 255).astype(np.uint8)[:, :, ::-1])
+    nw, nh = int(round(w * scale)), int(round(h * scale))
+    img = img.resize((nw, nh), Image.LANCZOS)
+    left, top = (nw - w) // 2, (nh - h) // 2
+    img = img.crop((left, top, left + w, top + h))
+    return np.array(img)[:, :, ::-1]
+
+
 def encode(frames, dst, fps=FPS, crf=15, preset="slow"):
     """Writes frames to a plain temp file first, then points ffmpeg's
     rawvideo demuxer at that file -- not a live stdin pipe. Same fix as
@@ -433,7 +451,8 @@ def build_loop():
     out = []
     for i in range(n):
         t = i / FPS
-        img = G.full_bleed(world[i])
+        frame = _zoom_frame(world[i], 1.0 + 0.07 * (t / dur))
+        img = G.full_bleed(frame)
         idx = min(int(t // 3.0), len(LOOP_WORDS) - 1)
         local_t = t - idx * 3.0
         primary, sub = LOOP_WORDS[idx]
