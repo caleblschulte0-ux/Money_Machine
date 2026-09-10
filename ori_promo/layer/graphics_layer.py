@@ -247,8 +247,13 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
     wy = max(0, min(Hf - wh, int(win_cy * Hf - wh / 2)))
     p = min(1.0, progress)
 
-    _soft_patch_scrim(img, wx + ww / 2, wy + wh / 2 + 12, ww / 2 + 20, wh / 2 + 20,
-                       max_alpha=int(130 * min(1.0, p * 3)), blur=30)
+    # r198 (ChatGPT review): the wider, offset, higher-alpha scrim read as
+    # a floating picture-card's drop shadow, working against "an anchored
+    # AR layer." Tighter to the window bounds, centered (no offset), and
+    # much lower alpha -- a legibility scrim only; the corner brackets
+    # below carry the AR-system identity, not a shadow.
+    _soft_patch_scrim(img, wx + ww / 2, wy + wh / 2, ww / 2 + 6, wh / 2 + 6,
+                       max_alpha=int(60 * min(1.0, p * 3)), blur=16)
 
     layer_img = full_bleed(layer_bgr)
     lw, lh = layer_img.width, layer_img.height
@@ -282,7 +287,13 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
     crop.putalpha(Image.fromarray((alpha * 255).astype(np.uint8), mode="L"))
     img.alpha_composite(crop, (wx, wy))
 
-    zone_trace(img, wx + ww // 2, wy + wh // 2, ww, wh, k=min(1.0, p * 2.5))
+    # r198 (ChatGPT review): brackets snapping to full strength by p=0.4
+    # and HOLDING there meant the closing sweep (progress 1.0 -> 0.0)
+    # left a still-fully-drawn aperture around a thin sliver of content
+    # for most of the close -- "a collapsing crop, not a clean AR
+    # dismissal." k now tracks p almost linearly, so the brackets shrink
+    # away in step with the content on both open and close.
+    zone_trace(img, wx + ww // 2, wy + wh // 2, ww, wh, k=min(1.0, p * 1.15))
 
     if 0.0 < p < 1.0:
         d = ImageDraw.Draw(img, "RGBA")

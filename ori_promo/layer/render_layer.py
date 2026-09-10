@@ -27,16 +27,29 @@ footage read, so its own wall clock stays small and predictable
 regardless of how slow a fresh raw read happens to run that minute.
 
 Footage windows (all reused from stretches this handoff has already
-verified clean across multiple prior rounds, plus a fresh scout of
-IMG_6805 20-38s done for this build):
+verified clean across multiple prior rounds):
   - IMG_6790 is only 32.0s long; its 8-31s stretch has been used clean
     by v36's place/hwsw/close across three separate rounds. hook/
     borrow/close all draw from inside that stretch here.
-  - IMG_6805's 20-33s window was verified clean by v36's r181 (one
-    small, consistently-distant background pedestrian, judged
-    acceptable). This build's own scout extended that check to 38s
-    (still clean) -- past 39s the recurring visitor walks close to
-    camera in the foreground, so nothing in this film reads past 38s.
+  - r199 (ChatGPT's r198 review: the wearer disappears for 46 straight
+    seconds, 00:20-01:06, because recognize/examples/loop all used
+    IMG_6805's peopleless 20-33/26-38s windows): recognize, examples_
+    hist, examples_ice, examples_audio and loop now all draw from ONE
+    continuous, unbroken take of the wearer -- IMG_6794 (54.4s, a
+    locked-off wide shot at the stone overlook wall, the wearer facing
+    away/across the falls, gesturing/pointing throughout; already
+    verified as "the wearer" by one/spec_one.py's own prior scouting).
+    0.0-12.0s -> recognize, 12.0-20.0s -> examples_hist, 20.0-29.5s ->
+    examples_ice, 29.5s (single frame) -> examples_audio's still,
+    29.5-41.5s -> loop: one unbroken 41.5s span out of the clip's 54.4s
+    (12.9s spare), so the wearer is on screen, in the SAME real shot,
+    for the whole recognize->examples->loop stretch -- never a cut to
+    a different, peopleless clip. The AR window position (WIN_CX/CY/
+    W/H, shared with recognize's own ZONE_CX/CY/W/H) was verified
+    against this specific take at 4s intervals across its full 0-44s
+    range plus the exact examples_audio anchor timestamp: the wearer
+    stays right-of-frame throughout, never entering the window's
+    bounds (roughly the left third of frame, over open falls/sky).
 """
 import os
 import subprocess
@@ -195,10 +208,14 @@ def encode(frames, dst, fps=FPS, crf=15, preset="slow"):
 # Each is split into two 6.0s halves, each its own tiny process, then
 # concatenated (a cheap `-c copy` mux, not a re-encode) into the single
 # _src_<key>.mp4 the section builders expect.
+# r199: recognize_world and loop_world now read IMG_6794 (the wearer's
+# continuous overlook take) at the in-points that keep the whole
+# recognize->examples->loop stretch one unbroken 41.5s span of it (see
+# this file's own module docstring for the full budget).
 SPLIT_PARTS = {
     "borrow_world": [("6790", 16.0, 6.0), ("6790", 22.0, 6.0)],
-    "recognize_world": [("6805", 20.0, 6.0), ("6805", 26.0, 6.0)],
-    "loop_world": [("6805", 26.0, 6.0), ("6805", 32.0, 6.0)],
+    "recognize_world": [("6794", 0.0, 6.0), ("6794", 6.0, 6.0)],
+    "loop_world": [("6794", 29.5, 6.0), ("6794", 35.5, 6.0)],
 }
 
 SOURCE_DUR = {
@@ -222,9 +239,11 @@ SOURCE_READERS = {
     "hook_layer": lambda: build_photo_zoom(ICEAGE_SRC, 8.0, cap=1.06),
     "borrow_hero": lambda: build_photo_zoom(HERO_SRC, 5.5, cap=1.05),
     "borrow_worn": lambda: build_photo_zoom(WORN_SRC, 5.0, cap=1.05),
-    "exhist_world": lambda: read_clip("6805", 24.0, 8.0),
+    # r199: 12.0-20.0s and 20.0-29.5s of IMG_6794 -- continuing directly
+    # from recognize_world's own 0.0-12.0s on the same unbroken take.
+    "exhist_world": lambda: read_clip("6794", 12.0, 8.0),
     "exhist_layer": lambda: read_plate(DAK_SRC, 8.0),
-    "exice_world": lambda: read_clip("6805", 26.0, 9.5),
+    "exice_world": lambda: read_clip("6794", 20.0, 9.5),
     "exice_layer": lambda: build_photo_zoom(ICEAGE_SRC, 9.5, cap=1.05),
     "close_world": lambda: read_clip("6790", 22.0, 8.0),
 }
@@ -429,7 +448,10 @@ def build_examples_ice():
 def build_examples_audio():
     seg_dur = 4.5
     n = int(round(seg_dur * FPS))
-    still = bright_edit_grade(read_clip("6805", 33.0, 0.1)[0])
+    # r199: the still is grabbed at IMG_6794 @29.5s -- the exact instant
+    # examples_ice's own read ends, so the wearer's continuous take
+    # carries straight through into this reset with no time jump.
+    still = bright_edit_grade(read_clip("6794", 29.5, 0.1)[0])
     out = []
     for i in range(n):
         t = i / FPS
@@ -437,8 +459,12 @@ def build_examples_audio():
         if t >= 1.0:
             k = G.fade_k(t - 1.0, seg_dur - 1.0, in_t=0.4, out_margin=0.0, no_out=True)
             phase = ((t - 1.0) % 1.2) / 1.2
-            G.anchor_pulse(img, W * 0.5, H * 0.42, k=k, phase=phase)
-            G.anchor_pulse(img, W * 0.5, H * 0.42, k=k, phase=(phase + 0.5) % 1.0)
+            # r199: shifted left off center (was W*0.5) -- the wearer
+            # occupies right-of-center in this shot; the anchor now
+            # sits over open falls/sky, matching the AR window's own
+            # position, instead of grazing his head/shoulder.
+            G.anchor_pulse(img, W * 0.34, H * 0.34, k=k, phase=phase)
+            G.anchor_pulse(img, W * 0.34, H * 0.34, k=k, phase=(phase + 0.5) % 1.0)
         if t >= 1.2:
             G.caption(img, t - 1.2, seg_dur - 1.2, CAPTIONS["audio"])
         out.append(from_pil(img))

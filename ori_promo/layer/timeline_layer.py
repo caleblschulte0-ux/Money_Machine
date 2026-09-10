@@ -75,10 +75,15 @@ STRUCTURE = {
         "clean real footage, the cut into the next section",
     ],
     "recognize": [
-        "0.0-12.0s  IMG_6805 @20.0s real footage, full-bleed, "
-        "continuous -- the 20-33s window v36's r181 verified clean "
-        "(one small, consistently-distant background pedestrian, "
-        "judged acceptable, disclosed there and still true here)",
+        "0.0-12.0s  IMG_6794 @0.0s real footage, full-bleed, continuous "
+        "-- r199: the wearer, locked-off wide at the stone overlook "
+        "wall, facing across the falls, gesturing/pointing throughout. "
+        "Replaces IMG_6805's peopleless 20-33s window (ChatGPT's r198 "
+        "review: the wearer was absent for 46 straight seconds here "
+        "through loop). This is the FIRST 12.0s of one continuous "
+        "41.5s take that also backs examples_hist/ice/audio and loop "
+        "(see STANDING WEARER CONTINUITY below) -- one unbroken real "
+        "shot spans recognize through loop, not four separate clips.",
         "0.2-1.9s   primary_label \"WHEN THE PLACE RECOGNIZES YOU\" "
         "(72px -- r187, was 62px; r186 caught this against r184's own "
         "72px primary-label minimum, the only miss in that review. "
@@ -106,16 +111,19 @@ STRUCTURE = {
         "process -- the same harness-timeout-avoidance pattern v36's "
         "examples section established (a single ~660-frame build "
         "kept exceeding the background wall-clock limit there).",
-        "0.0-1.0s   HISTORICAL part opens on clean IMG_6805 @24.0s "
-        "real footage (reset)",
+        "0.0-1.0s   HISTORICAL part opens on IMG_6794 @12.0s real "
+        "footage (reset) -- r199: continues directly from recognize's "
+        "own 0.0-12.0s on the SAME unbroken take, the wearer still on "
+        "screen, replacing IMG_6805's peopleless reset",
         "1.0-2.2s   windowed_reveal(direction=ltr, r197): the AR window "
         "opens over the LEFT side of frame, exposing IMG_DAK1.MOV (the "
         "same already-disclosed reenactment plate v33-v36 all reuse) "
-        "while the SAME real waterfall stays visible on the right -- "
-        "directly answers the operator's own comparison (\"when we cut "
-        "to the native family, that's at least a hard cut... still "
-        "sucks\"): it is no longer a cut at all, real and reenacted "
-        "footage of the same place sit side by side",
+        "while the SAME real waterfall -- and the wearer, r199 -- stays "
+        "visible on the right -- directly answers the operator's own "
+        "comparison (\"when we cut to the native family, that's at "
+        "least a hard cut... still sucks\"): it is no longer a cut at "
+        "all, real and reenacted footage of the same place sit side by "
+        "side, with a person actually standing there experiencing it",
         "1.0-8.0s   disclosure \"VISUALIZATION\", held continuously "
         "from the instant any layer pixel is visible",
         "2.2-8.0s   caption \"HISTORICAL RECONSTRUCTION\"",
@@ -123,8 +131,9 @@ STRUCTURE = {
         "matches the real plate exactly rather than requesting more "
         "than exists; ICE AGE absorbs the other 0.5s below so the "
         "section's total (22.0s) is unchanged.",
-        "8.0-9.0s   ICE AGE part opens on clean IMG_6805 @26.0s real "
-        "footage (reset)",
+        "8.0-9.0s   ICE AGE part opens on IMG_6794 @20.0s real footage "
+        "(reset) -- r199: same unbroken take, continuing from "
+        "HISTORICAL's own 12.0-20.0s window",
         "9.0-10.4s  windowed_reveal(direction=diag, r197): the AR "
         "window opens on a diagonal sweep -- a distinct direction from "
         "historical's left-to-right -- exposing the Ice Age plate "
@@ -132,10 +141,15 @@ STRUCTURE = {
         "beside it",
         "9.0-17.5s  disclosure \"VISUALIZATION\", held continuously",
         "10.4-17.5s caption \"ICE AGE VISUALIZATION\"",
-        "17.5-18.5s AUDIO part opens on clean IMG_6805 @33.0s real "
-        "footage (reset) -- the same still-frame technique v35/v36 "
-        "used for their own spatial-audio segment",
-        "18.5-22.0s two overlapping anchor_pulse rings (a simple "
+        "17.5-18.5s AUDIO part opens on a still grabbed at IMG_6794 "
+        "@29.5s (reset) -- r199: the exact instant ICE AGE's own read "
+        "ends, so the wearer's take carries straight through with no "
+        "time jump; the same still-frame technique v35/v36 used for "
+        "their own spatial-audio segment",
+        "18.5-22.0s two overlapping anchor_pulse rings, now at "
+        "(0.34W, 0.34H) -- r199: shifted off center (was 0.5W, 0.42H) "
+        "so the anchor sits over open falls/sky instead of grazing the "
+        "wearer's head/shoulder in this composition (a simple "
         "synchronized-audio visual, not a wipe) -- no disclosure tag, "
         "since this is a real-footage still, not fabricated imagery",
         "18.7-22.0s caption \"SPATIAL AUDIO, SYNCHRONIZED\"",
@@ -145,14 +159,16 @@ STRUCTURE = {
         "different reveal mechanisms this time.",
     ],
     "loop": [
-        "0.0-12.0s  IMG_6805 @26.0s real footage, full-bleed, "
-        "continuous -- no wipe, no text-heavy diagram, \"real footage "
+        "0.0-12.0s  IMG_6794 @29.5s real footage, full-bleed, "
+        "continuous -- r199: the LAST 12.0s of the same unbroken take "
+        "that opens recognize and backs all three examples parts, so "
+        "the wearer is on screen for the words too, not just a returned "
+        "empty view. No wipe, no text-heavy diagram, \"real footage "
         "and two or three large words at a time\" per r184's own "
-        "explicit instruction. r193: a gentle continuous push-in "
+        "explicit instruction. r193's gentle continuous push-in "
         "(1.00x -> 1.07x across the section, center-crop on the "
-        "already-loaded frame) -- the source clip is close to "
-        "locked-off, and this was the only full-bleed section with no "
-        "camera motion at all across a full 12s.",
+        "already-loaded frame) is unchanged -- still the only "
+        "full-bleed section with no camera motion of its own.",
         "0.0-3.0s   \"BORROW\" / \"the hardware\"",
         "3.0-6.0s   \"EXPERIENCE\" / \"the story\"",
         "6.0-9.0s   \"RETURN\" / \"the hardware\"",
@@ -180,7 +196,7 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v37 -- "THE WORLD / THE LAYER" (AR-window rework, r197)')
+    L.append('ORI v37 -- "THE WORLD / THE LAYER" (wearer continuity, r199)')
     L.append("Fifth and final execution in the operator-ordered five-style "
              "slate (r145__operator__five_style_variants.md); v33/r167, "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
@@ -377,24 +393,82 @@ def main():
              "and geometry recognize's own zone_trace already uses "
              "(reused deliberately -- the whole film now reads as one "
              "consistent AR system, not a different effect per section), "
-             "soft drop shadow, directional reveal sweep confined to the "
-             "window's own bounds, coral seam at the sweep's leading "
-             "edge while mid-open. The boy protagonist (hook/borrow) and "
-             "the falls themselves (examples) stay visible beside the "
-             "window at every timestamp checked -- no collision with "
-             "the disclosure tag (top-right) or the bottom captions in "
-             "any re-rendered section, confirmed on real frame grabs, "
-             "not just the synthetic smoke test windowed_reveal() was "
-             "unit-tested against before wiring it in. Window geometry "
-             "(WIN_CX/CY/W/H in graphics_layer.py) is a direct constant "
-             "copy of recognize's ZONE_CX/CY/W/H in render_layer.py -- "
-             "one AR window position/size for the whole film. Not fixed "
-             "by this round, and not attempted: hook/borrow/close use "
-             "IMG_6790 (the boy is on screen); recognize/examples/loop "
-             "use IMG_6805, a different, peopleless landscape clip. A "
-             "single continuous protagonist across all six sections "
-             "would require different footage selection, not a "
-             "compositing change, and is out of scope here.")
+             "directional reveal sweep confined to the window's own "
+             "bounds, coral seam at the sweep's leading edge while "
+             "mid-open. The wearer (hook/borrow, and r199: recognize/"
+             "examples/loop too) and the falls themselves stay visible "
+             "beside the window at every timestamp checked -- no "
+             "collision with the disclosure tag (top-right) or the "
+             "bottom captions in any re-rendered section, confirmed on "
+             "real frame grabs, not just the synthetic smoke test "
+             "windowed_reveal() was unit-tested against before wiring "
+             "it in. Window geometry (WIN_CX/CY/W/H in graphics_"
+             "layer.py) is a direct constant copy of recognize's "
+             "ZONE_CX/CY/W/H in render_layer.py -- one AR window "
+             "position/size for the whole film.")
+    L.append("  r198 (ChatGPT's review of r197): PASSED the white-type "
+             "correction and the core windowed-reveal approach, but "
+             "REJECTED freezing the picture on two grounds: (1) the "
+             "wearer still disappeared for 46 straight seconds (00:20-"
+             "01:06) because recognize/examples/loop drew from IMG_"
+             "6805, a different, peopleless clip -- \"places where "
+             "nobody is walking around have no life, no pathos, no "
+             "ethos,\" the operator's own point, still true after r197's "
+             "fix; (2) the window's drop shadow and static-strength "
+             "brackets still read as \"a floating picture-card,\" and "
+             "the closing sweep at ~00:19 left \"only a thin strip of "
+             "content inside the still fully drawn aperture\" -- \"a "
+             "collapsing crop, not a clean AR dismissal.\" See STANDING "
+             "WEARER CONTINUITY below for (1); for (2), windowed_"
+             "reveal()'s scrim is now tighter and lower-alpha (padding "
+             "ww/2+6 not +20, alpha up to 60 not 130, centered, no "
+             "offset -- a legibility scrim, not a card shadow) and "
+             "zone_trace's k now tracks p*1.15 instead of p*2.5, so the "
+             "brackets shrink in step with the revealed content on "
+             "BOTH open and close instead of snapping to full strength "
+             "by p=0.4 and holding there through most of a close.")
+    L.append("")
+    L.append("STANDING WEARER CONTINUITY (new this round, r199)")
+    L.append("  ChatGPT's r198 review, verbatim: \"the wearer disappears "
+             "for the entire 00:20-01:06 middle: 46 seconds of the "
+             "74-second film sit on the same peopleless base view... "
+             "A viewer therefore watches a person demonstrate the "
+             "premise, loses him for nearly two-thirds of the runtime, "
+             "and sees him return only for the close.\" This is the same "
+             "root complaint the operator raised at r196 (\"no life, no "
+             "pathos, no ethos\") persisting in a new form after r197's "
+             "picture-compositing fix, because that fix never touched "
+             "WHICH footage recognize/examples/loop drew from -- only "
+             "how the AI/product content was composited over it. "
+             "recognize, examples_hist, examples_ice, examples_audio "
+             "and loop now all draw from ONE continuous, unbroken take "
+             "of the wearer instead: IMG_6794 (a 54.4s locked-off wide "
+             "shot at the stone overlook wall, the wearer facing away/"
+             "across the falls, gesturing and pointing throughout -- "
+             "already identified as \"the wearer\" by one/spec_one.py's "
+             "own prior scouting of this same raw footage library). "
+             "0.0-12.0s backs recognize, 12.0-20.0s examples_hist, "
+             "20.0-29.5s examples_ice, 29.5s (a single frame) examples_"
+             "audio's still, 29.5-41.5s loop -- one unbroken 41.5s span "
+             "out of the clip's 54.4s (12.9s to spare), so the section "
+             "boundaries land on the SAME real take rather than cutting "
+             "to a different clip: the wearer is present, in the same "
+             "shot, continuously, for the entire recognize->examples->"
+             "loop stretch. AR window placement was verified against "
+             "this specific take at 4s intervals across its full 0-44s "
+             "range (frame grabs with the window's exact bounds drawn "
+             "on top): the wearer stays right-of-frame throughout, "
+             "never entering the window's bounds (the left third of "
+             "frame, over open falls/sky) -- confirmed, not assumed. "
+             "examples_audio's anchor_pulse position also moved (0.34W, "
+             "0.34H, was 0.5W/0.42H) after the original center position "
+             "was found grazing the wearer's head/shoulder in this "
+             "specific composition. Not touched: hook/borrow/close "
+             "still use IMG_6790, a different clip (also featuring the "
+             "wearer) -- the section cut between borrow and recognize "
+             "is a genuine shot change like every other section "
+             "boundary in the film, not a continuity break introduced "
+             "by this round.")
     L.append("")
     L.append("SOUND")
     L.append("  r195: narration plus a synthesized score (score_layer.py) "
@@ -421,10 +495,12 @@ def main():
              "chat) recommended freezing picture pending an operator "
              "audio listening verdict on r195 -- written before the "
              "operator's own direct critique below arrived; r197 "
-             "supersedes that hold on the operator's explicit, more "
-             "recent instruction to rework the picture. r195's score "
-             "and its open six-part audio spot-check are both carried "
-             "forward untouched by this round.")
+             "superseded that hold on the operator's explicit, more "
+             "recent instruction to rework the picture, and r199 "
+             "(this round) is ChatGPT's own r198 follow-up review of "
+             "that fix -- still picture-only. r195's score and its "
+             "open six-part audio spot-check are both carried forward "
+             "untouched, unchanged since r195.")
     L.append("")
     L.append("R197 -- THE OPERATOR'S DIRECT 5-SCREENSHOT CRITIQUE")
     L.append("  The operator watched the delivered r195 film and gave "
