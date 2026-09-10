@@ -139,13 +139,16 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v36 -- "HOW THE SYSTEM WORKS" (pass 2, r181)')
+    L.append('ORI v36 -- "HOW THE SYSTEM WORKS" (pass 3, r183)')
     L.append("Fourth execution in the operator-ordered five-style slate "
              "(r145__operator__five_style_variants.md); v33/r167 and "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
-             "only an operator audio spot-check. r181 rescales hwsw/"
-             "examples/loop for mobile legibility per r180's review; "
-             "place/zone/close are unchanged (all three PASSED).")
+             "only an operator audio spot-check. r181 rescaled hwsw/"
+             "examples/loop for mobile legibility per r180's review "
+             "(place/zone/close unchanged, all three PASSED). r183 is a "
+             "single surgical fix per r182's sole remaining note: the "
+             "\"SYSTEM DIAGRAM\" tag is now 38px in every section -- "
+             "nothing else changed.")
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps, full 16:9, no scope crop")
     L.append("")
     L.append("SECTION LIST -- generated from spec_map.py, not retyped")
@@ -191,8 +194,11 @@ def main():
              "imagery. \"SYSTEM DIAGRAM\" is held continuously across "
              "every section per r178's own explicit instruction, so the "
              "animated map is never mistaken for a recording of a "
-             "deployed interface -- 26px within hwsw/examples/loop (r181), "
-             "20px (unchanged) in place/zone/close.")
+             "deployed interface -- 38px uniformly in every section "
+             "(r183; was 20px in place/zone/close and 26px in hwsw/"
+             "examples/loop after r181). Corner position, restrained "
+             "weight, and continuous timing are unchanged -- only the "
+             "size changed.")
     L.append("")
     L.append("SOUND")
     L.append("  Narration only -- no score, no sound effects. r178's "

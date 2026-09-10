@@ -257,14 +257,14 @@ def dim_overlay(img, k):
     d.rectangle([0, 0, W, H], fill=(6, 7, 8, int(140 * k)))
 
 
-def system_diagram_tag(img, k=1.0, font_size=20):
+def system_diagram_tag(img, k=1.0, font_size=38):
     """"SYSTEM DIAGRAM" -- r178's own explicit instruction: label the
     map sequence so it cannot be mistaken for evidence of a deployed
     interface. Held continuously while the map is dominant, discreet
     corner, same "no shared fade envelope" discipline as a disclosure
-    tag. font_size is now callable -- r180's rule 5 explicitly names
-    this tag as needing to stay "mobile-legible"; default 20 is
-    unchanged so place/zone/close render exactly as before."""
+    tag. font_size is callable; r183 raised the default from 20 to 38
+    (r182's own minimum) so every call site -- with or without an
+    explicit override -- renders uniformly at 38px."""
     d = ImageDraw.Draw(img, "RGBA")
     text = "SYSTEM DIAGRAM"
     f = font("Medium", font_size)

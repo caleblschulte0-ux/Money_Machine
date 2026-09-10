@@ -210,7 +210,7 @@ def build_hwsw():
         G.rect_aperture(img, dark_doc_grade(f), px + pw // 2, py + ph // 2, pw, ph, G.AMBER)
         lit = min(1.0, t / 1.0)
         G.draw_path(img, path_pts, lit, k=1.0, width=3)
-        G.system_diagram_tag(img, k=1.0, font_size=26)
+        G.system_diagram_tag(img, k=1.0)
         if hw_t0 <= gt < hw_t1:
             lt = gt - hw_t0
             k = G.fade_k(lt, hw_t1 - hw_t0, in_t=0.3, out_margin=0.3)
@@ -282,7 +282,7 @@ EX_BIG_R = 315  # 630px diameter > r180's 620px minimum
 
 
 def _examples_base(img):
-    G.system_diagram_tag(img, k=1.0, font_size=26)
+    G.system_diagram_tag(img, k=1.0)
     G.draw_node(img, EX_ZONE_MARKER, "done", k=0.9, font_size=30)
     G.draw_path(img, [(EX_ZONE_MARKER[0], EX_ZONE_MARKER[1]), EX_BIG_CENTER], 1.0, k=0.5, width=2, glow=False)
 
@@ -383,7 +383,7 @@ def build_loop():
         t = i / FPS
         gt = beat_start + t
         img = G.background()
-        G.system_diagram_tag(img, k=1.0, font_size=26)
+        G.system_diagram_tag(img, k=1.0)
         f = place_frames[min(i, len(place_frames) - 1)]
         cx, cy, w, h = LG_PLACE_RECT
         G.rect_aperture(img, dark_doc_grade(f), cx, cy, w, h, G.AMBER)

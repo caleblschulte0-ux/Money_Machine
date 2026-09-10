@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""r181 evidence pack: full-film contact sheet for v36 "How the System
-Works", pass 2 (r180's mobile-legibility rescale of hwsw/examples/loop).
-Every ~1.3s across the 74.0s master, plus every node-arrival, disclosure,
-and end-card boundary -- same standard set every round in this handoff
-has used (r167, r171, r175, r177, ...). EXTRA_BOUNDS adds r180's own
-explicit requirement: "dense timestamp coverage of the active HARDWARE
-and SOFTWARE states; all three large example states and their disclosure
-boundaries; each operating-loop node arrival; and the literal final
-frame" -- place/zone/close (untouched, all PASSED) keep their r179
-boundary density.
+"""r183 evidence pack: full-film contact sheet for v36 "How the System
+Works", pass 3 (r182's sole requirement: the "SYSTEM DIAGRAM" tag raised
+to 38px uniformly in every section). Every ~1.3s across the 74.0s master,
+plus every node-arrival, disclosure, and end-card boundary -- same
+standard set every round in this handoff has used (r167, r171, r175,
+r177, r181, ...). EXTRA_BOUNDS already carried representative timestamps
+in every section (place, hwsw, zone, examples, loop, close) plus the
+literal final frame from r181 -- kept unchanged here since r182 asked for
+exactly that coverage, just now showing the tag at its corrected size in
+each one.
 """
 import subprocess
 
@@ -59,7 +59,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r181__claude__v36_system_map_pass2__contact.png", sheet)
+    cv2.imwrite("r183__claude__v36_system_map_pass3__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 
