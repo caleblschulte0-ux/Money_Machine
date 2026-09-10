@@ -1763,3 +1763,352 @@ manifest, so anything the app has to line up with something painted INTO a
 plate is solved from the render rather than guessed and nudged. Town's night
 lamps use it: the glow sits on the lantern glass the plate actually drew, and a
 re-render that moves the lamp moves the glow with it.
+
+## The world had no darks, because the sun was overhead (2026-09-10)
+
+*"This is getting much closer but it's still missing one more huge art style
+leap."*
+
+Saturation was no longer the gap. Measured against the Brawl Stars reference
+the park plate was already past it — 0.56 against 0.52 — so the thing still
+missing was not colour. It was VALUE, and the measurement that found it was
+taken against the game's own hero rather than against the reference:
+
+| | p05 | p50 | p95 | range | below 0.25 |
+|---|---|---|---|---|---|
+| Brawl Stars reference | 0.12 | 0.52 | 0.99 | 0.87 | **18.8%** |
+| Barkly himself | 0.14 | 0.66 | — | — | **25.4%** |
+| the park plate, alone | 0.28 | 0.63 | 0.79 | 0.51 | **4.9%** |
+| the park scene, composited in the app | 0.15 | 0.67 | 1.00 | 0.85 | **10.8%** |
+
+Two park rows because they are two different measurements and the difference
+matters: the PLATE is the painted place on its own, and the SCENE is what the
+player sees — plate, sky, props, the dog and the HUD. The dog and the HUD are
+most of what drags the composite's 4.9% up to 10.8%, which is the finding
+stated a second way: the darkest thing in the park was the interface.
+
+A quarter of Barkly is dark. A twentieth of the place he stands in is. That is
+the whole discrepancy: he is a character drawn with shadow in him, pasted onto
+a place with none, and no amount of chroma closes it.
+
+### The cause was one number, and it was not a colour
+
+The key sun stood at **51° elevation**. That is local noon, and at local noon
+almost every surface in an open scene faces up — which means almost every
+surface is lit, and every cast shadow is a stub under the thing that casts it.
+A gazebo at 51° puts a puddle under itself. The same gazebo at 26° lays a
+shadow twice its own height across the lawn, and that shadow is the dark the
+picture did not have.
+
+Three changes, all of them light:
+
+* `SKY_FILL_STRENGTH` **0.45 → 0.11**. The hemisphere ambient was filling
+  every shadow back in as fast as the sun could cut one. 0.45 was already the
+  fix for a previous pass — it was 1.0 — and it was still lifting the floor of
+  the whole picture.
+* Fill lamps **220 → 60**, in all three packs.
+* The scene sun down to **26°** for the park. (The beach started there
+  too and ended at 34° — see "The sea went black" below.)
+
+### Town wanted a different sun, and said so when asked
+
+A raking light put the entire plaza in its own buildings' shadow — the
+storefronts stand along the back of the square, so at 26° they shadow
+everything in front of them.
+
+| town sun | median value | below 0.25 |
+|---|---|---|
+| 26° | 0.34 | 25.1% |
+| 40° | 0.41 | 22.4% |
+| **50°** | **0.54** | **15.8%** |
+
+So `sun_height` became a per-scene entry in the `SCENES` tuple rather than one
+constant. This is not a special case being carved out: a plaza enclosed on one
+side is a different lighting problem from an open lawn, and pretending
+otherwise is what a single global would do.
+
+### Where the four ended up
+
+Every number below is the same measurement: HSV value over the frame, the app
+built and captured at 390x844 through Playwright, `git show HEAD:` for the
+before. Earlier drafts of this section quoted three different methods and did
+not say which was which; these are one.
+
+The **plates** — the painted ground itself, which is what the sun change
+actually moved:
+
+| plate | p05 | p50 | range | below 0.25 | saturation |
+|---|---|---|---|---|---|
+| park | 0.28 → **0.14** | 0.63 → 0.47 | 0.51 → **0.69** | 4.9% → **13.8%** | 0.56 → 0.62 |
+| beach | 0.16 → 0.14 | 0.71 → 0.58 | 0.74 → **0.85** | 5.5% → **11.7%** | 0.51 → 0.60 |
+| town | 0.14 → 0.14 | 0.66 → 0.74 | 0.68 → **0.82** | 9.0% → **17.4%** | 0.50 → 0.58 |
+
+Town lands on the reference's own 18.8%. Park more than doubled its darks and
+its p05 fell from 0.28 to 0.14 — 0.28 was the real number behind "this world
+has no darks", because it means the darkest twentieth of the picture was still
+a mid-tone.
+
+The **scenes as the player sees them** — plate, sky, props, dog and HUD:
+
+| scene | p05 | p50 | range | below 0.25 | saturation |
+|---|---|---|---|---|---|
+| park | 0.15 → 0.16 | 0.67 → 0.60 | 0.85 → 0.84 | 10.8% → 12.0% | 0.48 |
+| beach | 0.22 → 0.19 | 0.60 → 0.65 | 0.78 → 0.81 | 7.8% → **12.4%** | 0.36 → 0.38 |
+| town | 0.22 → 0.19 | 0.60 → 0.61 | 0.78 → 0.81 | 7.5% → **12.6%** | 0.31 → **0.36** |
+| home | 0.20 → 0.22 | 0.63 → 0.62 | 0.80 → 0.78 | 7.6% → 8.0% | 0.35 → 0.34 |
+
+**The composite always moves less than the plate, and park moves least of all.**
+Half of every frame is sky, HUD and the dog, and none of the three was relit —
+the dog least of all, because his renders are locked canon. Park is the case
+where that is most visible: measured mid-pass, with the plate relit and the
+props still at 51 degrees, it read 16.1%, and relighting the props brought it
+back down to 12.0%.
+
+That is not a regression, and it is worth writing down because the number went
+the wrong way. A 51-degree sun on a rounded prop gives a bright top and a hard
+dark underside — high contrast inside the prop, which counts as darks. A
+26-degree sun rakes across it and gives a broad terminator instead. So the
+props traded some of their own internal darkness for AGREEING WITH THE GROUND
+THEY STAND ON, which is what the whole pass is for and what a foreground tree
+sitting flat and bright on a raked lawn was failing to do. The scene reads as
+one place at 12.0% and read as two at 16.1%.
+
+### Two things this broke, both worth the finding
+
+**A hard seam across the whole park frame.** After the change, the largest
+row-to-row brightness jump in the picture was 36.7, at exactly y = 0.33, and
+it cut straight through the gazebo roof and the trees behind it. `GroundHaze`
+in `WorldScene.tsx` began its band AT the horizon with the haze at full alpha
+in its very first row — a step, drawn every frame, in every scene, since the
+haze was added. It was invisible while the ground was evenly lit and became a
+line across the picture the moment the world had tonal range. Feathered
+(`locations={[0, 0.12, 1]}`, band top lifted by 12% of its height): 36.7 →
+28.4, and the residual is the treeline's own edge against the sky, which is
+supposed to be the hardest transition in the frame.
+
+**The home lamp blew out.** 25.8% of the prop rendered pure white once the
+studio rig became a sun: `sun.lit` is value 0.90 and a lampshade painted there
+has nowhere left to climb. Stepping it down to `sun.base` fixed the clip and
+broke something else — that is the tone the BRASS is, and the top rim sits
+directly on the shade, so two touching parts of one prop became one blob.
+`tests/palette_source.test.ts` caught it, which is the test doing exactly its
+job.
+
+The fix was not another step on the same ramp. Brass is gold metal at chroma
+0.75; an undyed woven shade is pale cloth at 0.16. `cream.base` separates them
+by SATURATION instead of by value, which holds at a distance where one step of
+value would not — and clipping went to **0.0%**.
+
+### One thing that was checked and turned out fine
+
+The bed re-promoted after a re-render with no source change, which is the
+CI-churn class that once had two workflows overwriting each other. Measured:
+**3 pixels of 409,600, each off by at most 2** — the renderer's float
+accumulation, not geometry. Quantised to the shipping 256 colours, the two
+renders are byte-identical, and `promote-props.py` already compares the asset
+it would produce rather than the intermediate render. No tolerance was added
+and none was needed; the gate was comparing the right two things all along.
+
+### The half of it that was still at noon
+
+The tables above were measured with the SCENE plates relit and the individual
+props not. The prop pack's key stood at z=9.0 with a reach of 7.2 units, which
+is 51 degrees — the same local noon the plates had just been taken off — so a
+bench composited onto the park plate was lit at midday standing on a lawn lit
+at four in the afternoon. Three packs, three hard-coded lamp positions, and a
+comment in the prop pack claiming its direction "matches the scene pack's
+exactly" that had stopped being true the moment the scene pack moved.
+
+The number that matters is the **elevation**, not the z: the prop pack's lamp
+stands 7.2 units out and the scene pack's 9.0, so the same z is two different
+suns. `palette.SUN_ELEVATION` holds the angles and `palette.sun_height(reach,
+scene)` turns one into a z for whichever rig is asking. Both packs read it, and
+the prop pack takes the scene name **from the prop's own folder** — `park/bench`
+is lit by the park's sun, `town/fountain` by the town's — so a prop can never
+again be lit by a scene it does not stand in.
+
+Derived rather than kept: town came out at z=10.74 where the hand-tuned value
+was 11.0, a difference of 1.5 degrees. The hand-tuned number was replaced by
+the derived one; it is a rounding of the same decision, and keeping the literal
+would have meant keeping the second copy.
+
+### And the app was drawing noon shadows too
+
+`WorldScene.tsx` draws its own cast shadow under every prop, at `CAST_LENGTH`
+0.34 of the prop's height. That was solved against the 51-degree key, and it
+did not move when the key did: the same two-light-models defect, split across a
+Python file and a TypeScript one, where no amount of re-rendering would ever
+have found it.
+
+The lengths are not re-picked by eye. A shadow's true length is `height /
+tan(elevation)`, and this ground is seen at a shallow enough angle that it
+projects to 0.424 of that on screen — which is exactly what 0.34 at 51.3
+degrees implied, so that factor carries forward unchanged. The camera did not
+move in this pass; only the sun did.
+
+| scene | elevation | cast length |
+|---|---|---|
+| park | 26° | 0.34 → **0.87** |
+| beach | 34° | 0.34 → **0.63** |
+| home | 38° | 0.34 → **0.54** |
+| town | 50° | 0.34 → **0.36** |
+
+It rides the same context the air colour already does, for the reason that
+comment already gives: every WorldObject in every scene needs it, and threading
+it through forty call sites is how two copies of a number fall out of step.
+
+`__tests__/scene_surfaces.test.ts` now holds the two tables against each other.
+It deliberately has no opinion about what the angles should be — that is a
+judgement — only that the app's shadow lengths are the cotangents of the
+angles `palette.py` states. Verified to fail: setting park back to 0.34 with
+its sun at 26° fails the suite, and restoring it passes.
+
+### Home, which needed something the sun could not give it
+
+Home was the one location whose share of dark pixels did not move at all —
+7.6% before the lighting pass, 7.6% after — because its walls and floor are
+drawn in the app, not rendered, and nothing in that code knew there was a light
+in the room. Its furniture got relit; the room did not.
+
+The room's own target line is "strong window light", and it had the **light**
+half: a gold trapezoid laid down the floor in the floor's own perspective. A
+window does both. `DIORAMA.roomShade` is the other half, and three things make
+it a light model rather than a vignette: it starts at the window's own centre
+(the same number the gold trapezoid is projected from, so a narrow phone that
+shrinks the window moves the shade with it), it is the SKY's hue 205 — what
+`palette.light_rgb("fill")` gives the shadow side of every prop standing in
+that room, so one sky lights indoors and out — and it goes on top of the master
+grade, like the lamp, because a shadow crossing a room crosses the furniture in
+it.
+
+It is off at night on purpose: after dark the lamp is the source and already
+casts its own halo and floor pool, and a second falloff pointing at a dark
+window would shade the side of the room the lamp is standing on.
+
+### The freshness check could not see the file the sun moved into
+
+Found while moving the sun's elevation into `palette.py`, and it is the more
+serious of the two findings.
+
+`scripts/promote-props.py` refuses to ship props whose render directory was
+built by a different version of the builder, by comparing a sha256 recorded at
+render time against one computed now. Four places computed that digest — three
+packs and the promote script — and all four hashed exactly one file: the pack.
+
+`palette.py` was not in it. Neither was `ink.py` or `proportion.py`. So every
+colour in the game, both lights, the sky fill strength, the contour, the
+cartoon dials — and, as of this pass, the elevation every pack lights from —
+could all be edited, and every render in the repo would go on reporting itself
+current. The failure mode is the bad one: not a crash, but art that quietly
+does not change while a green checkmark says the pass ran.
+
+`tools/blender/packfile.py` is now the one implementation. It walks the pack's
+imports, follows those modules' imports in turn (`home_prop_pack` →
+`world_prop_pack` → `palette`), keeps only siblings in `tools/blender/`, and
+hashes name-plus-bytes in sorted order. It imports no `bpy`, because the packs
+run inside Blender and the promote script does not, and a marker the writer and
+the reader compute differently is worse than no marker.
+
+Verified to bite: appending one comment line to `palette.py` changes
+`world_prop_pack`'s fingerprint (`d988b833…` → `5f00b429…`) and removing it
+restores the original exactly.
+
+### Three more places the same light had not reached
+
+Found by following the sun rather than by looking at pictures.
+
+**`home_architecture.py` was a FOURTH light model.** It renders the room's
+walls, floor, rug, window and care tray — most of the surface area of the first
+screen a player ever sees — and it was still on the three-area studio rig after
+the world pack, the scene pack and its own sibling `home_prop_pack` had all
+moved to the shared sun. Home's chair and lamp were lit one way and the floor
+they stand on another, inside one room. Same sun, same fill, no rim, `world_rgb()`
+for the ambient: nothing in that rig is chosen locally now.
+
+**CI could not render the plates at all.** `world_scene_pack.py` had no step in
+any workflow, so the three painted grounds could only ever be rebuilt by hand
+on somebody's machine, while every other pack rebuilt on a palette change. That
+is the one drift a diff cannot show: a prop lit by the new sun composited onto a
+ground lit by the old one, both files green. There is a step now, and the job's
+timeout went 25 → 40 minutes to carry it.
+
+**The workflow's trigger list was a hand-maintained copy of the dependency
+set.** It named five files and was already missing `ink.py` — which decides
+every contour in the game — and `world_scene_pack.py`. Sitting next to a
+`packfile.py` that computes the same set, it is a second source of truth, and
+the one nobody remembers to edit. It is `barkly/app/tools/blender/**` now:
+over-triggering a render costs ten minutes of a runner, under-triggering ships
+a world lit two ways.
+
+### And a file the repo had been carrying since 2026-09-08
+
+`barkly/app/art-review/.promote-staging-2354.png`, 32KB of tracked binary. The
+promote script names its staging file by PID so two concurrent promotes cannot
+interleave into one half-written PNG; the unlink that cleans it up sat *after*
+the loop, so any exception skipped it, and a CI promotion committed the leftover
+in a commit that looked routine.
+
+Three fixes, because the leak had three independent holes: the file is deleted,
+`art-review/.promote-staging-*.png` is gitignored as a glob (the next one has a
+different PID), and both promote loops — props and plates — are wrapped in
+`try/finally` so nothing is left behind in the first place. The plate loop also
+picked up the PID naming it never had, which was the same race the prop loop
+had already been fixed for.
+
+### The sea went black, and the fix was not the sun
+
+The beach was the one scene the low sun clearly made worse, and looking at it
+said so before any number did: the water rendered as a dark teal slab with a
+hard edge along the top, mean value **0.31** against 0.49 before the pass.
+
+The sea is one huge flat sheet, so it takes the sun at exactly the same
+glancing angle the sand does — and unlike sand, almost none of real water's
+brightness is the sun landing on it. It is the SKY, reflected. Cutting
+`SKY_FILL_STRENGTH` from 0.45 to 0.11 took away the only thing in the model
+that was lighting the water, and lowering the sun took the rest.
+
+Raising the beach's sun to prop the water back up would have been the wrong
+fix twice over: it would have cost the palms their long shadows, and it would
+have left the sea's brightness hostage to a number that has nothing to do with
+it. So `depth_material` grew a `sky_mirror` — a small emission of
+`light_hex("fill")`, the same sky every shadow in this game already takes its
+colour from — which says the thing that is actually true about water and
+decouples it from the sun entirely. Sea back to **0.58**, and the beach's
+elevation is now free to be chosen for its SAND.
+
+Which it was, at **34°** rather than the park's 26°, and for a reason about
+what is in the scene rather than a preference. A beach is an open plane with a
+handful of palms on it: a raking light buys very few shadow shapes there, and
+it costs the sand its gold. Measured across three renders of the plate:
+
+| beach sun | p05 | p50 | below 0.25 | sea value |
+|---|---|---|---|---|
+| 51° (before) | 0.16 | 0.71 | 5.5% | 0.49 |
+| 26° | 0.14 | 0.58 | 11.7% | **0.31** |
+| 34° | 0.15 | 0.69 | 8.5% | 0.37 |
+| **34° + sky mirror** | 0.15 | 0.69 | 7.4% | **0.58** |
+
+Beach ends with the smallest gain in darks of the four, and that is the honest
+answer for an open beach rather than a number to chase: the shadows it has are
+the palms', and there are three of them.
+
+### A measurement that was wrong, and the tool that already existed
+
+The first version of the table above had a beach row that was really **town**.
+The beach is padlocked at level 1, so clicking its tab is a no-op and the
+screenshot is whatever scene was already on screen. Before and after both did
+it, so the row looked entirely plausible: two town frames, correctly measured,
+under the wrong name. It was caught by looking at the picture instead of the
+number.
+
+The part worth writing down is not the bug. `scripts/scene-shot.mjs` exists,
+does this properly — loads the developed save, then refuses to save a file
+unless `world-scene-<name>` is actually in the DOM — and its own docstring
+opens with *"The Beach is level-locked on a fresh profile... This repo has been
+bitten by that twice."* I wrote a throwaway capture script instead of using it
+and became the third time.
+
+So: measure with `scene-shot.mjs`. The lesson the repo had already learned was
+not that locked tabs are tricky; it was that a capture which silently
+photographs the wrong place is worse than one that fails, and the tool that
+enforces it is already here.

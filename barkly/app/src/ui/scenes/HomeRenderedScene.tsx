@@ -5,8 +5,40 @@ import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 import { useReduceMotion } from '../motion';
 import { radius } from '../theme';
 import { BRASS, DIORAMA, ITEM } from './artPalette';
+
+/**
+ * The room shade's transparent end: its own colour, at zero.
+ *
+ * NOT `CLEAR`, and not transparent black. A gradient stop is interpolated in
+ * RGB, so a warm wall crossing to #00000000 dips through mud at the halfway
+ * point. Fading to the shade's own colour at zero alpha keeps the hue constant
+ * across the whole run and moves only the amount.
+ *
+ * Built with `alpha()` rather than written out: this was 'rgba(36,62,81,0)',
+ * which is exactly `DIORAMA.roomShade` and is a second copy of it the moment
+ * anyone edits the palette.
+ */
+const ROOM_SHADE_CLEAR = alpha(DIORAMA.roomShade, 0);
+
+/**
+ * How deep the far side of the room goes, per time of day.
+ *
+ * The STRENGTH is a layer opacity rather than an alpha baked into the gradient
+ * stop, so `DIORAMA.roomShade` stays the one place the colour is written and
+ * this is the one place its amount is. Two dials, each in one file.
+ *
+ * Morning is the strongest because a low sun through a window throws the
+ * hardest light and therefore the deepest room behind it -- the same reason
+ * the outdoor scenes went to a 26-degree sun in this pass. Midday is the
+ * flattest hour indoors for exactly the reason it was outdoors.
+ */
+const ROOM_SHADE_STRENGTH: Partial<Record<SkyBand, number>> = {
+  morning: 0.40,
+  day: 0.34,
+  evening: 0.44,
+};
 import { skyBand, SkyBand } from './CandyScenesV2';
-import { crescentPath, RadialGlow, SCENE_CAMERA, WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
+import { alpha, crescentPath, RadialGlow, SCENE_CAMERA, WorldLayer, WorldLighting, WorldMotion, WorldObject, WorldScene, worldScale } from './WorldScene';
 import { BiographyProp } from '../../world/biography';
 
 const CHAIR = require('../../../assets/world/home/props/chair.png');
@@ -759,8 +791,17 @@ export function HomeScene({
   const bedW = (has('home_bed') ? 144 : 126) * propScale;
   const bedH = bedW / BED_ASPECT;
 
+  /*
+   * Where the light comes from, as a fraction of the screen. The room's shade
+   * (below the grade) starts here, and it is the window's own centre rather
+   * than a constant so a narrow phone -- where `windowScale` shrinks the
+   * window to fit the wall band -- moves the light source with it instead of
+   * shading from where a window used to be.
+   */
+  const windowCenter = Math.min(0.9, Math.max(0.1, (wallInset + windowW / 2) / Math.max(1, width)));
+
   return (
-    <WorldScene motion={asleep ? 'sleep' : motion} testID="world-scene-home" zoom={SCENE_CAMERA.home.zoom}>
+    <WorldScene motion={asleep ? 'sleep' : motion} scene="home" testID="world-scene-home" zoom={SCENE_CAMERA.home.zoom}>
       <WorldLayer name="sky">
         <LinearGradient colors={wall} style={[styles.fill, { bottom: undefined, height: floorTop }]} />
       </WorldLayer>
@@ -1044,6 +1085,60 @@ export function HomeScene({
       </WorldLayer>
 
       <WorldLighting ground={groundY} night={night} band={band} warm />
+      {/*
+        THE OTHER HALF OF THE WINDOW.
+
+        This scene's stated target is "strong window light", and the room had
+        the LIGHT half of that -- a gold trapezoid laid down the floor in the
+        floor's own perspective -- with nothing on the other side of it. A
+        window does both. What it faces is bright; the rest of the room falls
+        away into the ambient, and that falloff is most of what makes a lit
+        interior read as a room rather than as an evenly-printed backdrop.
+
+        The measurement that made this a defect rather than a nicety: across
+        the pass that lowered the world's sun, every other location gained
+        real darks -- beach went from 7.8% of its pixels below value 0.25 to
+        12.4%, town 7.5% -> 12.6%, and the park PLATE 4.9% -> 13.8%. Home went
+        7.6% -> 7.6%. Not "moved less" -- did not move at all. Every rendered
+        prop in the room was relit and the ROOM was not, because the room is
+        drawn here and nothing here knew there was a light in it.
+
+        Three things make this a light model and not a vignette:
+
+          * It comes FROM THE WINDOW. The axis starts at the window's own
+            centre, which is `wallInset + windowW / 2` -- the same number the
+            floor's gold trapezoid is projected from -- so moving the window,
+            or a phone narrow enough to shrink it, moves the shade with it.
+          * It is the SKY's hue. `DIORAMA.roomShade` is hue 205, which is what
+            `palette.light_rgb("fill")` gives the shadow side of every prop
+            standing in this room. One sky, indoors and out.
+          * It goes ON TOP OF THE GRADE, like the lamp below it, because a
+            shadow crossing a room crosses the furniture in it. Under the
+            props it would have been a stain on the wall behind them.
+
+        Night is excluded on purpose. After dark the lamp is the source and it
+        already casts its own halo and floor pool; a second falloff pointing at
+        a window with nothing behind it would darken the side of the room the
+        lamp is standing on.
+      */}
+      {!night && (
+        <View style={[styles.fill, { zIndex: 61, opacity: ROOM_SHADE_STRENGTH[band] ?? 0.34 }]} pointerEvents="none">
+          <LinearGradient
+            colors={[ROOM_SHADE_CLEAR, ROOM_SHADE_CLEAR, DIORAMA.roomShade]}
+            /*
+             * Nothing until 38% of the way across, then all of the falloff in
+             * the remaining 62%. A gradient that starts shading at the source
+             * puts a veil over the lit half as well -- the same defect as the
+             * horizon haze that began AT the horizon and drew a hard line
+             * across the park. Light does not fall off where it lands.
+             */
+            locations={[0, 0.38, 1]}
+            start={{ x: windowCenter, y: 0.08 }}
+            end={{ x: 1.02, y: 0.96 }}
+            style={styles.fill}
+          />
+        </View>
+      )}
       {/*
         AFTER the grade. Under it, the blue night wash composited over the warm
         shade and the lamp read as a grey disc -- the same mistake the warm

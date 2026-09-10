@@ -253,14 +253,77 @@ describe('scene surface renders', () => {
     // the same palette. The TYPE is not what this test is about; the DIRECTION
     // is, because the app draws its own cast shadows and they have to fall the
     // way the renders are lit.
-    const key = /light_add\(type="(?:AREA|SUN)", location=\((-?[\d.]+), (-?[\d.]+), (-?[\d.]+)\)\)\n    key = /.exec(pack);
+    const key = /light_add\(type="(?:AREA|SUN)", location=\((-?[\d.]+), (-?[\d.]+), (.+)\)\)\n    key = /.exec(pack);
     if (!key) throw new Error('the warm key is no longer the first light in the pack');
     expect(Number(key[1])).toBeLessThan(0); // lit from the left...
     const cast = src.slice(src.indexOf('styles.castShadow'), src.indexOf('styles.contactPool'));
     const left = /left: width \* ([\d.]+)/.exec(cast);
     if (!left) throw new Error('the cast shadow no longer offsets by a fraction of the width');
     expect(Number(left[1])).toBeGreaterThan(0); // ...so the shadow falls right.
-    expect(cast).toContain('height * CAST_LENGTH');
+    expect(cast).toContain('height * castLength');
+  });
+
+  /*
+   * AND AS FAR AS THE RENDER PACK IS LIT, not just the same way.
+   *
+   * Direction was already held here. LENGTH was not, and it drifted the moment
+   * it could: `CAST_LENGTH` was one constant solved against a 51-degree key,
+   * and when the packs dropped to 26 the app went on drawing noon shadows
+   * under late-afternoon props. Two files, one number, no test -- which is the
+   * shape of every other drift this repo has had.
+   *
+   * This does not re-derive the art direction. It asserts the ONE relationship
+   * that has to hold: a lower sun throws a longer shadow, and the ratio between
+   * any two scenes' cast lengths is the ratio between their sun elevations'
+   * cotangents. Whoever changes an angle in palette.py has to change the number
+   * here, and vice versa; what those angles SHOULD be is a judgement, and this
+   * deliberately has no opinion about it.
+   */
+  it('runs each scene\'s shadow as long as that scene\'s sun is low', () => {
+    const src = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'WorldScene.tsx')).toString();
+    const palette = readFileSync(join(ROOT, 'tools', 'blender', 'palette.py')).toString();
+
+    const elevations = new Map<string, number>();
+    const table = palette.slice(palette.indexOf('SUN_ELEVATION = {'), palette.indexOf('DEFAULT_ELEVATION'));
+    for (const m of table.matchAll(/"(\w+)":\s*([\d.]+),/g)) elevations.set(m[1], Number(m[2]));
+    expect(elevations.size).toBeGreaterThanOrEqual(4);
+
+    const lengths = new Map<string, number>();
+    const block = src.slice(src.indexOf('export const CAST_LENGTH: Record'), src.indexOf('CAST_LENGTH_DEFAULT'));
+    for (const m of block.matchAll(/(\w+):\s*([\d.]+),/g)) lengths.set(m[1], Number(m[2]));
+    expect(lengths.size).toBeGreaterThanOrEqual(4);
+
+    const foreshorten = Number(/CAST_FORESHORTEN = ([\d.]+)/.exec(src)?.[1]);
+    expect(foreshorten).toBeGreaterThan(0);
+
+    for (const [scene, length] of lengths) {
+      const elevation = elevations.get(scene);
+      if (elevation === undefined) {
+        throw new Error(`${scene} has a cast length but no sun in palette.py`);
+      }
+      const want = foreshorten / Math.tan((elevation * Math.PI) / 180);
+      // Two decimals is what the constant is written to; anything looser would
+      // let a whole scene's shadows drift while still passing.
+      expect(Math.abs(length - want)).toBeLessThan(0.005);
+    }
+
+    /*
+     * AND EVERY SCENE HAS TO ASK FOR ITS OWN.
+     *
+     * `scene` is an optional prop, which is right -- a WorldScene that is not
+     * one of the four locations should keep the default rather than lose its
+     * shadows -- and it is also how one of the four could quietly stop asking
+     * and go back to drawing noon shadows with nothing failing. Each of the
+     * four names itself at every one of its call sites; the plated and the
+     * composited version of a location are both call sites.
+     */
+    const outdoor = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'OutdoorRenderedScenes.tsx')).toString();
+    const home = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'HomeRenderedScene.tsx')).toString();
+    for (const [source, name] of [[outdoor, 'park'], [outdoor, 'town'], [outdoor, 'beach'], [home, 'home']] as const) {
+      const opens = source.match(new RegExp(`<WorldScene[^>]*testID="world-scene-${name}"`, 'g')) ?? [];
+      expect(opens.length).toBeGreaterThan(0);
+      for (const open of opens) expect(open).toContain(`scene="${name}"`);
+    }
   });
 
   it('draws no hand-drawn landscape behind the window glass any more', () => {

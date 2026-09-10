@@ -42,7 +42,7 @@ import bpy
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from palette import light_hex, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
+from palette import light_hex, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import crown, shaft, stack  # noqa: E402  -- and the one place a SHAPE comes from
 from ink import INK  # noqa: E402  -- and the one place an EDGE comes from
 from bpy_extras.object_utils import world_to_camera_view
@@ -148,7 +148,8 @@ def no_ink(obj):
     return obj
 
 
-def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str):
+def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str,
+          scene_name: str = ""):
     """One sun, real shadows, real occlusion -- the whole point of this pack.
 
     The prop pack lights each object with a three-area-light studio rig, which
@@ -181,7 +182,12 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     eevee = scene.eevee
     for attr, value in (
         ("use_gtao", True),            # ambient occlusion: where things MEET
-        ("gtao_distance", 0.8),
+        # 0.8 -> 1.5, with the sky fill. Occlusion is the only dark a scene has
+        # in the places a cast shadow cannot reach -- under a bench, inside a
+        # gazebo, where a trunk meets the grass -- and at 0.8 it only found
+        # contacts an inch apart. A longer reach is what turns "these two
+        # objects touch" into "this object is standing in a place".
+        ("gtao_distance", 1.5),
         ("gtao_factor", 1.0),
         ("use_soft_shadows", True),
         ("shadow_cube_size", "2048"),
@@ -283,7 +289,36 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     scene.camera = camera
 
     # THE sun. One light, one direction, and it casts.
-    bpy.ops.object.light_add(type="SUN", location=(-6.0, -4.0, 9.0))
+    # A LOW SUN, and this is the last big one.
+    #
+    # Measured against the game's own hero -- which the palette file names as
+    # the reference, because he is the thing that works -- the world was not
+    # lit like him at all. Barkly puts 25.4% of his pixels below value 0.25;
+    # the park plate put 4.9% there, and the Brawl Stars frame the operator
+    # sent puts 18.8%. Saturation had reached the reference (park 0.52 against
+    # its 0.52); tone had not, and it was not close.
+    #
+    # The cause is the sun's ELEVATION. At (-6, -4, 9) it stands 51 degrees up:
+    # midday. Almost every surface in an open scene faces up at midday, so
+    # almost every surface is lit, cast shadows are stubs directly under
+    # things, and the only darks left in the picture are crevices. Barkly is
+    # dark a quarter of the way through because he is a rounded form and a
+    # quarter of him faces away from the key -- the world has no such luck,
+    # because the world is mostly flat ground.
+    #
+    # 26 degrees is late afternoon. Shadows run about twice an object's height
+    # instead of four fifths of it, the light rakes across vertical faces
+    # instead of landing on their tops, and the ground gets large shadow SHAPES
+    # -- which is what the reference frames are full of and ours had none of.
+    # That is what the park and the beach take; town is the exception and the
+    # table at SCENES says why.
+    #
+    # The HEIGHT is not written here. `palette.SUN_ELEVATION` holds the angle
+    # for every scene and `palette.sun_height` turns it into a z for this rig's
+    # own reach, so the prop pack -- whose lamp stands 7.2 units out where this
+    # one stands 9.0 -- gets the SAME SUN rather than the same number.
+    reach = math.hypot(7.5, 5.0)
+    bpy.ops.object.light_add(type="SUN", location=(-7.5, -5.0, sun_height(reach, scene_name)))
     sun = bpy.context.object
     sun.name = "Sun"
     sun.data.energy = sun_energy
@@ -297,7 +332,7 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     bpy.ops.object.light_add(type="AREA", location=(5.0, -3.0, 5.0))
     fill = bpy.context.object
     fill.name = "Sky bounce"
-    fill.data.energy = 220
+    fill.data.energy = 60
     fill.data.size = 9.0
     fill.data.color = pack.rgb(light_hex("fill"))
     if hasattr(fill.data, "use_shadow"):
@@ -751,7 +786,8 @@ def _band(name: str, y0: float, y1: float, z: float, mat, half_width: float = 70
     return obj
 
 
-def depth_material(name: str, hex_near: str, hex_far: str, roughness: float = 0.90):
+def depth_material(name: str, hex_near: str, hex_far: str, roughness: float = 0.90,
+                   sky_mirror: float = 0.0):
     """A surface that changes colour with DISTANCE, continuously.
 
     Same lesson the ground already taught, and I walked into it again: the
@@ -778,6 +814,26 @@ def depth_material(name: str, hex_near: str, hex_far: str, roughness: float = 0.
     nt.links.new(coord.outputs["Generated"], sep.inputs["Vector"])
     nt.links.new(sep.outputs["Y"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    #
+    # WATER IS A MIRROR OF THE SKY, and a diffuse surface cannot say so.
+    #
+    # The sea is one huge horizontal plane, which means the sun strikes it at
+    # the same glancing angle it strikes the sand -- so when the sun came down
+    # to 26 degrees, the sea came down with it, from mean value 0.49 to 0.31.
+    # That is a dark teal slab with a hard edge along the top, and it is wrong
+    # in a way the sand at the same elevation is not: almost none of real
+    # water's brightness is the sun landing on it. It is the SKY, reflected.
+    #
+    # Modelling it as a little emission of the sky's own colour says exactly
+    # that, and it has a second virtue: it decouples the sea from the sun, so
+    # the beach's elevation can be chosen for its SAND and its palm shadows
+    # rather than propped up to stop its water going black.
+    #
+    # The colour is `light_hex("fill")`, which is the sky as every shadow in
+    # this game already takes it -- not a new decision, the same one.
+    if sky_mirror:
+        bsdf.inputs["Emission Color"].default_value = (*pack.rgb(light_hex("fill")), 1.0)
+        bsdf.inputs["Emission Strength"].default_value = sky_mirror
     return mat
 
 
@@ -1007,7 +1063,8 @@ def beach():
     _band("wet", 19.4, 25.4, 0.006, wet)
 
     # Shallows to deep water, as one continuous ramp.
-    _band("sea", 25.0, 43.0, 0.005, depth_material("Sea", tone("sea", "base"), tone("sea", "shade")))
+    _band("sea", 25.0, 43.0, 0.005,
+          depth_material("Sea", tone("sea", "base"), tone("sea", "shade"), sky_mirror=0.22))
 
     _surf(25.0)
     _headland(40.0)
@@ -1379,19 +1436,41 @@ def _marram(x: float, y: float, s: float = 1.0):
         obj.scale = (1.0, 0.3, 1.0)
 
 
+# name: (builder, ortho scale, camera target, sun energy, sun colour, sky)
+#
+# NO SUN HEIGHT COLUMN, and that is deliberate. It was one for a while, and a
+# per-scene z in this tuple is a per-scene z that only this file knows about --
+# which is exactly how the prop pack ended up lighting a bench at midday to
+# stand on a lawn lit at four. The elevations live in `palette.SUN_ELEVATION`
+# and `setup()` reads them by scene name, so every pack asks the same table.
+#
+# What that table says about these three, and why:
+#
+#   park, beach   26 degrees   shadows about twice an object's height
+#   town          50 degrees   shadows about 0.85x
+#
+# A low sun is what gives a picture large shadow SHAPES rather than stubs under
+# things, and that is most of the tonal range the reference has and this world
+# did not. How low depends on what is STANDING in the scene: an open field can
+# take a raking light because the only things casting are its own trees, and a
+# street cannot, because a row of two-storey shopfronts at 26 degrees throws
+# its shadow across the entire square in front of them. Town was measured at
+# all three -- 26 gave median value 0.34 with 25.1% of the frame under 0.25,
+# 40 gave 0.41 and 22.4%, and both left a plaza whose near half sat in the
+# shadow of its own shopfronts. A square is the one place in this game the
+# player STANDS and taps, and a raking light across it costs more than the
+# drama is worth.
+#
+# THE ENERGIES came up with it (4.2/4.6/5.0 -> 9.2/9.8/8.4) because
+# `SKY_FILL_STRENGTH` went the other way, 0.45 -> 0.11. The hemisphere was
+# doing a share of the lighting and stopped; without the key making that up,
+# lowering the sun would just be an underexposure. Contrast is the goal, not
+# darkness. Town takes the least of the three because its ground is a brick
+# plaza facing straight up into a 50-degree sun.
 SCENES = {
-    "park": (park, 18.5, (0.0, 20.0, 1.0), 4.2, light_hex("key"), light_hex("fill")),
-    "beach": (beach, 18.5, (0.0, 20.0, 1.0), 4.6, light_hex("key"), light_hex("fill")),
-    # 5.0, the HIGHEST of the three, which is the opposite of where this
-    # started. A horizontal plane sees the whole sky hemisphere, so town's
-    # pavement -- the flattest, palest, largest surface in the game -- takes
-    # more of the blue fill than any other ground and less of the warm key.
-    # Lowering the sun to stop it blowing out only handed it further to the
-    # sky: plated at 4.3 it measured saturation 0.234, and at 3.9 it measured
-    # 0.235. Warm light is what pulls a pale warm material back out of grey,
-    # and the pavement was moved down its own ramp at the same time so there
-    # is room for it.
-    "town": (town, 18.5, (0.0, 20.0, 1.0), 5.0, light_hex("key"), light_hex("fill")),
+    "park": (park, 18.5, (0.0, 20.0, 1.0), 9.2, light_hex("key"), light_hex("fill")),
+    "beach": (beach, 18.5, (0.0, 20.0, 1.0), 9.8, light_hex("key"), light_hex("fill")),
+    "town": (town, 18.5, (0.0, 20.0, 1.0), 8.4, light_hex("key"), light_hex("fill")),
 }
 
 
@@ -1422,7 +1501,7 @@ def main():
             continue
         clean()
         ANCHORS.clear()
-        camera = setup(ortho, target, energy, sun_hex, ambient)
+        camera = setup(ortho, target, energy, sun_hex, ambient, name)
         builder()
         path = OUT / f"{name}.png"
         scene = bpy.context.scene

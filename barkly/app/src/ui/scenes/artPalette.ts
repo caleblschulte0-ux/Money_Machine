@@ -165,6 +165,26 @@ export const DIORAMA = {
   wallNightA: '#5650AC',
   wallNightB: '#6A5DA8',
 
+  /*
+   * THE DARK HALF OF "STRONG WINDOW LIGHT".
+   *
+   * The room's own target line is "strong window light", and it had the light:
+   * a gold trapezoid laid down the floor in the floor's own perspective. What
+   * a window actually does is BOTH -- it lights what it faces and leaves
+   * everything else in the room's ambient, which is the part that was missing.
+   * Measured across the pass that lowered the world's sun, home was the only
+   * one of the four locations whose share of pixels below value 0.25 did not
+   * move at all: 7.6% before, 7.6% after. The furniture got relit; the room it
+   * stands in is drawn here, and nothing here knew about it.
+   *
+   * The hue is not a new decision. It is the SKY family's hue (205) at a
+   * shadow's value -- the same hue `palette.light_rgb("fill")` gives every
+   * rendered prop's shadow side, so the shade in the room and the shade on the
+   * couch standing in it come from one sky. That is the whole reason the four
+   * locations read as one game, and the room was outside it.
+   */
+  roomShade: '#243E51',
+
   floorDayFar: '#EEC273',
   floorDayNear: '#BC6A31',
   floorDayEdge: '#793C1E',

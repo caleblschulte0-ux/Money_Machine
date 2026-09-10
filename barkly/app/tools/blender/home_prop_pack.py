@@ -9,7 +9,6 @@ Run:
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import os
@@ -19,7 +18,8 @@ import bpy
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
+import packfile  # noqa: E402  -- what a render depends on, for the freshness marker
+from palette import light_rgb, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 # The form recorder and the proportion dials, from the packs that own them.
 # Home furniture is drawn to the same rules as everything outdoors -- it is the
 # room the player starts in, so it is the LAST place that should be an
@@ -166,7 +166,11 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
     scene.render.film_transparent = True
-    scene.world.color = (0.055, 0.065, 0.085)
+    # THE SAME SKY AS EVERYWHERE ELSE, at the same strength. This was a hand
+    # picked near-black, so home's furniture had a third light model of its own
+    # -- the world pack had one, the scene pack had another, and the room the
+    # player starts in had a third.
+    scene.world.color = world_rgb()
 
     # Keep contrast consistent across Blender 3.x/4.x.
     # STANDARD, NOT AgX -- see tools/blender/world_prop_pack.py for the
@@ -188,30 +192,39 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     look_at(cam, target)
     scene.camera = cam
 
-    # One warm upper-left key, a cool low-strength fill, and a gentle warm rim.
-    bpy.ops.object.light_add(type="AREA", location=(-4.8, -5.0, 8.4))
+    # ONE SUN AND ONE FILL -- no rim. This was "a warm upper-left key, a cool
+    # low-strength fill, and a gentle warm rim", three area lights, and it was
+    # the last three-lamp studio rig left in the game: the world pack gave its
+    # up, the scene pack never had one, and the room the player starts in kept
+    # a third light model of its own. Measured in the app, home held 9.0% of
+    # its frame under value 0.25 while park reached 14.8% and town 15.8%.
+    #
+    # The rim goes for the reason it went outdoors: the ink contour separates a
+    # prop from what is behind it now, and a rim light doing the same job just
+    # bleaches the edge it is drawn on.
+    #
+    # The ELEVATION is not written here. It lives in `palette.SUN_ELEVATION`
+    # with the three outdoor scenes -- 38 degrees for a room, because a window
+    # is a small aperture and the light through it is already directional, so
+    # an interior does not want the 26-degree rake an open field does.
+    reach = math.hypot(5.0, 6.0)
+    bpy.ops.object.light_add(type="SUN", location=(-5.0, -6.0, sun_height(reach, "home")))
     key = bpy.context.object
     key.name = "Barkly key"
-    key.data.energy = 790
-    key.data.size = 5.0
+    key.data.energy = 6.2
+    key.data.angle = math.radians(7.0)
     key.data.color = light_rgb("key")
     look_at(key, target)
 
     bpy.ops.object.light_add(type="AREA", location=(5.0, -2.2, 4.0))
     fill = bpy.context.object
     fill.name = "Barkly cool fill"
-    fill.data.energy = 270
+    fill.data.energy = 70
     fill.data.size = 5.5
     fill.data.color = light_rgb("fill")
     look_at(fill, target)
 
-    bpy.ops.object.light_add(type="AREA", location=(1.8, 4.0, 6.8))
-    rim = bpy.context.object
-    rim.name = "Barkly rim"
-    rim.data.energy = 420
-    rim.data.size = 4.2
-    rim.data.color = light_rgb("key")
-    look_at(rim, target)
+    # No rim: the contour separates a cut-out from its background now.
 
 
 def chair():
@@ -238,8 +251,23 @@ def chair():
 def lamp():
     brass = make_material("Lamp brass", tone("sun", "base"), roughness=0.28, metallic=0.72)
     wood = make_material("Lamp stem wood", tone("wood", "base"), roughness=0.52, coat=0.04)
-    shade = make_material("Warm woven shade", tone("sun", "lit"), roughness=0.68)
-    inner = make_material("Lit shade underside", tone("sun", "pop"), roughness=0.62, coat=0.04)
+    # OFF THE SUN FAMILY ALTOGETHER, because the key is a sun now. `sun.pop` is
+    # value 0.97 and `sun.lit` is 0.82: painted that high, a lampshade facing a
+    # real light has nowhere to go and 25.8% of the prop came out pure white. A
+    # lampshade looks lit because it is BRIGHTER THAN WHAT IS AROUND IT, which
+    # is the light's job; painting it at the top of the ramp as well just clips
+    # it.
+    #
+    # Stepping it down to `sun.base` fixed the clip and broke something else:
+    # that is the tone the BRASS is, and the top rim sits directly on the
+    # shade. Two touching parts of one prop at one tone is a single blob, and
+    # `tests/palette_source.test.ts` caught it. `cream.base` is the honest
+    # answer rather than a dodge -- brass is gold metal (chroma 0.75) and an
+    # undyed woven shade is pale cloth (chroma 0.16). They separate by
+    # SATURATION instead of by value, so the rim still reads against the shade
+    # at a distance where a one-step value difference would not.
+    shade = make_material("Warm woven shade", tone("cream", "base"), roughness=0.68)
+    inner = make_material("Lit shade underside", tone("sun", "lit"), roughness=0.62, coat=0.04)
 
     contact_shadow(0.68, 0.42)
     # The stem measured 0.058 of its own height -- under STOUT, the same wire
@@ -372,7 +400,14 @@ def stamp_pack(out_dir):
     Written LAST, after every render in the run succeeded. A pass that dies
     halfway must not leave a marker saying the directory is current.
     """
-    digest = hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+    #
+    # THE PACK AND WHAT IT IMPORTS. This hashed one file, so `palette.py` --
+    # every colour in the game, both lights, and since the sun pass the
+    # ELEVATION each pack lights from -- could be edited with every render in
+    # the repo still reporting itself current. `packfile.fingerprint` is the
+    # one implementation, shared with `scripts/promote-props.py`, because a
+    # marker the writer and the reader compute differently is worse than none.
+    digest = packfile.fingerprint(Path(__file__).resolve())
     (out_dir / ".pack-sha256").write_text(digest + "\n", encoding="utf-8")
 
 

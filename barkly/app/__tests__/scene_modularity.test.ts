@@ -310,9 +310,52 @@ describe('renders record the builder that made them', () => {
   it('promotion asks the hash, not the clock', () => {
     const promote = readFileSync(join(__dirname, '..', 'scripts', 'promote-props.py'), 'utf8');
     expect(promote).toContain('def pack_fingerprint(');
-    expect(promote).toContain('hashlib.sha256');
+    expect(promote).toContain('packfile.fingerprint(');
     // The mtime path survives only as the fallback for a directory rendered
     // before markers existed, and it is guarded by the marker being absent.
     expect(promote).toContain('got is None and render.stat().st_mtime');
+  });
+
+  /*
+   * AND THE HASH HAS TO COVER WHAT THE RENDER ACTUALLY DEPENDS ON.
+   *
+   * Every one of these packs computed its own marker as
+   * `sha256(Path(__file__).read_bytes())` -- three copies of a digest over ONE
+   * file. `palette.py` holds every colour in the game, both lights, the sky
+   * fill strength and, since the sun pass, the elevation each pack lights
+   * from; `ink.py` holds the contour; `proportion.py` holds the cartoon dials.
+   * None of them were in it. The single most behaviour-changing number in the
+   * render pipeline could be edited and the freshness check would wave every
+   * stale render in the repo straight through -- silently, which is the part
+   * that matters, because the failure looks like art that quietly did not
+   * change.
+   *
+   * The digest is `packfile.fingerprint`, one implementation shared by all
+   * four writers and the reader. A marker the writer and the reader compute
+   * differently is worse than no marker.
+   */
+  test.each(PACKS)('%s fingerprints its shared modules, not just itself', (file: string) => {
+    const src = readFileSync(join(__dirname, '..', 'tools', 'blender', file), 'utf8');
+    const stamp = src.slice(src.indexOf('def stamp_pack('));
+    const body = stamp.slice(0, stamp.indexOf('def ', 10) + 1 || undefined);
+    expect(body).toContain('packfile.fingerprint(');
+    // The one-file digest is what this replaced. If it comes back anywhere in
+    // the pack, something has grown a second opinion about freshness.
+    expect(src).not.toContain('hashlib.sha256(Path(__file__)');
+  });
+
+  it('fingerprints the whole shared layer, and every pack reaches all of it', () => {
+    const packfile = readFileSync(join(__dirname, '..', 'tools', 'blender', 'packfile.py'), 'utf8');
+    // It must FOLLOW imports rather than hard-coding a list, or the list is
+    // the next thing to go stale.
+    expect(packfile).toContain('ast.parse');
+    expect(packfile).not.toMatch(/\[\s*["']palette["']/);
+    // Nothing in here may import bpy: the packs run inside Blender and the
+    // promote script does not, and both have to be able to call it.
+    // Anchored to the start of a line: the module's own docstring explains
+    // why an `import bpy` is not part of what this repo renders with, and a
+    // bare substring match reads that sentence as the defect it describes.
+    expect(packfile).not.toMatch(/^import bpy/m);
+    expect(packfile).not.toMatch(/^from bpy/m);
   });
 });

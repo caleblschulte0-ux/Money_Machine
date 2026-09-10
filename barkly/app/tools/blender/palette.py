@@ -37,6 +37,7 @@ game moves with it. That is the point.
 """
 
 import colorsys
+import math
 
 # --- the light every surface is lit by --------------------------------
 #
@@ -52,6 +53,74 @@ import colorsys
 # one when they were picked.
 AMBIENT = (0.17, 0.22, 0.46)   # sky-blue, what fills the shadows
 KEY = (1.00, 0.94, 0.74)       # warm sun, what lands on the tops
+
+# --- and WHERE that sun stands ------------------------------------------
+#
+# The colour of the light was already shared and its DIRECTION was not, which
+# is half a light model. Three packs each hard-coded a lamp position, so a
+# bench rendered on its own could be lit at noon while the lawn it stands on
+# was lit at four in the afternoon -- and it was, for exactly as long as it
+# took to measure it.
+#
+# The number that matters is the ELEVATION, not the z. A lamp's height only
+# means something next to how far out it stands, and the two packs put their
+# keys at different distances (7.2 units for props, 9.0 for scenes), so the
+# same z was two different suns. Angles here, z computed per rig below.
+#
+# WHY THESE ANGLES. A sun at 51 degrees is local noon: nearly every surface in
+# an open scene faces up, so nearly every surface is lit and every cast shadow
+# is a stub under the thing that casts it. That is what the whole world was,
+# and it is why it held 4.9% of its pixels below value 0.25 while Barkly --
+# the character standing in it, and the piece of art everything else is
+# measured against -- holds 25.4%. At 26 degrees a shadow runs about twice its
+# object's height and the light rakes across vertical faces instead of landing
+# on their tops, which is where a picture's darks come from.
+#
+# Town is the exception and it earned it: its shopfronts stand along the back
+# of the square, so a raking light puts the entire plaza -- the one place in
+# this game the player stands and taps -- inside its own buildings' shadow.
+# Measured at 26 degrees it ran median value 0.34 with a quarter of the frame
+# under 0.25; at 40, 0.41 and 22.4%; at 50 it reads as a lit square.
+SUN_ELEVATION = {
+    "park": 26.0,
+    # 34, not the park's 26, and the reason is what is IN the scene rather
+    # than a preference. A beach is one open plane with a handful of palms on
+    # it, so a raking light buys very few shadow SHAPES -- and its other half
+    # is a huge flat sheet of water, which takes the sun at exactly the same
+    # glancing angle the sand does. At 26 the sea rendered mean value 0.31
+    # against 0.49 before the pass: a dark teal slab with a hard edge along
+    # the top. 34 keeps the palms' long shadows and gives the sand back its
+    # gold. (The sea itself is fixed properly, at the material -- see
+    # `depth_material`'s sky_mirror -- so this is a choice about SAND.)
+    "beach": 34.0,
+    "town": 50.0,
+    # A room, lit through one window. Not as raking as an open field -- a
+    # window is a small aperture and the light through it is already
+    # directional -- and not noon either.
+    "home": 38.0,
+    # Items are photographed, not staged: a biscuit or a collar is shown in a
+    # sheet at thumbnail size with no ground under it, so a long cast shadow
+    # is a shadow onto nothing. They keep a high key, and this is the note
+    # that says that is a decision rather than the old value left behind.
+    "item": 48.0,
+    # Clouds float over all three locations at once, so they cannot take any
+    # one of their suns. They keep a high key for the same reason items do:
+    # a raking light on a cloud is a SUNSET cloud, and drawing one of those
+    # over a midday park is worse than a cloud lit a little too evenly.
+    "sky": 48.0,
+}
+DEFAULT_ELEVATION = 38.0
+
+
+def sun_height(reach: float, scene: str = "") -> float:
+    """The z a key lamp needs, to stand at `scene`'s elevation from `reach` out.
+
+    `reach` is the lamp's horizontal distance from the origin -- hypot(x, y) of
+    wherever the rig puts it. Passing that rather than assuming one makes the
+    elevation portable between packs whose lamps sit at different distances,
+    which is the whole reason this lives here instead of in three files.
+    """
+    return reach * math.tan(math.radians(SUN_ELEVATION.get(scene, DEFAULT_ELEVATION)))
 
 # --- the ramp -----------------------------------------------------------
 #
@@ -210,7 +279,15 @@ def light_rgb(kind: str):
 #:
 #: Not zero: shadows take the colour of the sky, and that is the single most
 #: recognisable thing about the reference art. Just not all of it.
-SKY_FILL_STRENGTH = 0.45
+#:
+#: 0.45 -> 0.11 in the pass that lowered the sun, and the two go together. A
+#: low sun cuts a long shadow and a bright hemisphere fills it straight back
+#: in, so lowering one without the other buys nothing: the park plate went from
+#: 4.9% of its pixels below value 0.25 to 13.8% with both, and the ambient was
+#: the larger half of that. What it is NOT is an exposure change -- the key
+#: energies came up at the same time (props 4.0 -> 4.7, scenes 4.2 -> 9.2) so
+#: the picture gained contrast rather than just going dark.
+SKY_FILL_STRENGTH = 0.11
 
 
 def world_rgb():

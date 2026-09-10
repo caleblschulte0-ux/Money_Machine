@@ -5,15 +5,15 @@ live sky, time-of-day, upgrades, layout, and interaction logic; Blender supplies
 physical thickness, bevels, and a shared light response for the frame itself.
 """
 from pathlib import Path
-import hashlib
+import math
 import os
 
 import bpy
 
 import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
+import packfile  # noqa: E402  -- what a render depends on, for the freshness marker
+from palette import light_rgb, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -119,26 +119,39 @@ def setup():
     look_at(cam, (0, 0, 1.55))
     scene.camera = cam
 
-    bpy.ops.object.light_add(type='AREA', location=(-4.5, -4.8, 8.0))
+    # THE FOURTH LIGHT MODEL, and the last one. This pack renders the room's
+    # WALLS, FLOOR, RUG, WINDOW and care tray -- most of the surface area of
+    # the first screen a player ever sees -- and it was still the three-area
+    # studio rig after the world pack, the scene pack and its own sibling
+    # `home_prop_pack` had all been moved onto the shared sun. Home's chair and
+    # lamp were being lit one way and the floor they stand on another, inside
+    # one room, which is the same defect as the bench on the park plate.
+    #
+    # Nothing here is chosen locally now: the world colour, both light colours
+    # and the sun's elevation all come out of `palette.py`, exactly as they do
+    # in the other three packs.
+    scene.world.color = world_rgb()
+
+    reach = math.hypot(5.0, 6.0)
+    bpy.ops.object.light_add(type='SUN', location=(-5.0, -6.0, sun_height(reach, "home")))
     key = bpy.context.object
-    key.data.energy = 845
-    key.data.size = 5.0
+    key.name = "Barkly key"
+    key.data.energy = 6.2
+    key.data.angle = math.radians(7.0)
     key.data.color = light_rgb("key")
     look_at(key, (0, 0, 1.4))
 
-    bpy.ops.object.light_add(type='AREA', location=(4.5, -2.0, 4.0))
+    bpy.ops.object.light_add(type='AREA', location=(5.0, -2.2, 4.0))
     fill = bpy.context.object
-    fill.data.energy = 245
-    fill.data.size = 5.0
+    fill.name = "Barkly cool fill"
+    fill.data.energy = 70
+    fill.data.size = 5.5
     fill.data.color = light_rgb("fill")
     look_at(fill, (0, 0, 1.4))
 
-    bpy.ops.object.light_add(type='AREA', location=(0.8, 3.5, 6.4))
-    rim = bpy.context.object
-    rim.data.energy = 365
-    rim.data.size = 3.8
-    rim.data.color = light_rgb("key")
-    look_at(rim, (0, 0, 1.4))
+    # NO RIM, for the reason it went everywhere else: the ink contour separates
+    # a prop from what is behind it now, and a rim light doing the same job
+    # bleaches the edge it is drawn on.
 
 
 def build_window_frame():
@@ -195,7 +208,14 @@ def stamp_pack(out_dir):
     Written LAST, after every render in the run succeeded. A pass that dies
     halfway must not leave a marker saying the directory is current.
     """
-    digest = hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+    #
+    # THE PACK AND WHAT IT IMPORTS. This hashed one file, so `palette.py` --
+    # every colour in the game, both lights, and since the sun pass the
+    # ELEVATION each pack lights from -- could be edited with every render in
+    # the repo still reporting itself current. `packfile.fingerprint` is the
+    # one implementation, shared with `scripts/promote-props.py`, because a
+    # marker the writer and the reader compute differently is worse than none.
+    digest = packfile.fingerprint(Path(__file__).resolve())
     (out_dir / ".pack-sha256").write_text(digest + "\n", encoding="utf-8")
 
 

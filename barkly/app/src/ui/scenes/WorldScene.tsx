@@ -101,17 +101,57 @@ export const WORLD_LAYER_Z: Record<WorldLayerName, number> = {
  * two of them fall out of step again.
  */
 export type Atmosphere = { haze: string; ground: string };
+/**
+ * The scene's light, as the app needs it: which way and how far shadows run.
+ *
+ * Same reasoning as `Atmosphere` above -- every WorldObject in every scene
+ * needs it, and threading it through forty call sites is how two copies of a
+ * number fall out of step. It is its own context, wrapped alongside that one
+ * rather than folded into it: the air changes with the HOUR and this changes
+ * with the PLACE, so a scene that repaints at dusk should not be re-deciding
+ * how long its shadows are.
+ */
+export type SceneSun = { castLength: number };
+export const SceneSunContext = React.createContext<SceneSun | null>(null);
 export const AtmosphereContext = React.createContext<Atmosphere | null>(null);
 
 export const HAZE_MAX = 0.34;
 /*
  * How far a shadow runs, as a fraction of the prop's height. The ground is
  * seen at a shallow angle, so a shadow lying on it projects to a fraction of
- * its true length -- 0.34 puts a tree's shadow about a third of its height
- * across the grass, which reads as afternoon without turning the field into
- * stripes.
+ * its true length.
+ *
+ * IT IS PER SCENE NOW, and it is not a taste. This was one constant, 0.34,
+ * solved against a render key that stood at 51 degrees -- and when the packs
+ * lowered their suns, this did not move with them. A bench whose baked
+ * shading says late afternoon, throwing a stubby noon shadow, is the same
+ * "two light models in one frame" defect the whole pass exists to end, just
+ * split across a Python file and a TypeScript one.
+ *
+ * The numbers come out of the render's own geometry rather than being picked:
+ * a shadow's true length is `height / tan(elevation)`, and the ground is seen
+ * at a shallow enough angle that it projects to 0.424 of that on screen. That
+ * factor is what 0.34 at 51.3 degrees implied, so it is carried forward
+ * unchanged -- the camera did not move in this pass, only the sun.
+ *
+ *   park    26 deg -> 0.87
+ *   beach   34 deg -> 0.63
+ *   home    38 deg -> 0.54
+ *   town    50 deg -> 0.36
+ *
+ * `tools/blender/palette.py:SUN_ELEVATION` is where those angles live. If one
+ * changes there, it changes here, and `__tests__/scene_surfaces.test.ts` holds
+ * the two tables against each other so they cannot drift again.
  */
-export const CAST_LENGTH = 0.34;
+export const CAST_FORESHORTEN = 0.424;
+export const CAST_LENGTH: Record<string, number> = {
+  park: 0.87,
+  beach: 0.63,
+  home: 0.54,
+  town: 0.36,
+};
+/** Anything that does not name a scene: the same 38 degrees the packs default to. */
+export const CAST_LENGTH_DEFAULT = 0.54;
 /** Day haze is the sky; night haze is the deep blue the master grade uses. */
 export const HAZE_DAY = DIORAMA.hazeDay;
 export const HAZE_NIGHT = DIORAMA.hazeNight;
@@ -131,8 +171,16 @@ export const HAZE_NIGHT = DIORAMA.hazeNight;
  * Drawn at the END of the ground layer, so the terrain and the trail both
  * recede together while every prop keeps its own per-depth haze.
  */
-/** A palette token at an opacity, so no colour in this file is a raw literal. */
-function alpha(hex: string, a: number): string {
+/**
+ * A palette token at an opacity, so no colour is a raw literal.
+ *
+ * Exported because Home needed it and wrote the same three channels out by
+ * hand instead -- `DIORAMA.roomShade` is '#243E51' and the transparent end of
+ * its gradient went in as 'rgba(36,62,81,0)', which is correct today and is a
+ * second copy of a colour the moment anyone edits the palette. One helper, one
+ * hex, everywhere.
+ */
+export function alpha(hex: string, a: number): string {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
@@ -239,9 +287,32 @@ export function GroundHaze({
   );
   return (
     <View style={[styles.fill, { zIndex: 9 }]} pointerEvents="none">
+      {/*
+        FEATHERED AT THE TOP, and this was a visible seam for as long as it has
+        existed. The band started AT the horizon with the haze at full alpha in
+        its very first row, so there was a hard step across the entire width of
+        the frame -- nothing above the line, full haze below it. Measured on a
+        390x844 park capture, the largest row-to-row brightness jump in the
+        whole picture was 36.7 at exactly y = 0.33, and it cut straight through
+        the gazebo roof and the trees behind it.
+
+        It was invisible while the ground was evenly lit and became obvious the
+        moment the world got a low sun and real tonal range. Fading the haze IN
+        over the band's first eighth costs nothing and is more correct anyway:
+        the scenery just above the horizon line is the FURTHEST thing in the
+        picture, so it is the last thing that should be excluded from aerial
+        perspective.
+      */}
       <LinearGradient
-        colors={[haze, CLEAR]}
-        style={{ position: 'absolute', left: 0, right: 0, top: horizon, height: Math.max(130, (height - horizon) * 0.42) }}
+        colors={[CLEAR, haze, CLEAR]}
+        locations={[0, 0.12, 1]}
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: horizon - Math.max(130, (height - horizon) * 0.42) * 0.12,
+          height: Math.max(130, (height - horizon) * 0.42),
+        }}
       />
       <LinearGradient
         colors={[CLEAR, deepen]}
@@ -267,6 +338,7 @@ export function WorldScene({
   motion = 'idle',
   testID,
   atmosphere,
+  scene,
   zoom = 1,
 }: {
   children: React.ReactNode;
@@ -274,6 +346,14 @@ export function WorldScene({
   testID?: string;
   /** The colour of this scene's air, at this hour. See AtmosphereContext. */
   atmosphere?: Atmosphere;
+  /**
+   * WHICH PLACE THIS IS, for the things that vary by place and not by hour.
+   *
+   * Today that is one thing -- how far a shadow runs, which follows the
+   * scene's sun elevation -- and it is optional so a scene that does not name
+   * itself keeps the default rather than losing its shadows. See CAST_LENGTH.
+   */
+  scene?: string;
   /**
    * HOW CLOSE THIS PLACE IS, as a camera and not as a prop size.
    *
@@ -331,6 +411,9 @@ export function WorldScene({
   // effect competing with Barkly or shifting the HUD.
   return (
     <AtmosphereContext.Provider value={atmosphere ?? null}>
+    <SceneSunContext.Provider
+      value={{ castLength: (scene && CAST_LENGTH[scene]) || CAST_LENGTH_DEFAULT }}
+    >
       <View style={styles.frame} pointerEvents="none" testID={testID}>
         <Animated.View
           style={[
@@ -345,6 +428,7 @@ export function WorldScene({
           {children}
         </Animated.View>
       </View>
+    </SceneSunContext.Provider>
     </AtmosphereContext.Provider>
   );
 }
@@ -422,6 +506,10 @@ export function WorldObject({
    */
   const haze = HAZE_MAX * (1 - safeDepth) * (1 - safeDepth);
   const air = React.useContext(AtmosphereContext);
+  // How far this scene's sun throws a shadow. Its own context, wrapped
+  // alongside the air's, for the same reason the air has one: it is a fact
+  // about the place, not about this prop.
+  const castLength = React.useContext(SceneSunContext)?.castLength ?? CAST_LENGTH_DEFAULT;
   const hazeTint = hazeColor ?? air?.haze ?? (night ? HAZE_NIGHT : HAZE_DAY);
   const transforms: Array<{ rotate: string } | { scaleX: number }> = [];
   if (rotate) transforms.push({ rotate });
@@ -512,7 +600,7 @@ export function WorldObject({
               styles.castShadow,
               {
                 left: width * 0.26,
-                width: width * 0.52 + height * CAST_LENGTH,
+                width: width * 0.52 + height * castLength,
                 height: Math.max(9, Math.min(34, height * 0.13)),
                 bottom: -Math.max(2, height * 0.012),
                 opacity: (night ? 0.09 : 0.15) * (0.6 + safeDepth * 0.4),

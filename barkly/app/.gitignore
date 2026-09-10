@@ -61,6 +61,14 @@ world-artifact.html
 # Blender's raw output. CI (and a local `blender -b --python tools/blender/...`)
 # writes it, then PROMOTES the trimmed PNGs into assets/world/, which is what
 # ships. Keeping both copies doubles ~2MB of binaries in the diff for nothing.
+# The promote script's staging file. It is named by PID -- deliberately, so
+# two promotes running at once cannot interleave into one half-written PNG --
+# and a crashed run leaves one behind. `.promote-staging-2354.png` was
+# COMMITTED that way by a CI promotion on 2026-09-08 and sat in the repo as
+# tracked binary until this pass found it. A glob, because the next one will
+# have a different PID.
+art-review/.promote-staging-*.png
+
 art-review/world-props/
 art-review/world-scenes/
 art-review/home-props/

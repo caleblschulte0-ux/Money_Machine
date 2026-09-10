@@ -55,7 +55,6 @@ that used to overwrite each other's art are now one.
 """
 from __future__ import annotations
 
-import hashlib
 import os
 import re
 import subprocess
@@ -70,6 +69,7 @@ from PIL import Image, ImageFilter
 # a shipped PNG's alpha, the prop packs draw the INTERNAL edges with Freestyle
 # at render time, and the scene pack draws both. See that file for why.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools" / "blender"))
+import packfile  # noqa: E402  -- the pack AND the shared modules it renders through
 from ink import INK_RGB as CONTOUR_RGB, contour_width, takes_ink  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -234,25 +234,32 @@ def promote_scenes(check: bool) -> int:
     if not manifest.exists():
         print("no scene manifest rendered; skipping plates")
         return 0
-    staging = SCENE_RENDERS / ".promote-staging.png"
-    changed = []
-    for name in shipping_plates():
-        render = SCENE_RENDERS / f"{name}.png"
-        if not render.exists():
-            print(f"\nScenePlate ships '{name}' but {render.relative_to(ROOT)} "
-                  f"has never been rendered.")
-            return 1
-        subprocess.run(
-            ["convert", str(render), "-strip", "+dither", "-colors", str(PALETTE),
-             "-define", "png:compression-level=9", str(staging)],
-            check=True,
-        )
-        target = SCENE_ASSETS / f"{name}.png"
-        if not target.exists() or target.read_bytes() != staging.read_bytes():
-            if not check:
-                target.write_bytes(staging.read_bytes())
-            changed.append(name)
-    staging.unlink(missing_ok=True)
+    # PID-NAMED AND try/finally, for the same two reasons the prop loop
+    # below is: a fixed name is a race between two promotes running at
+    # once (the prize is a half-written plate), and an unlink after the
+    # loop is skipped by any exception, which is how a staging file ended
+    # up committed once already.
+    staging = SCENE_RENDERS / f".promote-staging-{os.getpid()}.png"
+    try:
+        changed = []
+        for name in shipping_plates():
+            render = SCENE_RENDERS / f"{name}.png"
+            if not render.exists():
+                print(f"\nScenePlate ships '{name}' but {render.relative_to(ROOT)} "
+                      f"has never been rendered.")
+                return 1
+            subprocess.run(
+                ["convert", str(render), "-strip", "+dither", "-colors", str(PALETTE),
+                 "-define", "png:compression-level=9", str(staging)],
+                check=True,
+            )
+            target = SCENE_ASSETS / f"{name}.png"
+            if not target.exists() or target.read_bytes() != staging.read_bytes():
+                if not check:
+                    target.write_bytes(staging.read_bytes())
+                changed.append(name)
+    finally:
+        staging.unlink(missing_ok=True)
 
     # The manifest is copied WHOLE, never filtered to the shipping plates: it
     # is the render record, and a partial copy is how a scene's anchors go
@@ -269,8 +276,17 @@ def promote_scenes(check: bool) -> int:
 
 
 def pack_fingerprint(pack: Path) -> str:
-    """The pack's content hash -- what a render directory records it was built by."""
-    return hashlib.sha256(pack.read_bytes()).hexdigest()
+    """The pack's content hash -- what a render directory records it was built by.
+
+    THE PACK AND EVERYTHING IT IMPORTS. This was `sha256(pack.read_bytes())`,
+    which quietly excluded the entire shared layer: `palette.py` holds every
+    colour, both lights, the sky fill strength and -- since the sun pass -- the
+    elevation each pack lights from, and editing any of it left every render in
+    the repo reporting itself current. `packfile` is the one implementation;
+    the pack's own `stamp_pack` writes what this reads, so a difference between
+    them is a difference nobody would ever see until the art was wrong.
+    """
+    return packfile.fingerprint(pack)
 
 
 def rendered_fingerprint(renders: Path) -> str | None:
@@ -373,38 +389,47 @@ def main() -> int:
     # Pillow could not even identify as an image. A shared temp path is a race
     # with a corrupted asset as its prize.
     staging = ROOT / "art-review" / f".promote-staging-{os.getpid()}.png"
-    for path, render, target in pending:
-        try:
-            size = build(render, path, staging)
-        except ValueError:
-            missing.append(f"{path} (rendered empty)")
-            continue
-        if target.exists():
+    #
+    # try/finally, because this unlink used to sit AFTER the loop and be
+    # skipped on any exception. One of those leaked
+    # `.promote-staging-2354.png` into a CI promotion commit on 2026-09-08,
+    # where it stayed as tracked binary until it was found by hand. The
+    # .gitignore glob added alongside this stops such a file being
+    # committed; this stops it being left behind at all.
+    try:
+        for path, render, target in pending:
             try:
-                was = Image.open(target).size
-            except Exception:
-                # An unreadable target is exactly what promotion is for. This
-                # used to raise and take the whole run down, so a single
-                # corrupt asset -- which is how the race above showed up --
-                # blocked the repair of the very file that was broken.
-                print(f"  {path}: shipped asset is unreadable; replacing it")
-                if not check:
-                    target.write_bytes(staging.read_bytes())
-                written.append(path)
+                size = build(render, path, staging)
+            except ValueError:
+                missing.append(f"{path} (rendered empty)")
                 continue
-            if was != size:
-                # The silhouette changed. That is legitimate when a builder is
-                # edited and alarming when it is not, so it is reported rather
-                # than waved through -- a prop that changes shape moves in the
-                # scene, and the aspect locks in __tests__ have to be updated
-                # with it.
-                moved.append(f"{path}  {was[0]}x{was[1]} -> {size[0]}x{size[1]}")
-            elif target.read_bytes() == staging.read_bytes():
-                continue
-        if not check:
-            target.write_bytes(staging.read_bytes())
-        written.append(path)
-    staging.unlink(missing_ok=True)
+            if target.exists():
+                try:
+                    was = Image.open(target).size
+                except Exception:
+                    # An unreadable target is exactly what promotion is for. This
+                    # used to raise and take the whole run down, so a single
+                    # corrupt asset -- which is how the race above showed up --
+                    # blocked the repair of the very file that was broken.
+                    print(f"  {path}: shipped asset is unreadable; replacing it")
+                    if not check:
+                        target.write_bytes(staging.read_bytes())
+                    written.append(path)
+                    continue
+                if was != size:
+                    # The silhouette changed. That is legitimate when a builder is
+                    # edited and alarming when it is not, so it is reported rather
+                    # than waved through -- a prop that changes shape moves in the
+                    # scene, and the aspect locks in __tests__ have to be updated
+                    # with it.
+                    moved.append(f"{path}  {was[0]}x{was[1]} -> {size[0]}x{size[1]}")
+                elif target.read_bytes() == staging.read_bytes():
+                    continue
+            if not check:
+                target.write_bytes(staging.read_bytes())
+            written.append(path)
+    finally:
+        staging.unlink(missing_ok=True)
 
     # The pack's own manifest, carried across as it always has been. Nothing
     # in src/ reads it -- it is a render record that happens to ship -- but

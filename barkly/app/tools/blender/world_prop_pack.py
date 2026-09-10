@@ -10,7 +10,6 @@ Run:
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import zlib
@@ -21,7 +20,8 @@ import bpy
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from palette import light_hex, light_rgb, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
+import packfile  # noqa: E402  -- what a render depends on, for the freshness marker
+from palette import light_hex, light_rgb, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import BITE, OVERHANG, crown, flare, shaft, stack  # noqa: E402
 from ink import INK, takes_ink  # noqa: E402  -- the one place an edge is decided
 from mathutils import Vector
@@ -205,6 +205,21 @@ def _infer_surface(name):
 def _shift(linear_rgb, amount):
     """Scale a linear colour lighter or darker. A MULTIPLIER, so hue is exact."""
     return tuple(min(1.0, max(0.0, c * (1.0 + amount))) for c in linear_rgb)
+
+
+# NO SHEEN KNOB. A coat floor was added here to chase the highlight end of the
+# range -- p95 0.83 against the reference frame's 0.99 -- on the theory that
+# nearly matte materials can never reach white. It was measured at 0.16 and at
+# 0.00 on the same prop and produced IDENTICAL output to three decimal places:
+# a 6-degree sun is too small a source to throw a broad specular, so the coat
+# had nowhere to show. Deleted rather than shipped, for the same reason the
+# pixel-comparison helper in promote-props was: a knob that does nothing, with
+# a comment saying it fixes something, is worse than the thing it does not fix.
+#
+# The p95 gap turned out to be a measuring error anyway. The reference number
+# was taken from a full game frame INCLUDING ITS SKY, and a plate renders on a
+# transparent film because the app owns the sky. Compare like with like at the
+# app level, not on the plate.
 
 
 def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None):
@@ -677,7 +692,8 @@ def use_ink(enabled):
     lineset.linestyle.thickness = 5.4
 
 
-def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640, 640)):
+def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640, 640),
+                            scene_name=""):
     scene = bpy.context.scene
     try:
         scene.render.engine = "BLENDER_EEVEE_NEXT"
@@ -783,14 +799,31 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     # touch softer than its 3.2 degrees because a prop is a cut-out with no
     # neighbours to catch its shadow, and a razor terminator on an isolated
     # object reads as a hard-edged paint job rather than as form.
-    bpy.ops.object.light_add(type="SUN", location=(-6.0, -4.0, 9.0))
+    #
+    # AND SO DOES THE ELEVATION NOW, which is the half of "exactly" that was
+    # not true. This lamp stood at z=9.0 with a reach of 7.2 units -- 51
+    # degrees, local noon -- while the scenes it composites over were lowered
+    # to 26. A bench standing on the park plate was lit at midday on a lawn lit
+    # at four in the afternoon, and that is precisely the "the art looks
+    # different scene to scene" the plates were supposed to have ended.
+    #
+    # `scene_name` comes from the prop's own path, so `park/bench` takes the
+    # park's sun and `town/fountain` takes the town's -- the same table the
+    # scene pack reads, which is what stops the two drifting again.
+    reach = math.hypot(6.0, 4.0)
+    bpy.ops.object.light_add(type="SUN", location=(-6.0, -4.0, sun_height(reach, scene_name)))
     key = bpy.context.object
     key.name = "Barkly warm key"
-    # 4.0, SOLVED FOR THE BRIGHTEST SURFACE, not for the prettiest hero prop.
-    # At 5.2 the flat courses clipped 11-19% of themselves to pure white: a
-    # horizontal plane takes parallel sun rays square on, and every one of them
-    # had been toned under an area light that fell off before it reached them.
-    key.data.energy = 4.0
+    # SOLVED FOR THE BRIGHTEST SURFACE, not for the prettiest hero prop. At 5.2
+    # the flat courses clipped 11-19% of themselves to pure white: a horizontal
+    # plane takes parallel sun rays square on, and every one of them had been
+    # toned under an area light that fell off before it reached them.
+    #
+    # 4.0 -> 4.7 when the sky fill came down from 0.45 to 0.11. The fill was
+    # doing a share of the lighting and it stopped; the key has to make that up
+    # or the whole pack just gets darker instead of getting CONTRAST, which is
+    # the difference between a low sun and an underexposure.
+    key.data.energy = 4.7
     key.data.angle = math.radians(6.0)
     key.data.color = light_rgb("key")
     look_at(key, target)
@@ -803,7 +836,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     # nothing in the world could go dark: measured, 0.1% of a park frame fell
     # below value 0.25 where the reference art puts 18.8% there. A fill exists
     # to keep shadow READABLE, not to erase it.
-    fill.data.energy = 220
+    fill.data.energy = 60
     fill.data.size = 5.5
     fill.data.color = light_rgb("fill")
     look_at(fill, target)
@@ -2507,7 +2540,11 @@ def build_prop(path, builder, ortho_scale, target, render=True):
     bug the filter's own comment below is about.
     """
     clean_scene()
-    setup_camera_and_lights(ortho_scale=ortho_scale, target=target)
+    # THE PROP'S OWN FOLDER NAMES ITS SUN. `park/bench` is lit by the park's
+    # light; anything outside the three locations (`item/`, `sky/`) falls
+    # through to `palette.DEFAULT_ELEVATION`, which the table documents.
+    setup_camera_and_lights(ortho_scale=ortho_scale, target=target,
+                            scene_name=path.split("/", 1)[0])
     use_ink(takes_ink(path))
     builder()
     if render:
@@ -2534,7 +2571,15 @@ def stamp_pack(out_dir):
     Written LAST, after every render in the run succeeded. A pass that dies
     halfway must not leave a marker saying the directory is current.
     """
-    digest = hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+    #
+    # THE PACK AND WHAT IT IMPORTS, not just the pack. This hashed one file,
+    # and `palette.py` -- every colour in the game, both lights, and since the
+    # sun pass the ELEVATION each pack lights from -- was not it. The single
+    # most behaviour-changing number in the render pipeline could be edited and
+    # every render in the repo would go on reporting itself current. See
+    # `packfile.py`, which both this and `scripts/promote-props.py` compute
+    # through so the two sides can never mean different things by it.
+    digest = packfile.fingerprint(Path(__file__).resolve())
     (out_dir / ".pack-sha256").write_text(digest + "\n", encoding="utf-8")
 
 

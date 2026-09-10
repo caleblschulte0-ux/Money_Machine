@@ -13,15 +13,15 @@ on:
       - 'claude/barkly-*'
       - 'claude/barkley-*'
     paths:
-      - 'barkly/app/tools/blender/world_prop_pack.py'
-      # The home pack promotes through the same script now, so a change to it
-      # has to re-render here too -- otherwise promotion refuses the whole run
-      # as stale, or (worse) CI ships the world from one pack and the living
-      # room from a render made before the recipe changed.
-      - 'barkly/app/tools/blender/home_prop_pack.py'
-      - 'barkly/app/tools/blender/home_architecture.py'
-      - 'barkly/app/tools/blender/proportion.py'
-      - 'barkly/app/tools/blender/palette.py'
+      # THE WHOLE DIRECTORY, not a hand-listed set of files. This named five of
+      # them and was already missing `ink.py` -- which decides every contour in
+      # the game -- and `world_scene_pack.py`, which builds the ground those
+      # props stand on. A list of dependencies maintained by hand next to a
+      # `packfile.py` that COMPUTES them is a second source of truth, and this
+      # is the copy nobody remembers to edit. Over-triggering a render costs
+      # ten minutes of a runner; under-triggering ships a world lit two ways.
+      - 'barkly/app/tools/blender/**'
+      - 'barkly/app/scripts/promote-props.py'
       - '.github/workflows/barkly-world-prop-render.yml'
   workflow_dispatch:
 
@@ -35,7 +35,8 @@ concurrency:
 jobs:
   render-world-props:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 25 -> 40: the three scene plates are a fourth pack now.
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: barkly/app
@@ -64,6 +65,15 @@ jobs:
       # 20KB with one, and the art you got depended on which finished last.
       - name: Render home architecture
         run: xvfb-run -a blender -b --python tools/blender/home_architecture.py
+
+      # AND THE PLATES. This step did not exist, so the three scene plates --
+      # the painted ground three of the four locations stand on -- could only
+      # ever be re-rendered by hand on somebody's machine. Every other pack
+      # rebuilt here on a palette change and the plates did not, which is the
+      # one drift that cannot be seen in a diff: a prop lit by a new sun,
+      # composited onto a ground lit by the old one, both files green.
+      - name: Render scene plates
+        run: xvfb-run -a blender -b --python tools/blender/world_scene_pack.py
 
       # ONE PROMOTION RECIPE, AND IT LIVES IN THE REPO.
       #
