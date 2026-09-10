@@ -21,9 +21,9 @@ const CARE_TRAY = require('../../assets/world/home/props/care_tray.png');
  */
 const KIT_ART: Record<string, { source: number; width: number; aspect: number }> = {
   bowl: { source: require('../../assets/world/item/kit_bowl.png'), width: 74, aspect: 224 / 129 },
-  stick: { source: require('../../assets/world/item/kit_stick.png'), width: 80, aspect: 224 / 66 },
+  stick: { source: require('../../assets/world/item/kit_stick.png'), width: 80, aspect: 224 / 101 },
   ball: { source: require('../../assets/world/item/toy_ball.png'), width: 54, aspect: 224 / 209 },
-  rope: { source: require('../../assets/world/item/toy_rope.png'), width: 80, aspect: 224 / 86 },
+  rope: { source: require('../../assets/world/item/toy_rope.png'), width: 80, aspect: 224 / 88 },
   bed: { source: require('../../assets/world/home/props/bed.png'), width: 86, aspect: 546 / 193 },
 };
 

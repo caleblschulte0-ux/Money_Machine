@@ -1867,50 +1867,75 @@ def item_biscuit():
 
 def item_cheese():
     """A wedge. A three-sided cylinder IS a triangular prism; a rotated cube is
-    a rhombus, which is what the first pass rendered."""
+    a rhombus, which is what the first pass rendered.
+
+    What was still wrong: it was 0.34 deep against a 0.52 radius and turned
+    face-on to the camera, so it read as a flat triangular SIGN. A wedge of
+    cheese is a solid -- you see the front face AND the top of it -- and its
+    holes are cavities, not three dots painted on the front. Deeper, turned off
+    axis, holes sunk in the top and the side, and a rind that wraps the back
+    instead of being a sheet stuck on the front.
+    """
     flesh = material("Cheese flesh", tone("sun", "lit"), roughness=0.60, coat=0.05)
     rind = material("Cheese rind", tone("sun", "base"), roughness=0.64)
     hole = material("Cheese hole", tone("sun", "shade"), roughness=0.72)
-    cylinder("wedge", (0, 0, 0.56), 0.52, 0.34, flesh,
-             rotation=(math.radians(90), 0, 0), vertices=3)
-    cylinder("wedge_rind", (0, -0.18, 0.56), 0.52, 0.03, rind,
-             rotation=(math.radians(90), 0, 0), vertices=3)
-    for x, z in ((-0.06, 0.52), (0.12, 0.44), (0.00, 0.68)):
-        sphere(f"hole_{x}_{z}", (x, -0.19, z), (0.055, 0.03, 0.055), hole)
+    turn = math.radians(-22)
+    cylinder("wedge", (0, 0, 0.54), 0.56, 0.50, flesh,
+             rotation=(math.radians(90), 0, turn), vertices=3, taper=1.0)
+    cylinder("wedge_rind", (0.09, 0.22, 0.54), 0.56, 0.07, rind,
+             rotation=(math.radians(90), 0, turn), vertices=3, taper=1.0)
+    # ON THE FACE, all of them. The first version of this spread the holes
+    # through the wedge's DEPTH (y from -0.24 to +0.02) and three of the four
+    # ended up inside the solid: one hole rendered, on a cheese that is
+    # supposed to be full of them.
+    # BORES, NOT BUMPS. Spheres sitting proud of the face take the key light
+    # on their tops and render as three studs -- the cheese grew rivets. A
+    # shallow dark disc flush with the surface is what reads as a hole.
+    for i, (x, z, r) in enumerate((
+        (-0.13, 0.49, 0.090),
+        (0.10, 0.40, 0.064),
+        (-0.04, 0.70, 0.055),
+    )):
+        cylinder(f"hole_{i}", (x, -0.243, z), r, 0.03, hole,
+                 rotation=(math.radians(90), 0, 0), vertices=20, taper=1.0, lean=0)
 
 
 def item_steak():
-    """A cut of meat: one mass, a rim of fat around it, one seared highlight.
+    """A cut of meat: one mass, a rim of fat, a lighter cut face, one bone.
 
-    Three passes were lost to detail this thing has no room for. Pale caps at
+    Four passes were lost to detail this thing has no room for. Pale caps at
     each END made it symmetrical and read as a wrapped sweet; fat along the top
-    edge read as a bun; a bone poking out of one side read as a drumstick. The
-    thing that actually says "steak" at 48px is a rounded slab of red with a
-    cream rim, so that is all this is now -- and no bone, because a bone is what
-    kept turning it into some other food.
+    edge read as a bun; a bone poking out of one SIDE read as a drumstick.
+
+    And then a fifth thing, which no amount of shaping was ever going to fix:
+    the seared face was painted `tone("sea", ...)`. The sea family. On a 48px
+    icon that is a TEAL BLOB in the middle of the meat, and the note above it
+    described the shape it wanted while saying nothing about the colour, so
+    three separate passes re-cut the geometry around a bug in the material.
+    Everything on a steak is warm. There is no cool tone anywhere in it.
     """
     meat = material("Steak", tone("berry", "shade"), roughness=0.68)
-    sear = material("Steak sear", tone("sea", "base"), roughness=0.60)
+    cut = material("Steak cut face", tone("berry", "base"), roughness=0.64)
     fat = material("Steak fat", tone("cream", "lit"), roughness=0.62)
-    sphere("fat_rim", (0, 0.03, 0.56), (0.52, 0.20, 0.36), fat)
-    sphere("cut", (0, -0.04, 0.56), (0.46, 0.20, 0.31), meat)
-    # The seared face reads as a broad lift across the top of the cut, not a
-    # separate ellipse in the middle -- that centred patch looked like a yolk.
-    sphere("cut_lit", (0.02, -0.19, 0.70), (0.34, 0.05, 0.10), sear)
-    # The T-bone, INSIDE the silhouette. A fourth pass: a slab of red with a
-    # cream rim is meat, but it is also ham, a pork chop, or a bread roll shot
-    # from above. The bone is what names it -- and every earlier attempt put it
-    # outside the outline, which is exactly what turned it into a drumstick.
+    sphere("fat_rim", (0, 0.03, 0.56), (0.54, 0.21, 0.38), fat)
+    sphere("cut", (0, -0.04, 0.56), (0.47, 0.20, 0.32), meat)
+    # The cut face is the top of the mass catching the key, one step up the
+    # SAME ramp -- not a separate patch in the middle, which looked like a yolk.
+    sphere("cut_lit", (0.02, -0.17, 0.68), (0.38, 0.07, 0.13), cut)
+    # The T-bone, INSIDE the silhouette. A slab of red with a cream rim is
+    # meat, but it is also ham, a pork chop, or a bread roll shot from above.
+    # The bone is what names it -- and every earlier attempt put it outside the
+    # outline, which is exactly what turned it into a drumstick.
     tilt = math.radians(-16)
-    bone_x, bone_y, bone_z, bone_half = -0.27, -0.26, 0.56, 0.17
-    cylinder("bone_bar", (bone_x, bone_y, bone_z), 0.042, bone_half * 2, fat,
-             rotation=(0, tilt, 0))
-    for end in (1, -1):
+    bone_x, bone_y, bone_z, bone_half = -0.26, -0.26, 0.56, 0.19
+    cylinder("bone_bar", (bone_x, bone_y, bone_z), 0.052, bone_half * 2, fat,
+             rotation=(0, tilt, 0), taper=1.0)
+    for end_ in (1, -1):
         sphere(
-            f"bone_end_{end}",
-            (bone_x + end * bone_half * math.sin(tilt), bone_y,
-             bone_z + end * bone_half * math.cos(tilt)),
-            (0.075, 0.05, 0.07),
+            f"bone_end_{end_}",
+            (bone_x + end_ * bone_half * math.sin(tilt), bone_y,
+             bone_z + end_ * bone_half * math.cos(tilt)),
+            (0.088, 0.055, 0.082),
             fat,
         )
 
@@ -1933,30 +1958,55 @@ def item_ball():
 
 
 def item_rope():
-    """A knotted tug rope: a thick braid with a fat knot and a tuft at each end.
+    """A knotted tug rope: TWO STRANDS WOUND ROUND EACH OTHER, and a knot at
+    each end.
 
-    Three passes. A flattened torus rendered as a tan disc; upright it rendered
-    as a doughnut, the one shape a rope toy must not have; and a thin bar with
-    dark beads strung along it rendered as a caterpillar. What reads is the
-    proportion -- the knots have to be much fatter than the braid, and the
-    frayed ends have to splay.
+    Five passes, and the first four all failed the same way: they drew a bar
+    and then tried to make the bar say "rope" with something added to its ends.
+    A flattened torus rendered as a tan disc. Upright it rendered as a
+    doughnut. A thin bar with dark beads rendered as a caterpillar. Cones fanned
+    round the ends rendered as a morningstar, and cones opening outward from
+    them rendered as a dumbbell.
+
+    What says rope is the TWIST, and a twist is not a detail you add to a
+    cylinder -- it is what the object is made of. So there is no cylinder: two
+    helical strands of overlapping beads wind around the axis in opposite
+    phase, in two tones, and the crossing pattern that produces is legible at
+    48px in a way nothing painted on a smooth rod ever was.
     """
     rope = material("Rope", tone("wood", "base"), roughness=0.88)
     rope_dark = material("Rope shade", tone("wood", "shade"), roughness=0.90)
-    cylinder("braid", (0, 0, 0.58), 0.16, 0.88, rope,
-             rotation=(0, math.radians(90), 0))
-    for i, tw in enumerate((-0.22, 0.0, 0.22)):
-        sphere(f"twist_{i}", (tw, -0.12, 0.58), (0.035, 0.06, 0.17), rope_dark)
-    for i, x in enumerate((-0.44, 0.44)):
-        outward = 1 if x > 0 else -1
-        sphere(f"knot_{i}", (x, 0, 0.58), (0.21, 0.21, 0.21), rope)
-        for j, tilt in enumerate((-40, -14, 14, 40)):
-            angle = math.radians(tilt)
-            cone(f"fray_{i}_{j}",
-                 (x + outward * 0.24 * math.cos(angle), 0,
-                  0.58 + 0.24 * math.sin(angle)),
-                 0.065, 0.02, 0.16, rope,
-                 rotation=(0, math.radians(outward * 90) - outward * angle, 0))
+    lean = math.radians(-14)
+    # The rope's own frame: `u` runs along it, `p` is across it in the picture
+    # plane, and y is the third axis. Everything below is placed in that frame,
+    # so changing `lean` swings the whole toy instead of shearing it.
+    ux, uz = math.cos(lean), -math.sin(lean)
+    px, pz = math.sin(lean), math.cos(lean)
+    span, twist, offset = 0.34, 7.2, 0.086
+
+    for i in range(19):
+        t = (i / 18.0 - 0.5) * 2 * span
+        for strand, phase in enumerate((0.0, math.pi)):
+            a = t * twist / span * 0.5 + phase
+            sphere(
+                f"strand_{strand}_{i}",
+                (t * ux + offset * math.cos(a) * px,
+                 offset * math.sin(a),
+                 0.58 + t * uz + offset * math.cos(a) * pz),
+                (0.080, 0.080, 0.080),
+                rope if strand == 0 else rope_dark,
+                swell=0.0,
+            )
+
+    for i, side in enumerate((-1, 1)):
+        kx = side * (span + 0.10) * ux
+        kz = 0.58 + side * (span + 0.10) * uz
+        sphere(f"knot_{i}", (kx, 0, kz), (0.140, 0.172, 0.172), rope)
+        # A short cut end past the knot, the same width as the knot: a rope
+        # that stops at a bulge looks tied, which is exactly what it is.
+        cone(f"end_{i}", (kx + side * 0.13 * ux, 0, kz + side * 0.13 * uz),
+             0.115, 0.135, 0.15, rope_dark,
+             rotation=(0, math.radians(side * 90) + lean, 0), vertices=14, lean=0)
 
 
 def kit_bowl():
@@ -1990,27 +2040,54 @@ def kit_bowl():
 def kit_stick():
     """The stick -- what he plays with before anything is bought.
 
-    ONE tapered branch with ONE twig. The first pass built it from three
-    cylinders whose ends did not actually meet, which rendered as a jack: three
-    separate brown rods crossing near the middle. A branch reads as a branch
-    because it TAPERS and because everything on it grows out of one line.
+    ONE tapered branch with twigs. The first pass built it from three cylinders
+    whose ends did not actually meet, which rendered as a jack: three separate
+    brown rods crossing near the middle. A branch reads as a branch because it
+    TAPERS and because everything on it grows out of one line.
+
+    It was still reading as a cigar: 0.10 down to 0.062 is a 38% taper on a
+    horizontal rod with one small twig, which is a smooth brown tube. Harder
+    taper, a lean, two twigs on opposite sides of the line rather than one, and
+    a couple of bark rings so the surface is not a single unbroken cylinder.
     """
     bark = material("Stick bark", tone("bark", "base"), roughness=0.86)
+    bark_dark = material("Stick bark shade", tone("bark", "shade"), roughness=0.88)
     lit = material("Stick lit", tone("wood", "lit"), roughness=0.80)
-    cone("limb", (0, 0, 0.58), 0.10, 0.062, 1.06, bark,
-         rotation=(0, math.radians(90), 0))
-    knot_x = 0.13
-    sphere("knot", (knot_x, 0, 0.585), (0.105, 0.098, 0.098), bark)
-    fork = math.radians(42)
-    cone("twig",
-         (knot_x + 0.14 * math.sin(fork), 0, 0.585 + 0.14 * math.cos(fork)),
-         0.055, 0.018, 0.28, bark,
-         rotation=(0, fork, 0))
+    lean = math.radians(-12)
+    axis = math.radians(90) + lean
+
+    def along(t):
+        """A point t units from the middle, down the branch's own line."""
+        return t * math.cos(lean), 0.58 - t * math.sin(lean)
+
+    # 0.115 -> 0.045 over one length is a CONE, and a brown cone with a point
+    # on it is a carrot. A branch keeps most of its thickness and loses it at
+    # the tip, so this is two segments: a near-parallel shaft, then a short
+    # taper. The rings sit proud (see beach/palm -- level with the surface they
+    # are invisible) and are what stops the shaft reading as one smooth tube.
+    cone("limb", (0.06, 0, 0.575), 0.098, 0.072, 0.80, bark, rotation=(0, axis, 0))
+    tx, tz = along(0.44)
+    cone("limb_tip", (tx, 0, tz), 0.074, 0.026, 0.34, bark, rotation=(0, axis, 0))
+    for i, (t, r) in enumerate(((-0.30, 0.098), (-0.02, 0.088), (0.24, 0.078))):
+        x, z = along(t)
+        cylinder(f"ring_{i}", (x, 0, z), r * 1.16, 0.05, bark_dark,
+                 rotation=(0, axis, 0), vertices=20, taper=1.0)
+    # Two twigs, opposite sides of the line. One was a knot with a spike on it.
+    for i, (t, fork, length) in enumerate(((0.13, 46, 0.30), (-0.09, -132, 0.21))):
+        x, z = along(t)
+        angle = math.radians(fork) + lean
+        sphere(f"knot_{i}", (x, 0, z), (0.10, 0.092, 0.092), bark)
+        cone(f"twig_{i}",
+             (x + (length / 2) * math.sin(angle), 0, z + (length / 2) * math.cos(angle)),
+             0.055, 0.014, length, bark, rotation=(0, angle, 0))
     # No painted-on highlight: a thin lit rod laid along the top of the branch
     # sits PROUD of it at the tapered end and renders as a second stick lying
     # across the first. The key light already gives it a top edge; the pale
-    # material is the scar where the twig broke off instead.
-    sphere("scar", (-0.30, -0.075, 0.60), (0.055, 0.03, 0.045), lit)
+    # material is the scar where the branch broke off instead.
+    # ON the shaft. This sat at along(-0.50) while the limb only reaches -0.34,
+    # so the pale scar rendered as a separate crumb floating beside the stick.
+    sx, sz = along(-0.30)
+    sphere("scar", (sx, -0.075, sz), (0.052, 0.030, 0.044), lit)
 
 
 def collar(name, hex_body, hex_edge):

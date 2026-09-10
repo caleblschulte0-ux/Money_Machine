@@ -1383,3 +1383,40 @@ render from the one workflow and promote through the one script; the window
 frame picks up the quantise and the contour on the way. The guard now reads
 the workflow DIRECTORY: any workflow that touches `art-review/` must promote
 with the script and must not copy or resize art itself.
+
+
+## The seven items, and a colour bug that survived four passes (2026-09-10)
+
+The care tray is on every screen and the items are 48-64pt in it. After the
+world got its contour and its proportions, four of the seven did not read:
+
+| item | was | now |
+|---|---|---|
+| treat_cheese | a flat triangular sign, 0.34 deep on a 0.52 radius, three dots painted on the front | a solid wedge turned off axis, holes BORED into the face |
+| treat_steak | a red oval with a **teal blob** on it | red mass, cream fat rim, lighter cut face, a bone |
+| toy_rope | a smooth bar with dark beads along the top: a caterpillar | two strands wound around each other |
+| kit_stick | 0.10 to 0.062 over one length: a smooth brown tube | a two-stage branch with bark rings and two twigs |
+
+The steak is the one worth remembering. Its docstring recorded four failed
+passes -- pale end caps read as a wrapped sweet, fat along the top read as a
+bun, a bone out the side read as a drumstick, a centred sear read as a yolk --
+and every one of them re-cut the GEOMETRY. The actual defect was one line:
+
+```python
+sear = material("Steak sear", tone("sea", "base"), roughness=0.60)
+```
+
+The **sea** family. A cyan patch in the middle of the meat, at 48px. Four
+passes reshaped a steak around a mis-typed material, because the note above the
+line described the shape it wanted and said nothing about the colour. Nothing
+on a steak is cool. It is one step up the same `berry` ramp now -- the cut face
+catching the key, which is what the shape note wanted all along.
+
+The rope is the other lesson, and it is a proportion one. Four passes drew a
+BAR and then tried to make the bar say "rope" by adding something to its ends:
+a torus (a doughnut), beads on a rod (a caterpillar), cones fanned around the
+ends (a morningstar), cones opening outward (a dumbbell). What says rope is the
+TWIST, and a twist is not a detail you add to a cylinder -- it is what the
+object is made of. There is no cylinder in it now: two helical strands of
+overlapping beads in two tones, winding in opposite phase. The crossing pattern
+is legible at 48px in a way nothing painted on a smooth rod ever was.
