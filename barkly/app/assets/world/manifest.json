@@ -8,12 +8,12 @@
       "displayWidth": 190,
       "anchor": "bottom",
       "form": {
-        "height": 5.01,
-        "parts": 10,
-        "widest": 4.729,
+        "height": 3.992,
+        "parts": 13,
+        "widest": 4.787,
         "foot": 2.178,
-        "waist": 1.904,
-        "crown": 4.729
+        "waist": 1.765,
+        "crown": 4.787
       }
     },
     "park/bench": {
@@ -190,12 +190,12 @@
       "displayWidth": 440,
       "anchor": "bottom",
       "form": {
-        "height": 1.557,
+        "height": 1.556,
         "parts": 30,
-        "widest": 7.642,
+        "widest": 7.33,
         "foot": 6.976,
         "waist": 6.976,
-        "crown": 7.642
+        "crown": 7.33
       }
     },
     "town/paving": {
@@ -229,11 +229,11 @@
       "displayWidth": 114,
       "anchor": "bottom",
       "form": {
-        "height": 2.58,
+        "height": 2.579,
         "parts": 7,
         "widest": 3.27,
-        "foot": 2.688,
-        "waist": 0.921,
+        "foot": 2.638,
+        "waist": 0.902,
         "crown": 1.902
       }
     },
@@ -242,12 +242,12 @@
       "displayWidth": 70,
       "anchor": "bottom",
       "form": {
-        "height": 4.658,
+        "height": 4.657,
         "parts": 7,
-        "widest": 1.722,
-        "foot": 0.935,
-        "waist": 0.62,
-        "crown": 1.722
+        "widest": 1.686,
+        "foot": 0.893,
+        "waist": 0.617,
+        "crown": 1.686
       }
     },
     "town/planter": {
@@ -257,9 +257,9 @@
       "form": {
         "height": 2.378,
         "parts": 6,
-        "widest": 1.803,
-        "foot": 1.618,
-        "waist": 1.59,
+        "widest": 1.76,
+        "foot": 1.563,
+        "waist": 1.563,
         "crown": 1.616
       }
     },
@@ -270,10 +270,10 @@
       "form": {
         "height": 4.2,
         "parts": 6,
-        "widest": 3.345,
+        "widest": 3.3,
         "foot": 0.884,
-        "waist": 0.359,
-        "crown": 3.345
+        "waist": 0.357,
+        "crown": 3.3
       }
     },
     "beach/lifeguard": {
@@ -389,8 +389,8 @@
         "parts": 7,
         "widest": 3.093,
         "foot": 3.093,
-        "waist": 2.603,
-        "crown": 2.603
+        "waist": 2.602,
+        "crown": 2.602
       }
     },
     "beach/castle": {
@@ -400,9 +400,9 @@
       "form": {
         "height": 3.331,
         "parts": 19,
-        "widest": 2.725,
-        "foot": 2.725,
-        "waist": 1.204,
+        "widest": 2.705,
+        "foot": 2.705,
+        "waist": 1.186,
         "crown": 2.424
       }
     },
@@ -411,12 +411,12 @@
       "displayWidth": 142,
       "anchor": "bottom",
       "form": {
-        "height": 5.217,
+        "height": 5.214,
         "parts": 23,
-        "widest": 3.701,
+        "widest": 3.7,
         "foot": 1.294,
         "waist": 1.294,
-        "crown": 3.701
+        "crown": 3.7
       }
     },
     "park/dig_mound": {
@@ -515,12 +515,12 @@
       "displayWidth": 48,
       "anchor": "center",
       "form": {
-        "height": 0.866,
+        "height": 0.844,
         "parts": 5,
-        "widest": 1.103,
-        "foot": 1.103,
-        "waist": 1.103,
-        "crown": 1.103
+        "widest": 1.063,
+        "foot": 1.063,
+        "waist": 1.063,
+        "crown": 1.063
       }
     },
     "item/treat_steak": {
@@ -556,10 +556,10 @@
       "form": {
         "height": 0.572,
         "parts": 42,
-        "widest": 1.315,
-        "foot": 0.501,
+        "widest": 1.314,
+        "foot": 0.5,
         "waist": 0.793,
-        "crown": 1.234
+        "crown": 1.233
       }
     },
     "item/kit_bowl": {
@@ -567,11 +567,11 @@
       "displayWidth": 76,
       "anchor": "center",
       "form": {
-        "height": 0.531,
+        "height": 0.53,
         "parts": 8,
         "widest": 1.08,
-        "foot": 1.007,
-        "waist": 1.007,
+        "foot": 0.96,
+        "waist": 0.96,
         "crown": 1.08
       }
     },
@@ -580,7 +580,7 @@
       "displayWidth": 82,
       "anchor": "center",
       "form": {
-        "height": 0.53,
+        "height": 0.527,
         "parts": 10,
         "widest": 0.965,
         "foot": 0.824,
