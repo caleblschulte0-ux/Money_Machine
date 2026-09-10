@@ -215,9 +215,14 @@ def map_zone_marker(img, t, dur, cx, cy, k=None):
     d.ellipse([cx - 5, cy - 5, cx + 5, cy + 5], fill=ACCENT + (a,))
 
 
-def summary_card(img, t, dur, items, k=None):
-    """SITE-BASED - REUSABLE HARDWARE - UPDATEABLE SOFTWARE, centered,
-    dot-separated -- a closing thesis line, not a bullet list."""
+def idea_card(img, t, dur, text, k=None):
+    """One large, centered, single-idea card -- replaces the old
+    summary_card thin dot-separated strip (r172's review: that strip put
+    three ideas in type materially smaller than every other lower_card in
+    the film, failing r168's own 'phone-readable, one idea per card'
+    rule). Sized at least as large as lower_card's headline (52px) on
+    purpose -- this is the film's closing thesis, it should not read as
+    fine print."""
     if k is None:
         k = fade_k(t, dur)
     if k <= 0:
@@ -225,14 +230,14 @@ def summary_card(img, t, dur, items, k=None):
     d = ImageDraw.Draw(img)
     W, H = img.size
     a = int(255 * k)
-    f = font("SemiBold", 30)
-    sep = "   •   "
-    line = sep.join(s.upper() for s in items)
-    lw = d.textlength(line, font=f)
-    x0 = W // 2 - lw / 2
-    y0 = H - 130
-    d.rectangle([x0 - 30, y0 - 16, x0 + lw + 30, y0 + 44], fill=PAPER + (int(210 * k),))
-    d.text((W // 2, y0 + 6), line, font=f, fill=INK + (a,), anchor="mm")
+    f = font("Bold", 58)
+    s = text.upper()
+    tw = d.textlength(s, font=f)
+    x0 = W // 2 - tw / 2
+    y0 = H - 160
+    d.rectangle([x0 - 40, y0 - 30, x0 + tw + 40, y0 + 46], fill=PAPER + (int(214 * k),))
+    d.rectangle([x0 - 40, y0 - 30, x0 - 34, y0 + 46], fill=ACCENT + (a,))
+    text_with_shadow(d, (W // 2, y0 + 8), s, f, INK + (a,), anchor="mm", shadow_alpha=0)
 
 
 def audio_sync_glyph(img, t, dur, cx1, cy1, cx2, cy2, k=None):

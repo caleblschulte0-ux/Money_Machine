@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""r171 evidence pack: full-film contact sheet for v34 "The Field Guide".
+"""r173 evidence pack (pass 2): full-film contact sheet for v34 "The Field
+Guide", after r172's two required fixes (ice-age plate, destination cards).
 
 Every ~1.4s across the 70.0s master, plus the exact boundary of every
-disclosure tag and every beat transition -- same standard r170/r168 set
-for v33's r167 contact sheet.
+disclosure tag, every beat transition, and (r172's explicit request) every
+destination-card boundary -- same standard r170/r168 set for v33's r167
+contact sheet.
 """
 import subprocess
 import sys
@@ -15,6 +17,7 @@ W, H = 1920, 1080
 MASTER = "../out/ORI_Field_Guide_master.mp4"
 BEAT_BOUNDS = [0.0, 6.0, 15.0, 23.0, 35.0, 49.0, 60.0, 70.0]
 DISCLOSURE_BOUNDS = [6.0, 15.0, 20.0, 23.0, 35.0, 39.67, 44.33, 49.0]
+DESTINATION_CARD_BOUNDS = [51.2, 54.1, 57.0]
 
 
 def grab(t):
@@ -37,7 +40,8 @@ def stamp(f, t):
 
 def main():
     times = sorted(set([round(x, 2) for x in
-                         list(np.arange(0.0, 70.0, 1.4)) + BEAT_BOUNDS + DISCLOSURE_BOUNDS]))
+                         list(np.arange(0.0, 70.0, 1.4)) + BEAT_BOUNDS + DISCLOSURE_BOUNDS
+                         + DESTINATION_CARD_BOUNDS]))
     tile_w, tile_h = 384, 216
     cols = 10
     rows = (len(times) + cols - 1) // cols
@@ -46,7 +50,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r171__claude__v34_field_guide__contact.png", sheet)
+    cv2.imwrite("r173__claude__v34_field_guide_pass2__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

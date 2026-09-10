@@ -55,14 +55,16 @@ STRUCTURE = {
         "35.0-39.67s IMG_DAK1.MOV plate (Dakota reconstruction, already-disclosed asset)",
         "35.0-39.67s disclosure_tag \"VISUALIZATION\", corner tl",
         "35.0-39.67s lower_card \"EXAMPLE ONE / HISTORICAL RECONSTRUCTION\"",
-        "39.67-44.33s HONEST GAP: no photoreal, location-matched ice-age asset exists. "
-        "ai/ice/'s old pollinations renders are a stylized fantasy canyon with no "
-        "falls and no tie to this location -- reusing them would present a worse, "
-        "non-photoreal image as if it met the same bar dak/mam/worn/hardware do. "
-        "Ships instead as a plain on-brand placeholder card reading "
-        "\"NEEDED_ICEAGE_FALLS_VISUALIZATION / no photoreal, location-matched asset "
-        "exists yet\" over solid paper.",
-        "39.67-44.33s lower_card \"EXAMPLE TWO / ICE-AGE VISUALIZATION\"",
+        "39.67-44.33s r172's supplied photoreal Ice Age Falls Park visualization plate "
+        "(ai/iceage/iceage_falls_visualization_r172_chatgpt.jpg, ChatGPT-generated, "
+        "operator-approved), replacing r171's NEEDED_ICEAGE_FALLS_VISUALIZATION "
+        "honest-gap placeholder now that a real, location-matched asset exists. "
+        "Restrained push-in, capped at 1.03x (~3%) per r172's exact spec.",
+        "39.67-44.33s disclosure_tag \"VISUALIZATION\", corner tl, HELD FULL INTERVAL "
+        "(no_fadeout=True) -- the one disclosure_tag in this film that skips the "
+        "shared release-fade, per r172's explicit \"continuously for the full "
+        "interval\" requirement",
+        "39.67-44.33s lower_card \"EXAMPLE TWO / ICE-AGE VISUALIZATION\" (unchanged)",
         "44.33-49.0s  IMG_6799 @3.0s real footage, dimmed/blended 55% with paper -- "
         "a diagram background, not a claim about what the footage shows",
         "44.33-49.0s  audio_sync_glyph: two points + bezier tie-line (no disclosure "
@@ -74,8 +76,15 @@ STRUCTURE = {
         "49.0-51.2s step_strip active=RETURN, over real footage (no product visible "
         "in frame) -- matches the narration (\"the glasses are returned\") that "
         "`borrow`'s own step_strip deliberately deferred",
-        "51.2-60.0s summary_card \"SITE-BASED - REUSABLE HARDWARE - UPDATEABLE SOFTWARE\"",
-        "57.0-60.0s IMG_6802 @0.0s real footage (summary_card continues)",
+        "51.2-54.1s idea_card \"SITE-BASED\", large centered one-idea card",
+        "54.1-57.0s idea_card \"REUSABLE HARDWARE\"",
+        "57.0-60.0s idea_card \"UPDATEABLE SOFTWARE\" (over IMG_6802 @0.0s real footage)",
+        "57.0-60.0s IMG_6802 @0.0s real footage",
+        "  -- r172's review: the old single dot-separated summary_card strip crammed "
+        "all three ideas into type materially smaller than every other lower_card in "
+        "the film -- phone-illegible, one-idea-per-card violation. Replaced with three "
+        "large sequential cards at r172's own exact intervals; summary_card() removed "
+        "from graphics.py (unused after this change, not left dead).",
     ],
     "close": [
         "60.0-66.0s IMG_6805 @19.0s real footage, locked-off wide of the falls "
@@ -91,9 +100,11 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v34 -- "THE FIELD GUIDE"')
+    L.append('ORI v34 -- "THE FIELD GUIDE" (pass 2, r173)')
     L.append("Second execution in the operator-ordered five-style slate "
-             "(r145__operator__five_style_variants.md); v33 is the first, frozen.")
+             "(r145__operator__five_style_variants.md); v33 is the first, frozen. "
+             "This pass applies r172's two required fixes: the ice-age plate and "
+             "the destination summary cards.")
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps, full 16:9, no scope crop")
     L.append("")
     L.append("BEAT LIST -- generated from spec_field.py, not retyped")
@@ -122,13 +133,13 @@ def main():
     L.append("STANDING DISCLOSURE")
     L.append("  \"PRODUCT VISUALIZATION\" over the hardware plate (system) and the "
              "worn plate (borrow); plain \"VISUALIZATION\" over the historical "
-             "reconstruction plate (experience, part one). Shown WHILE the "
-             "generated/reconstructed imagery is on screen, cleared everywhere "
-             "else. The ice-age example carries no disclosure tag because it "
-             "carries no image at all -- an honest NEEDED_ placeholder in its "
-             "place. The spatial-audio diagram carries no tag because it is a "
-             "drawn diagram over real, undisclosed-needing footage, not "
-             "fabricated imagery standing in for something real.")
+             "reconstruction plate (experience, part one) AND over the ice-age plate "
+             "(experience, part two, new this pass) -- held for that plate's FULL "
+             "interval per r172's requirement, not the shared fade envelope every "
+             "other tag in this film uses. Shown WHILE the generated/reconstructed "
+             "imagery is on screen, cleared everywhere else. The spatial-audio "
+             "diagram still carries no tag because it is a drawn diagram over real "
+             "footage, not fabricated imagery standing in for something real.")
     print("\n".join(L))
 
 

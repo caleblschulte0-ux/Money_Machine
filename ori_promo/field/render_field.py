@@ -86,6 +86,31 @@ def build_worn_long(dur, fps=FPS):
     return [f.copy() for f in a]
 
 
+def build_iceage_plate(dur, fps=FPS):
+    """r172 (ChatGPT, round r172): the operator-approved photoreal
+    Ice Age Falls Park visualization plate, replacing the r171
+    NEEDED_ICEAGE_FALLS_VISUALIZATION honest-gap placeholder now that a
+    real asset exists. Same push-in technique as build_worn_long, capped
+    at r172's specified ~3% (not v33's/borrow's larger pushes -- this is a
+    restrained hold, per the review)."""
+    src = os.path.join(_HERE, "..", "ai", "iceage", "iceage_falls_visualization_r172_chatgpt.jpg")
+    n = int(round(dur * fps))
+    cap = 1.03
+    rate = (cap - 1.0) / (n * 0.5)
+    vf = (f"scale=3840:2160:flags=lanczos,"
+          f"zoompan=z='min(1.0+{rate}*on,{cap})':d={n}:x='iw/2-(iw/zoom/2)':"
+          f"y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={fps}")
+    r = subprocess.run(
+        ["ffmpeg", "-v", "error", "-loop", "1", "-i", src, "-t", str(dur),
+         "-vf", vf, "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True)
+    b = r.stdout
+    got = len(b) // (W * H * 3)
+    if got < n:
+        raise SystemExit(f"iceage_plate: wanted {n}, got {got}: {r.stderr.decode()[-500:]}")
+    a = np.frombuffer(b[:n * W * H * 3], np.uint8).reshape(n, H, W, 3)
+    return [f.copy() for f in a]
+
+
 def daylight_grade(bgr):
     """A light lift, not v33's filmic S-curve. r168: 'daylight palette'
     -- the whole point is this should NOT look cinematically graded, it
@@ -217,23 +242,19 @@ def build_experience():
         G.lower_card(img, t, seg, "example one", "HISTORICAL RECONSTRUCTION")
         out.append(from_pil(img))
 
-    # b) ice-age -- HONEST GAP, no fabricated image (spec_field.py's own
-    # header explains why ai/ice/'s old renders are not used here)
-    n = int(seg * FPS)
-    for i in range(n):
+    # b) ice-age -- r172's supplied plate (ChatGPT), replacing the r171
+    # honest-gap placeholder now that a real, location-matched asset
+    # exists. VISUALIZATION disclosure held for the FULL interval
+    # (no_fadeout=True) per r172's explicit "continuously for the full
+    # interval" requirement -- every other disclosure_tag in this film
+    # still uses the shared fade envelope; this is the one exception,
+    # requested by name.
+    iceage_frames = build_iceage_plate(seg)
+    for i, f in enumerate(iceage_frames):
         t = i / FPS
-        plate = solid_bg((238, 234, 224))
+        plate = daylight_grade(f)
         img = to_pil_rgba(plate)
-        d_font = G.font("Bold", 30)
-        from PIL import ImageDraw
-        d = ImageDraw.Draw(img)
-        k = G.fade_k(t, seg)
-        a = int(255 * k)
-        d.text((W // 2, H // 2 - 30), "NEEDED_ICEAGE_FALLS_VISUALIZATION", font=d_font,
-               fill=G.INK + (a,), anchor="mm")
-        f2 = G.font("Medium", 22)
-        d.text((W // 2, H // 2 + 20), "no photoreal, location-matched asset exists yet",
-               font=f2, fill=G.DIM + (a,), anchor="mm")
+        G.disclosure_tag(img, t, seg, "VISUALIZATION", corner="tl", no_fadeout=True)
         G.lower_card(img, t, seg, "example two", "ICE-AGE VISUALIZATION")
         out.append(from_pil(img))
 
@@ -258,19 +279,29 @@ def build_destination():
     f2 = read_clip("6802", 0.0, d2)
     out = []
     strip_dur = 2.2
+    # r172's review: the old single dot-separated strip crammed three
+    # ideas into type smaller than every other lower_card in the film,
+    # phone-illegible and one idea-per-card violation. Three large
+    # sequential cards instead, at r172's own exact intervals (film time
+    # 51.2-54.1 / 54.1-57.0 / 57.0-60.0 -- beat-relative below, beat
+    # starts at film time 49.0).
+    CARDS = [(2.2, 5.1, "site-based"), (5.1, 8.0, "reusable hardware"), (8.0, 11.0, "updateable software")]
     for i, f in enumerate(f1):
         t = i / FPS
         img = to_pil_rgba(daylight_grade(f))
         if t < strip_dur:
             G.step_strip(img, t, strip_dur, ["borrow", "explore", "return"], 2)
         else:
-            G.summary_card(img, t - strip_dur, dur - strip_dur,
-                            ["site-based", "reusable hardware", "updateable software"])
+            for c0, c1, text in CARDS:
+                if c0 <= t < c1:
+                    G.idea_card(img, t - c0, c1 - c0, text)
         out.append(from_pil(img))
     for i, f in enumerate(f2):
         t = d1 + i / FPS
         img = to_pil_rgba(daylight_grade(f))
-        G.summary_card(img, t, dur, ["site-based", "reusable hardware", "updateable software"])
+        for c0, c1, text in CARDS:
+            if c0 <= t < c1:
+                G.idea_card(img, t - c0, c1 - c0, text)
         out.append(from_pil(img))
     return out
 
