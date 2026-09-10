@@ -103,13 +103,20 @@ def _soft_patch_scrim(img, cx, cy, half_w, half_h, max_alpha=150, blur=46, color
     img.alpha_composite(scrim, (int(cx - bw / 2), int(cy - bh / 2)))
 
 
-def _edge_scrim(img, edge, band_frac, max_alpha=175, color=DARKSCRIM):
-    """A smooth linear gradient along one frame edge (real captioning's
-    own device) -- no blur needed, the ramp is already continuous."""
+def _edge_scrim(img, edge, band_frac, max_alpha=175, color=DARKSCRIM, ease_pow=1.0):
+    """A smooth gradient along one frame edge (real captioning's own
+    device) -- no blur needed, the ramp is already continuous.
+    ease_pow<1.0 front-loads the rise (frac**ease_pow) so the band is
+    already near max_alpha by the time it reaches a caption's actual
+    y-position instead of only partway up a strictly linear ramp --
+    r190's own finding: at the old linear ramp, text sitting well above
+    the band's very bottom edge sat behind only ~60% of the nominal
+    peak opacity, not the full value."""
     if max_alpha <= 0:
         return
     band_h = int(H * band_frac)
-    ramp = np.linspace(0, max_alpha, band_h).astype(np.uint8)
+    frac = np.linspace(0.0, 1.0, band_h) ** ease_pow
+    ramp = (frac * max_alpha).astype(np.uint8)
     if edge == "bottom":
         alpha = np.tile(ramp.reshape(band_h, 1), (1, W))
         pos = (0, H - band_h)
@@ -123,11 +130,16 @@ def _edge_scrim(img, edge, band_frac, max_alpha=175, color=DARKSCRIM):
     img.alpha_composite(scrim, pos)
 
 
-def _halo_text(img, xy, s, f, fill, anchor="mm", halo_alpha=170, blur=6):
+def _halo_text(img, xy, s, f, fill, anchor="mm", halo_alpha=170, blur=6,
+               keyline_alpha=0, keyline_width=2):
     """Crisp text over a soft blurred dark duplicate of itself -- the
     legibility a box gave, without the box. Only supports anchor="mm"
     (everything this style needs); blur is sized to the glyphs' own
-    bounding box, not the full frame."""
+    bounding box, not the full frame. keyline_alpha>0 adds a crisp dark
+    stroke around the glyphs UNDER the soft halo (r190/r191: pale sky,
+    snow and bright concrete washed out plain white type -- the wide
+    soft halo alone wasn't enough contrast; a tight stroke plus the
+    halo gives both a soft glow and a hard edge)."""
     x, y = xy
     d0 = ImageDraw.Draw(Image.new("RGBA", (8, 8)))
     bbox = d0.textbbox((0, 0), s, font=f, anchor="la")
@@ -141,14 +153,20 @@ def _halo_text(img, xy, s, f, fill, anchor="mm", halo_alpha=170, blur=6):
         layer = layer.filter(ImageFilter.GaussianBlur(blur))
         img.alpha_composite(layer, (int(x - bw / 2), int(y - bh / 2)))
     d = ImageDraw.Draw(img, "RGBA")
-    _shadow_text(d, xy, s, f, fill, anchor=anchor)
+    if keyline_alpha > 0:
+        d.text(xy, s, font=f, fill=fill, anchor=anchor,
+               stroke_width=keyline_width, stroke_fill=(0, 0, 0, keyline_alpha))
+    else:
+        _shadow_text(d, xy, s, f, fill, anchor=anchor)
 
 
-def _draw_tracked(img, x, y, s, f, fill, tracking=4, halo_alpha=170, blur=5):
+def _draw_tracked(img, x, y, s, f, fill, tracking=4, halo_alpha=170, blur=5,
+                   keyline_alpha=0, keyline_width=2):
     """Left-anchored text with manual letter-spacing -- the small-caps,
     generously tracked treatment real disclosure/credit type uses,
     instead of PIL's default cramped kerning. Returns the tracked width
-    so callers can right-align."""
+    so callers can right-align. keyline_alpha>0 adds a crisp dark
+    stroke per glyph under the soft halo (see _halo_text)."""
     d = ImageDraw.Draw(img, "RGBA")
     widths = [d.textlength(ch, font=f) for ch in s]
     total = sum(widths) + tracking * (len(s) - 1) if s else 0
@@ -170,7 +188,11 @@ def _draw_tracked(img, x, y, s, f, fill, tracking=4, halo_alpha=170, blur=5):
     d = ImageDraw.Draw(img, "RGBA")
     cx = x
     for ch, w in zip(s, widths):
-        _shadow_text(d, (cx, y), ch, f, fill, anchor="la")
+        if keyline_alpha > 0:
+            d.text((cx, y), ch, font=f, fill=fill, anchor="la",
+                   stroke_width=keyline_width, stroke_fill=(0, 0, 0, keyline_alpha))
+        else:
+            _shadow_text(d, (cx, y), ch, f, fill, anchor="la")
         cx += w + tracking
     return total
 
@@ -278,7 +300,11 @@ def primary_label(img, text, k=1.0, y_frac=0.14, font_size=84, accent_bg=True):
 def caption(img, t, dur, text, k=None, y_frac=0.88, font_size=52):
     """r184's own 52px+ minimum for explanatory captions, given from the
     start. A soft bottom-edge gradient (real closed-captioning's own
-    device) replaces the old hard black bar."""
+    device) replaces the old hard black bar. r191 (r190's finding):
+    plain white type over bright concrete/grass/sky washed out once the
+    box was gone -- the gradient's own front-loaded rise (ease_pow) plus
+    a stronger local halo and a crisp keyline give the glyphs real
+    contrast without bringing back a hard bar."""
     if k is None:
         k = fade_k(t, dur)
     if k <= 0:
@@ -286,9 +312,10 @@ def caption(img, t, dur, text, k=None, y_frac=0.88, font_size=52):
     f = font("SemiBold", font_size)
     s = text.upper()
     x, y = W / 2, H * y_frac
-    _edge_scrim(img, "bottom", band_frac=0.30, max_alpha=int(150 * k))
-    a = int(245 * k)
-    _halo_text(img, (x, y), s, f, OFFWHITE + (a,), anchor="mm", halo_alpha=int(150 * k), blur=4)
+    _edge_scrim(img, "bottom", band_frac=0.27, max_alpha=int(195 * k), ease_pow=0.5)
+    a = int(250 * k)
+    _halo_text(img, (x, y), s, f, OFFWHITE + (a,), anchor="mm", halo_alpha=int(190 * k), blur=5,
+               keyline_alpha=int(175 * k), keyline_width=2)
 
 
 def disclosure(img, text="PRODUCT VISUALIZATION", corner="tr", k=1.0, font_size=38):
@@ -297,7 +324,11 @@ def disclosure(img, text="PRODUCT VISUALIZATION", corner="tr", k=1.0, font_size=
     explicit acceptance test. font_size defaults to r184's own 38px
     minimum from the start. Rendered as tracked small caps with a soft
     halo -- reads as an integrated credit line now, not a legal sticker
-    stamped in a box."""
+    stamped in a box. r191 (r190's finding): over pale sky/snow the
+    tracked white letters nearly disappeared with only a halo behind
+    them -- added a feathered local scrim (a soft patch, not a hard
+    box) plus a crisp keyline stroke so contrast holds over any
+    background."""
     f = font("Medium", font_size)
     d = ImageDraw.Draw(img, "RGBA")
     tracking = max(2, font_size // 11)
@@ -313,8 +344,11 @@ def disclosure(img, text="PRODUCT VISUALIZATION", corner="tr", k=1.0, font_size=
         x, y = W - margin - tw, H - margin - lh
     else:
         x, y = margin, H - margin - lh
-    a = int(225 * k)
-    _draw_tracked(img, x, y, text, f, OFFWHITE + (a,), tracking=tracking, halo_alpha=int(165 * k), blur=5)
+    a = int(230 * k)
+    _soft_patch_scrim(img, x + tw / 2, y + lh / 2, tw / 2 + 22, lh * 0.65,
+                       max_alpha=int(153 * k), blur=max(14, int(font_size * 0.4)))
+    _draw_tracked(img, x, y, text, f, OFFWHITE + (a,), tracking=tracking, halo_alpha=int(180 * k), blur=5,
+                  keyline_alpha=int(195 * k), keyline_width=2)
 
 
 def zone_trace(img, cx, cy, w, h, k=1.0, bracket_len_frac=0.22):
@@ -377,7 +411,10 @@ def end_card(img, t, dur, line1, line2, k=None):
     the true final frame, not ~97.5% one frame early. A soft radial
     vignette and a thin coral rule between the two lines replace the old
     hard box -- the wordmark now reads as a considered reveal instead of
-    a title card dropped onto a slide."""
+    a title card dropped onto a slide. r191 (r190's finding): the coral
+    second line lost contrast over the bright overlook -- both lines are
+    now white, coral reserved for the separator rule only, with a
+    stronger local scrim so the lockup reads confidently through 73.9s."""
     if k is None:
         k = fade_k(t, dur, in_t=0.6, no_out=True)
     if k <= 0:
@@ -389,11 +426,13 @@ def end_card(img, t, dur, line1, line2, k=None):
     w2 = d.textlength(line2, font=f2)
     bw = max(w1, w2)
     x, y = W / 2, H * 0.5
-    _soft_patch_scrim(img, x, y, bw / 2 + 90, 95, max_alpha=int(175 * k), blur=68)
+    _soft_patch_scrim(img, x, y, bw / 2 + 90, 100, max_alpha=int(210 * k), blur=56)
     a = int(255 * k)
-    _halo_text(img, (x, y - 22), line1, f1, (255, 255, 255, a), anchor="mm", halo_alpha=int(200 * k), blur=7)
+    _halo_text(img, (x, y - 22), line1, f1, (255, 255, 255, a), anchor="mm", halo_alpha=int(215 * k), blur=7,
+               keyline_alpha=int(180 * k), keyline_width=2)
     d = ImageDraw.Draw(img, "RGBA")
     rule_w = min(w1, w2) * 0.5
     ry = y + 9
-    d.line([(x - rule_w / 2, ry), (x + rule_w / 2, ry)], fill=ACCENT + (int(210 * k),), width=3)
-    _halo_text(img, (x, y + 34), line2, f2, ACCENT + (a,), anchor="mm", halo_alpha=int(160 * k), blur=5)
+    d.line([(x - rule_w / 2, ry), (x + rule_w / 2, ry)], fill=ACCENT + (int(220 * k),), width=3)
+    _halo_text(img, (x, y + 34), line2, f2, (255, 255, 255, a), anchor="mm", halo_alpha=int(195 * k), blur=5,
+               keyline_alpha=int(160 * k), keyline_width=1)

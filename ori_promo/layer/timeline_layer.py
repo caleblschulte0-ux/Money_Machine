@@ -151,7 +151,7 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v37 -- "THE WORLD / THE LAYER" (typography pass, r189)')
+    L.append('ORI v37 -- "THE WORLD / THE LAYER" (typography pass 2, r191)')
     L.append("Fifth and final execution in the operator-ordered five-style "
              "slate (r145__operator__five_style_variants.md); v33/r167, "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
@@ -163,12 +163,19 @@ def main():
              "rectangle -- a chyron/lower-third convention, not how a "
              "premium product film sets type, and coral filled every "
              "single label rather than reading as a rare accent. r189 "
-             "rewrites graphics_layer.py to replace every box with a soft "
-             "feathered scrim and blurred-halo text, and reserves coral "
-             "for the hook's own title toggle only -- every other label "
-             "is clean white. No footage, wipe, disclosure wording, "
-             "caption wording, narration, timing, or the 74.000s runtime "
-             "changed; only how the type renders.")
+             "rewrote graphics_layer.py to replace every box with a soft "
+             "feathered scrim and blurred-halo text, and reserved coral "
+             "for the hook's own title toggle only. r190 approved that "
+             "direction but found it overcorrected: plain white type with "
+             "only a soft halo washed out over pale sky, snow, bright "
+             "concrete and bright hair. r191 strengthens the local scrims, "
+             "front-loads the bottom-edge gradient's rise, and adds a "
+             "crisp keyline stroke under the halo on every disclosure and "
+             "caption, plus the end card (now white on both lines, coral "
+             "reserved for the separator rule) -- still boxless, now "
+             "legible over any background. No footage, wipe, disclosure "
+             "wording, caption wording, narration, timing, or the 74.000s "
+             "runtime changed; only how the type renders.")
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps, full 16:9, no scope crop")
     L.append("")
     L.append("SECTION LIST -- generated from spec_layer.py, not retyped")
@@ -217,9 +224,14 @@ def main():
              "plus these disclosure tags. r189: rendered as tracked "
              "small-caps with a soft halo instead of a dark box -- reads "
              "as an integrated credit line now, same words, same "
-             "interval, same 38px minimum, same corner position.")
+             "interval, same 38px minimum, same corner position. r191 "
+             "(r190's finding): the tracked white letters nearly "
+             "disappeared over pale sky/snow with only a halo behind "
+             "them -- added a feathered local scrim and a crisp keyline "
+             "stroke; still boxless, same words/interval/size/position, "
+             "now legible over any background.")
     L.append("")
-    L.append("STANDING TYPOGRAPHY (r189)")
+    L.append("STANDING TYPOGRAPHY (r189, legibility-corrected r191)")
     L.append("  Every text element in r185-r188's delivered cut sat inside "
              "a hard-edged solid-fill rectangle -- primary labels in a "
              "coral box, captions in a black bar, the loop words in a "
@@ -243,6 +255,25 @@ def main():
              "boundary, or the 74.000s runtime changed -- only how the "
              "type renders. Zone-trace brackets and the anchor pulse are "
              "unchanged (they were never boxed text).")
+    L.append("  r191 (r190's own finding, timestamped): plain white type "
+             "with only a soft halo washed out at 5.6-7.0s and 42.8-49.0s "
+             "(the VISUALIZATION disclosure over pale sky/snow), "
+             "16.8-18.2s (PRODUCT VISUALIZATION over bright hair/sky), "
+             "22.8-30.8s and 33.6-39.2s and 66.0-69.2s (bottom captions "
+             "over bright grass/river-rock/concrete), and 70.6-73.9s (the "
+             "end card's coral second line over the bright overlook). "
+             "disclosure() and caption() now add a feathered local scrim "
+             "(disclosure) or a front-loaded bottom-edge gradient "
+             "(caption) plus a crisp 2px dark keyline stroke under the "
+             "existing soft halo -- still no hard rectangle, contrast "
+             "held over any background. end_card()'s second line is now "
+             "white instead of coral (coral reserved for the separator "
+             "rule alone) with a stronger local scrim. Primary labels, "
+             "loop words, and the zone-trace/anchor-pulse graphics were "
+             "not touched -- r190 asked to preserve them, and this "
+             "session's own re-check of the r189 delivery found them "
+             "already legible. Font sizes, wording, timing, positions, "
+             "and the 74.000s runtime are unchanged.")
     L.append("")
     L.append("SOUND")
     L.append("  Narration only -- no score, no sound effects. r184's "
