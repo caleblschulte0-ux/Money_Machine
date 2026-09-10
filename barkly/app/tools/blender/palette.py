@@ -108,8 +108,26 @@ FAMILIES = {
     "grass":   (100, 1.00,  0.00),
     "foliage": (132, 0.94, -0.05),
     "sand":    ( 41, 0.66,  0.09),
-    "stone":   ( 28, 0.16,  0.06),
-    "paving":  ( 40, 0.20,  0.12),
+    # 0.30 and 0.34, up from 0.16 and 0.20 -- and NOT up to sand's 0.66, which
+    # is what the note above forbids and it is still right. This file's own
+    # legend three lines up says "0.3 is masonry", and stone was sitting at
+    # 0.16: under the value this palette defines for the material it is.
+    #
+    # Measured across the four locations in the app: town ran median saturation
+    # 0.292 where park ran 0.495, with 11.6% of its frame under 0.15 chroma.
+    # Stone and paving are town's two biggest surfaces -- the pavement, the
+    # kerb, the fountain -- and a family at 0.16 chroma cannot be lit into
+    # colour. It is grey pigment, and everything made of it is grey. It also
+    # left `stone.lit` with nowhere to go but white: under the sun key it blew
+    # 4.4% of the fountain to pure white, twenty times any other prop, because
+    # a near-neutral pale step has no colour to climb into.
+    #
+    # And a straight inconsistency: the app already draws town's road at
+    # #D9A75B and its pavement at #F4C562, warm and saturated, from a
+    # deliberate earlier pass. The grey `town/paving.png` prop was laid on top
+    # of that. One town, two opinions about what its ground is made of.
+    "stone":   ( 28, 0.30,  0.06),
+    "paving":  ( 40, 0.34,  0.12),
     # things made of wood -- Barkly's own hue family, deliberately
     "bark":    ( 24, 0.84, -0.11),
     "wood":    ( 32, 0.92, -0.02),

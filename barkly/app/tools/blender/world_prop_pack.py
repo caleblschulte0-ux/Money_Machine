@@ -21,7 +21,7 @@ import bpy
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from palette import light_rgb, tone  # noqa: E402  -- the one place a colour comes from
+from palette import light_hex, light_rgb, tone  # noqa: E402  -- the one place a colour comes from
 from proportion import BITE, OVERHANG, crown, flare, shaft, stack  # noqa: E402
 from ink import INK, takes_ink  # noqa: E402  -- the one place an edge is decided
 from mathutils import Vector
@@ -690,7 +690,21 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
     scene.render.film_transparent = True
-    scene.world.color = (0.045, 0.055, 0.075)
+    # THE SKY FILLS THE SHADOWS, and it did not here.
+    #
+    # This was (0.045, 0.055, 0.075) -- a nearly black room -- while the scene
+    # pack that renders the park plate sets its world to the FILL COLOUR, a
+    # bright blue sky. So a prop's shadow side was lit by almost nothing plus
+    # one area light, and a plate object's shadow side was lit by the whole
+    # sky. That is not a grading difference, it is a different physical
+    # situation, and no amount of palette work reaches it: it is why park
+    # measured saturation 0.495 / value 0.698 against town's 0.292 / 0.475
+    # after both had been through the same palette.
+    #
+    # Outdoors, in daylight, shadows are BLUE because the sky is what fills
+    # them. That is the single most recognisable thing about the reference art
+    # and this pack was rendering every prop in a black box.
+    scene.world.color = rgb(light_hex("fill"))
 
     # AMBIENT OCCLUSION, which this pack did not have at all.
     #
@@ -746,11 +760,38 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     look_at(camera, target)
     scene.camera = camera
 
-    bpy.ops.object.light_add(type="AREA", location=(-4.8, -5.0, 8.4))
+    # THE KEY IS A SUN, and that is the whole reason the four places did not
+    # look like one game.
+    #
+    # The palette pass gave every scene one set of COLOURS and one key colour.
+    # It did not unify the LIGHT MODEL, and the two packs were still lit
+    # completely differently: this one by a 5-unit AREA light ten units away,
+    # the scene pack (which renders the park plate) by a SUN at 3.2 degrees.
+    # An area light that big wraps -- the terminator is soft, nothing goes
+    # properly dark, and every face ends up mid-value. Measured across the four
+    # locations in the app: park (the plate) ran saturation 0.495 and value
+    # 0.698 with 4.9% near-grey pixels, town (all props) ran 0.292 / 0.475 with
+    # 11.6%. Park was not better authored. It was better LIT.
+    #
+    # A sun also fixes a scale bug nobody had noticed: an area light falls off
+    # with distance, so `park/near_grass` at ortho 11 and `item/toy_ball` at
+    # ortho 1.5 were being lit by a source at wildly different effective
+    # distances. Sun rays are parallel; a prop is lit the same whatever size
+    # its own frame is.
+    #
+    # Direction and colour match the scene pack's exactly. The angle is a
+    # touch softer than its 3.2 degrees because a prop is a cut-out with no
+    # neighbours to catch its shadow, and a razor terminator on an isolated
+    # object reads as a hard-edged paint job rather than as form.
+    bpy.ops.object.light_add(type="SUN", location=(-6.0, -4.0, 9.0))
     key = bpy.context.object
     key.name = "Barkly warm key"
-    key.data.energy = 1040
-    key.data.size = 5.0
+    # 4.0, SOLVED FOR THE BRIGHTEST SURFACE, not for the prettiest hero prop.
+    # At 5.2 the flat courses clipped 11-19% of themselves to pure white: a
+    # horizontal plane takes parallel sun rays square on, and every one of them
+    # had been toned under an area light that fell off before it reached them.
+    key.data.energy = 4.0
+    key.data.angle = math.radians(6.0)
     key.data.color = light_rgb("key")
     look_at(key, target)
 
@@ -762,18 +803,17 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     # nothing in the world could go dark: measured, 0.1% of a park frame fell
     # below value 0.25 where the reference art puts 18.8% there. A fill exists
     # to keep shadow READABLE, not to erase it.
-    fill.data.energy = 110
+    fill.data.energy = 220
     fill.data.size = 5.5
     fill.data.color = light_rgb("fill")
     look_at(fill, target)
 
-    bpy.ops.object.light_add(type="AREA", location=(1.8, 4.0, 6.8))
-    rim = bpy.context.object
-    rim.name = "Barkly warm rim"
-    rim.data.energy = 330
-    rim.data.size = 4.2
-    rim.data.color = light_rgb("key")
-    look_at(rim, target)
+    # NO RIM. There was a 330W warm rim behind every prop, and its whole job
+    # was to separate a cut-out object from whatever it would be composited
+    # onto. The INK CONTOUR does that now, absolutely and at every size, and
+    # the rim was paying for it by lifting the shadow side of everything --
+    # which is exactly the value the sky fill is supposed to own. The plate
+    # pack has never had one.
 
 
 def park_tree():
@@ -1054,10 +1094,13 @@ def town_near_paving():
     """
     turn = facing(camera_yaw())
     theta = camera_yaw()
+    # Same argument as `town_paving`, and worse here: this course clipped 19%
+    # of itself to white under the sun, because it carried the two palest steps
+    # on the ramp (`lit` and `pop`) on a plane that now faces the light.
     grout = material("Near paving grout", tone("stone", "shade"), roughness=0.94)
-    slab_a = material("Near paving slab", tone("paving", "lit"), roughness=0.86)
-    slab_b = material("Near paving slab b", tone("paving", "base"), roughness=0.86)
-    slab_c = material("Near paving slab c", tone("paving", "pop"), roughness=0.84)
+    slab_a = material("Near paving slab", tone("paving", "base"), roughness=0.86)
+    slab_b = material("Near paving slab b", tone("paving", "shade"), roughness=0.86)
+    slab_c = material("Near paving slab c", tone("paving", "lit"), roughness=0.84)
     kerb = material("Near kerb lip", tone("stone", "base"), roughness=0.88)
     kerb_top = material("Near kerb top", tone("stone", "lit"), roughness=0.86)
     grit = material("Near grit", tone("stone", "deep"), roughness=0.92)
@@ -1306,10 +1349,18 @@ def town_paving():
     """
     turn = facing(camera_yaw())
     theta = camera_yaw()
-    grout = material("Paving grout", tone("stone", "shade"), roughness=0.90)
-    slab_a = material("Paving slab", tone("paving", "base"), roughness=0.82)
-    slab_b = material("Paving slab b", tone("paving", "shade"), roughness=0.82)
-    slab_c = material("Paving slab c", tone("paving", "lit"), roughness=0.80)
+    # A STEP DOWN THE RAMP, because these lie FLAT and the key is a sun now.
+    #
+    # The old area key sat ten units away and fell off across a six-unit band,
+    # so this course rendered at median value 0.137 -- nearly black, unevenly
+    # lit, and the app was compensating by drawing it at 46% opacity. Under
+    # parallel sun rays a horizontal plane takes the light square on, and the
+    # same tones went to 0.529 with 11% of the course clipped to pure white.
+    # The render was wrong before and the material was hiding it.
+    grout = material("Paving grout", tone("stone", "deep"), roughness=0.90)
+    slab_a = material("Paving slab", tone("paving", "shade"), roughness=0.82)
+    slab_b = material("Paving slab b", tone("paving", "deep"), roughness=0.82)
+    slab_c = material("Paving slab c", tone("paving", "base"), roughness=0.80)
 
     # ONE course, deliberately. Two rows was the first attempt and the camera
     # ate it: looking down at 22 degrees, a 0.6-deep band projects to about a

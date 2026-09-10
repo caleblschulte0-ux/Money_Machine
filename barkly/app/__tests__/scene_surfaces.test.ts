@@ -247,8 +247,14 @@ describe('scene surface renders', () => {
     const src = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'WorldScene.tsx')).toString();
     // The key light this pack renders with, read from the Blender pack itself.
     const pack = readFileSync(join(ROOT, 'tools', 'blender', 'world_prop_pack.py')).toString();
-    const key = /light_add\(type="AREA", location=\((-?[\d.]+), (-?[\d.]+), (-?[\d.]+)\)\)\n    key = /.exec(pack);
-    if (!key) throw new Error('the warm key is no longer the first area light in the pack');
+    // AREA or SUN. The pack's key became a sun on 2026-09-10 -- the two packs
+    // were lit by two different models, which is why the park plate measured
+    // saturation 0.495 and prop-built town 0.292 after both had been through
+    // the same palette. The TYPE is not what this test is about; the DIRECTION
+    // is, because the app draws its own cast shadows and they have to fall the
+    // way the renders are lit.
+    const key = /light_add\(type="(?:AREA|SUN)", location=\((-?[\d.]+), (-?[\d.]+), (-?[\d.]+)\)\)\n    key = /.exec(pack);
+    if (!key) throw new Error('the warm key is no longer the first light in the pack');
     expect(Number(key[1])).toBeLessThan(0); // lit from the left...
     const cast = src.slice(src.indexOf('styles.castShadow'), src.indexOf('styles.contactPool'));
     const left = /left: width \* ([\d.]+)/.exec(cast);

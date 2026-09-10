@@ -1029,8 +1029,12 @@ def _marram(x: float, y: float, s: float = 1.0):
         lean = 0.30 + ((i * 0.618) % 1.0) * 0.22
         h = (0.5 + ((i * 0.382) % 1.0) * 0.35) * s
         bx, by = TURN(x + math.cos(a) * 0.10, y + math.sin(a) * 0.10)
-        obj = pack.cone(f"mar{x:.2f}{y:.2f}{i}", (bx, by, h / 2), 0.04 * s, 0.004, h, blade,
-                        rotation=(math.cos(a) * lean, math.sin(a) * lean, 0), vertices=8)
+        # no_ink, same as the park's tufts: a marram blade is 0.04 wide and
+        # squashed to 0.3 of that in y, so the Freestyle line is wider than the
+        # blade and fills it in. On the beach plate they came out as a scatter
+        # of black spiders on the sand.
+        obj = no_ink(pack.cone(f"mar{x:.2f}{y:.2f}{i}", (bx, by, h / 2), 0.04 * s, 0.004, h, blade,
+                               rotation=(math.cos(a) * lean, math.sin(a) * lean, 0), vertices=8))
         obj.scale = (1.0, 0.3, 1.0)
 
 

@@ -1532,3 +1532,110 @@ so the deepest one keeps being pushed down into the band the NPC name plates
 occupy: `dy` 56 -> 46 -> 42. The perspective spread is being squeezed a little
 each time. If it has to move again the answer is to widen the band's own height
 budget, not to flatten the courses further.
+
+
+## One light model, and where the scene difference actually lives (2026-09-10)
+
+Operator: *"some scenes don't vibe, like the art looks different scene to
+scene."* Measured over the world band of each location at 2pm:
+
+| scene | saturation | brightness | range | dark pixels |
+|---|---|---|---|---|
+| park | **0.495** | **0.698** | **0.761** | 10.6% |
+| beach | 0.404 | 0.651 | **0.565** | 11.6% |
+| home | 0.348 | 0.494 | 0.643 | 23.2% |
+| town | **0.292** | 0.475 | 0.612 | **27.5%** |
+
+Park is 70% more saturated than town. So: what is park doing that the others
+are not?
+
+### The two packs were lit by two different physics
+
+Not two different gradings -- two different situations:
+
+| | prop pack (town, beach, home, every prop) | scene pack (the park plate) |
+|---|---|---|
+| key | AREA light, size 5.0, ten units away | SUN at 3.2 degrees |
+| world | `(0.045, 0.055, 0.075)` -- a black room | the FILL colour -- a bright sky |
+| rim | a 330W warm rim behind everything | none |
+
+The palette pass unified the light *colours* and stopped there. An area light
+that big wraps: the terminator is soft, nothing goes properly dark, every face
+lands mid-value. And a prop's shadow side was being filled by a nearly black
+room while a plate object's shadow side was filled by the whole sky. Outdoors,
+in daylight, shadows are BLUE because the sky is what fills them -- the single
+most recognisable thing about the reference art -- and this pack was rendering
+every prop in a black box.
+
+It also hid a scale bug: an area light falls off with distance, so
+`park/near_grass` at ortho 11 and `item/toy_ball` at ortho 1.5 were lit by a
+source at wildly different effective distances. Sun rays are parallel.
+
+So the prop pack takes a sun, the sky fills its shadows, and the rim is gone --
+the rim's whole job was separating a cut-out from its background, and the ink
+contour does that now, absolutely and at every size.
+
+Per prop, that is a clear win. Median value up 19-49% across the sample with
+saturation held or improved: store_coral 0.333 -> 0.396, lamp 0.408 -> 0.518,
+bench 0.337 -> 0.502, tree 0.384 -> 0.486.
+
+### It did not move the scenes, and that is the finding
+
+| scene | saturation | brightness | range |
+|---|---|---|---|
+| home | 0.348 → 0.349 | 0.494 → 0.498 | 0.643 → 0.639 |
+| park | 0.495 → 0.495 | 0.698 → 0.698 | 0.761 → 0.761 |
+| town | 0.292 → **0.302** | 0.475 → 0.475 | 0.612 → 0.604 |
+| beach | 0.404 → 0.405 | 0.651 → 0.647 | 0.565 → 0.565 |
+
+Saturation spread across the four: 0.203 → 0.193. Essentially nothing.
+
+**Because the props are a minority of every frame.** This file already said so
+in the note above `GROUND_HAZE_A`: *"most of a scene is GROUND, which is
+code-drawn and so wears no depth at all."* The same is true of the whole
+question. Park is not better lit than town in the app -- park is a RENDERED
+PLATE and town is a code-drawn gradient with rendered props composited on it.
+One of the four locations is art and three are CSS.
+
+That is the real answer to "the art looks different scene to scene", and no
+amount of prop work reaches it. The lighting change above is kept because it is
+correct -- one light model for one world, and it fixes the falloff bug -- but it
+is not the fix for this, and pretending otherwise would be the kind of
+false-progress this file exists to prevent.
+
+### What plating the rest actually needs
+
+`world_scene_pack.py` already builds a beach plate and `ScenePlate.tsx`
+deliberately holds it back on quality. Looking at it now, that judgement is
+still right, and the defects are nameable:
+
+- **The dunes read as craters.** `_dune` is a squashed sphere lying nearly
+  flat, so from this camera it is an ellipse -- and inked, an ellipse on sand
+  is a hole. They need to be mounds with a silhouette, not discs.
+- **The field is empty.** Park has trees, hedges, flowerbeds, a path and a
+  bandstand; the beach has five objects on a flat tan plane.
+- There is no wet-sand tide line, and the sand is one value from the surf to
+  the camera -- the same "one flat colour from horizon to camera" that the
+  park's ground gradients were written to fix.
+
+Town and home have no plate builder at all yet.
+
+### And a smaller one found on the way
+
+`stone` was at chroma **0.16** and `paving` at **0.20** -- the two lowest in the
+palette, and they are town's two biggest surfaces. This file's own legend says
+"0.3 is masonry". They are 0.30 and 0.34 now: still nowhere near sand's 0.66,
+which the note above the families table forbids for good measured reasons, but
+no longer grey pigment that no light can turn into colour.
+
+It showed up twice at once. Under the sun key, `stone.lit` on the fountain's
+upper basin blew 4.4% of the prop to pure white -- twenty times any other prop
+-- because a near-neutral pale step has no colour to climb into. And the app
+has drawn town's road at `#D9A75B` and its pavement at `#F4C562` since an
+earlier pass: one town, two opinions about what its ground is made of.
+
+The flat courses needed re-toning for the same reason. `town/paving` rendered
+at median value 0.137 under the old area key -- nearly black, unevenly lit,
+with the app compensating at 46% opacity -- and the same tones went to 0.529
+with 11% clipped once parallel rays hit a horizontal plane square on. The
+render was wrong before and the material was hiding it.
