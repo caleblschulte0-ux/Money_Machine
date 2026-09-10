@@ -5,6 +5,8 @@ live sky, time-of-day, upgrades, layout, and interaction logic; Blender supplies
 physical thickness, bevels, and a shared light response for the frame itself.
 """
 from pathlib import Path
+import os
+
 import bpy
 
 import sys
@@ -165,10 +167,33 @@ def build_window_frame():
     cube('sill_glint', (-0.12, -0.70, -0.03), (1.34, 0.025, 0.035), brass, 0.03)
 
 
-clean()
-setup()
-build_window_frame()
-scene = bpy.context.scene
-scene.render.filepath = str(OUT / 'window_frame.png')
-bpy.ops.render.render(write_still=True)
-print(f'rendered {scene.render.filepath}')
+# A BUILDERS TABLE, for a pack that renders exactly one thing.
+#
+# Not ceremony: `scripts/promote-props.py` derives what it ships from a pack's
+# own BUILDERS, and the rule that nothing is hand-listed is what stops a second
+# copy of the shipping recipe growing back. Until this table existed, the way
+# window_frame.png reached the app was a `cp` line in a workflow -- and that
+# workflow was quietly overwriting the four home props with unquantised,
+# uncontoured renders every time it ran.
+BUILDERS = {
+    "window_frame": (build_window_frame, None, None, {"displayWidth": 224, "anchor": "bottom"}),
+}
+
+
+def main():
+    # Same PROP_ONLY narrowing the other two packs take, so the refusal message
+    # promote-props prints for a stale render is a command that actually runs.
+    only = os.environ.get("PROP_ONLY", "").strip()
+    for name, (builder, _scale, _target, _metadata) in BUILDERS.items():
+        if only and not name.startswith(only):
+            continue
+        clean()
+        setup()
+        builder()
+        scene = bpy.context.scene
+        scene.render.filepath = str(OUT / f"{name}.png")
+        bpy.ops.render.render(write_still=True)
+        print(f"rendered {scene.render.filepath}")
+
+
+main()

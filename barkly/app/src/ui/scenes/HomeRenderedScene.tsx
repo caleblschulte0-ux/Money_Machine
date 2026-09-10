@@ -31,6 +31,7 @@ const NEAR_FLOOR = require('../../../assets/world/home/props/near_floor.png');
  * lock by the require path in this file, which is what lets LAMP_ASPECT
  * and the town's LAMP_ASPECT both exist.
  */
+const WINDOW_FRAME_ASPECT = 471 / 510;
 const CHAIR_ASPECT = 349 / 351;
 const LAMP_ASPECT = 244 / 515;
 const BED_ASPECT = 546 / 193;
@@ -751,7 +752,7 @@ export function HomeScene({
 
   const windowNaturalScale = propScale * 0.86;
   const windowNaturalW = (has('home_window') ? 224 : 208) * windowNaturalScale;
-  const windowNaturalH = windowNaturalW * (760 / 720);
+  const windowNaturalH = windowNaturalW / WINDOW_FRAME_ASPECT;
   const windowScale =
     windowNaturalH > wallBand ? windowNaturalScale * (wallBand / windowNaturalH) : windowNaturalScale;
   const windowW = (has('home_window') ? 224 : 208) * windowScale;

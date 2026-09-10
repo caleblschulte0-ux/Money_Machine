@@ -1,7 +1,7 @@
 declare const require: (m: string) => any;
 declare const __dirname: string;
 
-const { readFileSync } = require('fs') as { readFileSync: (path: string, encoding: string) => string };
+const { readFileSync, readdirSync } = require('fs') as { readFileSync: (path: string, encoding: string) => string; readdirSync: (path: string) => string[] };
 const { join } = require('path') as { join: (...parts: string[]) => string };
 
 import { STORE } from '../src/game/progression';
@@ -181,9 +181,35 @@ describe('world scenery stays modular', () => {
     const promote = raw('scripts', 'promote-props.py');
 
     expect(workflow).toContain('python3 scripts/promote-props.py');
-    // No second recipe: nothing that copies or resizes art inline.
-    expect(workflow).not.toMatch(/cp art-review\/world-props/);
-    expect(workflow).not.toMatch(/convert "\$file" -resize/);
+
+    /*
+     * EVERY workflow, not just this one. The guard used to read only the file
+     * it knew about, and `barkly-home-prop-render.yml` sat beside it for
+     * months carrying its own recipe: four hand-listed props, an inline
+     * `convert -trim`, and `cp` into assets/ with no quantise and no contour.
+     * Both fire on a `claude/barkly-*` push, so they took turns overwriting
+     * the same four files -- CI commit 181aa5a shipped chair.png at 99KB with
+     * no ink edge, 64cd288 put it back at 20KB with one, and which art you got
+     * depended on which job finished last.
+     *
+     * A test that names one file cannot catch a second copy of the thing it is
+     * guarding against. This one reads the directory.
+     */
+    const dir = join(__dirname, '..', '..', '..', '.github', 'workflows');
+    for (const file of readdirSync(dir).filter((f: string) => f.endsWith('.yml'))) {
+      const raw_ = readFileSync(join(dir, file), 'utf8');
+      // Comment lines are stripped first, or this fails on the note that
+      // explains what was removed -- a guard that cannot survive its own
+      // explanation gets the explanation deleted instead.
+      const yml = raw_.split('\n').filter((l: string) => !/^\s*#/.test(l)).join('\n');
+      if (!/art-review\//.test(yml)) continue;
+      expect({ file, copiesArtByHand: /^\s*cp art-review\//m.test(yml) })
+        .toEqual({ file, copiesArtByHand: false });
+      expect({ file, resizesArtByHand: /convert .*-(resize|trim)/.test(yml) })
+        .toEqual({ file, resizesArtByHand: false });
+      expect({ file, promotesWithTheScript: yml.includes('scripts/promote-props.py') })
+        .toEqual({ file, promotesWithTheScript: true });
+    }
 
     // And the script derives its props rather than listing them.
     expect(promote).toContain('BUILDERS = {');
@@ -193,7 +219,10 @@ describe('world scenery stays modular', () => {
     // SHAPE, and is exactly as derived as the rest of it. What must never
     // appear is a prop's own name.
     for (const family of ['park', 'town', 'beach', 'home']) {
-      const named = new RegExp(`"${family}/[a-z_0-9]+`);
+      // A COMPLETE quoted name. `"home/architecture/` is a folder in a path
+      // shape, the same as `f"home/{key}"`; `"home/lamp"` is a prop somebody
+      // typed, which is the thing that must never be here.
+      const named = new RegExp(`"${family}/[a-z_0-9]+"`);
       expect({ family, handListed: named.test(promote) })
         .toEqual({ family, handListed: false });
     }

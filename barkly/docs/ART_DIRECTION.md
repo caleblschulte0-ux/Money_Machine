@@ -1355,3 +1355,31 @@ And the same aspect defect, worse: the chair's height was written `chairW *
 (398 / 374)`, the lamp's `lampW * 2`, the bed's `bedW * (254 / 512)` -- ratios
 typed into a layout, none of them what the render measured. The bed was being
 drawn 40% taller than it is.
+
+
+### ...and there was a second workflow doing it again
+
+The home pass above put the furniture through `promote-props.py`. CI then ran
+and produced two commits back to back:
+
+```
+181aa5a  Barkly art: render production Home asset pack
+         chair.png  20381 -> 99247 bytes
+64cd288  Barkly art: render modular 2.5D world pack
+         chair.png  99247 -> 20381 bytes
+```
+
+`barkly-home-prop-render.yml` was a second copy of the shipping recipe living
+in `.github/workflows/`: four hand-listed props, an inline `convert -trim`, and
+`cp` straight into `assets/`. No quantise, no contour. Both workflows fire on a
+`claude/barkly-*` push, so they took turns overwriting the same four files, and
+which art shipped depended on which job finished last. That is the same defect
+the repo already had a test for -- and the test read only the one workflow file
+it knew the name of, which is why it could sit there for months.
+
+It is deleted. Its two packs (`home_prop_pack.py` and `home_architecture.py`,
+which now has a one-entry BUILDERS table so nothing about it is hand-listed)
+render from the one workflow and promote through the one script; the window
+frame picks up the quantise and the contour on the way. The guard now reads
+the workflow DIRECTORY: any workflow that touches `art-review/` must promote
+with the script and must not copy or resize art itself.

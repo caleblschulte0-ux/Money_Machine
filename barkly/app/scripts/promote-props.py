@@ -60,6 +60,16 @@ ASSETS = ROOT / "assets" / "world"
 HOME_PACK = ROOT / "tools" / "blender" / "home_prop_pack.py"
 HOME_RENDERS = ROOT / "art-review" / "home-props"
 
+# And the window frame, for the same reason, found the same way. A second
+# WORKFLOW -- barkly-home-prop-render.yml -- was still carrying its own copy of
+# the recipe: four hand-listed props, an inline `convert -trim`, and `cp`. No
+# quantise and no contour, so on every push the two render workflows overwrote
+# each other's home art (CI commits 181aa5a then 64cd288, four files at four
+# times the bytes and back again). It is deleted; its two packs render from the
+# one workflow and promote through here.
+ARCH_PACK = ROOT / "tools" / "blender" / "home_architecture.py"
+ARCH_RENDERS = ROOT / "art-review" / "home-architecture"
+
 # Scene PLATES -- whole locations rendered as one lit picture -- come out of a
 # different pack and ship into a different folder, but they are the same kind
 # of thing: a render that has to become a shipped asset by a recipe nobody
@@ -153,6 +163,9 @@ def outlined(image: "Image.Image", path: str, pad: int | None = None) -> "Image.
 
 def destination(path: str) -> Path:
     """Where a builder's render is loaded from by the app."""
+    # Architecture keeps its own folder under the location, not `props/`.
+    if path.startswith("home/architecture/"):
+        return ASSETS / "home" / "architecture" / f"{path.rsplit('/', 1)[1]}.png"
     location, name = path.split("/", 1)
     # `item` and `sky` are loose files; every location keeps its props in one
     # folder. This mirrors the requires in src/ui/scenes -- if that ever moves,
@@ -262,6 +275,7 @@ def packs():
     return (
         (PACK, RENDERS, lambda key: key),
         (HOME_PACK, HOME_RENDERS, lambda key: f"home/{key}"),
+        (ARCH_PACK, ARCH_RENDERS, lambda key: f"home/architecture/{key}"),
     )
 
 

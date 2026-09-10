@@ -1,4 +1,4 @@
-name: Barkly modular world prop render
+name: Barkly art render (every pack, one promotion)
 
 on:
   push:
@@ -19,6 +19,7 @@ on:
       # as stale, or (worse) CI ships the world from one pack and the living
       # room from a render made before the recipe changed.
       - 'barkly/app/tools/blender/home_prop_pack.py'
+      - 'barkly/app/tools/blender/home_architecture.py'
       - 'barkly/app/tools/blender/proportion.py'
       - 'barkly/app/tools/blender/palette.py'
       - '.github/workflows/barkly-world-prop-render.yml'
@@ -53,6 +54,16 @@ jobs:
 
       - name: Render home prop pack
         run: xvfb-run -a blender -b --python tools/blender/home_prop_pack.py
+
+      # THE SECOND WORKFLOW IS GONE. `barkly-home-prop-render.yml` rendered
+      # these two packs and then shipped them with its OWN recipe -- four
+      # hand-listed props, an inline `convert -trim`, and `cp`, with no
+      # quantise and no contour. Both workflows fire on a `claude/barkly-*`
+      # push, so they took turns overwriting the same four files: CI commit
+      # 181aa5a put chair.png at 99KB with no ink edge, 64cd288 put it back at
+      # 20KB with one, and the art you got depended on which finished last.
+      - name: Render home architecture
+        run: xvfb-run -a blender -b --python tools/blender/home_architecture.py
 
       # ONE PROMOTION RECIPE, AND IT LIVES IN THE REPO.
       #
@@ -97,10 +108,13 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
-      - name: Upload world prop pack
+      - name: Upload every rendered pack
         uses: actions/upload-artifact@v4
         with:
           name: barkly-world-props-${{ github.sha }}
-          path: barkly/app/art-review/world-props/**
+          path: |
+            barkly/app/art-review/world-props/**
+            barkly/app/art-review/home-props/**
+            barkly/app/art-review/home-architecture/**
           if-no-files-found: error
           retention-days: 14
