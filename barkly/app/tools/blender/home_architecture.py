@@ -13,6 +13,7 @@ import bpy
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import packfile  # noqa: E402  -- what a render depends on, for the freshness marker
+import world_prop_pack as wpack  # noqa: E402  -- one set of primitives for the whole game
 from palette import light_rgb, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from mathutils import Vector
 
@@ -80,6 +81,11 @@ def cube(name, loc, scale, material, bevel=0.14):
     mod.width = bevel
     mod.segments = 5
     o.data.materials.append(material)
+    # Through the world pack's helper, for the reason its docstring gives: a
+    # five-segment bevel flat shaded is five visible strips down every edge of
+    # the window frame, which is the one piece of architecture the player looks
+    # straight at.
+    wpack.round_off(o)
     return o
 
 

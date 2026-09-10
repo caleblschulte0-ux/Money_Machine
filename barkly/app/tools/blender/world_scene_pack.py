@@ -957,8 +957,28 @@ def _bandstand(x: float, y: float, s: float = 1.0):
         pack.cone(f"bandpost{x:.1f}{i}", (px, py, 1.78 * s), 0.28 * s, shaft(0.28 * s), 2.76 * s, post, vertices=12)
         pack.cylinder(f"bandfoot{x:.1f}{i}", (px, py, 0.52 * s), 0.40 * s, 0.30 * s, post, vertices=12, taper=0.78)
     pack.cylinder(f"bandring{x:.1f}", (cx, cy, 3.18 * s), 2.72 * s, 0.22 * s, trim, vertices=24)
-    pack.cone(f"bandroof{x:.1f}", (cx, cy, 4.05 * s), 2.95 * s, 0.22 * s, 1.65 * s, roof, vertices=6)
-    pack.sphere(f"bandfin{x:.1f}", (cx, cy, 5.05 * s), (0.20 * s, 0.20 * s, 0.28 * s), finial)
+    # THE ROOF HAS THICKNESS AND AN EAVE, because a cone has neither.
+    #
+    # This was one 6-sided cone: a hexagonal pyramid whose rim comes to a
+    # mathematical zero -- a paper edge -- overhanging the ring below it by
+    # 0.23, which at plate scale is nothing. Photographed next to the fountain
+    # (the prop the operator picked out as right) the difference is not colour
+    # or light: every part of the fountain is a closed form with a rolled edge,
+    # and this was a folded sheet of paper.
+    #
+    # Three parts now. A wider cone for the eave, a short cylinder under its
+    # rim that gives the edge a real face to catch light on, and the cone
+    # itself sitting on top. The eave overhangs the posts by 0.62 rather than
+    # 0.23, which is what makes a roof read as sheltering something.
+    # PITCH, not just width. The first version widened the cone to 3.20 and
+    # kept its old depth, which turned it into a saucer: a roof reads as a
+    # roof by its SLOPE, and the eave is what it slopes down to. 3.05 with a
+    # deeper cone gives both -- still a 0.55 overhang past the posts, twice
+    # what it had, without flattening the pitch to get there.
+    pack.cylinder(f"bandeave{x:.1f}", (cx, cy, 3.44 * s), 3.05 * s, 0.28 * s, roof,
+                  vertices=6, taper=0.95)
+    pack.cone(f"bandroof{x:.1f}", (cx, cy, 4.42 * s), 2.92 * s, 0.20 * s, 1.92 * s, roof, vertices=6)
+    pack.sphere(f"bandfin{x:.1f}", (cx, cy, 5.50 * s), (0.20 * s, 0.20 * s, 0.28 * s), finial)
     # A railing between the posts, which is what stops it reading as a canopy
     # on sticks: a bandstand is enclosed at the bottom and open at the top.
     for i in range(6):
@@ -985,15 +1005,28 @@ def _tree(x: float, y: float, s: float, canopy: str = tone("foliage", "base"),
     crown_z = stack(2.56 * s, 1.16 * s)
     pack.sphere(f"leaf{x:.1f}{y:.1f}_mass", (wx, wy, crown_z),
                 (crown(base_r), crown(base_r) * 0.94, 1.16 * s), leaf)
-    for i, (dx, dy, dz, r) in enumerate((
-        (-0.42, -0.30, 0.86, 0.96), (1.46, 0.18, 0.14, 0.80),
-        (-1.52, 0.22, -0.28, 0.74),
+    # A CLUSTER, matching park/tree.png lobe for lobe. Three bumps sunk into
+    # one big ellipsoid gave a smooth mass with a single outline: measured,
+    # 0.83% of the prop's interior carried any ink at all against the
+    # fountain's 12.5%, because Freestyle draws silhouette and border and two
+    # smoothly interpenetrating spheres share neither. Six squashed lobes,
+    # each tilted off axis and sitting proud enough to keep an arc of its own
+    # outline, and the low two in the shade tone so the canopy has an
+    # underside. The plate's tree and the modular tree have to be the same
+    # tree or the park is two parks.
+    for i, (dx, dy, dz, r, sq, tilt, mat) in enumerate((
+        (-0.58, -0.40, 0.56, 1.04, 0.64, (-0.20, 0.24), leaf_hi),
+        (0.52, 0.04, 0.62, 0.86, 0.58, (0.16, -0.30), leaf_hi),
+        (1.52, 0.28, -0.06, 0.92, 0.62, (-0.12, 0.34), leaf),
+        (-1.56, 0.32, -0.14, 0.86, 0.58, (0.22, -0.26), leaf),
+        (1.02, 0.50, -0.56, 0.72, 0.46, (-0.26, 0.14), leaf),
+        (-0.94, 0.48, -0.60, 0.66, 0.44, (0.28, 0.20), leaf),
     )):
         lx, ly = TURN(x + dx * s, y + dy * s)
         pack.sphere(f"leaf{x:.1f}{y:.1f}_{i}",
                     (lx, ly, crown_z + dz * s),
-                    (r * s, r * 0.86 * s, r * 0.78 * s),
-                    leaf_hi if i == 0 else leaf)
+                    (r * s, r * 0.86 * s, sq * s),
+                    mat, rotation=(tilt[0], tilt[1], 0.0))
 
 
 def _bench(x: float, y: float):

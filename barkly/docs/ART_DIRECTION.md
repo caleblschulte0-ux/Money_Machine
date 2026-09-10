@@ -2078,3 +2078,86 @@ exact gradients this whole pass exists to create. So the warning stays true and
 `build-artifact.mjs` now says which number it is and which one matters, with
 that measurement written down next to it — because the next session to see
 "over the limit" would otherwise reach for the palette.
+
+## "Still looks super goofy and clunky" (2026-09-10)
+
+The lighting pass landed and the verdict was that it beat what came before the
+reference images and still read as goofy and clunky. That is a different
+complaint from the last three and it is not about light at all — it is about
+the FORMS.
+
+### What the measurement said, and it was the opposite of what I assumed
+
+I assumed the tree canopy was over-inked: lobes outlined individually, reading
+as a pile of balls. Measured — dark pixels within 30 of the ink colour, more
+than 6px inside the silhouette, as a share of the interior:
+
+| prop | interior ink |
+|---|---|
+| town/fountain | **12.5%** |
+| park/bench | 9.5% |
+| park/treeline | 3.9% |
+| park/hedge | 3.5% |
+| park/tree | **0.83%** |
+
+The fountain is the prop the operator singled out as right. It carries fifteen
+times the internal line the tree does. The tree was not over-inked; it had
+almost no internal definition at all.
+
+The mechanism: Freestyle draws SILHOUETTE and BORDER. Two spheres that
+interpenetrate smoothly share neither — there is no edge in the mesh where they
+meet, only an intersection curve, which Freestyle does not draw. So the ink
+pass that fixed the tiered props could never have fixed the smooth ones. The
+fix there is geometry, not a line setting.
+
+### Every cylinder, cone and cube in the game was flat shaded
+
+Found while looking at the trunk's vertical banding. Only `sphere`, `torus` and
+`metablob` ever called `shade_smooth` — so every post, column, stem, trunk,
+lamp, bench leg, kerb and shopfront rendered with its 48 or 64 barrel facets
+visible. At phone size that reads as exactly one thing: a primitive. It is
+most of what "clunky" is, and it was one missing call.
+
+`round_off()` is angle-limited rather than blanket, at 38°: the barrel of a
+48-sided cylinder (7.5° between neighbours) goes smooth while the 90° turn
+into a flat cap, and the bevelled rim that sells the thickness, stay crisp.
+Blanket smoothing rounds those off too and turns a cut cylinder into a lozenge,
+and a box into a bar of soap.
+
+**The home packs had their own copy of the primitives**, so the room the player
+starts in would have kept its facets while everything outdoors lost them —
+the same shape of defect as the four light rigs, one pass later. Both home
+packs call the world pack's helper now.
+
+### The tree, rebuilt as a cluster
+
+Seven squashed lobes, each tilted off axis and sitting proud enough of its
+neighbours to keep a real arc of its own outline, sizes running 0.58–1.42 so
+no two read as the same ball, the low pair in the shade tone so the canopy has
+an underside instead of a flat cut-off bottom. `sphere()` takes a rotation now,
+because a flattened ellipsoid lying dead level is a pancake and a stack of
+them is a stack of pancakes.
+
+The trunk stopped being a traffic cone (a 3:1 squeeze over its height, straight
+sides, flat top) and gained two short fat limb stubs, so the canopy lands on a
+fork instead of balancing on a disc. The `trunk_glint` — a painted highlight
+cylinder — is deleted: it rendered as a hard orange stripe down the bark, and
+it dates from before there was a real sun to make its own highlight. Same
+reasoning that retired the rim light.
+
+The plate's `_tree` got the identical treatment lobe for lobe, because the
+plate's tree and the modular tree have to be the same tree or the park is two
+parks.
+
+### The bandstand roof was a sheet of paper
+
+One 6-sided cone: a hexagonal pyramid whose rim comes to a mathematical zero,
+overhanging the ring below it by 0.23. Photographed beside the fountain, the
+difference is not colour or light — every part of the fountain is a closed form
+with a rolled edge, and this was a folded sheet.
+
+It has an eave now (a short 6-sided cylinder under the rim, giving the edge a
+real face to catch light on) overhanging the posts by 0.55 instead of 0.23.
+The first attempt widened the cone and kept its depth, which made a saucer: a
+roof reads as a roof by its SLOPE, and the eave is what it slopes down to. The
+cone is deeper and slightly narrower than that attempt, so it has both.

@@ -480,17 +480,58 @@ def cube(name, loc, scale, mat, bevel_width=None, rotation=(0, 0, 0), lean=1.0):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     bevel(obj, _edge_for(scale) if bevel_width is None else bevel_width)
     obj.data.materials.append(mat)
+    # A bevel is what tells the eye a box is a moulded object and not a
+    # rectangle, and flat shaded it is three visible strips down every edge
+    # instead. Angle-limited so the six FACES stay dead flat -- a box that
+    # rounds off entirely is a bar of soap.
+    round_off(obj)
     return _record(obj)
 
 
-def sphere(name, loc, scale, mat, swell=1.0):
+def round_off(obj, angle=38.0):
+    """Smooth the CURVED faces of a primitive and leave its hard edges hard.
+
+    Every cylinder, cone and cube in this pack was flat shaded -- only sphere,
+    torus and metablob ever called shade_smooth -- so every post, column, stem,
+    trunk, lamp and bench leg rendered with its 48 or 64 barrel facets visible
+    as vertical banding. At phone size that reads as exactly one thing: a
+    primitive. It is most of what "clunky" is, and it is one call.
+
+    Angle-limited, not blanket: at 38 degrees the barrel of a cylinder (about
+    7.5 degrees between neighbouring facets at 48 sides) goes smooth, while the
+    90-degree turn into a flat cap, and the bevelled rim that sells the
+    thickness, stay crisp. Blanket shade_smooth would round those off too and
+    turn a cut cylinder into a lozenge.
+    """
+    mesh = obj.data
+    if hasattr(mesh, "use_auto_smooth"):
+        # 4.0 and earlier: the mesh carries the angle itself.
+        bpy.ops.object.shade_smooth()
+        mesh.use_auto_smooth = True
+        mesh.auto_smooth_angle = math.radians(angle)
+    elif hasattr(bpy.ops.object, "shade_smooth_by_angle"):
+        # 4.1+ removed auto-smooth in favour of the operator.
+        bpy.ops.object.shade_smooth_by_angle(angle=math.radians(angle))
+    else:
+        bpy.ops.object.shade_smooth()
+    return obj
+
+
+def sphere(name, loc, scale, mat, swell=1.0, rotation=(0, 0, 0)):
     """A sphere, DENTED. A perfect ellipsoid is the giveaway of a primitive.
 
     The swell is deterministic per name and small -- up to 7% on each axis --
     which is enough that a row of hedge lumps or beach pebbles stops reading as
     the same ball copied along a line.
+
+    `rotation` exists because a squashed ellipsoid is only interesting when it
+    is not axis-aligned: a canopy of flattened lobes all lying dead level is a
+    stack of pancakes, and tilting each one is what turns the same parts into
+    foliage. Applied before the scale so the tilt is of the SHAPE, not of a
+    sphere that is then squashed flat again.
     """
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, location=loc)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, location=loc,
+                                         rotation=rotation)
     obj = bpy.context.object
     obj.name = name
     if swell:
@@ -498,7 +539,7 @@ def sphere(name, loc, scale, mat, swell=1.0):
         f = [1.0 + (((h >> (i * 7)) & 0xFF) / 255.0 - 0.5) * 0.14 * swell for i in range(3)]
         scale = (scale[0] * f[0], scale[1] * f[1], scale[2] * f[2])
     obj.scale = scale
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
     obj.data.materials.append(mat)
     bpy.ops.object.shade_smooth()
     return _record(obj)
@@ -527,6 +568,7 @@ def cylinder(name, loc, radius, depth, mat, rotation=(0, 0, 0), vertices=48,
     obj.name = name
     obj.data.materials.append(mat)
     bevel(obj, min(radius * 0.24, 0.09), 3)
+    round_off(obj)
     return _record(obj)
 
 
@@ -544,6 +586,7 @@ def cone(name, loc, radius1, radius2, depth, mat, rotation=(0, 0, 0), vertices=6
     obj.name = name
     obj.data.materials.append(mat)
     bevel(obj, _edge_for((radius1, radius2 if radius2 > 0.02 else radius1, depth), 0.20, 0.10), 3)
+    round_off(obj)
     return _record(obj)
 
 
@@ -869,20 +912,56 @@ def park_tree():
     # Roots. A trunk that meets the ground at its own diameter looks pushed in.
     for i, (x, y) in enumerate(((-0.66, 0.28), (0.62, 0.32), (-0.06, -0.36))):
         sphere(f"root_{i}", (x, y, 0.15), (0.46, 0.36, 0.21), bark)
-    cone("trunk", (0, 0.12, 1.28), 0.95, shaft(0.95, 0.32), 2.56, bark)
-    cylinder("trunk_glint", (-0.30, -0.52, 1.26), 0.12, 1.96, bark_light,
-             rotation=(math.radians(-4), 0, math.radians(-5)), taper=0.44)
-    # ONE canopy mass, sunk over the trunk's shoulder rather than balanced on
-    # it, then bitten into by four bumps that only break the silhouette.
-    crown_z = stack(2.56, 1.16)
-    sphere("crown_mass", (0.02, 0.16, crown_z), (crown(0.95), 1.34, 1.16), leaf)
-    for name, (x, y, z, sx, sy, sz), mat in (
-        ("crown_sun", (-0.42, -0.30, crown_z + 0.86, 1.06, 0.86, 0.70), leaf_light),
-        ("crown_right", (1.52, 0.18, crown_z + 0.14, 0.86, 0.72, 0.74), leaf),
-        ("crown_left", (-1.58, 0.22, crown_z - 0.28, 0.80, 0.68, 0.68), leaf_dark),
-        ("crown_under", (0.56, 0.42, crown_z - 0.62, 1.02, 0.72, 0.56), leaf_dark),
+    # A LESS EXTREME TAPER, and a shoulder that is not a flat disc.
+    #
+    # 0.95 -> shaft(0.95, 0.32) is a 3:1 squeeze over 2.56 of height, which is
+    # a traffic cone: the eye reads the straight sides and the wide foot before
+    # it reads "tree". Photographed against the fountain -- the prop the
+    # operator picked out as right -- what the fountain has and this did not is
+    # FORM SEPARATION: distinct closed shapes meeting at hard edges, each with
+    # its own outline. A single smooth cone has one outline and nothing inside
+    # it. So: a gentler trunk, and a collar where the canopy lands, so the
+    # join is an EDGE instead of a fade.
+    cone("trunk", (0, 0.12, 1.02), 0.90, shaft(0.90, 0.56), 2.04, bark)
+    # The shoulder. Two SHORT fat stubs reading as the first branch fork -- at
+    # 0.92 long and 0.26 thick they were sticks poking out of a tube, which is
+    # a different primitive tell, not a fix. Half the length and half again the
+    # thickness, buried in the canopy so only the fork shows.
+    for i, (bx, by, tilt) in enumerate(((-0.56, -0.16, -0.75), (0.60, 0.10, 0.68))):
+        cylinder(f"limb_{i}", (bx, by, 1.94), 0.34, 0.62, bark,
+                 rotation=(0, tilt, 0), vertices=16, taper=0.72)
+    # THE CANOPY IS A CLUSTER, NOT A BLOB.
+    #
+    # It was one big ellipsoid with four bumps sunk deep into it, and it
+    # measured 0.83% interior ink against the fountain's 12.5% -- i.e. almost
+    # no internal line at all, because Freestyle draws SILHOUETTE and BORDER
+    # and two smoothly interpenetrating spheres share neither. The canopy was
+    # one smooth green mass with a single outline, which is exactly the
+    # "smooth continuous masses whose lobes melt into one blob" this file's
+    # ink note already named -- the ink pass fixed the tiered props and could
+    # not fix this one, because the fix here is GEOMETRY.
+    #
+    # Seven lobes, each a squashed ellipsoid TILTED off axis (level ones stack
+    # like pancakes), sitting proud enough of their neighbours that each keeps
+    # a real arc of its own outline. Sizes run 0.62..1.15 so no two read as
+    # the same ball, and the lower three are the shade tone so the canopy has
+    # an underside instead of a flat cut-off bottom.
+    # WIDE AND FLATTISH, and no two lobes the same size. Round lobes of equal
+    # size are a bunch of grapes however they are arranged; what makes a canopy
+    # read as foliage is that the masses are SQUASHED (z about two thirds of x)
+    # and that the size runs 0.58..1.42, so the eye finds a big form with small
+    # ones breaking its edge rather than seven balls.
+    crown_z = stack(2.04, 0.86)
+    for name, (x, y, z), (sx, sy, sz), (rx, ry), mat in (
+        ("crown_core",  (0.04, 0.24, crown_z + 0.02), (1.42, 1.20, 0.86), (0.10, -0.08), leaf),
+        ("crown_sun",   (-0.58, -0.40, crown_z + 0.56), (1.04, 0.88, 0.66), (-0.20, 0.24), leaf_light),
+        ("crown_top",   (0.52, 0.04, crown_z + 0.62), (0.86, 0.76, 0.58), (0.16, -0.30), leaf_light),
+        ("crown_right", (1.52, 0.28, crown_z - 0.06), (0.92, 0.78, 0.62), (-0.12, 0.34), leaf),
+        ("crown_left",  (-1.56, 0.32, crown_z - 0.14), (0.86, 0.76, 0.58), (0.22, -0.26), leaf),
+        ("crown_lowr",  (1.02, 0.50, crown_z - 0.56), (0.72, 0.62, 0.46), (-0.26, 0.14), leaf_dark),
+        ("crown_lowl",  (-0.94, 0.48, crown_z - 0.60), (0.66, 0.58, 0.44), (0.28, 0.20), leaf_dark),
     ):
-        sphere(name, (x, y, z), (sx, sy, sz), mat)
+        sphere(name, (x, y, z), (sx, sy, sz), mat, rotation=(rx, ry, 0.0))
 
 
 def park_bench():

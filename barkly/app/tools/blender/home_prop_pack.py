@@ -113,6 +113,12 @@ def cube(name, loc, scale, material, bevel_width=0.12, rotation=(0, 0, 0)):
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     bevel(obj, bevel_width)
     obj.data.materials.append(material)
+    # SMOOTHED THROUGH THE WORLD PACK'S OWN HELPER. These primitives are a
+    # second copy of the world pack's, so the room the player starts in would
+    # have kept its 48 visible barrel facets while everything outdoors lost
+    # them -- the same shape of defect as the four light rigs. One
+    # implementation, called from here.
+    wpack.round_off(obj)
     return wpack._record(obj)
 
 
@@ -133,6 +139,7 @@ def cylinder(name, loc, radius, depth, material, rotation=(0, 0, 0), vertices=48
     obj.name = name
     obj.data.materials.append(material)
     bevel(obj, min(radius * 0.22, 0.08), 3)
+    wpack.round_off(obj)
     return wpack._record(obj)
 
 
@@ -143,6 +150,7 @@ def cone(name, loc, radius1, radius2, depth, material, rotation=(0, 0, 0), verti
     obj.name = name
     obj.data.materials.append(material)
     bevel(obj, min(radius1 * 0.22, 0.08), 3)
+    wpack.round_off(obj)
     return wpack._record(obj)
 
 
