@@ -345,7 +345,15 @@ def build_borrow():
             progress = 1.0
         else:
             progress = G.ease(1.0 - (t - 11.0) / 1.0)
-        img = G.windowed_reveal(world[i], layer, progress, direction="ttb")
+        # r201: shrink_brackets=True only during THIS section's own
+        # closing sweep (t>=11.0) -- the one call site in the whole
+        # film that actually closes back to 0 -- so the bracket
+        # rectangle tracks the shrinking revealed content instead of
+        # staying full-size around empty space. Every other
+        # windowed_reveal call (this section's own opening included) is
+        # unaffected.
+        img = G.windowed_reveal(world[i], layer, progress, direction="ttb",
+                                 shrink_brackets=(t >= 11.0))
         if t < 1.6:
             k = G.fade_k(t, 1.6, in_t=0.3, out_margin=0.4)
             G.primary_label(img, "BORROW THE LAYER", k=k, y_frac=0.14, accent_bg=False)

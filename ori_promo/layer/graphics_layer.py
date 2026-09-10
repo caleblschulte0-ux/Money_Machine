@@ -216,7 +216,8 @@ WIN_W_FRAC, WIN_H_FRAC = 760 / W, 400 / H
 
 def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
                      win_cx=WIN_CX_FRAC, win_cy=WIN_CY_FRAC,
-                     win_w=WIN_W_FRAC, win_h=WIN_H_FRAC):
+                     win_w=WIN_W_FRAC, win_h=WIN_H_FRAC,
+                     shrink_brackets=False):
     """r196 (operator direct note): every prior reveal in this style
     was a FULL-FRAME wipe -- the whole picture swapped to an unrelated
     photo (a different place, a different person, sometimes a black
@@ -237,7 +238,14 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
     progress 0.0 = window empty/absent; 1.0 = window fully revealed.
     The reveal sweeps in `direction`, but confined to the window's own
     bounds -- never the full frame. Both inputs are the same HxWx3 BGR
-    arrays every other function here takes (uint8 or float)."""
+    arrays every other function here takes (uint8 or float).
+
+    shrink_brackets=True (r201, off by default -- every other call in
+    the film is unaffected): the corner brackets track the ACTUAL
+    revealed-content bounds instead of the full fixed window rect, so
+    they shrink/grow together with the content rather than fading
+    opacity around empty space. render_layer.py passes this only
+    during borrow's own closing sweep (see build_borrow)."""
     img = full_bleed(world_bgr)
     if progress <= 0.0:
         return img
@@ -284,16 +292,62 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
         raise ValueError(direction)
     boundary = p * (extent + 2 * edge) - edge
     alpha = np.clip((boundary - coord) / edge, 0.0, 1.0)
+
+    # r201 (operator direct note, after seeing the r199 delivery: "the
+    # floating window itself still looks cheap/flat"): a hard-edged
+    # rectangular photo pasted over real footage reads as a picture-in-
+    # picture, not a projected AR layer. Two standard, cheap compositing
+    # cues for "this is a light/projection, not a photo card": feather
+    # the window's OUTER edges (perpendicular to the sweep direction --
+    # the sweep's own leading edge already fades via `alpha` above) and
+    # a soft glowing rim at the boundary once content is showing.
+    feather = max(10, int(min(ww, wh) * 0.05))
+    edge_mask = np.ones((wh, ww), dtype=np.float32)
+    perp_edges = ("top", "bottom") if direction == "ltr" else \
+        ("left", "right") if direction == "ttb" else ("top", "bottom", "left", "right")
+    if "top" in perp_edges:
+        edge_mask *= np.clip(np.arange(wh, dtype=np.float32) / feather, 0, 1).reshape(wh, 1)
+    if "bottom" in perp_edges:
+        edge_mask *= np.clip((wh - 1 - np.arange(wh, dtype=np.float32)) / feather, 0, 1).reshape(wh, 1)
+    if "left" in perp_edges:
+        edge_mask *= np.clip(np.arange(ww, dtype=np.float32) / feather, 0, 1).reshape(1, ww)
+    if "right" in perp_edges:
+        edge_mask *= np.clip((ww - 1 - np.arange(ww, dtype=np.float32)) / feather, 0, 1).reshape(1, ww)
+    alpha = alpha * edge_mask
+
     crop.putalpha(Image.fromarray((alpha * 255).astype(np.uint8), mode="L"))
     img.alpha_composite(crop, (wx, wy))
 
-    # r198 (ChatGPT review): brackets snapping to full strength by p=0.4
-    # and HOLDING there meant the closing sweep (progress 1.0 -> 0.0)
-    # left a still-fully-drawn aperture around a thin sliver of content
-    # for most of the close -- "a collapsing crop, not a clean AR
-    # dismissal." k now tracks p almost linearly, so the brackets shrink
-    # away in step with the content on both open and close.
-    zone_trace(img, wx + ww // 2, wy + wh // 2, ww, wh, k=min(1.0, p * 1.15))
+    rim_alpha = int(130 * min(1.0, p * 2.0))
+    if rim_alpha > 0:
+        pad = 14
+        rim = Image.new("RGBA", (ww + 2 * pad, wh + 2 * pad), (0, 0, 0, 0))
+        ImageDraw.Draw(rim).rectangle([pad, pad, pad + ww, pad + wh],
+                                       outline=(215, 232, 255, rim_alpha), width=5)
+        rim = rim.filter(ImageFilter.GaussianBlur(5))
+        img.alpha_composite(rim, (wx - pad, wy - pad))
+
+    # r198's opacity fix (k tracking p almost linearly) was not enough on
+    # its own -- ChatGPT's r200 re-check found actual rendered frames at
+    # the borrow close (~00:19.4) still showing "the four large corner
+    # brackets still occupy the full original window bounds" around a
+    # collapsed sliver of content, "two animations that are not
+    # spatially coupled." r201: when shrink_brackets=True, the bracket
+    # RECTANGLE itself (not just its opacity) is clamped to the actual
+    # revealed-content bounds (content + its soft feather edge), so the
+    # brackets can never enclose empty space -- scoped to the one call
+    # site that actually closes (borrow's own closing sweep).
+    bx, by, bwid, bhei = wx, wy, ww, wh
+    if shrink_brackets and direction in ("ltr", "ttb"):
+        # bound to `boundary` itself -- the exact same value the seam
+        # line below is drawn at, so the bracket edge and the seam are
+        # always the same position; never leaves a gap of empty bracket
+        # beyond the seam the way a full-window rect did.
+        if direction == "ltr":
+            bwid = max(2, min(ww, int(boundary)))
+        else:
+            bhei = max(2, min(wh, int(boundary)))
+    zone_trace(img, bx + bwid // 2, by + bhei // 2, bwid, bhei, k=min(1.0, p * 1.15))
 
     if 0.0 < p < 1.0:
         d = ImageDraw.Draw(img, "RGBA")

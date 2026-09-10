@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""r199 evidence pack: full-film contact sheet for v37 "The World / The
-Layer" -- ChatGPT's r198 review of r197 found the wearer disappeared
-for 46 straight seconds (recognize/examples/loop all used IMG_6805's
-peopleless window) and that the AR window's shadow/bracket handling
-still read as a picture card. This round: recognize, examples_hist,
-examples_ice, examples_audio and loop now all draw from ONE continuous
-41.5s take of the wearer (IMG_6794) instead of the peopleless IMG_6805;
-windowed_reveal()'s drop shadow is tighter/lighter and its corner
-brackets now shrink in step with the content on open AND close (see
-graphics_layer.py and render_layer.py). Same density/EXTRA_BOUNDS as
-r193/r195/r197: those timestamps already bracket every reveal/
-disclosure moment across the whole film, and now also show the wearer
-present through recognize/examples/loop where he was previously absent.
+"""r201 evidence pack: full-film contact sheet for v37 "The World / The
+Layer". Two things landed this round: (1) ChatGPT's r200 review of r199
+found the borrow-close bracket still framed the FULL window around a
+collapsed content sliver (opacity alone wasn't enough) -- the bracket
+rectangle now tracks the actual revealed-content bounds (shrink_brackets
+in windowed_reveal(), scoped to borrow's own closing sweep only); (2)
+the operator watched r199 directly and said it "don't look any better,"
+naming two things: the wearer's gaze never meets the window (verified
+against real footage: no such moment exists in the available clips --
+a genuine footage limitation, not something this round fixes), and the
+window itself still reads as a flat pasted photo -- windowed_reveal()
+now feathers the window's outer edges and adds a soft glowing rim, the
+two standard cues for "projected layer" over "picture card." Same
+density/EXTRA_BOUNDS as r193/r195/r197/r199.
 """
 import subprocess
 
@@ -25,6 +26,9 @@ EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
     5.6, 7.0,                                  # hook: disclosure over pale sky/snow (r190)
     9.5, 12.2, 15.0, 19.0, 20.0,                # borrow: hardware in/hold, software swap, software out
+    19.2, 19.4, 19.6, 19.8,                     # r201: ChatGPT's exact 6 requested
+                                                 # boundary-check timestamps for the
+                                                 # bracket-geometry close fix
     16.8, 18.2,                                 # borrow: disclosure over bright hair/sky (r190)
     20.0, 20.2, 21.0, 21.9,                     # recognize: label entry / full 72px hold / exit (r186)
     21.8, 23.0, 24.6,                           # recognize: zone-trace in, anchor-pulse in, captions
@@ -71,7 +75,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r199__claude__v37_world_layer_wearer_continuity__contact.png", sheet)
+    cv2.imwrite("r201__claude__v37_world_layer_aperture_close__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

@@ -72,7 +72,13 @@ STRUCTURE = {
         "through the closing sweep)",
         "7.0-11.0s  caption \"PLACE-BASED EXPERIENCE — SOFTWARE\"",
         "11.0-12.0s AR window closes (progress 1.0 -> 0.0) back to "
-        "clean real footage, the cut into the next section",
+        "clean real footage, the cut into the next section -- r201: "
+        "the ONLY closing sweep in the whole film (every other "
+        "windowed_reveal call holds at progress=1.0 until its section "
+        "ends). The bracket rectangle now shrinks in lockstep with the "
+        "collapsing content (shrink_brackets=True, this call site "
+        "only) instead of fading opacity around the still-full-size "
+        "window -- see STANDING AR GRAMMAR below.",
     ],
     "recognize": [
         "0.0-12.0s  IMG_6794 @0.0s real footage, full-bleed, continuous "
@@ -196,7 +202,7 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v37 -- "THE WORLD / THE LAYER" (wearer continuity, r199)')
+    L.append('ORI v37 -- "THE WORLD / THE LAYER" (aperture close + edge treatment, r201)')
     L.append("Fifth and final execution in the operator-ordered five-style "
              "slate (r145__operator__five_style_variants.md); v33/r167, "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
@@ -427,6 +433,54 @@ def main():
              "brackets shrink in step with the revealed content on "
              "BOTH open and close instead of snapping to full strength "
              "by p=0.4 and holding there through most of a close.")
+    L.append("  r200 (ChatGPT's re-check of r199, verbatim): \"the four "
+             "large corner brackets still occupy the full original "
+             "window bounds. The bottom two corners are plainly visible "
+             "far below the remaining content... two animations that "
+             "are not spatially coupled.\" r198's opacity fade was not "
+             "steep enough on its own. r201: windowed_reveal() gained "
+             "`shrink_brackets` (default False, off everywhere except "
+             "one call site). When True, the bracket rectangle's "
+             "relevant axis is clamped to `boundary` -- the exact same "
+             "value the coral seam line is drawn at -- so the bracket "
+             "edge and the seam are always the same position; the "
+             "brackets can never enclose empty space. render_layer.py "
+             "passes shrink_brackets=(t>=11.0) only in build_borrow(), "
+             "i.e. only during borrow's own closing sweep -- the ONE "
+             "call site in the whole film that actually closes back to "
+             "0 (every other windowed_reveal call holds at progress=1.0 "
+             "until its section ends, so shrink_brackets would be a "
+             "no-op there anyway). No other shot's bracket behavior "
+             "changed. Verified on real rendered frames at ChatGPT's "
+             "own six requested timestamps, 00:19.0 through 00:20.0 at "
+             "0.2s steps: the bracket visibly shrinks in lockstep with "
+             "the collapsing content at every one, fully gone by "
+             "~00:19.8 alongside the content.")
+    L.append("  r201 (operator direct note on the delivered r199 cut: "
+             "\"this don't look any better\" -- \"the floating window "
+             "itself still looks cheap/flat\"): windowed_reveal() now "
+             "feathers the window's own outer edges -- the two sides "
+             "perpendicular to the sweep direction (top/bottom for "
+             "ltr, left/right for ttb; all four for diag, which never "
+             "closes in this build) -- with a ~20px falloff, instead of "
+             "a crisp rectangular cut on those sides (the sweep's own "
+             "leading edge already had a soft `edge` feather; the "
+             "window's STATIC sides did not). A soft glowing rim (a "
+             "blurred, cool-white 5px outline just outside the window "
+             "bounds, alpha scaling in with progress) now sits at the "
+             "boundary too. Both are standard, cheap compositing cues "
+             "for \"a projected light layer,\" not a redesign of the "
+             "window's size, position, or the reveal mechanism itself. "
+             "Confirmed via direct frame comparison against the exact "
+             "beats the operator screenshotted (hook's THE LAYER, "
+             "borrow's SOFTWARE, examples' HISTORICAL RECONSTRUCTION): "
+             "edges read softer, less like a pasted rectangle. Not "
+             "claimed to fully resolve \"cheap/flat\" on its own -- see "
+             "R201 -- THE OPERATOR'S DIRECT RESPONSE above for the "
+             "gaze-mismatch finding, which is very likely the larger "
+             "remaining factor and is NOT fixable by this or any other "
+             "compositing change against the currently available "
+             "footage.")
     L.append("")
     L.append("STANDING WEARER CONTINUITY (new this round, r199)")
     L.append("  ChatGPT's r198 review, verbatim: \"the wearer disappears "
@@ -469,6 +523,75 @@ def main():
              "is a genuine shot change like every other section "
              "boundary in the film, not a continuity break introduced "
              "by this round.")
+    L.append("")
+    L.append("R200 -- CHATGPT'S REVIEW OF R199, AND WHAT R201 FIXES")
+    L.append("  ChatGPT's r200 review passed r199's wearer-continuity fix "
+             "outright (\"the same wearer remains visible throughout "
+             "recognize, historical, Ice Age, spatial audio, and the "
+             "four-word loop... directly answers the operator's 'no "
+             "life, no pathos, no ethos' criticism\") and passed the "
+             "overall window treatment, but held picture freeze on one "
+             "narrow remaining point, verbatim: \"At 00:19.4, the "
+             "software plate has collapsed to a shallow strip at the "
+             "top of the aperture, but the four large corner brackets "
+             "still occupy the full original window bounds. The bottom "
+             "two corners are plainly visible far below the remaining "
+             "content... The current frame reads as two animations "
+             "that are not spatially coupled.\" r198's opacity-only fix "
+             "(k tracking p) was not enough: at p=0.648 the brackets "
+             "were still ~75% opaque even though the revealed content "
+             "had shrunk well below half the window's height. r201 "
+             "fixes the actual GEOMETRY, not just the opacity -- see "
+             "STANDING AR GRAMMAR below -- verified on real rendered "
+             "frames at ChatGPT's own six requested timestamps (00:19.0 "
+             "through 00:20.0 at 0.2s steps).")
+    L.append("")
+    L.append("R201 -- THE OPERATOR'S DIRECT RESPONSE TO THE DELIVERED r199 CUT")
+    L.append("  Before r201 could ship, the operator watched the "
+             "delivered r199 master directly (3 screenshots: the "
+             "historical-reconstruction beat, the HARDWARE beat, and "
+             "the hook's own THE LAYER beat) and said plainly: \"this "
+             "don't look any better.\" Asked to narrow it down, two "
+             "things were confirmed: (1) the wearer's gaze never meets "
+             "the window -- in every screenshot he is looking down, "
+             "forward, or adjusting his hair, never toward the floating "
+             "content beside him, so the window reads as juxtaposed "
+             "rather than seen; (2) the window itself still reads as a "
+             "flat, pasted photo rather than an integrated AR layer, "
+             "brackets and reduced shadow notwithstanding. Both were "
+             "checked directly against the raw footage rather than "
+             "assumed:")
+    L.append("  (1) GAZE -- verified, NOT fixable with existing footage. "
+             "Sampled IMG_6794 (recognize/examples/loop's own take) at "
+             "2s intervals across its full 0-52s range and IMG_6790 "
+             "(hook/borrow) at 2s intervals across its own used stretch: "
+             "in IMG_6794 the wearer faces away from camera toward the "
+             "falls for the ENTIRE take, arm gestures (pointing, "
+             "touching his hair) are the only variation -- he never "
+             "turns his head back toward camera-left, where the window "
+             "sits. In IMG_6790 he is in profile, facing left toward "
+             "real signage in front of him, not toward the window's "
+             "specific position. Both clips are candid, real footage "
+             "shot for their own sake, not staged reaction shots for a "
+             "VFX composite -- there is no frame in either clip where "
+             "he is deliberately looking at a point that would later "
+             "hold an AR window. Fixing this for real needs NEW footage "
+             "(the operator or a future capture session filming him "
+             "actually looking toward a marked spot), not a compositing "
+             "change -- flagged here rather than faked, per rule zero.")
+    L.append("  (2) WINDOW TREATMENT -- fixed, within what compositing "
+             "alone can do. windowed_reveal() now feathers the window's "
+             "own outer edges (the two sides perpendicular to the sweep "
+             "direction -- the sweep's own leading edge already faded) "
+             "and adds a soft glowing rim at the boundary once content "
+             "is showing: a light blue-white blurred outline, scaling "
+             "in with progress. These are the two standard, cheap "
+             "compositing cues for \"this is a projected light, not a "
+             "photo card.\" Honest limit: this is a real, verifiable "
+             "improvement in the edge treatment, not a claim that the "
+             "window now looks fully premium -- the deeper gaze problem "
+             "in (1) is very likely still the dominant thing a viewer "
+             "notices, and no compositing-only change resolves it.")
     L.append("")
     L.append("SOUND")
     L.append("  r195: narration plus a synthesized score (score_layer.py) "
