@@ -17,7 +17,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { color, radius, space, type } from './theme';
+import { color, molded, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import { PRESETS } from '../dev/presets';
 import { ActiveSlot, activeSlot, canRestart, hasBackup, loadPreset, restart, restoreBackup } from '../dev/saveSlots';
@@ -155,7 +155,7 @@ export default function PlaytestSheet({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.well, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
+  sheet: { backgroundColor: color.well, ...molded(radius.xl, { top: true }) },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

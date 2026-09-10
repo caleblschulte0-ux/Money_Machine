@@ -5,6 +5,7 @@ live sky, time-of-day, upgrades, layout, and interaction logic; Blender supplies
 physical thickness, bevels, and a shared light response for the frame itself.
 """
 from pathlib import Path
+import hashlib
 import os
 
 import bpy
@@ -180,6 +181,24 @@ BUILDERS = {
 }
 
 
+
+def stamp_pack(out_dir):
+    """Record WHICH VERSION of this file rendered into `out_dir`.
+
+    `scripts/promote-props.py` reads this instead of comparing modification
+    times. Times are rewritten by `git rebase`, `git checkout` and a fresh
+    clone without a byte of the pack changing -- which marked every render
+    stale and cost a fifteen-minute re-render to produce identical files --
+    and a `git stash pop` can restore an older pack with a newer time, which
+    the time check waved straight through.
+
+    Written LAST, after every render in the run succeeded. A pass that dies
+    halfway must not leave a marker saying the directory is current.
+    """
+    digest = hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+    (out_dir / ".pack-sha256").write_text(digest + "\n", encoding="utf-8")
+
+
 def main():
     # Same PROP_ONLY narrowing the other two packs take, so the refusal message
     # promote-props prints for a stale render is a command that actually runs.
@@ -194,6 +213,8 @@ def main():
         scene.render.filepath = str(OUT / f"{name}.png")
         bpy.ops.render.render(write_still=True)
         print(f"rendered {scene.render.filepath}")
+    if not only:
+        stamp_pack(OUT)
 
 
 main()

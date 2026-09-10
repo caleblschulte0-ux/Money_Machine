@@ -1,7 +1,7 @@
 import React from 'react';
 import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ItemIcon, { BowlIcon, ItemStand } from './ItemIcon';
-import { color, elevation, glyph, radius, space, type } from './theme';
+import { color, elevation, glyph, molded, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import { STORE, Wallet } from '../game/progression';
 import { useAmbientLoop, useReduceMotion } from './motion';
@@ -184,8 +184,7 @@ const styles = StyleSheet.create({
   bodyContent: { paddingBottom: space.xs },
   sheet: {
     backgroundColor: color.paper,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    ...molded(radius.xl, { top: true }),
     paddingHorizontal: space.xl,
     paddingBottom: space.xxl,
     overflow: 'hidden',

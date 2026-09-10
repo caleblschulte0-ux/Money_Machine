@@ -3,7 +3,7 @@ import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { RelationshipProfile, RelationshipLore } from '../barkly/relationship';
 import { StoryState } from '../barkly/storyV2';
 import { Treasure, TREASURES } from '../world/stash';
-import { color, elevation, glyph, radius, space, type } from './theme';
+import { color, elevation, glyph, molded, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import { NPC_ART } from './npcArt';
 import TreasureIcon from './TreasureIcon';
@@ -380,8 +380,7 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: color.paper,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    ...molded(radius.xl, { top: true }),
     paddingHorizontal: space.xl,
     paddingTop: space.lg,
     ...elevation.sheet,

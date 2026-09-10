@@ -1420,3 +1420,58 @@ TWIST, and a twist is not a detail you add to a cylinder -- it is what the
 object is made of. There is no cylinder in it now: two helical strands of
 overlapping beads in two tones, winding in opposite phase. The crossing pattern
 is legible at 48px in a way nothing painted on a smooth rod ever was.
+
+
+## The interface was drawn in a different language from the world
+
+Everything in the world now carries an ink contour and molded proportions. The
+interface carried neither: six sheets, six hand-written container styles, flat
+white with a hairline shadow, over a rendered scene. Held side by side that is
+the same complaint the props got -- a thing from one picture dropped into
+another -- and it is the last big one.
+
+`molded()` in `src/ui/theme.ts` is the shared surface, and `contour` is the
+renders' own ink as an exact RGB (`#0D1123`, `tone("ink", "deep")`) rather than
+a second opinion about "dark". All six sheets take their container from it and
+none of them restates a corner radius or a border any more.
+
+**It is one constant.** `SURFACE_EDGE = 0` and every sheet goes back to what it
+was, with no other edit. That was verified rather than asserted: built both
+ways and sampled the sheet's left edge on a 390x844 shot at deviceScaleFactor
+2 -- `(13, 17, 35)` for four device pixels with the edge on, `(255, 250, 242)`
+with it off. A test holds both halves, because an escape hatch nobody has
+tested is not an escape hatch.
+
+What was deliberately NOT given the edge: the scrapbook cards inside the Pack
+Book (dashed borders and highlighter marks are their own motif, and it is a
+good one), the store's item cards (they already carry a 2px border in their
+category colour, which is doing the same job in a louder voice), and the panes
+items are displayed against -- those are solved for contrast against the item
+renders and an edge on them would be a ring around a piece of glass.
+
+
+### The staleness check was asking the clock
+
+`promote-props.py` refuses to ship a render made by a different version of the
+builder that makes it. Until now it decided that by comparing modification
+times, and that is wrong in both directions -- both of which were felt in one
+session:
+
+- `git rebase` rewrote `world_prop_pack.py` without changing a byte of it, and
+  all 49 renders went stale. Fifteen minutes of re-rendering to produce
+  identical files.
+- And the other way, which is the dangerous one: `git stash pop` can restore an
+  OLDER pack with a NEWER timestamp, and the check waves it straight through --
+  shipping a world built by two versions of itself, which is the exact failure
+  it exists to prevent.
+
+Each pack now writes a sha256 of its own source into its render directory,
+last, and only on a full pass (a `PROP_ONLY` run deliberately leaves the rest
+of the pack behind, which is the half-rendered world the marker refuses).
+Verified both ways: one added comment line marks all 49 stale, and `touch` on
+all three packs marks none.
+
+The refusal message changed with it. It used to hand back a `PROP_ONLY=` line
+listing every stale prop, which cannot work -- a narrowed run does not stamp
+the directory, so the next promote refuses again with the same wall of text. A
+fix command that does not fix it is worse than no fix command.

@@ -161,6 +161,53 @@ function shadow(y: number, blur: number, alpha: number): ViewStyle {
  * otherwise solid controls look like soft HTML cards. These still lift from
  * the world, but their edges stay readable.
  */
+/**
+ * THE WORLD'S EDGE, IN THE INTERFACE.
+ *
+ * Every object in the game is separated from what is behind it by an ink
+ * contour -- `scripts/promote-props.py` grows it off each prop's own alpha in
+ * `tone("ink", "deep")`, and `scripts/outline-cast.py` gives the dog the same
+ * one. The interface had none: flat white cards with hairline shadows, sitting
+ * over a rendered world that is drawn in a completely different language. Held
+ * side by side that is the same complaint the props got -- a thing from one
+ * picture dropped into another.
+ *
+ * This is that ink, as the exact RGB the renders carry, so a panel edge and a
+ * prop edge are the same colour rather than two people's idea of "dark".
+ *
+ * IT IS ONE CONSTANT. Set `SURFACE_EDGE` to 0 and every sheet, card and chip
+ * goes back to what it was, with no other edit anywhere.
+ */
+export const contour = '#0D1123';
+export const SURFACE_EDGE = 2;
+
+/**
+ * A surface that belongs in the world: ink edge, and a shadow that sits
+ * UNDER it rather than blurring around it.
+ *
+ * `radius` is the corner it takes. Pass `edge: false` for a surface that
+ * genuinely has no outline in the reference either -- a full-bleed hero
+ * image, or a pane an object is displayed against.
+ */
+export function molded(
+  cornerRadius: number,
+  options: { edge?: boolean; top?: boolean } = {},
+): ViewStyle {
+  const { edge = true, top = false } = options;
+  const corners: ViewStyle = top
+    ? { borderTopLeftRadius: cornerRadius, borderTopRightRadius: cornerRadius }
+    : { borderRadius: cornerRadius };
+  if (!edge || SURFACE_EDGE <= 0) return corners;
+  return {
+    ...corners,
+    borderWidth: SURFACE_EDGE,
+    borderColor: contour,
+    // A top-edged surface (a sheet rising off the bottom) must not draw a line
+    // across the bottom of the screen: that reads as a gap under the sheet.
+    ...(top ? { borderBottomWidth: 0 } : null),
+  };
+}
+
 export const elevation = {
   flat: Platform.select({
     web: { boxShadow: 'none' } as ViewStyle,

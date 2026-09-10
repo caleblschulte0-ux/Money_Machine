@@ -8,9 +8,18 @@ theoretical gap: a material change was measured against `assets/` renders that
 predated it by a day, twice, and both times the honest-looking answer was
 "nothing changed" -- which is exactly what a real failure looks like.
 
-So this refuses to promote a render that is OLDER than the builder that makes
-it. A stale render is now an error with the command to fix it, instead of a
-silent copy of yesterday's picture over today's.
+So this refuses to promote a render made by a DIFFERENT VERSION of the builder
+that makes it. A stale render is now an error with the command to fix it,
+instead of a silent copy of yesterday's picture over today's.
+
+It compares a sha256 of the pack, recorded into the render directory at render
+time, and NOT modification times. Times were the first version and they are
+wrong in both directions: `git rebase`, `git checkout` and a fresh clone all
+rewrite a source file's mtime without changing a byte of it, which marked 49
+renders stale and cost a fifteen-minute re-render to produce identical files;
+and a `git stash pop` can restore an OLDER pack with a NEWER time, which the
+mtime check waves straight through. The hash is the question anyone actually
+means: was this render made by this builder?
 
 It is deliberately blunt: ANY edit to the pack marks EVERY render stale, even
 a one-word change that cannot affect most of them. That is not a bug to soften.
@@ -25,6 +34,7 @@ about twelve minutes. Take the twelve minutes.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import subprocess
@@ -258,6 +268,20 @@ def promote_scenes(check: bool) -> int:
     return 0
 
 
+def pack_fingerprint(pack: Path) -> str:
+    """The pack's content hash -- what a render directory records it was built by."""
+    return hashlib.sha256(pack.read_bytes()).hexdigest()
+
+
+def rendered_fingerprint(renders: Path) -> str | None:
+    """What the render directory says it was built by, or None if it predates this."""
+    marker = renders / ".pack-sha256"
+    try:
+        return marker.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+
+
 def builders(pack: Path = PACK) -> list[str]:
     """Every key in a pack's BUILDERS table.
 
@@ -288,14 +312,21 @@ def main() -> int:
     # looked at, because the refusal below is only worth anything if it happens
     # before the files move.
     for pack, renders, ship in packs():
-        pack_mtime = pack.stat().st_mtime
+        # ONE ANSWER PER PACK, not per file. The pack is the single source of
+        # the whole world's look -- one shared camera, one light rig, one
+        # material() -- so "which props does this edit change?" is a question
+        # nobody can answer by reading it. Either this directory was rendered
+        # by this builder or it was not.
+        want = pack_fingerprint(pack)
+        got = rendered_fingerprint(renders)
+        pack_stale = got is not None and got != want
         for key in builders(pack):
             path = ship(key)
             render = renders / f"{key}.png"
             if not render.exists():
                 missing.append(path)
                 continue
-            if render.stat().st_mtime < pack_mtime:
+            if pack_stale or (got is None and render.stat().st_mtime < pack.stat().st_mtime):
                 stale.setdefault(pack, []).append(key)
                 continue
             target = destination(path)
@@ -316,11 +347,15 @@ def main() -> int:
                 f"rendered by two versions of the pack.\n"
             )
         for pack, keys in stale.items():
+            # A FULL PASS, and the message says so. It used to hand back a
+            # PROP_ONLY line listing every stale prop -- which cannot work: a
+            # narrowed run deliberately does not stamp the directory, so the
+            # very next promote refuses again with the same wall of text. A fix
+            # command that does not fix it is worse than no fix command.
             print(
-                f"STALE ({len(keys)}) -- these renders predate the builder that "
-                f"makes them:\n  {', '.join(keys)}\n\n"
-                f"  PROP_ONLY={','.join(keys)} blender -b --python "
-                f"{pack.relative_to(ROOT)}\n"
+                f"STALE ({len(keys)}) -- these renders were made by a different "
+                f"version of the builder:\n  {', '.join(keys)}\n\n"
+                f"  blender -b --python {pack.relative_to(ROOT)}\n"
             )
         if missing:
             print(f"\nnever rendered ({len(missing)}): {', '.join(missing)}")

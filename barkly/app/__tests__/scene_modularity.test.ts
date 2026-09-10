@@ -274,3 +274,45 @@ describe('world scenery stays modular', () => {
     });
   }
 });
+
+/*
+ * A RENDER DIRECTORY SAYS WHICH BUILDER MADE IT.
+ *
+ * Promotion used to refuse any render whose mtime predated the pack's. That is
+ * wrong in both directions and both were felt: `git rebase` rewrites a source
+ * file's timestamp without changing a byte, which marked all 49 renders stale
+ * and cost a fifteen-minute re-render to produce identical files; and a `git
+ * stash pop` can restore an OLDER pack with a NEWER time, which the mtime
+ * check waves straight through and ships a world built by two versions of
+ * itself -- the exact failure the check exists to prevent.
+ *
+ * Each pack now writes a sha256 of its own source into its render directory,
+ * LAST, and only on a full pass. This holds that contract from the source
+ * side; `python3 scripts/promote-props.py --check` is what enforces it.
+ */
+describe('renders record the builder that made them', () => {
+  const PACKS = ['world_prop_pack.py', 'home_prop_pack.py', 'home_architecture.py'];
+
+  test.each(PACKS)('%s stamps its render directory', (file: string) => {
+    const src = readFileSync(join(__dirname, '..', 'tools', 'blender', file), 'utf8');
+    expect(src).toContain('def stamp_pack(');
+    expect(src).toContain('.pack-sha256');
+    // Only a full pass may claim the directory is current: a narrowed run
+    // leaves the rest of the pack behind, which is the half-rendered world
+    // the marker exists to refuse.
+    // Comment lines are allowed between the guard and the call -- two of the
+    // three packs explain themselves there -- but the guard has to be the
+    // thing immediately above it, and there must be exactly one call site.
+    expect(src).toMatch(/if not only:\n(?:\s*#[^\n]*\n)*\s+stamp_pack\(OUT\)/);
+    expect(src.match(/^\s*stamp_pack\(OUT\)/gm) || []).toHaveLength(1);
+  });
+
+  it('promotion asks the hash, not the clock', () => {
+    const promote = readFileSync(join(__dirname, '..', 'scripts', 'promote-props.py'), 'utf8');
+    expect(promote).toContain('def pack_fingerprint(');
+    expect(promote).toContain('hashlib.sha256');
+    // The mtime path survives only as the fallback for a directory rendered
+    // before markers existed, and it is guarded by the marker being absent.
+    expect(promote).toContain('got is None and render.stat().st_mtime');
+  });
+});

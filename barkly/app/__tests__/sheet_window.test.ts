@@ -139,3 +139,46 @@ describe('the room pans behind the sheet', () => {
     expect(room).toContain('peekShift(groundY, SPRITE_HEIGHT * spriteScale, screenH)');
   });
 });
+
+/*
+ * ONE SURFACE, AND ONE SWITCH THAT REVERTS IT.
+ *
+ * The world got an ink contour on every prop and on the dog. The interface
+ * did not -- six sheets, six hand-written container styles, flat white with a
+ * hairline shadow. Held next to a rendered scene that is the same complaint
+ * the props got: a thing from one picture dropped into another.
+ *
+ * `molded()` in theme.ts is the shared surface and `SURFACE_EDGE` is the one
+ * number that turns it off. This holds both ends of that: every sheet uses
+ * the helper rather than restating corners and a border, and the helper
+ * really does collapse to bare corners when the constant is zero -- an escape
+ * hatch nobody has tested is not an escape hatch.
+ */
+describe('the sheets are drawn in the world\'s language', () => {
+  const SHEETS = [
+    'FoodSheet.tsx',
+    'PackBookSheet.tsx',
+    'StoreSheet.tsx',
+    'SettingsSheet.tsx',
+    'PlaytestSheet.tsx',
+    'PrivacySheet.tsx',
+  ];
+
+  test.each(SHEETS)('%s takes its container from molded()', (file: string) => {
+    const src = fs.readFileSync(path.join(UI, file), 'utf8');
+    const sheet = src.slice(src.indexOf('  sheet: {'), src.indexOf('  sheet: {') + 400);
+    expect(sheet).toContain('molded(');
+    // ...and does not also hand-roll the corners it just asked for.
+    expect(sheet).not.toMatch(/borderTopLeftRadius:/);
+  });
+
+  it('the edge is one constant, and zero really does revert it', () => {
+    const theme = fs.readFileSync(path.join(UI, 'theme.ts'), 'utf8');
+    expect(theme).toMatch(/export const SURFACE_EDGE = \d+;/);
+    // The ink is the renders' ink, not a second opinion about "dark".
+    expect(theme).toMatch(/export const contour = '#0D1123';/);
+    // The early return that makes the switch real.
+    const fn = theme.slice(theme.indexOf('export function molded('));
+    expect(fn.slice(0, 900)).toContain('SURFACE_EDGE <= 0');
+  });
+});

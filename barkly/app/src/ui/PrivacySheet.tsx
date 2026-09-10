@@ -15,7 +15,7 @@
  */
 
 import React, { useState } from 'react';
-import { color } from './theme';
+import { color, molded, radius } from './theme';
 import { TAP_MIN } from './layout';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ParentalGate from './ParentalGate';
@@ -161,7 +161,7 @@ export default function PrivacySheet({
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { backgroundColor: color.well, borderTopLeftRadius: 26, borderTopRightRadius: 26 },
+  sheet: { backgroundColor: color.well, ...molded(radius.xl, { top: true }) },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

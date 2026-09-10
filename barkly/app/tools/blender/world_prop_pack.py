@@ -10,6 +10,7 @@ Run:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import zlib
@@ -2385,6 +2386,24 @@ def build_prop(path, builder, ortho_scale, target, render=True):
     return measure_form()
 
 
+
+def stamp_pack(out_dir):
+    """Record WHICH VERSION of this file rendered into `out_dir`.
+
+    `scripts/promote-props.py` reads this instead of comparing modification
+    times. Times are rewritten by `git rebase`, `git checkout` and a fresh
+    clone without a byte of the pack changing -- which marked every render
+    stale and cost a fifteen-minute re-render to produce identical files --
+    and a `git stash pop` can restore an older pack with a newer time, which
+    the time check waved straight through.
+
+    Written LAST, after every render in the run succeeded. A pass that dies
+    halfway must not leave a marker saying the directory is current.
+    """
+    digest = hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+    (out_dir / ".pack-sha256").write_text(digest + "\n", encoding="utf-8")
+
+
 def main():
     manifest = {
         "camera": "Barkly shared front-weighted orthographic v3",
@@ -2413,6 +2432,11 @@ def main():
             entry["form"] = form
         manifest["assets"][path] = entry
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    if not only:
+        # Only a FULL pass may claim the directory is current. A PROP_ONLY run
+        # deliberately leaves the rest of the pack behind, which is exactly the
+        # half-rendered world the marker exists to refuse.
+        stamp_pack(OUT)
     if only:
         if not rendered:
             raise SystemExit(

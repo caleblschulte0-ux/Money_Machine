@@ -9,7 +9,7 @@
  */
 
 import React, { useState } from 'react';
-import { color } from './theme';
+import { color, molded, radius } from './theme';
 import { TAP_MIN } from './layout';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ParentalGate from './ParentalGate';
@@ -550,8 +550,7 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: color.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    ...molded(radius.md, { top: true }),
     padding: 20,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import ItemIcon, { ItemStand } from './ItemIcon';
 import CollarPreview, { hasCollarPreview } from './CollarPreview';
-import { color, elevation, radius, space, type } from './theme';
+import { color, elevation, molded, radius, space, type } from './theme';
 import { TAP_MIN } from './layout';
 import {
   equippedItem,
@@ -318,8 +318,7 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: color.paper,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    ...molded(radius.xl, { top: true }),
     /*
      * The sheet is capped and centred because the GRID is capped: card widths
      * are computed from `Math.min(width, 700)`, and without the same cap here
