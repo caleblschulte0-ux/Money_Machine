@@ -408,6 +408,44 @@ def frame_cue(d, t, dur):
 DISSOLVE = 0.5          # seconds of cross-dissolve into each beat
 FIGURE_MAX_DRIFT = 0.03  # a plate carrying a figure must be this static
 
+# HARD_CUT_IN, r166 (ChatGPT's review, both findings measured and
+# confirmed before fixing, not taken on the review's word alone).
+# DIP_TO_BLACK only changes what the 0.5s dissolve blends FROM (black vs.
+# the previous beat's held last frame) -- it does NOT skip the dissolve.
+# For a very short beat, that 0.5s blend eats a real fraction of its
+# runtime: `worn` (1.5s) needs its disclosure legible "first frame
+# through last," and dissolving in from black for its first ~0.5s made
+# the frame ChatGPT measured as "near-black... not practically legible"
+# -- confirmed directly (the ease-in math puts real, visible brightness
+# only from ~40% of a second in). `table`'s entry measured OBJECTIVELY
+# worse: a patch of its studio-black background at t=40.60 read mean BGR
+# (94,109,97), std 42 -- daylight-green content bleeding through from
+# `off`'s real footage -- vs. the settled (42,40,36), std 4 by t=41.0.
+# That is exactly the "translucent object over the wrong background"
+# scale-mismatch ghosting this project has already fixed twice before
+# (the table turntable's OWN internal cuts, and the dissolve-scale
+# comment further up this file); it went unnoticed here because the
+# 12-angle/fast-orbit versions never had anyone check the ENTRY
+# transition specifically, only the cuts between angles.
+# Beats in this set skip the per-beat dissolve entirely -- a literal
+# hard cut from whatever the previous beat's last frame was, no blend
+# in either direction.
+HARD_CUT_IN = {"worn", "table"}
+
+# LABEL_NO_FADEOUT, r166. The shared label release fade (`k *= (dur -
+# 0.12 - t) / 0.45`) starts winding a label down well before its beat
+# actually ends -- fine for every other label, which either persist into
+# a following beat's own graphic or simply aren't required to hold to
+# the literal last frame. `worn`'s disclosure is: ChatGPT's exact
+# instruction was "keep it fully legible... through the final rendered
+# frame... disable any label fade-out on this beat; cut the label and
+# plate together." Checked the math before accepting the finding: at
+# dur=1.5s the shared formula reaches zero opacity by t=1.38s, a good
+# 0.12s before the beat's own end -- the r165 report's claim that it
+# "remains visible through the last frame" was wrong, not verified
+# closely enough at the time.
+LABEL_NO_FADEOUT = {"worn"}
+
 # A cross-dissolve blends the incoming beat's first frames against the
 # previous beat's LAST COMPOSED FRAME held still. That is invisible when
 # neighbouring shots share a framing scale (every plate in this film drifts
@@ -641,7 +679,8 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
             cx, cy = lpath[min(i, len(lpath) - 1)]
             if t >= t0:
                 k = AR.ease(min(1.0, (t - t0) / 0.5))
-                k *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
+                if beat not in LABEL_NO_FADEOUT:
+                    k *= min(1.0, max(0.0, (dur - 0.12 - t) / 0.45))
                 if k > 0:
                     draw_label(d, (cx, cy), (cx + off[0], cy + off[1]), title, sub, k,
                                beat, col=lcol, scale=lscale)
@@ -722,7 +761,7 @@ def compose(beat, dur, frames, prev_last=None, global_i=0):
         # therefore every label, tick and score boundary, exactly where
         # the spec says it is -- an overlap would have silently shifted
         # the entire timeline under them.
-        if prev_last is not None and i < int(DISSOLVE * FPS):
+        if prev_last is not None and beat not in HARD_CUT_IN and i < int(DISSOLVE * FPS):
             a = AR.ease((i + 1) / (DISSOLVE * FPS))
             src = (np.zeros_like(out) if beat in DIP_TO_BLACK
                    else prev_last.astype(np.float32))
