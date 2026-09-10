@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
-"""r201 evidence pack: full-film contact sheet for v37 "The World / The
-Layer". Two things landed this round: (1) ChatGPT's r200 review of r199
-found the borrow-close bracket still framed the FULL window around a
-collapsed content sliver (opacity alone wasn't enough) -- the bracket
-rectangle now tracks the actual revealed-content bounds (shrink_brackets
-in windowed_reveal(), scoped to borrow's own closing sweep only); (2)
-the operator watched r199 directly and said it "don't look any better,"
-naming two things: the wearer's gaze never meets the window (verified
-against real footage: no such moment exists in the available clips --
-a genuine footage limitation, not something this round fixes), and the
-window itself still reads as a flat pasted photo -- windowed_reveal()
-now feathers the window's outer edges and adds a soft glowing rim, the
-two standard cues for "projected layer" over "picture card." Same
-density/EXTRA_BOUNDS as r193/r195/r197/r199.
+"""r203 evidence pack: full-film contact sheet for v37 "The World / The
+Layer". ChatGPT's r202 review pushed back on r201's "gaze mismatch is
+unfixable" conclusion, correctly: that was checked against only 2 of
+33 real candid clips. r203's full audit (see
+r203__claude__v37_gaze_alignment_audit.md) found exactly ONE genuine
+gaze-aligned moment across the whole library: IMG_6790 raw t~3.5-7.0s,
+where the wearer turns toward camera and points at real signage. hook
+now uses that stretch (0.5-8.5s, was 8.0-16.0s) with its AR window
+repositioned to sit where he points -- the only section this round
+touches; no comparable moment exists for borrow/recognize/examples/
+loop, which remain a genuine capture gap (see the new capture brief).
+Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201, plus new sample
+points across hook's own gesture window.
 """
 import subprocess
 
@@ -25,6 +24,9 @@ SECTION_BOUNDS = [0.0, 8.0, 20.0, 32.0, 40.0, 49.5, 54.0, 66.0, 74.0]
 EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
     5.6, 7.0,                                  # hook: disclosure over pale sky/snow (r190)
+    3.5, 4.5, 5.0, 6.0, 6.5,                    # r203: the gesture window itself
+                                                 # (raw IMG_6790 t~3.5-7.0s, local
+                                                 # t = raw - 0.5s new in-point)
     9.5, 12.2, 15.0, 19.0, 20.0,                # borrow: hardware in/hold, software swap, software out
     19.2, 19.4, 19.6, 19.8,                     # r201: ChatGPT's exact 6 requested
                                                  # boundary-check timestamps for the
@@ -75,7 +77,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r201__claude__v37_world_layer_aperture_close__contact.png", sheet)
+    cv2.imwrite("r203__claude__v37_gaze_alignment__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

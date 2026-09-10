@@ -235,7 +235,15 @@ for _key, _parts in SPLIT_PARTS.items():
         SOURCE_DUR[f"{_key}_p{_i}"] = _dur
 
 SOURCE_READERS = {
-    "hook_world": lambda: read_clip("6790", 8.0, 8.0),
+    # r203: shifted from @8.0s (where he has already turned his back and
+    # is walking away -- the exact orientation the operator's own r201
+    # screenshot showed) to @0.5s. This is the ONE stretch found across
+    # a full audit of all 33 real candid clips where he faces camera and
+    # extends his arm in a clear pointing gesture (raw t~3.5-7.0s, real
+    # signage as the target) -- see r203's own gaze-alignment audit.
+    # 0.5s (not 0.0s) skips a finger-over-lens artifact in the first
+    # ~0.4s of the raw clip.
+    "hook_world": lambda: read_clip("6790", 0.5, 8.0),
     "hook_layer": lambda: build_photo_zoom(ICEAGE_SRC, 8.0, cap=1.06),
     "borrow_hero": lambda: build_photo_zoom(HERO_SRC, 5.5, cap=1.05),
     "borrow_worn": lambda: build_photo_zoom(WORN_SRC, 5.0, cap=1.05),
@@ -311,7 +319,14 @@ def build_hook():
             progress = G.ease((t - 1.8) / 2.4)
         else:
             progress = 1.0
-        img = G.windowed_reveal(world[i], layer[i], progress, direction="ltr")
+        # r203: window repositioned to sit where he actually points
+        # (raw IMG_6790 t~3.5-7.0s, local t~3.0-6.5s here -- right as
+        # the reveal opens/holds) -- x=1000/1920, y=470/1080, same w/h
+        # as the shared default. Every other windowed_reveal call in
+        # the film keeps the shared WIN_CX/CY_FRAC position; this is
+        # the one shot with a real gesture to align to.
+        img = G.windowed_reveal(world[i], layer[i], progress, direction="ltr",
+                                 win_cx=1000 / 1920, win_cy=470 / 1080)
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)
             G.primary_label(img, "THE WORLD", k=k, y_frac=0.14)

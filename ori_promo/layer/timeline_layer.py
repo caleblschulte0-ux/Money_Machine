@@ -13,22 +13,37 @@ from spec_layer import SECTIONS, VO_LINES, TOTAL, W, H, FPS
 
 STRUCTURE = {
     "hook": [
-        "0.0-8.0s   IMG_6790 @8.0s real footage, bright_edit_grade -- "
+        "0.0-8.0s   IMG_6790 @0.5s real footage, bright_edit_grade -- "
         "the film's own daylight treatment (opposite instinct from "
-        "map/'s dark_doc_grade)",
+        "map/'s dark_doc_grade). r203: shifted from @8.0s -- ChatGPT's "
+        "r202 review pushed back on r201's 2-clip \"unfixable\" claim; "
+        "a full audit of all 33 real candid clips (r203__claude__v37_"
+        "gaze_alignment_audit.md) found exactly one genuine gaze-"
+        "aligned moment in the whole library, right here at raw "
+        "t~3.5-7.0s, previously unused because hook's own in-point "
+        "started 0.5s after this stretch ends.",
         "0.0-1.8s   clean world, no layer -- \"hold clean real footage "
         "for at least 1.5 seconds\" (r184's own beat-1 requirement)",
         "1.8-4.2s   windowed_reveal(direction=ltr, r197): the real "
         "footage stays full-bleed at every value of progress -- a "
-        "bracket-framed floating AR window (recognize's own zone_trace "
-        "geometry) sweeps open over the LEFT side of frame, exposing "
+        "bracket-framed floating AR window sweeps open, exposing "
         "ai/iceage/iceage_falls_visualization_r172_chatgpt.jpg inside "
         "the window only, never the whole picture; a coral seam marks "
         "the sweep's leading edge while it is mid-open (replaces r185's "
         "wipe_reveal, a full-frame crossfade to an unrelated photo -- "
         "the operator's direct complaint: \"we cut to an AI image, it's "
         "out of place... it doesn't give the feel... you walk around "
-        "with glasses and you see stuff\")",
+        "with glasses and you see stuff\"). r203: the window is "
+        "repositioned for this shot only (win_cx=1000/1920, "
+        "win_cy=470/1080, same size -- every other windowed_reveal call "
+        "keeps the shared default position) to sit exactly where the "
+        "wearer points at local t~3.0-6.5s -- see STANDING AR GRAMMAR.",
+        "3.0-6.5s   the wearer turns toward camera and extends his arm, "
+        "pointing at the real signage -- and, with the window "
+        "repositioned, at the AR window itself. This is the ONE moment "
+        "found across the full 33-clip audit where the wearer's own "
+        "gesture aligns with the visualization instead of it floating "
+        "beside him unnoticed.",
         "4.2-8.0s   window fully open (progress=1.0), held -- real "
         "footage (the boy, on the RIGHT of frame) stays visible beside "
         "it the whole time",
@@ -202,7 +217,7 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v37 -- "THE WORLD / THE LAYER" (aperture close + edge treatment, r201)')
+    L.append('ORI v37 -- "THE WORLD / THE LAYER" (hook gaze alignment, r203)')
     L.append("Fifth and final execution in the operator-ordered five-style "
              "slate (r145__operator__five_style_variants.md); v33/r167, "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
@@ -481,6 +496,18 @@ def main():
              "remaining factor and is NOT fixable by this or any other "
              "compositing change against the currently available "
              "footage.")
+    L.append("  r203 (ChatGPT's r202 pushback on r201's 2-clip gaze "
+             "check, and the full 33-clip audit it prompted): hook's "
+             "windowed_reveal() call now passes win_cx=1000/1920, "
+             "win_cy=470/1080 -- shifted from the shared default (used "
+             "everywhere else in the film) to sit where the wearer's "
+             "own pointing gesture (see hook's own STRUCTURE entry "
+             "above, local t~3.0-6.5s) actually lands. This is a "
+             "per-shot override, not a change to the shared WIN_CX/"
+             "CY_FRAC constant -- recognize's zone_trace and every "
+             "other windowed_reveal call keep the original position. "
+             "One shot, found by full audit, actually has a gesture to "
+             "align to; the rest do not.")
     L.append("")
     L.append("STANDING WEARER CONTINUITY (new this round, r199)")
     L.append("  ChatGPT's r198 review, verbatim: \"the wearer disappears "
@@ -593,6 +620,44 @@ def main():
              "in (1) is very likely still the dominant thing a viewer "
              "notices, and no compositing-only change resolves it.")
     L.append("")
+    L.append("R202 -- CHATGPT'S REVIEW OF R201, AND WHY R203 IS A FULL AUDIT")
+    L.append("  ChatGPT's r202 review passed the r201 aperture-close fix "
+             "outright (\"the six dense boundary samples show the closing "
+             "image and its coral brackets shrinking together... the "
+             "aperture now closes cleanly\") but pushed back, correctly, "
+             "on r201's gaze finding, verbatim: \"the operator brief says "
+             "the production holds 60+ clips/photos, so an 'unfixable "
+             "with existing footage' conclusion requires a complete "
+             "source audit.\" r201 had checked only IMG_6794 and "
+             "IMG_6790 -- 2 of 33 real candid clips in the raw library. "
+             "r203 is that complete audit: every clip sampled at 3 "
+             "points minimum, full-resolution follow-up wherever the "
+             "wearer appeared in any orientation besides back-to-camera. "
+             "See r203__claude__v37_gaze_alignment_audit.md for the full "
+             "33-row table.")
+    L.append("R203 -- WHAT THE FULL AUDIT FOUND")
+    L.append("  One genuine candidate, previously missed: IMG_6790 raw "
+             "t~3.5-7.0s, a stretch that sits BEFORE hook's own in-point "
+             "(which started at t=8.0, by which point he has already "
+             "turned his back and is walking away -- exactly the "
+             "orientation the operator's own r201 screenshot showed). In "
+             "this earlier stretch he turns toward camera and extends "
+             "his arm in a clear pointing gesture at real signage. hook's "
+             "own in-point moved to t=0.5 (8.0s duration, same as "
+             "before, just 7.5s earlier in the same clip -- a 0.4s "
+             "finger-over-lens artifact at the very start of the raw "
+             "file is why the in-point isn't t=0.0). The AR window is "
+             "repositioned for this one shot (win_cx=1000/1920, "
+             "win_cy=470/1080 -- his pointing hand lands right at the "
+             "window's edge) -- see STANDING AR GRAMMAR. Every other "
+             "section (borrow, recognize, examples, loop) has no "
+             "comparable moment anywhere in the 33-clip library -- "
+             "second people present, back-to-camera throughout, framing "
+             "incompatible with a window, too short, or unrelated content "
+             "entirely (screen recordings). Those remain a genuine "
+             "capture gap; see r203__claude__v37_new_capture_brief.md "
+             "for exactly what new footage would resolve it.")
+    L.append("")
     L.append("SOUND")
     L.append("  r195: narration plus a synthesized score (score_layer.py) "
              "-- no sample, nothing licensed, regenerable from source at "
@@ -619,11 +684,10 @@ def main():
              "audio listening verdict on r195 -- written before the "
              "operator's own direct critique below arrived; r197 "
              "superseded that hold on the operator's explicit, more "
-             "recent instruction to rework the picture, and r199 "
-             "(this round) is ChatGPT's own r198 follow-up review of "
-             "that fix -- still picture-only. r195's score and its "
-             "open six-part audio spot-check are both carried forward "
-             "untouched, unchanged since r195.")
+             "recent instruction to rework the picture. r199, r200 and "
+             "r201 are all further picture-only rounds since -- r195's "
+             "score and its open six-part audio spot-check are still "
+             "carried forward untouched, unchanged since r195.")
     L.append("")
     L.append("R197 -- THE OPERATOR'S DIRECT 5-SCREENSHOT CRITIQUE")
     L.append("  The operator watched the delivered r195 film and gave "
