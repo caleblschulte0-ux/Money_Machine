@@ -206,7 +206,37 @@ try {
   writeFileSync(outPath, html);
   const kb = Math.round(Buffer.byteLength(html) / 1024);
   console.log(`wrote ${outPath} (${kb} KB, ${inlined} script${inlined === 1 ? '' : 's'} inlined)`);
-  if (kb > 16 * 1024) console.warn('WARNING: over the 16MB artifact limit.');
+  if (kb > 16 * 1024) {
+    /*
+     * WHAT THIS IS AND IS NOT, because the obvious "fix" is the wrong one.
+     *
+     * This file is the SELF-CONTAINED PREVIEW: every asset inlined as a
+     * base64 data URI, which costs about a third on top of its real bytes.
+     * The live playtest link is GitHub Pages serving `dist/`, and `dist/` is
+     * measured by `scripts/payload-budget.mjs` against its own 16MB budget --
+     * 12.4MB at the time of writing, with real headroom. Going over HERE does
+     * not make the game bigger for a player; it makes one preview file too
+     * large to attach somewhere.
+     *
+     * It first went over on the pass that lowered the world's sun, and by
+     * 0.09MB: a picture with real tonal range has more distinct colours in it
+     * than a flat one, so it quantises and deflates worse. Measured, the three
+     * scene plates gained 94KB of the 130KB.
+     *
+     * The tempting fix is to drop the plates' palette. Measured at 256 / 192 /
+     * 160 / 128 colours, park goes 263 / 250 / 236 / 224 KB -- so even
+     * halving it recovers about 100KB across three files, and buys that by
+     * BANDING the exact gradients this pass exists to create. Do not do that
+     * to make a warning go away. If the preview has to fit, ship fewer
+     * locations in it, or fix the base64 inflation.
+     */
+    console.warn(
+      `WARNING: ${kb} KB, over the 16MB single-file preview limit. ` +
+      'This is the inlined preview, NOT the shipped bundle -- ' +
+      'run `node scripts/payload-budget.mjs dist` for the number that ' +
+      'affects players. See the note above before shrinking any art.',
+    );
+  }
 
   // A self-contained page must not reach out. Catch it here rather than
   // discovering it as a blank page behind a CSP.

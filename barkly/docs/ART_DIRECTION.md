@@ -1744,104 +1744,19 @@ being unlockable.
 
 ### Where the four ended up
 
-| scene | saturation | brightness | tonal range |
-|---|---|---|---|
-| park | 0.495 → 0.516 | 0.698 → 0.659 | 0.761 → 0.741 |
-| beach | 0.404 → **0.508** | 0.651 → 0.722 | 0.565 → **0.792** |
-| home | 0.348 → 0.357 | 0.494 → 0.502 | 0.643 → 0.639 |
-| town | 0.292 → **0.345** | 0.475 → 0.494 | 0.612 → 0.565 |
+Every number below is one measurement: HSV value over the frame, captured at
+390x844 by `scripts/scene-shot.mjs` (which refuses to save a file unless the
+scene it was asked for is actually on screen), with the before taken from a
+worktree at 1d1a84e built and captured the identical way. Earlier drafts of
+this section quoted three different methods and did not say which was which.
 
-Town is still the least saturated of the four and it should be: it is a street,
-and a street is not a lawn. What changed is that it is now a street *rendered
-the way the lawn is*, which is the thing that was actually being asked about.
-
-### One more thing the plates bought
-
-`plateAnchor()` generalises what `plateHorizon()` was doing for one point. A
-builder projects real world positions through the real camera into the
-manifest, so anything the app has to line up with something painted INTO a
-plate is solved from the render rather than guessed and nudged. Town's night
-lamps use it: the glow sits on the lantern glass the plate actually drew, and a
-re-render that moves the lamp moves the glow with it.
-
-## The world had no darks, because the sun was overhead (2026-09-10)
-
-*"This is getting much closer but it's still missing one more huge art style
-leap."*
-
-Saturation was no longer the gap. Measured against the Brawl Stars reference
-the park plate was already past it — 0.56 against 0.52 — so the thing still
-missing was not colour. It was VALUE, and the measurement that found it was
-taken against the game's own hero rather than against the reference:
-
-| | p05 | p50 | p95 | range | below 0.25 |
-|---|---|---|---|---|---|
-| Brawl Stars reference | 0.12 | 0.52 | 0.99 | 0.87 | **18.8%** |
-| Barkly himself | 0.14 | 0.66 | — | — | **25.4%** |
-| the park plate, alone | 0.28 | 0.63 | 0.79 | 0.51 | **4.9%** |
-| the park scene, composited in the app | 0.15 | 0.67 | 1.00 | 0.85 | **10.8%** |
-
-Two park rows because they are two different measurements and the difference
-matters: the PLATE is the painted place on its own, and the SCENE is what the
-player sees — plate, sky, props, the dog and the HUD. The dog and the HUD are
-most of what drags the composite's 4.9% up to 10.8%, which is the finding
-stated a second way: the darkest thing in the park was the interface.
-
-A quarter of Barkly is dark. A twentieth of the place he stands in is. That is
-the whole discrepancy: he is a character drawn with shadow in him, pasted onto
-a place with none, and no amount of chroma closes it.
-
-### The cause was one number, and it was not a colour
-
-The key sun stood at **51° elevation**. That is local noon, and at local noon
-almost every surface in an open scene faces up — which means almost every
-surface is lit, and every cast shadow is a stub under the thing that casts it.
-A gazebo at 51° puts a puddle under itself. The same gazebo at 26° lays a
-shadow twice its own height across the lawn, and that shadow is the dark the
-picture did not have.
-
-Three changes, all of them light:
-
-* `SKY_FILL_STRENGTH` **0.45 → 0.11**. The hemisphere ambient was filling
-  every shadow back in as fast as the sun could cut one. 0.45 was already the
-  fix for a previous pass — it was 1.0 — and it was still lifting the floor of
-  the whole picture.
-* Fill lamps **220 → 60**, in all three packs.
-* The scene sun down to **26°** for the park. (The beach started there
-  too and ended at 34° — see "The sea went black" below.)
-
-### Town wanted a different sun, and said so when asked
-
-A raking light put the entire plaza in its own buildings' shadow — the
-storefronts stand along the back of the square, so at 26° they shadow
-everything in front of them.
-
-| town sun | median value | below 0.25 |
-|---|---|---|
-| 26° | 0.34 | 25.1% |
-| 40° | 0.41 | 22.4% |
-| **50°** | **0.54** | **15.8%** |
-
-So `sun_height` became a per-scene entry in the `SCENES` tuple rather than one
-constant. This is not a special case being carved out: a plaza enclosed on one
-side is a different lighting problem from an open lawn, and pretending
-otherwise is what a single global would do.
-
-### Where the four ended up
-
-Every number below is the same measurement: HSV value over the frame, the app
-built and captured at 390x844 through Playwright, `git show HEAD:` for the
-before. Earlier drafts of this section quoted three different methods and did
-not say which was which; these are one.
-
-The **plates** — the painted ground itself, which is what the sun change
-actually moved:
+The **plates** — the painted ground itself, which is what the sun moved:
 
 | plate | p05 | p50 | range | below 0.25 | saturation |
 |---|---|---|---|---|---|
 | park | 0.28 → **0.14** | 0.63 → 0.47 | 0.51 → **0.69** | 4.9% → **13.8%** | 0.56 → 0.62 |
-| beach | 0.16 → 0.14 | 0.71 → 0.58 | 0.74 → **0.85** | 5.5% → **11.7%** | 0.51 → 0.60 |
-| town | 0.14 → 0.14 | 0.66 → 0.74 | 0.68 → **0.82** | 9.0% → **17.4%** | 0.50 → 0.58 |
+| beach | 0.16 | 0.71 → 0.69 | 0.74 → **0.84** | 5.5% → 7.4% | 0.51 → **0.58** |
+| town | 0.14 | 0.66 → 0.74 | 0.68 → **0.82** | 9.0% → **17.4%** | 0.50 → **0.58** |
 
 Town lands on the reference's own 18.8%. Park more than doubled its darks and
 its p05 fell from 0.28 to 0.14 — 0.28 was the real number behind "this world
@@ -1852,26 +1767,23 @@ The **scenes as the player sees them** — plate, sky, props, dog and HUD:
 
 | scene | p05 | p50 | range | below 0.25 | saturation |
 |---|---|---|---|---|---|
-| park | 0.15 → 0.16 | 0.67 → 0.60 | 0.85 → 0.84 | 10.8% → 12.0% | 0.48 |
-| beach | 0.22 → 0.19 | 0.60 → 0.65 | 0.78 → 0.81 | 7.8% → **12.4%** | 0.36 → 0.38 |
-| town | 0.22 → 0.19 | 0.60 → 0.61 | 0.78 → 0.81 | 7.5% → **12.6%** | 0.31 → **0.36** |
+| park | 0.15 → 0.14 | 0.67 → 0.55 | 0.85 → 0.86 | 10.8% → **16.0%** | 0.48 → 0.50 |
+| town | 0.22 → 0.20 | 0.60 → 0.66 | 0.78 → 0.80 | 7.5% → **12.1%** | 0.31 → 0.33 |
 | home | 0.20 → 0.22 | 0.63 → 0.62 | 0.80 → 0.78 | 7.6% → 8.0% | 0.35 → 0.34 |
+| beach | 0.22 → 0.20 | 0.76 → 0.75 | 0.78 → 0.80 | 5.7% → 6.8% | 0.49 → **0.57** |
 
-**The composite always moves less than the plate, and park moves least of all.**
-Half of every frame is sky, HUD and the dog, and none of the three was relit —
-the dog least of all, because his renders are locked canon. Park is the case
-where that is most visible: measured mid-pass, with the plate relit and the
-props still at 51 degrees, it read 16.1%, and relighting the props brought it
-back down to 12.0%.
+**The composite always moves less than the plate.** Half of every frame is sky,
+HUD and the dog, and none of the three was relit — the dog least of all,
+because his renders are locked canon. Park is the case where the change is
+biggest and it still lands short of the plate's own gain.
 
-That is not a regression, and it is worth writing down because the number went
-the wrong way. A 51-degree sun on a rounded prop gives a bright top and a hard
-dark underside — high contrast inside the prop, which counts as darks. A
-26-degree sun rakes across it and gives a broad terminator instead. So the
-props traded some of their own internal darkness for AGREEING WITH THE GROUND
-THEY STAND ON, which is what the whole pass is for and what a foreground tree
-sitting flat and bright on a raked lawn was failing to do. The scene reads as
-one place at 12.0% and read as two at 16.1%.
+**Beach and home are the two that barely move IN DARKS, and both are honest.**
+A beach is one open plane whose only casters are three palms, so a low sun has
+almost nothing to throw a shadow of — but it is also the biggest CHROMA gain of
+the four (0.49 → 0.57), because what it needed was its sea and its sand to stop
+being the same brightness. Home is a room with an unlockable furniture set and
+app-drawn walls, so its shell can only ever take a falloff, never a cast
+shadow. Neither is tuned to look better than it is.
 
 ### Two things this broke, both worth the finding
 
@@ -1904,10 +1816,20 @@ value would not — and clipping went to **0.0%**.
 The bed re-promoted after a re-render with no source change, which is the
 CI-churn class that once had two workflows overwriting each other. Measured:
 **3 pixels of 409,600, each off by at most 2** — the renderer's float
-accumulation, not geometry. Quantised to the shipping 256 colours, the two
-renders are byte-identical, and `promote-props.py` already compares the asset
-it would produce rather than the intermediate render. No tolerance was added
-and none was needed; the gate was comparing the right two things all along.
+accumulation, not geometry. Quantised to the shipping 256 colours those two
+renders come out byte-identical, and `promote-props.py` already compares the
+asset it would produce rather than the intermediate render, so the churn
+disappears. No tolerance was added and none was needed.
+
+**It does not disappear entirely at plate scale, though.** Re-rendering the
+beach plate after a pure parameter RENAME — output-neutral by construction —
+produced 2 differing pixels out of 1,376,256, max delta 12. On a 640x640 prop
+the quantiser rounds that noise away; on a 768x1792 plate there are enough
+pixels that one or two land on the other side of a palette boundary and
+survive. So a plate can re-promote with no source change, rarely, at two
+pixels. That is worth knowing before someone hunts it as a bug, and it is
+still not worth a tolerance: a threshold loose enough to swallow a delta of 12
+is a threshold picked to fit the case in front of it.
 
 ### The half of it that was still at noon
 
@@ -2070,11 +1992,32 @@ that was lighting the water, and lowering the sun took the rest.
 Raising the beach's sun to prop the water back up would have been the wrong
 fix twice over: it would have cost the palms their long shadows, and it would
 have left the sea's brightness hostage to a number that has nothing to do with
-it. So `depth_material` grew a `sky_mirror` — a small emission of
-`light_hex("fill")`, the same sky every shadow in this game already takes its
-colour from — which says the thing that is actually true about water and
-decouples it from the sun entirely. Sea back to **0.58**, and the beach's
-elevation is now free to be chosen for its SAND.
+it. So `depth_material` grew a `sky_mirror`: a small emission that decouples
+the surface from the sun entirely.
+
+**What it emits took two goes, and the physical answer was the wrong one.**
+The first version emitted `light_hex("fill")` — literally the sky, which is the
+better story. That lamp is deliberately a low-chroma daylight blue, so adding
+it to every channel made the sea GREY: the app's sea band went value 0.53 →
+0.61 and saturation **0.55 → 0.36**. Brighter, and a brighter version of the
+wrong problem. A cartoon sea is not a grey mirror; it is a saturated blue that
+is brighter than the light falling on it, because sky, depth and caustics are
+all doing something a diffuse lobe cannot say.
+
+Emitting the material's own near colour says that instead, and it stays general
+— any `depth_material` can be told to carry its own light without importing a
+second opinion about what colour it is:
+
+| beach sea band, in the app | colour | saturation | value |
+|---|---|---|---|
+| before the pass | `#3C7786` | 0.55 | 0.53 |
+| 26°, no emission | — | — | **0.31** |
+| emitting the sky | `#638D9B` | **0.36** | 0.61 |
+| **emitting its own hue** | `#32727F` | **0.61** | 0.50 |
+
+Baseline brightness, more chroma than it ever had — and the beach frame's own
+saturation went 0.49 → **0.57**, the largest single-scene chroma gain in the
+pass. The beach's elevation is now free to be chosen for its SAND.
 
 Which it was, at **34°** rather than the park's 26°, and for a reason about
 what is in the scene rather than a preference. A beach is an open plane with a
@@ -2086,11 +2029,13 @@ it costs the sand its gold. Measured across three renders of the plate:
 | 51° (before) | 0.16 | 0.71 | 5.5% | 0.49 |
 | 26° | 0.14 | 0.58 | 11.7% | **0.31** |
 | 34° | 0.15 | 0.69 | 8.5% | 0.37 |
-| **34° + sky mirror** | 0.15 | 0.69 | 7.4% | **0.58** |
+| **34° + own-hue emission** | 0.16 | 0.69 | 7.4% | — |
 
-Beach ends with the smallest gain in darks of the four, and that is the honest
-answer for an open beach rather than a number to chase: the shadows it has are
-the palms', and there are three of them.
+Beach's PLATE gains the least of the three (5.5% -> 7.4%), and what it gains
+instead is RANGE — 0.74 -> 0.84, the widest of the four — because the sea and
+the sand finally separate. That is the honest answer for an open beach rather
+than a number to chase: the shadows it has are the palms', and there are three
+of them. Home moves less still, for its own reason, above.
 
 ### A measurement that was wrong, and the tool that already existed
 
@@ -2112,3 +2057,24 @@ So: measure with `scene-shot.mjs`. The lesson the repo had already learned was
 not that locked tabs are tricky; it was that a capture which silently
 photographs the wrong place is worse than one that fails, and the tool that
 enforces it is already here.
+
+### The cost, stated rather than hidden
+
+A picture with real tonal range has more distinct colours in it than a flat
+one, so it quantises and deflates worse. The world's assets went 1.64MB →
+1.77MB, and 94KB of that 130KB is the three scene plates.
+
+That pushed `barkly-artifact.html` — the self-contained preview, every asset
+inlined as base64, which costs about a third on top of the real bytes — from
+15.92MB to 16.09MB, over a 16MB warning it had been just under. **It does not
+affect players.** The live link is GitHub Pages serving `dist/`, and `dist/`
+measures 12.41MB against its own 16MB budget, which `payload-budget.mjs`
+checks and passes.
+
+The tempting fix is to drop the plates' palette, and it is measurably not worth
+it. Park at 256 / 192 / 160 / 128 colours is 263 / 250 / 236 / 224 KB: halving
+the palette recovers about 100KB across three files and buys it by BANDING the
+exact gradients this whole pass exists to create. So the warning stays true and
+`build-artifact.mjs` now says which number it is and which one matters, with
+that measurement written down next to it — because the next session to see
+"over the limit" would otherwise reach for the palette.

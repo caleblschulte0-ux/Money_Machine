@@ -1096,12 +1096,16 @@ export function HomeScene({
         interior read as a room rather than as an evenly-printed backdrop.
 
         The measurement that made this a defect rather than a nicety: across
-        the pass that lowered the world's sun, every other location gained
-        real darks -- beach went from 7.8% of its pixels below value 0.25 to
-        12.4%, town 7.5% -> 12.6%, and the park PLATE 4.9% -> 13.8%. Home went
-        7.6% -> 7.6%. Not "moved less" -- did not move at all. Every rendered
-        prop in the room was relit and the ROOM was not, because the room is
-        drawn here and nothing here knew there was a light in it.
+        the pass that lowered the world's sun, the park went from 10.8% of its
+        pixels below value 0.25 to 16.0% and the town 7.5% -> 12.1%, while the
+        park's PLATE went 4.9% -> 13.8%. Home went 7.6% -> 7.6%. Not "moved
+        less" -- did not move at all. Every rendered prop in the room was
+        relit and the ROOM was not, because the room is drawn here and nothing
+        here knew there was a light in it.
+
+        It still moves least of the four with this in (7.6% -> 8.0%), and that
+        is the honest ceiling rather than a shortfall: a falloff is not a cast
+        shadow, and a shell whose contents are unlockable cannot have one.
 
         Three things make this a light model and not a vignette:
 

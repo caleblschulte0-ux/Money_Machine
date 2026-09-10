@@ -787,7 +787,7 @@ def _band(name: str, y0: float, y1: float, z: float, mat, half_width: float = 70
 
 
 def depth_material(name: str, hex_near: str, hex_far: str, roughness: float = 0.90,
-                   sky_mirror: float = 0.0):
+                   self_lit: float = 0.0):
     """A surface that changes colour with DISTANCE, continuously.
 
     Same lesson the ground already taught, and I walked into it again: the
@@ -815,7 +815,7 @@ def depth_material(name: str, hex_near: str, hex_far: str, roughness: float = 0.
     nt.links.new(sep.outputs["Y"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
     #
-    # WATER IS A MIRROR OF THE SKY, and a diffuse surface cannot say so.
+    # WATER CARRIES ITS OWN LIGHT, and a diffuse surface cannot say so.
     #
     # The sea is one huge horizontal plane, which means the sun strikes it at
     # the same glancing angle it strikes the sand -- so when the sun came down
@@ -824,16 +824,27 @@ def depth_material(name: str, hex_near: str, hex_far: str, roughness: float = 0.
     # in a way the sand at the same elevation is not: almost none of real
     # water's brightness is the sun landing on it. It is the SKY, reflected.
     #
-    # Modelling it as a little emission of the sky's own colour says exactly
-    # that, and it has a second virtue: it decouples the sea from the sun, so
-    # the beach's elevation can be chosen for its SAND and its palm shadows
-    # rather than propped up to stop its water going black.
+    # Modelling it as a little EMISSION says that, and it has a second virtue:
+    # it decouples the sea from the sun, so the beach's elevation can be chosen
+    # for its SAND and its palm shadows rather than propped up to stop its
+    # water going black.
     #
-    # The colour is `light_hex("fill")`, which is the sky as every shadow in
-    # this game already takes it -- not a new decision, the same one.
-    if sky_mirror:
-        bsdf.inputs["Emission Color"].default_value = (*pack.rgb(light_hex("fill")), 1.0)
-        bsdf.inputs["Emission Strength"].default_value = sky_mirror
+    # THE COLOUR IS THE SURFACE'S OWN, not the sky lamp's. The first version
+    # emitted `light_hex("fill")` -- literally the sky, which is the more
+    # physical story -- and it made the sea GREY: that lamp is deliberately a
+    # low-chroma daylight blue (saturation 0.30), so adding it to every channel
+    # washed the water out. Measured in the app, the sea band went value
+    # 0.53 -> 0.61 and saturation 0.55 -> 0.36, which is a brighter version of
+    # the wrong problem. A cartoon sea is not a grey mirror; it is a saturated
+    # blue that is brighter than the light falling on it, because sky, depth
+    # and caustics are all doing something a diffuse lobe cannot.
+    #
+    # Emitting the material's OWN near colour says that and stays general: any
+    # depth_material can be told to carry its own light without importing a
+    # second opinion about what colour it is.
+    if self_lit:
+        bsdf.inputs["Emission Color"].default_value = (*pack.rgb(hex_near), 1.0)
+        bsdf.inputs["Emission Strength"].default_value = self_lit
     return mat
 
 
@@ -1064,7 +1075,7 @@ def beach():
 
     # Shallows to deep water, as one continuous ramp.
     _band("sea", 25.0, 43.0, 0.005,
-          depth_material("Sea", tone("sea", "base"), tone("sea", "shade"), sky_mirror=0.22))
+          depth_material("Sea", tone("sea", "base"), tone("sea", "shade"), self_lit=0.22))
 
     _surf(25.0)
     _headland(40.0)
