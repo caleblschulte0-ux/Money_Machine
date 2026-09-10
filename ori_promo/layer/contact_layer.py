@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""r187 evidence pack: full-film contact sheet for v37 "The World / The
-Layer", pass 2 (r186's sole correction: the recognize section's primary
-label raised 62px -> 72px). Approximately one frame every 1.4s across
-the 74.0s master (within r184's own requested 1.3-1.5s density), plus
-EXTRA_BOUNDS at every disclosure entry/exit, every real-to-layer reset,
-every section (and examples sub-part) transition, the recognize label's
-own entry/hold/exit, and the literal final frame -- all per r184's own
-explicit contact-sheet requirement and r186's own explicit request for
-dense coverage of the corrected label's interval.
+"""r189 evidence pack: full-film contact sheet for v37 "The World / The
+Layer", typography pass (operator direct note: the delivered r187/r188
+cut used hard-edged solid-fill rectangles behind every label, caption
+and disclosure -- a chyron/lower-third convention, not a premium
+product-film treatment. graphics_layer.py was rewritten to replace
+every box with a soft feathered scrim and blurred-halo text, and coral
+is now reserved for the hook's own title toggle instead of every
+label). Same 1.4s base density plus EXTRA_BOUNDS at every disclosure
+entry/exit, every real-to-layer reset, every section (and examples
+sub-part) transition, the recognize label's own entry/hold/exit, and
+the literal final frame -- unchanged from r187, since none of those
+moments changed, only how their text renders.
 """
 import subprocess
 
@@ -61,7 +64,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r187__claude__v37_world_layer_pass2__contact.png", sheet)
+    cv2.imwrite("r189__claude__v37_world_layer_typography__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

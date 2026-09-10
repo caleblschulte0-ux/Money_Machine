@@ -33,12 +33,14 @@ STRUCTURE = {
     ],
     "borrow": [
         "0.0-12.0s  IMG_6790 @16.0s real footage, continuous",
-        "0.0-1.6s   primary_label \"BORROW THE LAYER\" (84px)",
+        "0.0-1.6s   primary_label \"BORROW THE LAYER\" (84px, white, "
+        "soft scrim, no box -- r189; every non-hook label lost its "
+        "coral fill this round, see STANDING TYPOGRAPHY below)",
         "1.5-3.0s   wipe_reveal(direction=ttb): a coral seam sweeps "
         "top-to-bottom (a distinct direction from hook's left-to-"
         "right), exposing ai/hero/glasses_hero_chatgpt.jpg (gentle "
         "push-in)",
-        "2.6-7.0s   primary_label \"HARDWARE\" (76px)",
+        "2.6-7.0s   primary_label \"HARDWARE\" (76px, white, no box)",
         "1.5-7.0s   disclosure \"PRODUCT VISUALIZATION\", held "
         "continuously while the hero plate is on screen",
         "3.2-7.0s   caption \"BORROWED GLASSES — HARDWARE\"",
@@ -48,7 +50,7 @@ STRUCTURE = {
         "underneath swaps, the same \"active aperture, singular\" "
         "logic v36's hwsw beat used for its own hardware/software "
         "swap",
-        "7.0-11.4s  primary_label \"SOFTWARE\" (76px)",
+        "7.0-11.4s  primary_label \"SOFTWARE\" (76px, white, no box)",
         "7.0-12.0s  disclosure \"PRODUCT VISUALIZATION\", held "
         "continuously while the worn plate is on screen (including "
         "through the closing wipe's fade)",
@@ -63,7 +65,8 @@ STRUCTURE = {
         "judged acceptable, disclosed there and still true here)",
         "0.2-1.9s   primary_label \"WHEN THE PLACE RECOGNIZES YOU\" "
         "(72px -- r187, was 62px; r186 caught this against r184's own "
-        "72px primary-label minimum, the only miss in that review)",
+        "72px primary-label minimum, the only miss in that review. "
+        "r189: white, soft scrim, no box, same size/position/wording)",
         "1.8-12.0s  zone_trace: four coral corner brackets mark a "
         "bounded zone -- camera-autofocus/AR-bounding-box language, "
         "deliberately NOT v36's node/path rig, which r184 asks this "
@@ -148,20 +151,24 @@ STRUCTURE = {
 
 def main():
     L = []
-    L.append('ORI v37 -- "THE WORLD / THE LAYER" (pass 2, r187)')
+    L.append('ORI v37 -- "THE WORLD / THE LAYER" (typography pass, r189)')
     L.append("Fifth and final execution in the operator-ordered five-style "
              "slate (r145__operator__five_style_variants.md); v33/r167, "
              "v34/r173 are frozen, v35/r177 is visually locked pending "
              "only an operator audio spot-check, v36/r183 is frozen per "
-             "r184's own review. r184 assigns this style: a bright "
-             "editorial transformation film -- the real place is one "
-             "visual world, and a decisive landscape-motivated wipe "
-             "opens a second, story-bearing layer over that exact place. "
-             "r186 passed everything except one number: the recognize "
-             "section's primary label was 62px against r184's own 72px "
-             "minimum. r187 is that single correction -- every other "
-             "element (footage, wipes, disclosures, captions, narration, "
-             "runtime, end card) is unchanged.")
+             "r184's own review. r186/r188 passed and froze this style's "
+             "picture on ChatGPT's own rubric. The operator then looked at "
+             "the delivered film directly and called it out: every label, "
+             "caption and disclosure sat inside a hard-edged solid-fill "
+             "rectangle -- a chyron/lower-third convention, not how a "
+             "premium product film sets type, and coral filled every "
+             "single label rather than reading as a rare accent. r189 "
+             "rewrites graphics_layer.py to replace every box with a soft "
+             "feathered scrim and blurred-halo text, and reserves coral "
+             "for the hook's own title toggle only -- every other label "
+             "is clean white. No footage, wipe, disclosure wording, "
+             "caption wording, narration, timing, or the 74.000s runtime "
+             "changed; only how the type renders.")
     L.append(f"Running time {TOTAL:.3f}s   {W}x{H} @ {FPS} fps, full 16:9, no scope crop")
     L.append("")
     L.append("SECTION LIST -- generated from spec_layer.py, not retyped")
@@ -207,7 +214,35 @@ def main():
              "style, per r184's own explicit instruction to avoid v36's "
              "\"node-map language\" -- the real/visualized boundary is "
              "communicated by the wipe grammar itself (world vs. layer) "
-             "plus these disclosure tags.")
+             "plus these disclosure tags. r189: rendered as tracked "
+             "small-caps with a soft halo instead of a dark box -- reads "
+             "as an integrated credit line now, same words, same "
+             "interval, same 38px minimum, same corner position.")
+    L.append("")
+    L.append("STANDING TYPOGRAPHY (r189)")
+    L.append("  Every text element in r185-r188's delivered cut sat inside "
+             "a hard-edged solid-fill rectangle -- primary labels in a "
+             "coral box, captions in a black bar, the loop words in a "
+             "black chip, the end card in a black card. That reads as a "
+             "chyron/lower-third convention (news captions, corporate "
+             "training video), not how a premium product film sets type, "
+             "and it was the operator's own direct catch, not a ChatGPT "
+             "review finding -- r186/r188 graded this film against r184's "
+             "numeric minimums and never flagged the box treatment "
+             "itself. graphics_layer.py now replaces every box with a "
+             "soft feathered scrim (a blurred alpha patch, not a hard "
+             "edge) and blurred-halo text (a soft dark duplicate of the "
+             "glyphs behind the crisp glyphs -- the same legibility a box "
+             "gave, without the box). Coral is now reserved for the "
+             "hook's own \"THE WORLD\"/\"THE LAYER\" title toggle; every "
+             "other beat's primary label (BORROW THE LAYER, HARDWARE, "
+             "SOFTWARE, WHEN THE PLACE RECOGNIZES YOU) is clean white, so "
+             "the accent reads as a rare, designed moment instead of a "
+             "wash of red on every frame. No footage, wipe, disclosure "
+             "wording, caption wording, narration, timing, section "
+             "boundary, or the 74.000s runtime changed -- only how the "
+             "type renders. Zone-trace brackets and the anchor pulse are "
+             "unchanged (they were never boxed text).")
     L.append("")
     L.append("SOUND")
     L.append("  Narration only -- no score, no sound effects. r184's "

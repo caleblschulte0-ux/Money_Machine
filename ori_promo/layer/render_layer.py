@@ -310,13 +310,13 @@ def build_borrow():
         img = G.wipe_reveal(world[i], layer, progress, direction="ttb")
         if t < 1.6:
             k = G.fade_k(t, 1.6, in_t=0.3, out_margin=0.4)
-            G.primary_label(img, "BORROW THE LAYER", k=k, y_frac=0.14)
+            G.primary_label(img, "BORROW THE LAYER", k=k, y_frac=0.14, accent_bg=False)
         if 1.5 <= t < 7.0:
             if progress > 0.001:
                 G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr")
             if t >= 2.6:
                 G.primary_label(img, "HARDWARE", k=G.fade_k(t - 2.6, 7.0 - 2.6, in_t=0.3, out_margin=0.3),
-                                 y_frac=0.14, font_size=76)
+                                 y_frac=0.14, font_size=76, accent_bg=False)
             if t >= 3.2:
                 G.caption(img, t - 3.2, 7.0 - 3.2, CAPTIONS["hardware"])
         elif t >= 7.0:
@@ -324,7 +324,7 @@ def build_borrow():
                 G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr")
             if t < 11.4:
                 G.primary_label(img, "SOFTWARE", k=G.fade_k(t - 7.0, 11.4 - 7.0, in_t=0.3, out_margin=0.3),
-                                 y_frac=0.14, font_size=76)
+                                 y_frac=0.14, font_size=76, accent_bg=False)
             if t < 11.0:
                 G.caption(img, t - 7.0, 11.0 - 7.0, CAPTIONS["software"])
         out.append(from_pil(img))
@@ -345,7 +345,7 @@ def build_recognize():
         img = G.full_bleed(world[i])
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)
-            G.primary_label(img, "WHEN THE PLACE RECOGNIZES YOU", k=k, y_frac=0.12, font_size=72)
+            G.primary_label(img, "WHEN THE PLACE RECOGNIZES YOU", k=k, y_frac=0.12, font_size=72, accent_bg=False)
         if t >= 1.8:
             k = G.fade_k(t - 1.8, dur - 1.8, in_t=0.5, out_margin=0.0, no_out=True)
             G.zone_trace(img, ZONE_CX, ZONE_CY, ZONE_W, ZONE_H, k=k)
