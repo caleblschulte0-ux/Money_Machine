@@ -2225,3 +2225,63 @@ its two low lobes are `foliage.deep` (0.19) now, which is the underside, and an
 underside is meant to be dark. The old note forbidding `deep` there was written
 when the tone alternated over half the canopy — true then, and not true once
 the canopy became a cluster.
+
+## "Too Big Nate" — the outline comes off (2026-09-10)
+
+Operator, on the smoothed and re-toned build: *"I don't like that art style,
+it's too Big Nate."*
+
+That is the most precise note this art has had, and it is correct. A thick
+uniform black contour over flat fill IS newspaper-comic language. It is also
+the opposite of the reference: **Brawl Stars and Clash Mini models carry no
+outline at all** — their forms are read by shading, occlusion and a lit edge.
+The contour was our invention, added in the pass that created `ink.py`, and it
+has been quietly fighting the target ever since.
+
+I had already put "no outline" in front of him as style C and then **ruled it
+out myself, wrongly**, on the grounds that Barkly carries a baked contour and
+would be left the only outlined thing in frame. He does not. The check took one
+command:
+
+* `assets/barkly/renders/front.png` is the locked canon and has **no contour**.
+* `assets/barkly/outlined/front.png` is that same file with the world's edge
+  grown onto it by `outline-cast.py`, using `promote-props`' own function.
+
+Side by side, the canon render reads as a vinyl toy and the outlined copy reads
+as a sticker. The best asset in the game was being flattened by a finish
+applied on top of it — and the finish was reversible the whole time. The
+constraint I used to close down the right answer was one I had assumed rather
+than checked.
+
+### One constant, because the edge was always decided in one place
+
+`ink.CONTOUR = False`. Every consumer already asked this module first, which is
+what that file was written for:
+
+* `promote-props.py` grows the outer edge — `takes_ink()` now returns False, so
+  it returns the image untouched;
+* the prop and scene packs draw internal lines with Freestyle — same call, so
+  Freestyle is off;
+* `outline-cast.py` sizes its dilation from `contour_width()` — now 0, so the
+  cast frames become byte-identical copies of the canon renders.
+
+Measured after: **all 15 cast frames identical to `renders/`**, and no app code
+changed — the app still loads `outlined/`, which is now a faithful copy. The
+canon renders are untouched, exactly as they were when the contour went on.
+
+Flip the constant to `True` and the whole game has its edge back, which is the
+property that made this safe to try at all.
+
+### What now carries the form
+
+The three passes immediately before this one turn out to have been the
+groundwork, though that was not why they were done:
+
+* the **low sun** gives every object a real shadow side and a cast shadow;
+* **`round_off()`** stopped every cylinder, cone and cube rendering its facets,
+  so a curved surface now reads as curved rather than as a polygon fan;
+* the **tone re-specs** gave each prop a genuine dark, so parts separate from
+  each other by value instead of by a line drawn between them.
+
+An outline is a crutch for art that has none of those. Removing it before them
+would have produced mush.

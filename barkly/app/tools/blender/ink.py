@@ -35,6 +35,33 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import tone  # noqa: E402
 
+#: IS THERE AN EDGE AT ALL? Operator, 2026-09-10: *"I don't like that art
+#: style, it's too Big Nate."*
+#:
+#: That is the most precise note this art has had. A thick uniform black
+#: contour over flat fill IS newspaper-comic language -- and it is the opposite
+#: of the reference: Brawl Stars and Clash Mini models carry NO outline. Their
+#: forms are read by shading, occlusion and a lit edge. The contour was our
+#: invention, added in the pass that named this file, and it has been quietly
+#: fighting the target ever since.
+#:
+#: The evidence that settled it is the hero. `assets/barkly/renders/front.png`
+#: is the locked canon and has no contour; `assets/barkly/outlined/front.png`
+#: is that same file with this edge grown onto it, which is what the app draws.
+#: Side by side the canon render reads as a vinyl toy and the outlined copy
+#: reads as a sticker. The best asset in the game was being flattened by a
+#: finish applied on top of it.
+#:
+#: THE REASON THIS IS ONE CONSTANT and not a rewrite: the edge was always
+#: decided here and applied by three consumers that all ask this module first
+#: (`promote-props.py`, the prop packs' Freestyle, `outline-cast.py`). Turning
+#: it off turns it off everywhere, including on the cast -- `outlined/` becomes
+#: a byte-identical copy of `renders/`, so no app code changes and the canon
+#: renders are untouched, exactly as they were when the contour went on.
+#:
+#: Flip this to True and the whole game has its edge back.
+CONTOUR = False
+
 #: The world's darkest neutral, and the only colour any edge in the game is.
 INK = tone("ink", "deep")
 
@@ -50,6 +77,8 @@ EXEMPT_WORDS = ("shadow", "haze", "glow", "surf")
 
 def takes_ink(path: str) -> bool:
     """Does the prop at this BUILDERS path get an edge at all?"""
+    if not CONTOUR:
+        return False
     if any(path.startswith(prefix) for prefix in EXEMPT_PREFIXES):
         return False
     return not any(word in path for word in EXEMPT_WORDS)
@@ -61,5 +90,11 @@ def contour_width(width: int) -> int:
     A constant pixel count would give the storefront a hairline and the treat
     icon a bruise: they ship at 640 and 224. Proportional keeps the weight even
     once the app has scaled them back into the same world.
+
+    Zero when `CONTOUR` is off, so the one switch reaches the callers that ask
+    for a WIDTH rather than for permission -- `outline-cast.py` and the item
+    icons' inner box both size themselves off this.
     """
+    if not CONTOUR:
+        return 0
     return max(3, round(width * 0.011))
