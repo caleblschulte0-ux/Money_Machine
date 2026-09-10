@@ -1639,3 +1639,127 @@ at median value 0.137 under the old area key -- nearly black, unevenly lit,
 with the app compensating at 46% opacity -- and the same tones went to 0.529
 with 11% clipped once parallel rays hit a horizontal plane square on. The
 render was wrong before and the material was hiding it.
+
+
+## Three of four locations are plates now (2026-09-10)
+
+The previous section established the cause and refused to pretend otherwise:
+park was a rendered plate and town, beach and home were code-drawn gradients
+with props composited onto them. One of four locations was art and three were
+CSS, and no amount of prop work reaches that. This is the rehaul.
+
+### The beach, which was built and held back
+
+`ScenePlate.tsx` had deliberately withheld the beach plate on quality, and
+that judgement was right. Three things were wrong with it, none of them
+lighting:
+
+- **The dunes sat at the water.** Dunes are landward. They were also the flat
+  modular prop -- a sphere squashed to (1.65, 0.66, 0.42) -- which projects to
+  an ellipse from this camera, and an inked ellipse lying on sand is a crater.
+  `_dune` is now a mound whose width and height are within a third of each
+  other, and the pale "sunlit shoulder" lobe is gone: a bright patch inside a
+  dark outline was half of what made them read as holes.
+- **The wet-sand band was painted in the dry sand's own colour.** `tone("sand",
+  "base")` on a ground drawn in `tone("sand", "base")`. The tide line had been
+  invisible since it was written.
+- **There was no proscenium.** The park's own note explains the trick -- near,
+  large, mostly off-stage -- and the beach framed nothing, so it read as five
+  objects on an empty tan field. An earlier pass had rejected the palm four
+  times for covering whatever stood behind it; that is a placement answer, not
+  a verdict on the prop. At the corners with its trunk at the frame edge it
+  covers nothing and holds the shot.
+
+Plus what a beach actually needs to stop being a plane: a windbreak, a second
+umbrella, driftwood, rocks, a beach ball, starfish, and 76 scatter items
+instead of 34.
+
+Result, measured in the app: **saturation 0.404 → 0.508, tonal range 0.565 →
+0.792.** It went from the flattest location in the game to the widest.
+
+### The town, which had no builder at all
+
+A street running across the frame -- shopfronts along the back, a road, a kerb,
+and the plaza the dog stands on. Same rules as the park: proscenium at the
+corners, middle-distance mass, colour accents, deterministic scatter, and the
+centre band left clear for the dog, the NPCs and the care tray.
+
+Getting town's colour up took five attempts, and the first four all failed for
+the same reason.
+
+| attempt | measured saturation |
+|---|---|
+| composited (before) | 0.292 |
+| plated, concrete plaza | 0.257 |
+| paving chroma 0.20 → 0.34 | 0.234 |
+| paving lift 0.12 → 0.02 | 0.235 |
+| town sun 4.3 → 5.0 | 0.232 |
+| **brick plaza** | **0.345** |
+
+Four dials moved it by 0.003 in total, because none of them was the thing
+doing it. **Town's ground is masonry.** `paving` is chroma 0.42 and `grass` is
+1.00, so a street paved in concrete cannot measure like a lawn however it is
+lit, and the app's master grade lays a violet bottom wash that a pale ground
+shows and a saturated one absorbs. Pushing a grey family toward colour until
+it stops being grey is the "street reads as a beach" mistake approached from
+the other side.
+
+The answer was to pave the plaza in something that HAS a colour. Brick is hue
+10 at chroma 0.80: a full-strength family, thirty degrees off sand so the two
+can never be confused, and a red-tiled square is what the reference puts a town
+on. Which step of the ramp then mattered more than the family did:
+
+| plaza tones | saturation | value |
+|---|---|---|
+| `shade` → `base` | 0.372 | 0.455 (a maroon square the shopfronts competed with) |
+| `base` → `lit` | **0.345** | **0.494** |
+| `lit` → `pop` | 0.280 | 0.522 (back to where concrete was) |
+
+`lit` and `pop` carry the ramp's lowest saturation multipliers (0.62 and 0.34),
+so paving a square at the top of the ramp trades away the colour the change
+exists to get.
+
+### And a dial that was quietly costing the whole world half its chroma
+
+Found while chasing town. Both packs set `scene.world.color` to the fill colour
+at FULL STRENGTH -- a whole hemisphere of saturated blue at value 0.94. That,
+not the fill lamp, is what washes everything: town's pavement is authored
+`#9E8C69` at saturation 0.33 and was rendering `#ABA38E` at 0.17. A flat ground
+plane takes the most of it, because it faces the whole sky.
+
+`palette.SKY_FILL_STRENGTH` is 0.45 now and both packs read it. Not zero --
+shadows take the colour of the sky, and that is the most recognisable thing
+about the reference art. Just not all of it.
+
+### Home stays composited, on purpose
+
+A plate is one picture of a place. Home's furniture is an unlockable set --
+bed, rug, window, photo -- so "the living room" is sixteen pictures, not one.
+The part that could be plated is the shell, and that is the part that was never
+the problem: home's walls, skirting, floor and window vista are already
+rendered props from the same packs, not gradients. It is why home measured
+0.348 against town's 0.292 while both were composited. The note is in
+`ScenePlate.tsx` so the decision can be revisited if the furniture ever stops
+being unlockable.
+
+### Where the four ended up
+
+| scene | saturation | brightness | tonal range |
+|---|---|---|---|
+| park | 0.495 → 0.516 | 0.698 → 0.659 | 0.761 → 0.741 |
+| beach | 0.404 → **0.508** | 0.651 → 0.722 | 0.565 → **0.792** |
+| home | 0.348 → 0.357 | 0.494 → 0.502 | 0.643 → 0.639 |
+| town | 0.292 → **0.345** | 0.475 → 0.494 | 0.612 → 0.565 |
+
+Town is still the least saturated of the four and it should be: it is a street,
+and a street is not a lawn. What changed is that it is now a street *rendered
+the way the lawn is*, which is the thing that was actually being asked about.
+
+### One more thing the plates bought
+
+`plateAnchor()` generalises what `plateHorizon()` was doing for one point. A
+builder projects real world positions through the real camera into the
+manifest, so anything the app has to line up with something painted INTO a
+plate is solved from the render rather than guessed and nudged. Town's night
+lamps use it: the glow sits on the lantern glass the plate actually drew, and a
+re-render that moves the lamp moves the glow with it.

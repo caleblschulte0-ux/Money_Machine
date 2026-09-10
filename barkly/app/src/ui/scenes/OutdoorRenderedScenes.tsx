@@ -22,7 +22,7 @@ import {
   AtmosphereContext,
   SCENE_CAMERA,
 } from './WorldScene';
-import { hasPlate, plateHorizon, ScenePlate } from './ScenePlate';
+import { hasPlate, plateAnchor, plateHorizon, ScenePlate } from './ScenePlate';
 
 const PARK_TREE = require('../../../assets/world/park/props/tree.png');
 const PARK_BENCH = require('../../../assets/world/park/props/bench.png');
@@ -1112,7 +1112,72 @@ function TownNightLights({
 }
 
 /** Town buildings are separate rendered modules; sidewalk, road, and weather stay live. */
-export function TownScene({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
+/** Town, either way. See ParkScene for why both paths stay. */
+export function TownScene(props: {
+  hour: number;
+  bandHeight?: number;
+  groundY?: number;
+  chromeBottom?: number;
+  motion?: WorldMotion;
+}) {
+  return hasPlate('town') ? <TownScenePlated {...props} /> : <TownSceneComposited {...props} />;
+}
+
+/**
+ * Town as one lit place.
+ *
+ * Town measured the worst of the four locations on every axis -- saturation
+ * 0.292 against park's 0.495, 27.5% of the frame dark -- and the cause was
+ * never its props: park was a rendered plate and this was a code-drawn
+ * gradient with props composited onto it. The lamps' night glow is the one
+ * thing that cannot come from the plate, because a painted lantern cannot
+ * bloom; it is anchored to where the render actually put the glass.
+ */
+function TownScenePlated({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
+  const { width, height } = useWindowDimensions();
+  const band = skyBand(hour);
+  const night = band === 'night';
+  const ground = groundY ?? bandHeight * 0.72;
+  const canvasHeight = ground + 264;
+  const horizon = plateHorizon('town', ground, height) ?? clamp(ground - 458, 116, 154);
+  const sidewalk = Math.max(372, ground - 116);
+  const lampsOn = night || band === 'evening';
+  const left = plateAnchor('town', 'lampLeft', ground, height, width);
+  const right = plateAnchor('town', 'lampRight', ground, height, width);
+  const glassW = Math.max(14, width * 0.055);
+  const glassH = glassW * 0.94;
+
+  return (
+    <WorldScene motion={motion} atmosphere={AIR[band]} testID="world-scene-town" zoom={SCENE_CAMERA.town.zoom}>
+      <WorldLayer name="sky"><SceneSky band={band} horizon={horizon} chromeBottom={chromeBottom} /></WorldLayer>
+      <WorldLayer name="ground">
+        <ScenePlate name="town" groundY={ground} night={night} />
+        <GroundHaze horizon={horizon} height={canvasHeight} night={night} strength={0.24} />
+      </WorldLayer>
+      <WorldLighting ground={ground} night={night} band={band} warm />
+      {lampsOn && left && right && (
+        <WorldLayer name="fx">
+          <TownNightLights
+            intensity={night ? 1 : 0.55}
+            afterDark={night}
+            lampCenters={[left.x, right.x]}
+            glassCenters={[
+              { x: left.x - glassW / 2, y: left.y - glassH / 2 },
+              { x: right.x - glassW / 2, y: right.y - glassH / 2 },
+            ]}
+            glassW={glassW}
+            glassH={glassH}
+            lampW={glassW * 2.2}
+            sidewalk={sidewalk}
+            spills={[]}
+          />
+        </WorldLayer>
+      )}
+    </WorldScene>
+  );
+}
+
+function TownSceneComposited({ hour, bandHeight = 620, groundY, chromeBottom = CHROME_BOTTOM, motion = 'idle' }: { hour: number; bandHeight?: number; groundY?: number; chromeBottom?: number; motion?: WorldMotion }) {
   const { width, height } = useWindowDimensions();
   const scale = worldScale(width, height);
   const band = skyBand(hour);

@@ -21,7 +21,7 @@ import bpy
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from palette import light_hex, light_rgb, tone  # noqa: E402  -- the one place a colour comes from
+from palette import light_hex, light_rgb, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import BITE, OVERHANG, crown, flare, shaft, stack  # noqa: E402
 from ink import INK, takes_ink  # noqa: E402  -- the one place an edge is decided
 from mathutils import Vector
@@ -704,7 +704,7 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
     # Outdoors, in daylight, shadows are BLUE because the sky is what fills
     # them. That is the single most recognisable thing about the reference art
     # and this pack was rendering every prop in a black box.
-    scene.world.color = rgb(light_hex("fill"))
+    scene.world.color = world_rgb()
 
     # AMBIENT OCCLUSION, which this pack did not have at all.
     #

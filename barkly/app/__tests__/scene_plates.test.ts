@@ -79,7 +79,15 @@ describe('scene plates', () => {
   it('anchors the dog to the ground and puts the horizon above him', () => {
     for (const name of names) {
       const a = manifest.scenes[name].anchors;
-      expect(Object.keys(a).sort()).toEqual(['horizon', 'stand', 'standTop']);
+      // THE THREE THE APP REQUIRES, not the only three allowed. This asserted
+      // an exact set, which made publishing a fourth anchor a test failure --
+      // and publishing anchors is the whole point of the system: town's plate
+      // publishes `lampLeft` and `lampRight` so the night glow lands on the
+      // lantern glass that is painted into the picture rather than on a
+      // position computed from a sprite the plated path does not draw.
+      for (const required of ['horizon', 'stand', 'standTop']) {
+        expect({ name, required, published: required in a }).toEqual({ name, required, published: true });
+      }
       for (const [key, point] of Object.entries(a)) {
         expect({ name, key, onPlate: point.x >= 0 && point.x <= 1 && point.y >= 0 && point.y <= 1 })
           .toEqual({ name, key, onPlate: true });

@@ -42,7 +42,7 @@ import bpy
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from palette import light_hex, tone  # noqa: E402  -- the one place a colour comes from
+from palette import light_hex, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import crown, shaft, stack  # noqa: E402  -- and the one place a SHAPE comes from
 from ink import INK  # noqa: E402  -- and the one place an EDGE comes from
 from bpy_extras.object_utils import world_to_camera_view
@@ -252,7 +252,12 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
 
     # Ambient light stands in for the sky the app will draw behind this.
     scene.world.use_nodes = False
-    scene.world.color = pack.rgb(ambient)
+    # The sky, at the strength a surface sees it -- `palette.world_rgb`. This
+    # was the ambient hex at full strength, a whole hemisphere of saturated
+    # blue, and it was quietly taking half the chroma off every warm surface
+    # in the game. `ambient` still names WHICH sky; the palette decides how
+    # much of it there is, once, for both packs.
+    scene.world.color = world_rgb()
 
     bpy.ops.object.camera_add(location=(0.0, 0.0, 0.0))
     camera = bpy.context.object
@@ -439,6 +444,177 @@ def park():
     for fx, fy, fs in ((-4.4, -16.0, 1.9), (4.7, -15.0, 1.85),
                        (-6.6, -6.0, 1.5), (6.4, -5.0, 1.45)):
         _tuft(fx, fy, fs)
+
+
+def town():
+    """The town, composed. Built 2026-09-10; this location had no plate at all.
+
+    Town measured the worst of the four locations on every axis -- median
+    saturation 0.292 against park's 0.495, 27.5% of its frame dark, 11.6% of it
+    under 0.15 chroma -- and the reason was never its props. Park is a rendered
+    plate and town was a code-drawn gradient with props composited onto it. One
+    of four locations was art and three were CSS.
+
+    The street runs across the frame rather than into it: shopfronts along the
+    back, a road, a kerb, and the pavement the dog stands on. That is a stage
+    set, and it is the right shape for a scene whose subject stands in the
+    middle facing the camera.
+    """
+    # A BRICK PLAZA, not a concrete one.
+    #
+    # Plated, town still measured saturation 0.257 against park's 0.516, and
+    # four separate attempts to close that failed for the same reason: its
+    # ground is masonry. `paving` is chroma 0.42 and `grass` is 1.00, so a
+    # street paved in concrete cannot measure like a lawn however it is lit,
+    # and the app's master grade lays a violet bottom wash that a pale ground
+    # shows and a saturated one absorbs.
+    #
+    # The answer is not to keep pushing a grey family toward colour until it
+    # stops being grey -- that is the "street reads as a beach" mistake the
+    # palette's own note warns about, approached from the other side. It is to
+    # pave the plaza in something that HAS a colour. Brick is hue 10 at chroma
+    # 0.80: a full-strength family, thirty degrees off sand so the two can
+    # never be confused, and a red-tiled square is what the reference art puts
+    # a town on. The kerb and the joints stay in `paving`, which is what they
+    # are made of.
+    # `base`->`lit`. Four pairs were measured in the app, and the ramp's own
+    # shape decides it: the `lit` and `pop` steps carry the LOWEST saturation
+    # multipliers (0.62 and 0.34), so paving the square at the top of the ramp
+    # trades away the colour this change exists to get.
+    #
+    #   shade->base   sat 0.372  val 0.455   a deep maroon square the
+    #                                        shopfronts had to compete with
+    #   base->lit     sat 0.345  val 0.494   <- this
+    #   lit->pop      sat 0.280  val 0.522   back to where concrete was
+    #
+    # Against town's composited 0.292 / 0.475 and park's 0.516 / 0.659.
+    ground(tone("brick", "base"), tone("brick", "lit"), tooth=30.0, bump=0.07)
+    _anchor("stand", 0.0, -3.0)
+    _anchor("standTop", 0.0, -3.0, 1.0)
+    _anchor("horizon", 0.0, 43.0)
+
+    # THE ROAD, and the kerb that separates it from the pavement. Two real
+    # planes at two heights, so the kerb throws a shadow along its own length
+    # the way a kerb does.
+    # NEARER AND LIGHTER. At y 24-33 the road pushed the shops beyond y 34,
+    # where they read as a distant row of small buildings and two thirds of the
+    # frame was empty pavement; and `stone.shade` under an ink outline came out
+    # as a black river across the picture.
+    _band("road", 20.0, 27.0, 0.004,
+          depth_material("Road", tone("stone", "base"), tone("stone", "shade"), roughness=0.88))
+    kerb = pack.material("Kerb", tone("paving", "lit"), roughness=0.86)
+    # Its own tone. The kerb's face and the paving joints both landed on
+    # `paving.shade`, and `tests/surface_grain` is right to refuse that: two
+    # neighbouring things in one builder sharing a colour is how a scene
+    # flattens one pair at a time.
+    kerb_face = pack.material("Kerb face", tone("paving", "deep"), roughness=0.88)
+    for i in range(26):
+        x = -33.0 + i * 2.6
+        wx, wy = TURN(x, 19.4)
+        pack.cube(f"kerb{i}", (wx, wy, 0.16), (1.3, 0.62, 0.16), kerb, 0.05,
+                  rotation=(0, 0, THETA))
+        fx, fy = TURN(x, 20.0)
+        pack.cube(f"kerbface{i}", (fx, fy, 0.09), (1.3, 0.05, 0.09), kerb_face, 0.03,
+                  rotation=(0, 0, THETA))
+
+    # THE SHOPS. Three colourways, alternating, wider than the frame so the row
+    # reads as a street rather than as three buildings standing in a field.
+    fronts = (
+        ("Coral", tone("roof", "base"), tone("roof", "shade"), tone("roof", "lit")),
+        ("Aqua", tone("sea", "base"), tone("sea", "shade"), tone("sea", "lit")),
+        ("Violet", tone("grape", "base"), tone("grape", "shade"), tone("grape", "lit")),
+    )
+    for i, x in enumerate((-16.0, -9.6, -3.2, 3.2, 9.6, 16.0)):
+        name, body, edge, awning = fronts[i % 3]
+        place(lambda n=name, b=body, e=edge, a=awning: pack.storefront(n, b, e, a),
+              x, 29.0 + (i % 2) * 1.1, 1.28, flip=(i % 2 == 1))
+
+    # The town behind the town: a rooftop band far enough back to be a horizon.
+    place(pack.town_rooftops, 0.0, 42.0, 2.6)
+    place(pack.town_rooftops, -9.0, 47.0, 2.2, flip=True)
+    place(pack.town_rooftops, 9.5, 46.0, 2.3)
+
+    # STREET FURNITURE, on the pavement, clear of the middle where the dog and
+    # the two NPCs stand.
+    place(pack.town_fountain, -5.4, 11.0, 1.55)
+    # The two near lamps publish where their LIT PANE lands, so the app's night
+    # glow sits on the glass that is painted into the plate instead of on a
+    # position computed from a sprite the plated path no longer draws. The
+    # lantern centre is at z 3.45 on the prop (`town_lamp`: `stack(3.01, 0.60)`).
+    place(pack.town_lamp, -7.9, 3.0, 1.4)
+    _anchor("lampLeft", -7.9, 3.0, 3.45 * 1.4)
+    place(pack.town_lamp, 8.1, 1.0, 1.35, flip=True)
+    _anchor("lampRight", 8.1, 1.0, 3.45 * 1.35)
+    place(pack.town_lamp, -6.6, 16.0, 1.1)
+    place(pack.town_lamp, 7.2, 17.0, 1.05, flip=True)
+    place(pack.town_planter, -4.0, 5.5, 1.25)
+    place(pack.town_planter, 5.4, 7.0, 1.2, flip=True)
+    place(pack.town_planter, 7.6, 13.5, 1.05)
+    place(pack.park_bench, -7.4, -2.0, 1.2)
+    place(pack.park_bench, 7.8, 8.5, 1.05, flip=True)
+
+    # Street trees. A high street with no green in it reads as a warehouse row,
+    # and they give the shot the vertical mass the shopfronts alone do not.
+    _tree(-10.8, 16.5, 1.35)
+    _tree(11.4, 18.0, 1.3)
+
+    # THE PROSCENIUM. Same rule as the park's: near, large, mostly off-stage,
+    # wide of x = +-4 where the app draws the dog, PEPPER and the care tray.
+    # FURTHER OUT. At x = -12.4 the canopy still hung across the middle of the
+    # picture over the bench; the park's own note says the same thing about the
+    # same mistake -- "a proscenium is mostly off-stage".
+    _tree(-12.9, -12.0, 2.9, canopy=tone("foliage", "shade"), trunk=tone("bark", "base"))
+    _tree(13.3, -10.0, 2.8, canopy=tone("foliage", "base"), trunk=tone("bark", "lit"))
+    # ...and NOT giant flowerpots. Two planters at scale 2.4 on the bottom
+    # corners read as garden centre stock, not as a street. A lamp is the thing
+    # a street actually has at that size, and its post is narrow enough to
+    # frame without blocking.
+    # 1.5, not 2.1: at that size the post filled the bottom corner as a plain
+    # grey pillar with its lantern cropped off the top, which frames nothing.
+    place(pack.town_lamp, -8.7, -12.0, 1.5)
+    place(pack.town_lamp, 9.0, -14.0, 1.45, flip=True)
+
+    # The near pavement, which was an empty grid. The app covers the bottom
+    # eighth with the care tray, but the band just under the dog is in shot and
+    # was bare.
+    place(pack.park_bench, -6.4, -9.0, 1.35)
+    place(pack.town_planter, 6.6, -7.0, 1.4, flip=True)
+    place(pack.town_planter, -3.9, -17.0, 1.55)
+
+    # Paving joints, as geometry rather than as three drawn hairlines. The
+    # app's own note on `TOWN_PAVING_COURSES` calls the old version "one fill
+    # with three drawn hairlines on it pretending to be slab joints".
+    # NO INK ON THEM, and this is the same lesson the grass taught twice: a
+    # joint is 0.055 wide and the ink line is wider than that, so the first
+    # pass drew the pavement as a black grid over the whole lower half of the
+    # frame. `no_ink` plus one step of contrast is a joint; an outline is a
+    # fence.
+    joint = pack.material("Paving joint", tone("brick", "shade"), roughness=0.92)
+    for i in range(15):
+        y = -26.0 + i * 3.4
+        if y > 18.0:
+            break
+        wx, wy = TURN(0.0, y)
+        no_ink(pack.cube(f"joint{i}", (wx, wy, 0.012), (34.0, 0.05, 0.012), joint, 0.01,
+                         rotation=(0, 0, THETA)))
+    for i in range(19):
+        x = -30.0 + i * 3.4
+        wx, wy = TURN(x, -4.0)
+        no_ink(pack.cube(f"jointx{i}", (wx, wy, 0.012), (0.05, 22.0, 0.012), joint, 0.01,
+                         rotation=(0, 0, THETA)))
+
+    # Scatter: a few tufts pushing through the joints, which is what makes a
+    # pavement look walked-on rather than laid this morning.
+    for i in range(26):
+        t = (i * 0.6180339887) % 1.0
+        u = (i * 0.3819660113) % 1.0
+        x = -14.0 + t * 28.0
+        y = -22.0 + u * 44.0
+        if abs(x) < 3.5 and y < 2.0:
+            continue
+        if y > 18.0:
+            continue
+        _tuft(x, y, 0.45 + u * 0.35)
 
 
 def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2,
@@ -797,17 +973,38 @@ def beach():
     stroke between them; here the shoreline is where two real planes meet, so
     the surf sits in a place rather than on a picture, and the umbrella throws
     its shadow across the sand it stands on.
+
+    RE-COMPOSED 2026-09-10, against the park as the bar. This plate had been
+    BUILT and deliberately held back on quality, and three things were wrong
+    with it that had nothing to do with lighting:
+
+    - The dunes sat at y 14-22, which is at the WATER. Dunes are landward. They
+      were also the flat modular prop, which projects to an ellipse from this
+      camera and reads as a crater once inked (see `_dune`).
+    - There was no proscenium. Park frames its shot with two near trees mostly
+      out of frame; the beach framed nothing, so it read as five objects on an
+      empty tan field.
+    - The "wet sand" band was `tone("sand", "base")` -- the SAME TONE as the dry
+      ground it was drawn on. The tide line has been invisible since it was
+      written.
     """
     ground(tone("sand", "base"), tone("sand", "lit"), tooth=38.0, bump=0.09)
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
     _anchor("horizon", 0.0, 43.0)
 
-    # The sea: its own plane, starting at the tide line and running past the
-    # sand's far edge so no seam of bare ground shows between them.
-    # Wet sand: the strip the water has just left, darker and slightly damp.
-    wet = pack.material("Wet sand", tone("sand", "base"), roughness=0.72, coat=0.18)
-    _band("wet", 20.0, 25.3, 0.006, wet)
+    # THE TIDE LINE, at last visible. Wet sand is darker and glossier than dry
+    # -- that is the whole of what makes a shoreline read -- and this band was
+    # painted in the dry sand's own colour. Two steps down the ramp and a real
+    # coat, ramped so the strip nearest the water is wettest.
+    # ...and not so dark it becomes a SHELF. shade->deep put a near-black strip
+    # across the full width of the frame with a hard top edge, which reads as a
+    # step down to the water rather than as damp sand. It darkens toward the
+    # sea, where the water actually is, and the near end is only one step under
+    # the dry ground it continues.
+    wet = depth_material("Wet sand", tone("sand", "base"), tone("sand", "shade"),
+                         roughness=0.42)
+    _band("wet", 19.4, 25.4, 0.006, wet)
 
     # Shallows to deep water, as one continuous ramp.
     _band("sea", 25.0, 43.0, 0.005, depth_material("Sea", tone("sea", "base"), tone("sea", "shade")))
@@ -815,15 +1012,10 @@ def beach():
     _surf(25.0)
     _headland(40.0)
 
-    # Dunes behind, so the sand has a back edge that is not the sea.
-    # Dunes, kept inside the frame: x is only +-8.5 at this ortho scale.
-    # PLACED BY WHERE THEY LAND ON SCREEN, not by eye. At this camera one
-    # world unit is 0.55% of the frame, so the visible ground runs from about
-    # y = -56 at the bottom edge to the horizon at y = 62. The first pass put
-    # every prop between y = -16 and +6 -- a band from 0.66 to 0.74 of the
-    # frame -- and left the whole bottom third as empty sand.
-    for dx, dy, ds in ((-7.8, 16.0, 1.1), (7.6, 14.0, 1.05), (-6.4, 21.0, 0.85), (6.8, 22.0, 0.8)):
-        place(pack.beach_dune, dx, dy, ds, flip=dx > 0)
+    # THE BACK OF THE BEACH. Low mounds behind the tide line give the sand a
+    # far edge that is not the sea, small enough to read as distance.
+    for dx, dy, ds in ((-7.4, 15.5, 0.85), (7.2, 14.0, 0.8), (-5.2, 20.5, 0.62), (6.0, 21.0, 0.6)):
+        _dune(dx, dy, ds, flip=dx > 0)
 
     # AND NOT PAST THE CAMERA. The camera stands at y = -30 in this frame, so
     # a prop at y = -36 is behind its near plane and renders as nothing but the
@@ -837,27 +1029,117 @@ def beach():
     place(pack.beach_lifeguard, -6.4, 13.0, 1.05)  # ~0.58 -- back and left
     place(pack.beach_umbrella, 6.2, -8.0, 1.15)    # ~0.74 -- beside him
     place(pack.beach_castle, 5.0, -16.0, 1.2)      # ~0.78 -- in front of him
-    # NO PALM. Four passes at it: too small to read, then overlapping the
-    # lifeguard tower, then a flat green mass across it. The prop is fine --
-    # it is built to be seen alone at 142pt, where its crown reads from the
-    # side; at this camera, at the size the near corner needs, it covers the
-    # thing behind it. A scene does not owe every prop a place in it.
-    place(pack.beach_dune, -7.4, -13.0, 1.3, flip=True)
-    _towel(1.6, -3.0, 1.0)            # ~0.71 -- the middle, which was bare sand
-    _bucket(-3.0, -11.0, 0.8)
 
-    # Scatter: shells, pebbles and marram, thinning toward the water.
-    for i in range(34):
+    # THE PROSCENIUM, which this plate did not have.
+    #
+    # The park's note says it plainly: near, large, and deliberately cropped by
+    # the frame -- they are the proscenium, not scenery, and mostly off-stage.
+    # The frame is x = +-9.25. An earlier pass rejected the palm four times for
+    # covering whatever stood behind it; that is a placement answer, not a
+    # verdict on the prop. Out at the corners with its trunk off-camera it
+    # covers nothing and holds the edge of the shot, which is the one job it
+    # was never given.
+    # AT the edge, not past it. At x = -11.4 the trunk was entirely off-camera
+    # and only frond tips reached in, which reads as loose grass floating in
+    # mid-air rather than as a tree holding the corner. The frame is +-9.25:
+    # the trunk wants to be just inside it.
+    place(pack.beach_palm, -9.0, -13.0, 1.85)
+    place(pack.beach_palm, 9.4, -11.0, 1.75, flip=True)
+    # NO NEAR DUNES. Two passes at them and from this camera the near corners
+    # are seen almost from above, where even a hemisphere projects to a disc --
+    # they came out as two pale ellipses on the bottom edge, which is the
+    # crater read all over again in the one place the eye lands first. The
+    # palms hold the corners; a dune cannot, at this pitch, this close.
+
+    # The middle, which was bare sand. Kept clear of x = +-3 below the stand
+    # line, where the dog, the SIFT mound and the two NPCs go.
+    # A BEACH IS A FLAT PLANE, which is the whole difficulty: the park gets its
+    # structure free from trees and this has none. So the middle distance has
+    # to be furnished, and with things that stand UP -- a second umbrella and a
+    # windbreak do more for the shot than any amount of scatter on the floor.
+    place(pack.beach_umbrella, -5.4, 4.5, 0.95)
+    _windbreak(4.6, 12.0, 1.0)
+    _towel(1.9, -2.4, 1.05)
+    _towel(-6.6, 9.0, 0.9)
+    _bucket(-3.4, -10.5, 0.85)
+    _bucket(6.9, -3.5, 0.7)
+    _beachball(-4.6, -4.0, 1.0)
+    _beachball(7.8, 2.0, 0.75)
+    _driftwood(-5.6, 0.5, 1.1)
+    _driftwood(7.9, 8.5, 0.9)
+    _starfish(3.9, 7.0, 1.2)
+    _starfish(-2.2, 16.5, 1.0)
+
+    # THE NEAR BAND, which was bare. The scatter reaches down here but shells
+    # and marram are too small to read at the bottom of the frame; near ground
+    # wants near-sized objects. Kept outside x = +-4, where the app draws the
+    # care tray, the SIFT mound and the dog himself.
+    _driftwood(-6.9, -15.0, 1.9)
+    _driftwood(7.6, -19.0, 1.7)
+    _rocks(-5.2, -21.0, 1.5)
+    _rocks(6.2, -13.0, 1.1)
+    _bucket(-8.0, -6.5, 1.0)
+
+    # Scatter: shells, pebbles and marram, thinning toward the water. 34 was
+    # not enough to be texture and too many to be objects; the park runs 70
+    # tufts over a comparable field.
+    for i in range(76):
         t = (i * 0.6180339887) % 1.0
         u = (i * 0.3819660113) % 1.0
-        x = -13.0 + t * 26.0
-        y = -26.0 + u * 56.0
+        x = -13.5 + t * 27.0
+        y = -25.0 + u * 50.0
         if abs(x) < 3.0 and y < 0.0:
             continue
-        if i % 3 == 0:
+        if y > 19.0:
+            continue  # past the tide line is water, and nothing grows in it
+        if i % 4 == 0:
             _pebble(x, y, 0.7 + u * 0.7)
+        elif i % 4 == 1:
+            _shells(x, y, 0.8 + u * 0.5)
         else:
             _marram(x, y, 0.8 + u * 0.6)
+
+
+def _rocks(x: float, y: float, s: float = 1.0):
+    """A cluster of three, for the near ground. Sea-worn: rounded, no facets."""
+    a = pack.material(f"Rock a{x:.1f}{y:.1f}", tone("stone", "base"), roughness=0.90)
+    b = pack.material(f"Rock b{x:.1f}{y:.1f}", tone("stone", "shade"), roughness=0.92)
+    c = pack.material(f"Rock c{x:.1f}{y:.1f}", tone("stone", "lit"), roughness=0.88)
+    for i, (dx, dy, r, mat) in enumerate((
+        (0.0, 0.0, 0.62, a), (-0.72, 0.22, 0.42, b), (0.64, -0.18, 0.34, c),
+    )):
+        wx, wy = TURN(x + dx * s, y + dy * s)
+        pack.sphere(f"rock{x:.1f}{y:.1f}{i}", (wx, wy, r * s * 0.62),
+                    (r * s, r * s * 0.82, r * s * 0.72), mat)
+
+
+def _windbreak(x: float, y: float, s: float = 1.0):
+    """Striped canvas between poles. The one piece of beach furniture that is
+    tall, flat-on to the camera and unmistakable at any size."""
+    pole = pack.material(f"Wind pole{x:.1f}", tone("wood", "base"), roughness=0.80)
+    stripes = (
+        pack.material(f"Wind a{x:.1f}", tone("berry", "base"), roughness=0.86),
+        pack.material(f"Wind b{x:.1f}", tone("cream", "pop"), roughness=0.86),
+        pack.material(f"Wind c{x:.1f}", tone("sea", "base"), roughness=0.86),
+    )
+    span = 3.4 * s
+    for i in range(6):
+        px = x - span / 2 + i * (span / 5.0)
+        wx, wy = TURN(px, y)
+        pack.cube(f"windpanel{x:.1f}{i}", (wx, wy, 0.62 * s),
+                  (span / 10.0, 0.06 * s, 0.62 * s), stripes[i % 3], 0.04,
+                  rotation=(0, 0, THETA))
+    for i in (0, 5):
+        px = x - span / 2 + i * (span / 5.0)
+        wx, wy = TURN(px, y - 0.04 * s)
+        pack.cylinder(f"windpole{x:.1f}{i}", (wx, wy, 0.72 * s), 0.075 * s, 1.44 * s,
+                      pole, vertices=12, taper=0.86)
+
+
+def _shells(x: float, y: float, s: float = 1.0):
+    """A couple of shells. The scatter was pebbles and grass and nothing else,
+    on a beach, while `beach/shells` has existed as a prop the whole time."""
+    place(pack.beach_shells, x, y, 0.9 * s, flip=(int(x * 5) % 2 == 0))
 
 
 def _surf(y: float):
@@ -891,21 +1173,80 @@ def _headland(y: float):
                     far if i % 2 else far_b)
 
 
-def _dune(x: float, y: float, s: float = 1.0):
-    """A sand dune. The first beach pass reused the park's shrub for these and
-    put four green bushes on a beach, which is what happens when a builder is
-    borrowed for its shape and not its material."""
+def _dune(x: float, y: float, s: float = 1.0, flip: bool = False):
+    """A sand dune, as a MOUND. Two things this had wrong at once.
+
+    It had no caller. `beach()` was placing `pack.beach_dune` -- the modular
+    prop, built to be seen alone at 158pt -- and this builder sat here unused,
+    which is the exact thing rule zero forbids.
+
+    And the prop is the wrong shape for a plate. It is a sphere squashed to
+    (1.65, 0.66, 0.42): two and a half times wider than tall. Seen from this
+    camera's 22-degree pitch that projects to an ELLIPSE, and once the ink pass
+    outlines an ellipse lying on sand you have drawn a crater. Five of them
+    across the beach plate, which is what held it back.
+
+    A dune reads as a dune because its crest breaks the line of the sand behind
+    it. So this is tall relative to its width, asymmetric -- windward slope long
+    and shallow, leeward short and steep, which is what makes a sand shape look
+    like sand -- and its marram grows on the crest where marram grows.
+    """
     sand = pack.material(f"Dune{x:.1f}{y:.1f}", tone("sand", "base"), roughness=0.95)
     lit = pack.material(f"DuneLit{x:.1f}{y:.1f}", tone("sand", "lit"), roughness=0.94)
-    for i, (dx, dy, dz, r) in enumerate((
-        (0.0, 0.0, 0.30, 1.0), (-0.9, 0.2, 0.22, 0.75),
-        (0.85, -0.15, 0.24, 0.8), (0.1, 0.5, 0.34, 0.62),
+    shade = pack.material(f"DuneShade{x:.1f}{y:.1f}", tone("sand", "shade"), roughness=0.95)
+    # TALL ENOUGH TO BE A HILL. The first rewrite was still 2.6 times wider
+    # than high and still projected to a disc; a mound only stops reading as a
+    # crater when its crest genuinely rises out of the plane. Width and height
+    # are now within a third of each other, and the pale "sunlit shoulder"
+    # sphere is gone -- a bright patch inside a dark outline is the exact thing
+    # that made these look like holes rather than heaps.
+    d = -1.0 if flip else 1.0
+    for i, (dx, dy, dz, rx, ry, rz, mat) in enumerate((
+        (0.00, 0.00, 0.30, 1.55, 1.15, 1.45, sand),        # the crest
+        (-1.20 * d, 0.30, 0.10, 1.25, 0.95, 0.95, shade),  # the long windward slope
+        (0.95 * d, -0.25, 0.14, 0.95, 0.80, 1.05, lit),    # the short leeward one
     )):
-        wx, wy = TURN(x + dx * s * 1.6, y + dy * s * 1.6)
+        wx, wy = TURN(x + dx * s * 1.5, y + dy * s * 1.5)
         pack.sphere(f"dune{x:.1f}{y:.1f}{i}", (wx, wy, dz * s),
-                    (r * s * 1.9, r * s * 1.3, r * s * 0.52), lit if i == 3 else sand)
-    for i in range(3):
-        _marram(x + (i - 1) * 1.1 * s, y + 0.4 * s, 0.9 * s)
+                    (rx * s * 1.5, ry * s * 1.35, rz * s), mat)
+    for i in range(4):
+        _marram(x + (i - 1.5) * 0.95 * s, y - 0.25 * s, 0.95 * s)
+
+
+def _beachball(x: float, y: float, s: float = 1.0):
+    """The one saturated round thing on a beach of tan and blue."""
+    a = pack.material(f"Ball a{x:.1f}", tone("berry", "base"), roughness=0.52, coat=0.10)
+    b = pack.material(f"Ball b{x:.1f}", tone("cream", "pop"), roughness=0.54, coat=0.10)
+    c = pack.material(f"Ball c{x:.1f}", tone("sea", "base"), roughness=0.52, coat=0.10)
+    bx, by = TURN(x, y)
+    pack.sphere(f"ball{x:.1f}", (bx, by, 0.52 * s), (0.52 * s, 0.52 * s, 0.52 * s), a)
+    for i, mat in enumerate((b, c)):
+        pack.cube(f"ballband{x:.1f}{i}", (bx, by, 0.52 * s),
+                  (0.14 * s, 0.53 * s, 0.53 * s), mat, 0.05,
+                  rotation=(0, 0, THETA + i * 1.05))
+
+
+def _starfish(x: float, y: float, s: float = 1.0):
+    star = pack.material(f"Star{x:.1f}{y:.1f}", tone("roof", "base"), roughness=0.86)
+    sx, sy = TURN(x, y)
+    pack.sphere(f"starmid{x:.1f}{y:.1f}", (sx, sy, 0.05 * s), (0.20 * s, 0.20 * s, 0.06 * s), star)
+    for i in range(5):
+        a = i * math.tau / 5 + x
+        ax, ay = TURN(x + math.cos(a) * 0.26 * s, y + math.sin(a) * 0.26 * s)
+        pack.cone(f"stararm{x:.1f}{y:.1f}{i}", (ax, ay, 0.045 * s),
+                  0.13 * s, 0.02 * s, 0.30 * s, star,
+                  rotation=(math.pi / 2, 0, THETA + a + math.pi / 2), vertices=8)
+
+
+def _driftwood(x: float, y: float, s: float = 1.0):
+    wood = pack.material(f"Drift{x:.1f}{y:.1f}", tone("cream", "base"), roughness=0.92)
+    dark = pack.material(f"DriftDark{x:.1f}{y:.1f}", tone("bark", "shade"), roughness=0.94)
+    wx, wy = TURN(x, y)
+    pack.cylinder(f"drift{x:.1f}{y:.1f}", (wx, wy, 0.16 * s), 0.16 * s, 2.1 * s, wood,
+                  rotation=(0, math.pi / 2, THETA + 0.3), vertices=14, taper=0.72)
+    bx, by = TURN(x + 0.75 * s, y + 0.16 * s)
+    pack.cylinder(f"driftarm{x:.1f}{y:.1f}", (bx, by, 0.26 * s), 0.075 * s, 0.8 * s, dark,
+                  rotation=(0, math.radians(58), THETA + 0.9), vertices=10, taper=0.7)
 
 
 def _lifeguard(x: float, y: float, s: float = 1.0):
@@ -1041,6 +1382,16 @@ def _marram(x: float, y: float, s: float = 1.0):
 SCENES = {
     "park": (park, 18.5, (0.0, 20.0, 1.0), 4.2, light_hex("key"), light_hex("fill")),
     "beach": (beach, 18.5, (0.0, 20.0, 1.0), 4.6, light_hex("key"), light_hex("fill")),
+    # 5.0, the HIGHEST of the three, which is the opposite of where this
+    # started. A horizontal plane sees the whole sky hemisphere, so town's
+    # pavement -- the flattest, palest, largest surface in the game -- takes
+    # more of the blue fill than any other ground and less of the warm key.
+    # Lowering the sun to stop it blowing out only handed it further to the
+    # sky: plated at 4.3 it measured saturation 0.234, and at 3.9 it measured
+    # 0.235. Warm light is what pulls a pale warm material back out of grey,
+    # and the pavement was moved down its own ramp at the same time so there
+    # is room for it.
+    "town": (town, 18.5, (0.0, 20.0, 1.0), 5.0, light_hex("key"), light_hex("fill")),
 }
 
 

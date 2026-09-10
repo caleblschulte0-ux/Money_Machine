@@ -107,7 +107,15 @@ FAMILIES = {
     # gold, and the palette has to say so.
     "grass":   (100, 1.00,  0.00),
     "foliage": (132, 0.94, -0.05),
-    "sand":    ( 41, 0.66,  0.09),
+    # 0.80, not 0.66. `sand.base` was #B09353 -- an olive khaki -- and the
+    # beach plate rendered as a drab field because its single largest surface
+    # was that colour under a blue sky fill. The app has drawn the beach's near
+    # sand at #BC7B33 since an earlier pass, which is a far warmer gold: one
+    # beach, two opinions about what sand is, exactly as town had about its
+    # pavement. Raised to match the app rather than the other way round,
+    # because the app's value is the one that was measured against the
+    # reference.
+    "sand":    ( 41, 0.80,  0.09),
     # 0.30 and 0.34, up from 0.16 and 0.20 -- and NOT up to sand's 0.66, which
     # is what the note above forbids and it is still right. This file's own
     # legend three lines up says "0.3 is masonry", and stone was sitting at
@@ -127,7 +135,14 @@ FAMILIES = {
     # deliberate earlier pass. The grey `town/paving.png` prop was laid on top
     # of that. One town, two opinions about what its ground is made of.
     "stone":   ( 28, 0.30,  0.06),
-    "paving":  ( 40, 0.34,  0.12),
+    # ...and the LIFT comes down with it, 0.12 -> 0.02. Chroma alone did not
+    # fix town: plated, its pavement rendered at median value 0.576 -- pale
+    # concrete filling most of the frame -- and the scene's saturation went
+    # DOWN to 0.234 even as its brightness went up. A big surface sitting that
+    # high on the ramp has little colour left to show whatever chroma it is
+    # given. Lower and warmer is a street; pale and warm is a pavement in
+    # direct sun with the exposure wrong.
+    "paving":  ( 40, 0.42,  0.02),
     # things made of wood -- Barkly's own hue family, deliberately
     "bark":    ( 24, 0.84, -0.11),
     "wood":    ( 32, 0.92, -0.02),
@@ -167,8 +182,40 @@ def light_rgb(kind: str):
         # The ambient is the colour of a SHADOW -- deep and violet, which is
         # right for the shadow side of a surface and wrong for a lamp. The
         # fill lamp is the SKY: the sky family's hue at daylight value.
-        return colorsys.hsv_to_rgb(FAMILIES["sky"][0] / 360.0, 0.42, 0.94)
+        # 0.30, not 0.42. A whole hemisphere of skylight is blue but it is not
+        # THAT blue, and at 0.42 it green-shifts every warm surface it fills:
+        # the beach plate's sand is authored at #B08C3F, a real gold, and
+        # rendered as olive khaki because its largest surface was being filled
+        # by a strongly saturated blue. Hue unchanged -- shadows are still sky
+        # coloured, which is the whole point of the fill -- just less of it.
+        return colorsys.hsv_to_rgb(FAMILIES["sky"][0] / 360.0, 0.30, 0.94)
     raise KeyError(f"no such light: {kind!r}")
+
+
+#: How much of the sky a surface is actually lit by, as a multiplier on the
+#: fill colour when it is used as a render WORLD.
+#:
+#: Both packs set `scene.world.color` to the fill colour at full strength,
+#: which is a whole hemisphere of saturated blue at value 0.94 -- and that,
+#: not the fill LAMP, is what washes the world. Measured on the plated town:
+#: its pavement is authored #9E8C69 at saturation 0.33 and rendered #ABA38E at
+#: 0.17. Blue was being added to every channel of a warm surface until half
+#: its chroma was gone, and a flat ground plane takes the most of it because it
+#: faces the whole sky.
+#:
+#: Three separate attempts to fix town by other means moved its measured
+#: saturation by 0.003 in total: paving chroma up, paving lift down, sun energy
+#: up and then down again. None of them could work, because none of them was
+#: the thing doing it.
+#:
+#: Not zero: shadows take the colour of the sky, and that is the single most
+#: recognisable thing about the reference art. Just not all of it.
+SKY_FILL_STRENGTH = 0.45
+
+
+def world_rgb():
+    """The render world's colour: the sky, at the strength a surface sees it."""
+    return tuple(c * SKY_FILL_STRENGTH for c in light_rgb("fill"))
 
 
 def light_hex(kind: str) -> str:

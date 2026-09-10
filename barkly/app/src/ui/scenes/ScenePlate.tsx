@@ -4,6 +4,8 @@ import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 const MANIFEST = require('../../../assets/world/scenes/manifest.json') as SceneManifest;
 const PLATE_ART: Record<string, number> = {
   park: require('../../../assets/world/scenes/park.png'),
+  beach: require('../../../assets/world/scenes/beach.png'),
+  town: require('../../../assets/world/scenes/town.png'),
 };
 
 type Anchor = { x: number; y: number };
@@ -31,6 +33,25 @@ type SceneManifest = {
  */
 export const SCENE_PLATES = true;
 
+/*
+ * WHY HOME IS NOT HERE, and it is not an omission.
+ *
+ * A plate is ONE PICTURE of a place, lit as a whole. Home's furniture is an
+ * unlockable set -- `has('home_bed')`, `has('home_rug')`, `has('home_window')`,
+ * the photo -- so "the living room" is sixteen pictures, not one, and a plate
+ * cannot carry a room whose contents depend on what the player has bought.
+ *
+ * The part that COULD be plated is the shell, and that is exactly the part
+ * that was never the problem: home's walls, skirting, floor and window vista
+ * are already rendered props out of the same packs, not the code-drawn
+ * gradients town and beach were built on. It is why home measured 0.348
+ * saturation against town's 0.292 while both were composited -- it was
+ * already half-plated, in the only sense that mattered.
+ *
+ * So: park, beach and town are plates; home stays composited on purpose. If
+ * the furniture ever stops being unlockable, this is the note that says the
+ * decision can be revisited.
+ */
 /** Which locations actually have a plate. The rest stay composited either way. */
 export function hasPlate(name: string): boolean {
   return SCENE_PLATES && name in PLATE_ART && name in MANIFEST.scenes;
@@ -121,19 +142,40 @@ export function ScenePlate({
   );
 }
 
+/**
+ * Where the plate puts one of its published anchors on screen.
+ *
+ * The builder projects real world points through the real camera into the
+ * manifest, so anything the app has to line up with something PAINTED INTO the
+ * plate -- the horizon for the sky and the haze, a lamp's lit pane for its
+ * night glow -- is solved from the render rather than guessed and then nudged.
+ * A re-render that moves the thing moves the number with it.
+ */
+export function plateAnchor(
+  name: string,
+  key: string,
+  groundY: number,
+  height: number,
+  width: number,
+): { x: number; y: number } | null {
+  const meta = MANIFEST.scenes[name];
+  const stand = meta?.anchors?.stand;
+  const point = meta?.anchors?.[key];
+  if (!meta || !stand || !point) return null;
+  // The anchors are a known distance apart in the plate; the scale that put
+  // `stand` on `groundY` puts this one here.
+  const byTop = groundY / stand.y / meta.height;
+  const byBottom = (height - groundY) / (1 - stand.y) / meta.height;
+  const scale = Math.max(byTop, byBottom);
+  return {
+    x: width / 2 + (point.x - stand.x) * meta.width * scale,
+    y: groundY - (stand.y - point.y) * meta.height * scale,
+  };
+}
+
 /** Where the plate puts the horizon on screen, for the sky and the haze. */
 export function plateHorizon(name: string, groundY: number, height: number): number | null {
-  const meta = MANIFEST.scenes[name];
-  if (!meta?.anchors.horizon || !meta.anchors.stand) return null;
-  const stand = meta.anchors.stand;
-  const horizon = meta.anchors.horizon;
-  // The two anchors are a known distance apart in the plate; the scale that
-  // put `stand` on `groundY` puts `horizon` here.
-  const ay = stand.y;
-  const byTop = groundY / ay / meta.height;
-  const byBottom = (height - groundY) / (1 - ay) / meta.height;
-  const scale = Math.max(byTop, byBottom);
-  return groundY - (stand.y - horizon.y) * meta.height * scale;
+  return plateAnchor(name, 'horizon', groundY, height, 0)?.y ?? null;
 }
 
 const styles = StyleSheet.create({
