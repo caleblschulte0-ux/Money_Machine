@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""r195 evidence pack: full-film contact sheet for v37 "The World / The
-Layer" -- audio only round (score added, see score_layer.py and
-assemble_layer.py). The picture is pixel-identical to r193/r194 (same
-section renders, same push-in, same typography); this contact sheet is
-regenerated only so the evidence pack has a matching round number, not
-because anything visual changed. Same density/EXTRA_BOUNDS as r193.
+"""r197 evidence pack: full-film contact sheet for v37 "The World / The
+Layer" -- the operator's direct 5-screenshot critique round (coral text
+fill removed everywhere; every wipe-to-unrelated-photo cutaway replaced
+with windowed_reveal(), a bounded floating AR window -- framed with
+recognize's own zone_trace corner brackets -- over real footage that
+stays full-bleed at every value of progress; see graphics_layer.py and
+render_layer.py). Same density/EXTRA_BOUNDS as r193/r195: those
+timestamps already bracket every reveal/disclosure moment the picture
+change touches (hook 1.8-4.2s, borrow 9.5-20.0s, examples 33-49.5s), so
+no new sample points were needed to see the new AR windows land.
 """
 import subprocess
 
@@ -64,7 +68,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r195__claude__v37_world_layer_score__contact.png", sheet)
+    cv2.imwrite("r197__claude__v37_world_layer_ar_window__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

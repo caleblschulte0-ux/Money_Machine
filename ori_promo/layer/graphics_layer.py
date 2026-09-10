@@ -205,80 +205,115 @@ def full_bleed(content_rgb_float):
     return Image.fromarray(np.clip(content_rgb_float, 0, 255).astype(np.uint8)[:, :, ::-1]).convert("RGBA")
 
 
-def wipe_reveal(world_bgr, layer_bgr, progress, direction="ltr", edge=90):
-    """The core recurring device: WORLD (real footage) transforming into
-    LAYER (a plate or a different real-footage still) across a moving,
-    softly-feathered boundary, with a coral seam line drawn at the
-    boundary while it's mid-sweep. direction in {"ltr","ttb","diag"} so
-    no two reveals in the film move the same way (r184's own explicit
-    "distinct reveal directions" requirement for the examples, applied
-    everywhere a wipe is used). progress 0.0 = pure world, 1.0 = pure
-    layer; boundary sweeps from fully off one edge to fully off the
-    other, so both ends are naturally feathered.
+# The same AR-window geometry recognize's own zone_trace/anchor_pulse
+# already use (ZONE_CX/ZONE_CY/ZONE_W/ZONE_H in render_layer.py) --
+# reused here on purpose so every windowed reveal in the film sits in
+# the same place, reading as one consistent AR system, not a different
+# effect per section.
+WIN_CX_FRAC, WIN_CY_FRAC = 560 / W, 460 / H
+WIN_W_FRAC, WIN_H_FRAC = 760 / W, 400 / H
 
-    Both inputs are the same HxWx3 BGR array (uint8 or float, either
-    works -- see the progress<=0/>=1 shortcuts below). Returns a PIL RGBA
-    image ready for further caption/label drawing on top.
 
-    progress<=0.0 or >=1.0 skip the blend entirely and hand the relevant
-    frame straight to full_bleed(), which is cheap even on uint8 input
-    (clip+astype is a near-no-op there). Converting a whole clip's worth
-    of frames to float32 up front measured ~35s of genuine CPU-bound
-    work for 240 1920x1080 frames on this machine -- most frames in most
-    sections have progress at a hard 0 or 1 and never needed that
-    conversion at all; only the actual transition window (a couple of
-    seconds) does the float math, and only for the two frames it touches
-    each call, not a whole preloaded clip."""
+def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
+                     win_cx=WIN_CX_FRAC, win_cy=WIN_CY_FRAC,
+                     win_w=WIN_W_FRAC, win_h=WIN_H_FRAC):
+    """r196 (operator direct note): every prior reveal in this style
+    was a FULL-FRAME wipe -- the whole picture swapped to an unrelated
+    photo (a different place, a different person, sometimes a black
+    studio void), which is exactly backwards from what an AR-glasses
+    film is supposed to feel like: "you walk around with glasses and
+    you see stuff," meaning the real place NEVER disappears -- the
+    visualization appears as a bounded window within your continuous
+    view. This function replaces the old wipe_reveal() everywhere in
+    the film (hook, borrow, examples_hist, examples_ice -- see
+    render_layer.py); wipe_reveal itself is deleted, having zero
+    callers left. The real footage stays full-bleed at EVERY value of
+    progress; the transformed/AI/product content only ever appears
+    inside a floating AR window, framed with the exact same corner
+    brackets zone_trace already uses for recognize's own bounded zone,
+    so the whole film reads as one consistent AR system rather than a
+    different visual effect in every section.
+
+    progress 0.0 = window empty/absent; 1.0 = window fully revealed.
+    The reveal sweeps in `direction`, but confined to the window's own
+    bounds -- never the full frame. Both inputs are the same HxWx3 BGR
+    arrays every other function here takes (uint8 or float)."""
+    img = full_bleed(world_bgr)
     if progress <= 0.0:
-        return full_bleed(world_bgr)
-    if progress >= 1.0:
-        return full_bleed(layer_bgr)
-    h, w = world_bgr.shape[:2]
+        return img
+    Wf, Hf = img.width, img.height
+    ww, wh = int(win_w * Wf), int(win_h * Hf)
+    wx = max(0, min(Wf - ww, int(win_cx * Wf - ww / 2)))
+    wy = max(0, min(Hf - wh, int(win_cy * Hf - wh / 2)))
+    p = min(1.0, progress)
+
+    _soft_patch_scrim(img, wx + ww / 2, wy + wh / 2 + 12, ww / 2 + 20, wh / 2 + 20,
+                       max_alpha=int(130 * min(1.0, p * 3)), blur=30)
+
+    layer_img = full_bleed(layer_bgr)
+    lw, lh = layer_img.width, layer_img.height
+    target_ar, src_ar = ww / wh, lw / lh
+    if src_ar > target_ar:
+        new_w = max(1, int(lh * target_ar))
+        x0 = (lw - new_w) // 2
+        crop = layer_img.crop((x0, 0, x0 + new_w, lh))
+    else:
+        new_h = max(1, int(lw / target_ar))
+        y0 = (lh - new_h) // 2
+        crop = layer_img.crop((0, y0, lw, y0 + new_h))
+    crop = crop.resize((ww, wh), Image.LANCZOS)
+
+    edge = max(16, int(min(ww, wh) * 0.14))
     if direction == "ltr":
-        coord = np.tile(np.arange(w, dtype=np.float32), (h, 1))
-        extent = float(w)
+        coord = np.tile(np.arange(ww, dtype=np.float32), (wh, 1))
+        extent = float(ww)
     elif direction == "ttb":
-        coord = np.tile(np.arange(h, dtype=np.float32).reshape(h, 1), (1, w))
-        extent = float(h)
+        coord = np.tile(np.arange(wh, dtype=np.float32).reshape(wh, 1), (1, ww))
+        extent = float(wh)
     elif direction == "diag":
-        xs = np.arange(w, dtype=np.float32).reshape(1, w) * (h / w)
-        ys = np.arange(h, dtype=np.float32).reshape(h, 1)
+        xs = np.arange(ww, dtype=np.float32).reshape(1, ww) * (wh / ww)
+        ys = np.arange(wh, dtype=np.float32).reshape(wh, 1)
         coord = xs + ys
         extent = float(coord.max())
     else:
         raise ValueError(direction)
-    boundary = progress * (extent + 2 * edge) - edge
+    boundary = p * (extent + 2 * edge) - edge
     alpha = np.clip((boundary - coord) / edge, 0.0, 1.0)
-    alpha3 = alpha[:, :, None]
-    out = world_bgr.astype(np.float32) * (1.0 - alpha3) + layer_bgr.astype(np.float32) * alpha3
-    img = full_bleed(out)
-    if 0.0 < progress < 1.0:
+    crop.putalpha(Image.fromarray((alpha * 255).astype(np.uint8), mode="L"))
+    img.alpha_composite(crop, (wx, wy))
+
+    zone_trace(img, wx + ww // 2, wy + wh // 2, ww, wh, k=min(1.0, p * 2.5))
+
+    if 0.0 < p < 1.0:
         d = ImageDraw.Draw(img, "RGBA")
         if direction == "ltr":
-            x = int(boundary)
-            d.line([(x, 0), (x, h)], fill=ACCENT + (235,), width=5)
+            x = wx + int(boundary)
+            if wx <= x <= wx + ww:
+                d.line([(x, wy), (x, wy + wh)], fill=ACCENT + (220,), width=4)
         elif direction == "ttb":
-            y = int(boundary)
-            d.line([(0, y), (w, y)], fill=ACCENT + (235,), width=5)
+            y = wy + int(boundary)
+            if wy <= y <= wy + wh:
+                d.line([(wx, y), (wx + ww, y)], fill=ACCENT + (220,), width=4)
         else:
             pts = []
-            for x in range(-40, w + 40, 32):
-                y = boundary - x * (h / w)
-                if -80 <= y <= h + 80:
+            for x in range(wx - 30, wx + ww + 30, 20):
+                y = wy + boundary - (x - wx) * (wh / ww)
+                if wy - 60 <= y <= wy + wh + 60:
                     pts.append((x, y))
             if len(pts) >= 2:
-                d.line(pts, fill=ACCENT + (235,), width=5)
+                d.line(pts, fill=ACCENT + (220,), width=4)
     return img
 
 
 def primary_label(img, text, k=1.0, y_frac=0.14, font_size=84, accent_bg=True):
     """A big bold idea label (r184's own 72px+ minimum, given headroom
-    here). accent_bg=True is reserved for the hook's own "THE WORLD"/
-    "THE LAYER" title toggle -- coral text with a thin coral rule
-    beneath it, the film's one deliberate accent-color type moment.
-    accent_bg=False (every other beat's opening label) renders clean
-    white on a soft feathered scrim -- legible over any footage without
-    turning every single label red."""
+    here). r196 (operator direct note: "that orange text color... it's
+    ugly"): text is never colored coral -- ACCENT is reserved entirely
+    for geometric elements (rules, brackets, the wipe seam, the anchor
+    pulse), never a glyph fill, on any call. accent_bg=True (the hook's
+    own "THE WORLD"/"THE LAYER" title toggle) keeps a thin coral rule
+    beneath the white text as its one accent touch; accent_bg=False
+    (every other beat's label) has no rule."""
     d = ImageDraw.Draw(img, "RGBA")
     f = font("Black", font_size)
     s = text.upper()
@@ -287,14 +322,12 @@ def primary_label(img, text, k=1.0, y_frac=0.14, font_size=84, accent_bg=True):
     _soft_patch_scrim(img, x, y, tw / 2 + 70, font_size * 0.62,
                        max_alpha=int(140 * k), blur=max(24, int(font_size * 0.5)))
     a = int(245 * k)
+    _halo_text(img, (x, y), s, f, OFFWHITE + (a,), anchor="mm", halo_alpha=int(205 * k), blur=7)
     if accent_bg:
-        _halo_text(img, (x, y), s, f, ACCENT + (a,), anchor="mm", halo_alpha=int(205 * k), blur=7)
         d = ImageDraw.Draw(img, "RGBA")
         rule_w = tw * 0.4
         ry = y + font_size * 0.44
         d.line([(x - rule_w / 2, ry), (x + rule_w / 2, ry)], fill=ACCENT + (a,), width=4)
-    else:
-        _halo_text(img, (x, y), s, f, OFFWHITE + (a,), anchor="mm", halo_alpha=int(205 * k), blur=7)
 
 
 def caption(img, t, dur, text, k=None, y_frac=0.88, font_size=52):
@@ -387,7 +420,9 @@ def loop_word(img, primary, sub, k=1.0, font_size=88, sub_font_size=44):
     large words at a time -- r184's explicit instruction, "not a system
     diagram." One word pair on screen at once, never four nodes at once
     the way v36's loop did. No box now -- a soft feathered patch and
-    blurred-halo text instead, the same treatment as every other label."""
+    blurred-halo text instead, the same treatment as every other label.
+    r196: the sub-caption is white now, not coral -- ACCENT is never a
+    glyph fill anywhere in this style."""
     d = ImageDraw.Draw(img, "RGBA")
     f = font("Black", font_size)
     fs = font("Medium", sub_font_size)
@@ -401,7 +436,7 @@ def loop_word(img, primary, sub, k=1.0, font_size=88, sub_font_size=44):
     py = y - (sub_font_size * 0.5 + 6) if sub else y
     _halo_text(img, (W / 2, py), primary, f, OFFWHITE + (a,), anchor="mm", halo_alpha=int(195 * k), blur=6)
     if sub:
-        _halo_text(img, (W / 2, y + font_size * 0.42 + 8), sub, fs, ACCENT + (int(a * 0.95),),
+        _halo_text(img, (W / 2, y + font_size * 0.42 + 8), sub, fs, OFFWHITE + (int(a * 0.85),),
                    anchor="mm", halo_alpha=int(160 * k), blur=4)
 
 

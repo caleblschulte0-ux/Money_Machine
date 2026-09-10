@@ -87,10 +87,11 @@ def _run_rawvideo(cmd, n, w=W, h=H):
         # the majority of a section composite's wall clock, on top of the
         # already-variable decode time, and was pushing hook's build past
         # the harness's kill threshold. Callers that need float math
-        # (bright_edit_grade, wipe_reveal's actual blend) convert only the
-        # single frame(s) they're touching, when they touch them -- most
-        # frames in most sections never need it at all (see wipe_reveal's
-        # own progress<=0/>=1 shortcuts)."""
+        # (bright_edit_grade, windowed_reveal's actual blend) convert only
+        # the single frame(s) they're touching, when they touch them --
+        # most frames in most sections never need it at all (see
+        # windowed_reveal's own progress<=0 shortcut, and its blend is
+        # confined to the AR window's own small area besides)."""
         return [f.copy() for f in a]
     finally:
         if os.path.exists(tmp_path):
@@ -291,7 +292,7 @@ def build_hook():
             progress = G.ease((t - 1.8) / 2.4)
         else:
             progress = 1.0
-        img = G.wipe_reveal(world[i], layer[i], progress, direction="ltr")
+        img = G.windowed_reveal(world[i], layer[i], progress, direction="ltr")
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)
             G.primary_label(img, "THE WORLD", k=k, y_frac=0.14)
@@ -325,7 +326,7 @@ def build_borrow():
             progress = 1.0
         else:
             progress = G.ease(1.0 - (t - 11.0) / 1.0)
-        img = G.wipe_reveal(world[i], layer, progress, direction="ttb")
+        img = G.windowed_reveal(world[i], layer, progress, direction="ttb")
         if t < 1.6:
             k = G.fade_k(t, 1.6, in_t=0.3, out_margin=0.4)
             G.primary_label(img, "BORROW THE LAYER", k=k, y_frac=0.14, accent_bg=False)
@@ -393,7 +394,7 @@ def build_examples_hist():
             progress = G.ease((t - 1.0) / 1.2)
         else:
             progress = 1.0
-        img = G.wipe_reveal(world[i], layer[i], progress, direction="ltr")
+        img = G.windowed_reveal(world[i], layer[i], progress, direction="ltr")
         if progress > 0.001:
             G.disclosure(img, "VISUALIZATION", corner="tr")
         if t >= 2.2:
@@ -416,7 +417,7 @@ def build_examples_ice():
             progress = G.ease((t - 1.0) / 1.4)
         else:
             progress = 1.0
-        img = G.wipe_reveal(world[i], layer[i], progress, direction="diag")
+        img = G.windowed_reveal(world[i], layer[i], progress, direction="diag")
         if progress > 0.001:
             G.disclosure(img, "VISUALIZATION", corner="tr")
         if t >= 2.4:
