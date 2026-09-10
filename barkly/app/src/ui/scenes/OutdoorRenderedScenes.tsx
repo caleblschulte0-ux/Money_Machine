@@ -53,16 +53,16 @@ const PARK_NEAR_GRASS = require('../../../assets/world/park/props/near_grass.png
  */
 /* The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds these
    against the real PNGs, the same way the shop's item art is held. */
-const TREELINE_ASPECT = 654 / 138;
-const TUFT_ASPECT = 300 / 303;
-const FLOWERS_ASPECT = 246 / 288;
-const CLUMP_ASPECT = 410 / 302;
+const TREELINE_ASPECT = 640 / 119;
+const TUFT_ASPECT = 294 / 297;
+const FLOWERS_ASPECT = 240 / 279;
+const CLUMP_ASPECT = 402 / 294;
 /*
  * THE NEAR-GROUND BANDS. Wide strips of ground cover rendered for the plane
  * closest to the viewer, spanning the whole width and hung off the bottom.
  * `__tests__/scene_surfaces.test.ts` holds these against the real PNGs.
  */
-const NEAR_GRASS_ASPECT = 631 / 101;
+const NEAR_GRASS_ASPECT = 617 / 87;
 
 type Cover = { fx: number; dy: number; s: number; depth: number; flip?: boolean; flower?: boolean };
 const PARK_COVER: readonly Cover[] = [
@@ -189,10 +189,10 @@ const TOWN_KERB = require('../../../assets/world/town/props/kerb.png');
 const TOWN_PAVING = require('../../../assets/world/town/props/paving.png');
 const TOWN_NEAR_PAVING = require('../../../assets/world/town/props/near_paving.png');
 /* Trimmed renders' own aspects; __tests__/scene_surfaces.test.ts holds them. */
-const ROOFTOPS_ASPECT = 654 / 166;
-const KERB_ASPECT = 624 / 54;
-const NEAR_PAVING_ASPECT = 654 / 78;
-const PAVING_ASPECT = 654 / 43;
+const ROOFTOPS_ASPECT = 640 / 145;
+const KERB_ASPECT = 606 / 34;
+const NEAR_PAVING_ASPECT = 640 / 58;
+const PAVING_ASPECT = 638 / 23;
 
 /**
  * COURSES OF PAVING, RECEDING.
@@ -255,23 +255,23 @@ const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png')
  * re-render can never distort a prop again. `npm run check:aspects` restates
  * these from the real PNGs.
  */
-const TREE_ASPECT = 482 / 417;
-const BENCH_ASPECT = 491 / 312;
-const HEDGE_ASPECT = 506 / 282;
-const LAMP_ASPECT = 213 / 562;
-const FOUNTAIN_ASPECT = 498 / 425;
-const PLANTER_ASPECT = 332 / 408;
-const UMBRELLA_ASPECT = 396 / 492;
-const PALM_ASPECT = 403 / 553;
-const DUNE_ASPECT = 468 / 244;
-const CASTLE_ASPECT = 412 / 493;
-const LIFEGUARD_ASPECT = 396 / 448;
-const STORE_AQUA_ASPECT = 480 / 519;
-const HEADLAND_ASPECT = 654 / 86;
+const TREE_ASPECT = 466 / 402;
+const BENCH_ASPECT = 481 / 297;
+const HEDGE_ASPECT = 496 / 269;
+const LAMP_ASPECT = 201 / 551;
+const FOUNTAIN_ASPECT = 488 / 410;
+const PLANTER_ASPECT = 324 / 394;
+const UMBRELLA_ASPECT = 382 / 481;
+const PALM_ASPECT = 392 / 539;
+const DUNE_ASPECT = 458 / 234;
+const CASTLE_ASPECT = 398 / 481;
+const LIFEGUARD_ASPECT = 383 / 434;
+const STORE_AQUA_ASPECT = 465 / 504;
+const HEADLAND_ASPECT = 640 / 68;
 const SURF_ASPECT = 640 / 55;
-const SHELLS_ASPECT = 286 / 155;
-const NEAR_SAND_ASPECT = 624 / 57;
-const DUNE_GRASS_ASPECT = 221 / 256;
+const SHELLS_ASPECT = 274 / 144;
+const NEAR_SAND_ASPECT = 604 / 38;
+const DUNE_GRASS_ASPECT = 215 / 250;
 
 /**
  * WHAT GOES ON THE SAND.

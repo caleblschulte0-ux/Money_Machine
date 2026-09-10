@@ -26,10 +26,10 @@ const SAND_MOUND = require('../../assets/world/beach/props/sand_mound.png');
  * against the real files by __tests__/scene_surfaces.test.ts.
  */
 const MOUND_W = 118;
-const DIG_MOUND_ASPECT = 548 / 186;
-const SAND_MOUND_ASPECT = 548 / 186;
+const DIG_MOUND_ASPECT = 530 / 169;
+const SAND_MOUND_ASPECT = 530 / 169;
 const BALL_W = 50;
-const BALL_ASPECT = 224 / 210;
+const BALL_ASPECT = 224 / 209;
 
 /**
  * The spark that says the ground is being worked. It belonged to the drawn
