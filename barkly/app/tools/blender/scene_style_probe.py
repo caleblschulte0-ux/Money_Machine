@@ -283,8 +283,11 @@ ROUND_SIX = {
     "1-soft": dict(label="SOFT REALIST (now)", **LIT),
     "2-storefront": dict(label="CEL STOREFRONT", shading="cel", bands=3,
                          roughness=1.0, coat=0.0, surface="smooth",
-                         elevation=52.0, sun_scale=1.45, sky_fill=0.40,
-                         fill_scale=1.8, ao=(1.2, 0.7), sun_angle=2.0),
+                         # 1.45 with a 0.40 sky clipped a quarter of the
+                         # frame to white; a bright style still has to have
+                         # somewhere above its highlights to go.
+                         elevation=52.0, sun_scale=0.80, sky_fill=0.34,
+                         fill_scale=1.6, ao=(1.2, 0.7), sun_angle=2.0),
     "3-storybook": dict(label="STORYBOOK INK", shading="cel", bands=3,
                         contour=True, roughness=1.0, coat=0.0,
                         surface="smooth", sat_boost=0.72, shadow=False,
