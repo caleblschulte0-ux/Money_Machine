@@ -6,8 +6,8 @@
     1792
   ],
   "scenes": {
-    "park": {
-      "file": "park.png",
+    "beach": {
+      "file": "beach.png",
       "width": 768,
       "height": 1792,
       "anchors": {
@@ -26,8 +26,8 @@
       },
       "unitPx": 38.5244
     },
-    "beach": {
-      "file": "beach.png",
+    "park": {
+      "file": "park.png",
       "width": 768,
       "height": 1792,
       "anchors": {

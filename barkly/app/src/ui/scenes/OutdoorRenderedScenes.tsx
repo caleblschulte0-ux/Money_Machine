@@ -257,11 +257,11 @@ const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png')
  */
 const TREE_ASPECT = 466 / 402;
 const BENCH_ASPECT = 481 / 297;
-const HEDGE_ASPECT = 496 / 269;
+const HEDGE_ASPECT = 498 / 240;
 const LAMP_ASPECT = 201 / 551;
 const FOUNTAIN_ASPECT = 488 / 410;
-const PLANTER_ASPECT = 324 / 394;
-const UMBRELLA_ASPECT = 382 / 481;
+const PLANTER_ASPECT = 335 / 403;
+const UMBRELLA_ASPECT = 534 / 500;
 const PALM_ASPECT = 392 / 539;
 const DUNE_ASPECT = 458 / 234;
 const CASTLE_ASPECT = 398 / 481;
