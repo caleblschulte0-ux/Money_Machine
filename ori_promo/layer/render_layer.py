@@ -78,7 +78,22 @@ ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_falls_visualizati
 # with a fake AR-window graphic already burned in) and the "borrow" one
 # used an unrelated woman, not the actual wearer -- both rejected, see
 # r210's own report; a corrected re-request went out the same round.
-HOOK_ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_hook_railing_r209_chatgpt.jpg")
+# r214 (operator direct note: "the picture and the lining up of it" --
+# not an edge/opacity problem at all): the r209 plate has its OWN
+# railing/sign-stand baked in, generated at a completely different
+# angle than the real one (the AI rail bars run a steep diagonal; the
+# real rail is close to flat within this frame's own span) -- windowed_
+# reveal's own crop happened to include a chunk of that mismatched
+# rail, so two differently-angled railings sat right on top of each
+# other at the boundary and visibly failed to connect. No edge
+# treatment can fix two different structures that don't line up.
+# Pre-cropped to the exact 760x220 aspect using ONLY the part of the
+# same plate above where its own railing starts (mammoths/falls/
+# skyline, verified clean of any rail/post) -- the window now shows
+# content with no second, conflicting railing to fail to align with;
+# its bottom edge meets the one real railing already measured to sit
+# right at the window's own boundary (see graphics_layer.py notes).
+HOOK_ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_hook_norail_r214_chatgpt.jpg")
 # r212 (ChatGPT's delivery against r211's exact-box request, recovered via
 # the signed asset URLs in its transport_recovery.md after Drive's binary
 # upload rejected the connector-reference requirement): both purpose-built

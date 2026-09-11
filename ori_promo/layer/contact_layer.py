@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
-"""r213 evidence pack: full-film contact sheet for v37 "The World / The
-Layer". r211 fixed hook's window (measured the real railing's top edge
-on rendered frames, repositioned the window to clear it) but held
-borrow's identical fix back -- its old assets weren't composed for the
-shorter box. r212 was ChatGPT's exact-box delivery against r211's
-request (both images purpose-built for the box they land in): recovered
-via the signed URLs in its own transport_recovery.md after Drive's
-binary upload rejected the generated-asset reference. This round wires
-both in: borrow's window is now tightened to match hook's (y 260-450,
-was 260-660) since its new worn/software plate was custom pre-cropped
-for exactly that box (and the existing hero/hardware studio shot was
-re-checked by direct simulation, not assumed, to already frame cleanly
-in it); examples_ice gets its new purpose-built treeline/mammoth plate
-at its existing (already correct, unchanged) window geometry.
-Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208/r211.
+"""r214 evidence pack: full-film contact sheet for v37 "The World / The
+Layer". Direct operator feedback on the shipped r213 hook frame: "not
+seamless... the puzzle piece don't match." A first attempt this round
+(widening/blurring the window's edge) was explicitly rejected -- "don't
+soften the edges... you're trying to cut the edges to make it fit."
+Correct: no edge treatment fixes content that doesn't belong. Root
+cause found by direct pixel inspection of the actual rendered boundary:
+the accepted r209 hook plate has its OWN railing/sign-stand baked in,
+generated at a completely different angle than the real one -- two
+differently-angled railings sitting on top of each other at the
+boundary, visibly failing to connect. Fixed by re-cropping that same
+plate to exclude its own conflicting railing entirely (mammoths/falls/
+skyline only, verified clean), so the window shows content with nothing
+left to fail to line up -- its edge now meets the one real railing,
+which was already close. Also reverted the rejected feather-widen/blur,
+and (independently, not itself the fix, kept because it's still
+correct) grades the window's content toward the real scene's own
+ambient color instead of a fixed cool push, and caps the corner-
+bracket/rim HUD well short of full strength so it doesn't stay a bold
+frame for the whole hold.
+Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208/r211/r213.
 """
 import subprocess
 
@@ -21,7 +27,7 @@ import cv2
 import numpy as np
 
 W, H = 1920, 1080
-MASTER = "../out/ORI_WorldLayer_r213_final_master.mp4"
+MASTER = "../out/ORI_WorldLayer_r214_final_master.mp4"
 SECTION_BOUNDS = [0.0, 8.0, 20.0, 32.0, 40.0, 49.5, 54.0, 66.0, 74.0]
 EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
@@ -81,7 +87,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r213__claude__v37_borrow_examples_exactbox__contact.png", sheet)
+    cv2.imwrite("r214__claude__v37_norail_seam_fix__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

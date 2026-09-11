@@ -276,31 +276,56 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
         crop = layer_img.crop((0, y0, lw, y0 + new_h))
     crop = crop.resize((ww, wh), Image.LANCZOS)
 
-    # r211 (operator direct note: even with a genuinely shot-matched
-    # source image, "you're still putting them in the same old shitty
-    # way" -- the window itself, not the picture inside it, is the
-    # actual problem. Every prior fix (r197 windowing, r201 feather/rim)
-    # only ever touched the EDGE of the insert; the interior was always
-    # a flat, fully opaque photograph, which is exactly why even a
-    # perfectly matched plate still reads as "a picture taped over the
-    # video" rather than a projected AR layer. Three real, cheap
-    # projection cues, applied to every windowed_reveal call in the film
-    # at once (not a per-shot patch):
+    # r214 (operator direct note, AGAIN, after r211's fixes shipped:
+    # "that's not a seamless overlay"): every prior fix (r197 window,
+    # r201 feather/rim, r211 opacity-cap/cool-tint/scanlines) treated
+    # this as an edge-thinness or opacity problem. Looking at the actual
+    # delivered frame, it wasn't -- two bigger things neither prior fix
+    # touched:
+    #  (a) r211's own "cool digital" push deliberately pushed the insert
+    #      AWAY from the real scene's color -- on a bright sunlit real
+    #      photo that makes the insert visibly a different, colder
+    #      photograph dropped on top, the opposite of "seamless."
+    #  (b) the edge was still a near-linear 5%-wide ramp (not a real
+    #      soft blend) with a bright corner-bracket HUD held at nearly
+    #      full opacity for the ENTIRE hold, not just the reveal -- a
+    #      picture frame that never stops announcing itself as a frame.
+    # Replaced with two real fixes, both in this one function so every
+    # call site gets them at once:
+    #  (1) grade the insert toward the REAL scene's own sampled ambient
+    #      color (a ring of real pixels just outside the window),
+    #      instead of a fixed synthetic push -- the insert now sits in
+    #      the same light as the photo around it.
+    #  (2) a genuinely wide, gaussian-blurred alpha falloff (no crisp
+    #      rectangle edge at any zoom) instead of a thin linear ramp;
+    #      brackets/rim are capped well short of full strength (see
+    #      below) so they read as a brief focusing cue, not a sustained
+    #      frame around the picture.
+    world_u8 = np.clip(np.asarray(world_bgr, dtype=np.float32), 0, 255).astype(np.uint8)
+    world_rgb = world_u8[:, :, ::-1].astype(np.float32)
+    band = 48
+    ry0, ry1 = max(0, wy - band), min(Hf, wy + wh + band)
+    rx0, rx1 = max(0, wx - band), min(Wf, wx + ww + band)
+    samples = []
+    if wy - band >= 0:
+        samples.append(world_rgb[wy - band:wy, rx0:rx1].reshape(-1, 3))
+    if wy + wh + band <= Hf:
+        samples.append(world_rgb[wy + wh:wy + wh + band, rx0:rx1].reshape(-1, 3))
+    if wx - band >= 0:
+        samples.append(world_rgb[ry0:ry1, wx - band:wx].reshape(-1, 3))
+    if wx + ww + band <= Wf:
+        samples.append(world_rgb[ry0:ry1, wx + ww:wx + ww + band].reshape(-1, 3))
+    ring = np.concatenate(samples) if samples else world_rgb.reshape(-1, 3)
+    ambient = ring.mean(axis=0)
+
     crop_rgb = np.asarray(crop.convert("RGB"), dtype=np.float32)
-    # (1) a cool, slightly desaturated push toward cyan/blue -- real
-    # photos read "warm capture," projected light reads "cool digital."
-    # Desaturate 18% toward luminance, then lift blue/cut red slightly.
-    luma = (crop_rgb[..., 0] * 0.299 + crop_rgb[..., 1] * 0.587 + crop_rgb[..., 2] * 0.114)
-    crop_rgb = crop_rgb * 0.82 + luma[..., None] * 0.18
-    crop_rgb[..., 2] = np.clip(crop_rgb[..., 2] * 1.06 + 4, 0, 255)
-    crop_rgb[..., 0] = np.clip(crop_rgb[..., 0] * 0.95, 0, 255)
-    # (2) faint horizontal scan lines -- the standard, cheap "this is a
-    # display, not a print" cue. Subtle: every 3rd row dimmed ~6%, never
-    # a strobe (progress-independent, doesn't flicker frame to frame).
-    scan = np.ones((wh, 1), dtype=np.float32)
-    scan[::3] = 0.94
-    crop_rgb = crop_rgb * scan[:, :, None]
-    crop = Image.fromarray(np.clip(crop_rgb, 0, 255).astype(np.uint8), mode="RGB").convert("RGBA")
+    crop_mean = np.maximum(crop_rgb.reshape(-1, 3).mean(axis=0), 1.0)
+    # per-channel gain toward the real scene's ambient tone, blended at
+    # 45% -- enough to feel like the same light, not so much the
+    # visualization's own content (snow, sky, product color) washes out.
+    gain = np.clip(ambient / crop_mean, 0.7, 1.5)
+    crop_rgb = np.clip(crop_rgb * (0.55 + 0.45 * gain[None, None, :]), 0, 255)
+    crop = Image.fromarray(crop_rgb.astype(np.uint8), mode="RGB").convert("RGBA")
 
     edge = max(16, int(min(ww, wh) * 0.14))
     if direction == "ltr":
@@ -319,14 +344,17 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
     boundary = p * (extent + 2 * edge) - edge
     alpha = np.clip((boundary - coord) / edge, 0.0, 1.0)
 
-    # r201 (operator direct note, after seeing the r199 delivery: "the
-    # floating window itself still looks cheap/flat"): a hard-edged
-    # rectangular photo pasted over real footage reads as a picture-in-
-    # picture, not a projected AR layer. Two standard, cheap compositing
-    # cues for "this is a light/projection, not a photo card": feather
-    # the window's OUTER edges (perpendicular to the sweep direction --
-    # the sweep's own leading edge already fades via `alpha` above) and
-    # a soft glowing rim at the boundary once content is showing.
+    # r214 operator correction: widening/blurring this edge (this
+    # session's first attempt this round) was REJECTED outright --
+    # "don't soften the edges, that's not the solution, the puzzle
+    # piece don't match and you're trying to cut the edges to make it
+    # fit." Correct: no amount of edge blur fixes content that doesn't
+    # belong at that boundary; it only hides the mismatch instead of
+    # fixing it. Reverted to r201's original tight, unblurred edge --
+    # the real fix has to be the content/geometry actually fitting the
+    # real scene at the boundary (see the window-anchoring change to
+    # the real railing line below/in render_layer.py), not the edge
+    # treatment.
     feather = max(10, int(min(ww, wh) * 0.05))
     edge_mask = np.ones((wh, ww), dtype=np.float32)
     perp_edges = ("top", "bottom") if direction == "ltr" else \
@@ -341,20 +369,22 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
         edge_mask *= np.clip((ww - 1 - np.arange(ww, dtype=np.float32)) / feather, 0, 1).reshape(1, ww)
     alpha = alpha * edge_mask
 
-    # (3) the actual biggest fix: content never reaches full 1.0 alpha
-    # even fully "open" and held -- a real AR projection lets the world
-    # underneath still show through faintly; a 100%-opaque insert is
-    # what makes it read as a pasted photo no matter how well the photo
-    # itself matches. Capped well short of invisible (0.90) so the
-    # visualization stays perfectly readable; the real railing/rocks
-    # ghost through at ~10%, which is what actually sells "layer," not
-    # "swap."
+    # content never reaches full 1.0 alpha even fully "open" and held --
+    # the real world underneath still shows through faintly (r211's own
+    # finding, kept: this part was already right).
     alpha = alpha * 0.90
 
     crop.putalpha(Image.fromarray((alpha * 255).astype(np.uint8), mode="L"))
     img.alpha_composite(crop, (wx, wy))
 
-    rim_alpha = int(130 * min(1.0, p * 2.0))
+    # r214: rim + bracket ceilings both cut roughly 3x from r201's
+    # levels -- a bright rim/bracket held at near-full opacity for the
+    # ENTIRE hold (not just the brief reveal) is itself a big part of
+    # "not seamless": a HUD frame that never stops announcing itself as
+    # a frame. Both still ramp in at the same rate during the reveal
+    # (the "AR system engaging" cue r196 wants), they just never reach
+    # the earlier bold ceiling once held.
+    rim_alpha = int(40 * min(1.0, p * 2.0))
     if rim_alpha > 0:
         pad = 14
         rim = Image.new("RGBA", (ww + 2 * pad, wh + 2 * pad), (0, 0, 0, 0))
@@ -383,7 +413,7 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
             bwid = max(2, min(ww, int(boundary)))
         else:
             bhei = max(2, min(wh, int(boundary)))
-    zone_trace(img, bx + bwid // 2, by + bhei // 2, bwid, bhei, k=min(1.0, p * 1.15))
+    zone_trace(img, bx + bwid // 2, by + bhei // 2, bwid, bhei, k=min(0.4, p * 1.15))
 
     if 0.0 < p < 1.0:
         d = ImageDraw.Draw(img, "RGBA")
