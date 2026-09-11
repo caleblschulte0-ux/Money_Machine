@@ -1032,13 +1032,31 @@ def park_hedge():
     leaf = material("Hedge green", tone("foliage", "base"), roughness=0.82)
     leaf_light = material("Hedge light", tone("foliage", "lit"), roughness=0.78)
     earth = material("Hedge earth", tone("bark", "shade"), roughness=0.94)
-    # Five equal lumps in a row read as five bushes. One mass with three
-    # unequal bumps bitten into its top reads as a hedge.
+    berry = material("Hedge berry", tone("berry", "base"), roughness=0.64, coat=0.10)
+    # A CLIPPED hedge is a BOX with a lumpy top, not a pile of spheres. This
+    # was one ellipsoid with three bumps sunk into it, and photographed beside
+    # the storefront -- the prop that reads best in the whole pack, because it
+    # carries an awning, a sign band, window goods and a door handle -- it was
+    # plainly the weakest thing in the park: four green balls in a row.
+    #
+    # The body is a heavily rounded cube now, which is what says CLIPPED, and
+    # the top clumps are sized to OVERLAP each other. That matters more than it
+    # used to: with the contour gone, same-material shapes that overlap merge
+    # into one silhouette, so a row of touching clumps reads as foliage where a
+    # row of separated ones reads as balls.
     contact_shadow(1.72, 0.52)
     sphere("earth", (0, 0.20, 0.22), (1.62, 0.56, 0.18), earth)
-    sphere("hedge_mass", (0, 0, 0.74), (1.52, 0.56, 0.60), leaf)
-    for i, (x, z, s) in enumerate(((-0.94, 1.00, 0.62), (0.08, 1.16, 0.74), (0.98, 0.96, 0.56))):
-        sphere(f"hedge_{i}", (x, -0.04, z), (s, s * 0.80, s * 0.84), leaf_light if i == 1 else leaf)
+    cube("hedge_body", (0, 0, 0.70), (1.48, 0.54, 0.56), leaf, 0.34)
+    for i, (x, z, s) in enumerate((
+        (-1.12, 0.98, 0.56), (-0.42, 1.14, 0.62), (0.34, 1.10, 0.60), (1.06, 0.96, 0.54),
+    )):
+        sphere(f"hedge_{i}", (x, -0.02, z), (s, s * 0.76, s * 0.62),
+               leaf_light if i in (1, 2) else leaf)
+    # Three berries, and only three. A second HUE is what stops a green mass
+    # reading as one printed colour, and the fountain's teal water against its
+    # cream stone is the same move.
+    for i, (x, y, z) in enumerate(((-0.76, -0.34, 1.02), (0.58, -0.36, 1.06), (1.18, -0.28, 0.84))):
+        sphere(f"berry_{i}", (x, y, z), (0.10, 0.10, 0.10), berry)
 
 
 # ---------------------------------------------------------------------------
@@ -1632,11 +1650,22 @@ def town_planter():
     contact_shadow(0.96, 0.46)
     cone("pot", (0, 0.05, 0.44), 0.42, 0.80, 0.88, pot)
     cylinder("pot_rim", (0, 0.05, 0.94), 0.90, 0.22, pot_dark, taper=0.94)
+    # A FOOT, so the pot is tiered rather than a cone with a lip. The fountain
+    # and the lamp post are the two props the operator picked out as right and
+    # the thing they share is tiers -- each one a closed form meeting the next
+    # at a hard break in a different material.
+    cylinder("pot_foot", (0, 0.05, 0.08), 0.50, 0.16, pot_dark, taper=0.86)
     plant_z = stack(1.05, 0.52)
     sphere("plant_mass", (0, 0.02, plant_z), (0.80, 0.60, 0.52), leaf)
-    for i, (x, z, s) in enumerate(((-0.44, 0.16, 0.40), (0.10, 0.54, 0.44), (0.46, 0.06, 0.36))):
-        sphere(f"plant_{i}", (x, -0.04, plant_z + z), (s, s * 0.80, s * 0.88),
+    # Overlapping, for the reason the hedge's clumps are: with no contour,
+    # touching same-material shapes merge into one silhouette. At the old
+    # spacing these were three separate balls sitting on a fourth.
+    for i, (x, z, s) in enumerate(((-0.50, 0.14, 0.52), (0.06, 0.50, 0.56), (0.52, 0.08, 0.48))):
+        sphere(f"plant_{i}", (x, -0.04, plant_z + z), (s, s * 0.80, s * 0.80),
                leaf_light if i == 1 else leaf)
+    bloom = material("Planter bloom", tone("sun", "lit"), roughness=0.62, coat=0.10)
+    for i, (x, y, z) in enumerate(((-0.34, -0.30, plant_z + 0.46), (0.40, -0.32, plant_z + 0.38))):
+        sphere(f"bloom_{i}", (x, y, z), (0.11, 0.11, 0.11), bloom)
 
 
 def beach_umbrella():
@@ -1651,9 +1680,44 @@ def beach_umbrella():
     sphere("sand_heap", (0, 0.06, 0.10), (0.44, 0.32, 0.15), wood)
     cylinder("umbrella_pole", (0, 0.08, 1.62), 0.17, 3.10, wood, taper=0.58)
     cone("canopy", (0, 0, 3.40), 1.66, 0.20, 0.92, coral)
-    torus("canopy_edge", (0, 0, 2.98), 1.48, 0.14, coral_dark, scale=(1.0, 0.72, 0.65))
+
+    # SEGMENTS AND A SCALLOPED HEM, which is the whole difference between a
+    # parasol and a cone on a stick. The canopy was a smooth cone with a torus
+    # round the bottom, and no amount of shading rescues that read -- what the
+    # eye looks for on an umbrella is the RIBS and the scalloped edge they
+    # divide, and neither existed. Photographed beside the storefront (which
+    # reads best of any prop in the pack because it carries an awning, a sign
+    # band, window goods and a door handle), the difference is detail that
+    # MEANS something, not detail for its own sake.
+    #
+    # Eight ribs laid on the cone's own surface: the slope is atan(depth /
+    # (r1 - r2)), so they are computed from the canopy's numbers rather than
+    # dialled in, and changing the canopy moves them with it.
+    slope = math.atan2(0.92, 1.66 - 0.20)
+    rib_half = math.hypot(0.92, 1.66 - 0.20) / 2.0
+    for i in range(8):
+        theta = i / 8.0 * math.tau
+        r = (1.66 + 0.20) / 2.0
+        cube(f"rib_{i}", (r * math.cos(theta) * 0.98, r * math.sin(theta) * 0.98, 3.40),
+             (rib_half * 0.96, 0.055, 0.045), coral_dark, 0.02,
+             rotation=(0, slope, theta), lean=0)
+        # The hem scallops sit BETWEEN the ribs, which is where the fabric
+        # bellies out on a real one. FLAT AND TUCKED IN: at (0.30, 0.30, 0.16)
+        # and a radius outside the cone's rim they read as bobbles hung off
+        # the edge, which is a different wrong prop. Wide, thin, and centred on
+        # the rim radius itself, they extend the hem into a wavy line instead.
+        mid = (i + 0.5) / 8.0 * math.tau
+        # BIG ENOUGH TO TOUCH. At 8 lobes on a 1.62 radius the arc spacing is
+        # 1.27, so anything under 0.64 across cannot reach its neighbour and
+        # reads as discs stuck onto the rim. Now that nothing carries an
+        # outline, same-material shapes that overlap merge seamlessly -- so
+        # the hem only has to be continuous, not welded.
+        sphere(f"hem_{i}", (1.50 * math.cos(mid), 1.50 * math.sin(mid), 2.975),
+               (0.80, 0.80, 0.085), coral, swell=0.0)
+    torus("canopy_edge", (0, 0, 2.98), 1.48, 0.12, coral_dark, scale=(1.0, 1.0, 0.72))
     cone("canopy_inset", (0, -0.18, 3.42), 0.92, 0.11, 0.78, yellow)
-    sphere("cap", (0, 0, 3.94), (0.18, 0.16, 0.20), yellow)
+    cylinder("finial_neck", (0, 0, 3.92), 0.10, 0.22, wood, vertices=16)
+    sphere("cap", (0, 0, 4.10), (0.19, 0.17, 0.21), yellow)
 
 
 def beach_lifeguard():
