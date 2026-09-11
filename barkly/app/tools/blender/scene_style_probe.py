@@ -1,0 +1,159 @@
+"""WHOLE SCENES in several styles, because two props on a beige square is not
+a test anyone can answer.
+
+Operator: *"I need more than just a fucking lamp and a bench though to tell if
+I like the art style or not."* Correct, and the earlier measurement says the
+same thing from the other side: a hedge is about 3% of the screen and a planter
+2%, so a style judged on isolated props is a style judged on 5% of the picture.
+What carries a frame is the ground, the sky, the plate and the light -- all of
+which only exist at SCENE scale.
+
+So this renders the PARK PLATE, whole, once per style, and composites each one
+into a phone-shaped crop with Barkly standing in it. Same builder, same camera,
+same palette; only the style dials move.
+
+    xvfb-run -a blender -b --python tools/blender/scene_style_probe.py
+
+Writes art-review/style-probe/scene__<style>.png. Like the prop probe, nothing
+here feeds the shipped packs -- it imports them, sets module globals, and
+writes to its own directory.
+"""
+from __future__ import annotations
+
+import math
+import sys
+from pathlib import Path
+
+import bpy
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import world_prop_pack as pack  # noqa: E402
+import world_scene_pack as scenes  # noqa: E402
+import ink  # noqa: E402
+
+OUT = Path(__file__).resolve().parents[2] / "art-review" / "style-probe"
+SCENE = "park"
+
+#: name -> (label, dials)
+#:
+#: `contour`    the game's dark edge, on or off (ink.CONTOUR)
+#: `fill_scale` multiplier on the sky-bounce fill: how dark the darks get
+#: `rim`        an area light behind, for a lit edge on every silhouette
+#: `ao`         (distance, factor) for contact occlusion
+#: `shading`    "default" or "cel"
+#: `sun_scale`  multiplier on the key
+STYLES = {
+    "1-now": dict(label="AS IT SHIPS NOW"),
+    "2-inked": dict(label="OUTLINE BACK ON", contour=True),
+    "3-contrast": dict(label="HIGH CONTRAST + RIM", fill_scale=0.30, rim=5.0,
+                       ao=(2.4, 1.0), sun_scale=1.15),
+    "4-cel": dict(label="CEL / BANDED", shading="cel", bands=3),
+    "5-soft": dict(label="SOFT MATTE", fill_scale=1.9, sun_scale=0.8, ao=(1.0, 0.5)),
+    "6-golden": dict(label="LOW GOLDEN SUN", sun_scale=1.25, fill_scale=0.55,
+                     rim=2.5, elevation=18.0),
+}
+
+_ORIG_MATERIAL = pack.material
+_ORIG_SETUP = scenes.setup
+_ORIG_CONTOUR = ink.CONTOUR
+_ORIG_ELEVATION = dict(__import__("palette").SUN_ELEVATION)
+
+
+def _cel(mat, bands):
+    """Quantise shading into flat bands with a hard terminator (EEVEE)."""
+    nt = mat.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    out = nt.nodes.get("Material Output")
+    if bsdf is None or out is None:
+        return mat
+    to_rgb = nt.nodes.new("ShaderNodeShaderToRGB")
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    emit = nt.nodes.new("ShaderNodeEmission")
+    mix = nt.nodes.new("ShaderNodeMixRGB")
+    nt.links.new(bsdf.outputs["BSDF"], to_rgb.inputs["Shader"])
+    nt.links.new(to_rgb.outputs["Color"], ramp.inputs["Fac"])
+    ramp.color_ramp.interpolation = "CONSTANT"
+    elements = ramp.color_ramp.elements
+    while len(elements) > 1:
+        elements.remove(elements[-1])
+    elements[0].position = 0.0
+    elements[0].color = (0.48, 0.48, 0.48, 1.0)
+    for i in range(1, bands):
+        e = elements.new(i / bands)
+        v = 0.48 + (1.15 - 0.48) * (i / max(1, bands - 1))
+        e.color = (v, v, v, 1.0)
+    mix.blend_type = "MULTIPLY"
+    mix.inputs["Fac"].default_value = 1.0
+    mix.inputs["Color2"].default_value = bsdf.inputs["Base Color"].default_value
+    nt.links.new(ramp.outputs["Color"], mix.inputs["Color1"])
+    nt.links.new(mix.outputs["Color"], emit.inputs["Color"])
+    nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
+    return mat
+
+
+def apply(style):
+    import palette
+    ink.CONTOUR = style.get("contour", False)
+    palette.SUN_ELEVATION[SCENE] = style.get("elevation", _ORIG_ELEVATION[SCENE])
+
+    shading = style.get("shading", "default")
+
+    def material_shim(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None):
+        mat = _ORIG_MATERIAL(name, color, roughness, metallic, coat, surface)
+        if shading == "cel":
+            _cel(mat, style.get("bands", 3))
+        return mat
+
+    pack.material = material_shim
+    scenes.pack.material = material_shim
+
+    def setup_shim(ortho_scale, target, sun_energy, sun_color, ambient, scene_name=""):
+        camera = _ORIG_SETUP(ortho_scale, target, sun_energy * style.get("sun_scale", 1.0),
+                             sun_color, ambient, scene_name)
+        scene = bpy.context.scene
+        fill_scale = style.get("fill_scale", 1.0)
+        if fill_scale != 1.0:
+            for obj in scene.objects:
+                if obj.type == "LIGHT" and "bounce" in obj.name.lower():
+                    obj.data.energy *= fill_scale
+        rim = style.get("rim", 0.0)
+        if rim:
+            bpy.ops.object.light_add(type="AREA", location=(6.0, 30.0, 9.0))
+            light = bpy.context.object
+            light.name = "Probe rim"
+            light.data.energy = rim * 220.0
+            light.data.size = 24.0
+            light.data.color = pack.light_rgb("key")
+            pack.look_at(light, target)
+        ao = style.get("ao")
+        if ao:
+            scene.eevee.gtao_distance, scene.eevee.gtao_factor = ao
+        return camera
+
+    scenes.setup = setup_shim
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    builder, ortho, target, energy, sun_hex, ambient = scenes.SCENES[SCENE]
+    for name, style in STYLES.items():
+        import palette
+        pack.material = _ORIG_MATERIAL
+        scenes.pack.material = _ORIG_MATERIAL
+        scenes.setup = _ORIG_SETUP
+        ink.CONTOUR = _ORIG_CONTOUR
+        palette.SUN_ELEVATION.update(_ORIG_ELEVATION)
+        apply(style)
+
+        scenes.clean()
+        scenes.ANCHORS.clear()
+        scenes.setup(ortho, target, energy, sun_hex, ambient, SCENE)
+        builder()
+        bpy.context.scene.render.filepath = str(OUT / f"scene__{name}.png")
+        bpy.ops.render.render(write_still=True)
+        print(f"scene probe {name}  ({style.get('label', name)})")
+    print(f"wrote {len(STYLES)} scene renders to {OUT}")
+
+
+if __name__ == "__main__":
+    main()
