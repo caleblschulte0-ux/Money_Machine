@@ -395,6 +395,31 @@ describe('renders record the builder that made them', () => {
     expect(setupOnly).not.toMatch(/^\s*return\s*$/m);
   });
 
+  it('binds no palette colour in a default argument', () => {
+    /*
+     * Python evaluates default arguments ONCE, at import. A `tone(...)`
+     * written as one is therefore a frozen copy of the palette, which is the
+     * same defect as `from ink import CONTOUR` in the shape the language
+     * makes easiest to write -- and it hid for as long as nothing changed the
+     * palette at runtime. When the style probe finally did, pushing every
+     * family's chroma by 1.42 moved the rendered saturation from 0.50 to
+     * 0.49: the treeline, the far half of the ground and every flower were
+     * painted from tones bound before the boost existed, and those are most
+     * of the frame.
+     */
+    for (const file of ['world_prop_pack.py', 'world_scene_pack.py',
+                        'home_prop_pack.py', 'home_architecture.py']) {
+      const src = readFileSync(join(__dirname, '..', 'tools', 'blender', file), 'utf8');
+      const frozen = src.match(/^def [^\n]*?=\s*(?:tone|ramp|light_hex|world_rgb)\(/gm) ?? [];
+      expect(frozen).toEqual([]);
+      // Multi-line signatures too -- `ground(` carried its on the second.
+      const signatures = src.match(/^def [\s\S]*?\):$/gm) ?? [];
+      for (const signature of signatures) {
+        expect(signature).not.toMatch(/=\s*(?:tone|ramp|light_hex|world_rgb)\(/);
+      }
+    }
+  });
+
   it('fingerprints the whole shared layer, and every pack reaches all of it', () => {
     const packfile = readFileSync(join(__dirname, '..', 'tools', 'blender', 'packfile.py'), 'utf8');
     // It must FOLLOW imports rather than hard-coding a list, or the list is

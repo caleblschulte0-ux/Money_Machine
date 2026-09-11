@@ -363,9 +363,100 @@ ROUND_SEVEN = {
                         cascade=60.0, patch=0.26, bump=0.16),
 }
 
+#: ROUND EIGHT -- ONE TIME OF DAY, and the code enforces it.
+#:
+#: *"I don't like any of them and the time of day should all be the same."*
+#: Fair on both counts, and the second is on me: every round so far has let
+#: the sun move. Round seven still ran 24 to 46 degrees with three different
+#: key colours, which means it was still partly a lighting comparison wearing
+#: a style label -- the exact thing the operator corrected two rounds ago.
+#:
+#: `FIXED_LIGHT` is the only light in this round. `LIGHT_DIALS` names every
+#: key that would move it, and the loader REFUSES a round-eight entry that
+#: carries one, because a convention I keep breaking is not a convention.
+#:
+#: What varies is what is left once the light is nailed down, and it is more
+#: than it sounds: the shading model, the number of tones, the drawn line and
+#: its weight and colour, the specular, and THE PALETTE ITSELF -- chroma and
+#: how deep the dark end of every colour ramp sits. Palette is the lever that
+#: has not been tried, and it is the one that separates most of the games
+#: anybody would name as a reference: they differ in what colour the art is,
+#: not in where the sun is.
+FIXED_LIGHT = dict(elevation=34.0, sun_scale=1.10, key_hex="#FFE2B4",
+                   sky_fill=0.13, fill_scale=0.55, ao=(2.4, 1.0),
+                   sun_angle=1.1, cascade=60.0, rim=3.0)
+
+#: Anything that changes where the sun is, how strong it is, or what colour.
+LIGHT_DIALS = frozenset({
+    "elevation", "sun_scale", "sun_angle", "cascade", "key_hex", "world_hex",
+    "sky_fill", "fill_scale", "rim", "ao", "shadow", "volume",
+})
+
+
+def _style(label, **dials):
+    stray = LIGHT_DIALS & dials.keys()
+    if stray:
+        raise SystemExit(
+            f"round eight style {label!r} sets {sorted(stray)}, which moves "
+            "the light. This round holds the time of day fixed -- the "
+            "operator asked for that specifically, after three rounds that "
+            "quietly varied it. Vary the ART."
+        )
+    return dict(FIXED_LIGHT, label=label, **dials)
+
+
+ROUND_EIGHT = {
+    "A-now": _style("A / AS IT SHIPS"),
+    "B-cel": _style("B / THREE-TONE CEL", shading="cel", bands=3,
+                    roughness=1.0, coat=0.0, surface="smooth"),
+    "C-line": _style("C / CEL + FINE LINE", shading="cel", bands=3,
+                     contour=True, ink_thickness=0.55, roughness=1.0,
+                     coat=0.0, surface="smooth"),
+    "D-bold": _style("D / CEL + BOLD LINE, HIGH CHROMA", shading="cel",
+                     bands=3, contour=True, ink_thickness=1.5,
+                     sat_boost=1.22, roughness=1.0, coat=0.0,
+                     surface="smooth"),
+    "E-gloss": _style("E / GLOSS, HIGH CHROMA", roughness=0.15, coat=1.0,
+                      sat_boost=1.26, surface="smooth"),
+    "F-deep": _style("F / DEEP PALETTE, RICH DARKS", lift_shift=-0.13,
+                     sat_boost=1.10, roughness=0.78, coat=0.12),
+}
+
+#: ROUND NINE -- FOUR, because four is how many there are.
+#:
+#: Round eight held the light still, which was the right correction, and the
+#: matrix then said something worth listening to: a fine line sat 1.9 from
+#: the same style with no line, and a gloss pass 3.7 from the baseline. With
+#: one sun, this pipeline has about four genuinely distinct looks in it --
+#: smooth, banded, banded-and-drawn, and a re-graded palette -- and offering
+#: six means padding two of them.
+#:
+#: So four, each pushed to the end of its own lever rather than nudged:
+#: chroma 1.35 instead of 1.22, a palette dropped 0.24 instead of 0.13, a
+#: line at 1.8x instead of 0.55x. Same sun in all four.
+ROUND_NINE = {
+    "A-now": _style("A / AS IT SHIPS"),
+    "B-drawn": _style("B / BANDED + DRAWN LINE", shading="cel", bands=3,
+                      contour=True, ink_thickness=1.8, sat_boost=1.24,
+                      roughness=1.0, coat=0.0, surface="smooth"),
+    "C-deep": _style("C / DEEP RE-GRADE, MATTE", lift_shift=-0.24,
+                     sat_boost=1.16, roughness=0.90, coat=0.0),
+    # `sat_boost` is a DEAD LEVER and this slot proved it twice. The palette
+    # already runs 0.52 to 1.00 saturation, so a 1.42 boost mostly clamps:
+    # with gloss on top it measured 3.9 from the baseline, and the frame's
+    # own saturation went 0.50 -> 0.49. Chroma has nowhere to go.
+    #
+    # Banding ON TOP of the deep re-grade does have somewhere to go: it is
+    # the one combination of the two levers that do work.
+    "D-deepcel": _style("D / DEEP RE-GRADE + BANDED", shading="cel", bands=3,
+                        lift_shift=-0.22, roughness=1.0, coat=0.0,
+                        surface="smooth"),
+}
+
 ROUNDS = {"1": ROUND_ONE, "2": ROUND_TWO, "3": ROUND_THREE, "4": ROUND_FOUR,
-          "5": ROUND_FIVE, "6": ROUND_SIX, "7": ROUND_SEVEN}
-ROUND = os.environ.get("PROBE_ROUND", "7")
+          "5": ROUND_FIVE, "6": ROUND_SIX, "7": ROUND_SEVEN, "8": ROUND_EIGHT,
+          "9": ROUND_NINE}
+ROUND = os.environ.get("PROBE_ROUND", "9")
 STYLES = ROUNDS[ROUND]
 PREFIX = "scene__" if ROUND == "1" else f"r{ROUND}__"
 
@@ -410,6 +501,30 @@ def _cel(mat, bands):
     nt.links.new(mix.outputs["Color"], emit.inputs["Color"])
     nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
     return mat
+
+
+def _ink_weight(style):
+    """Line weight and colour -- the drawn line is a style, not a switch.
+
+    A fine line and a bold one are different art, and until now the probe
+    could only turn the contour on or off. The lineset is built by the scene
+    pack, so this reaches in after `setup` and scales what it made rather
+    than forking a second copy of the ink rules.
+    """
+    scale = style.get("ink_thickness")
+    hex_colour = style.get("ink_hex")
+    if scale is None and hex_colour is None:
+        return
+    view_layer = bpy.context.view_layer
+    for lineset in getattr(view_layer.freestyle_settings, "linesets", []):
+        if scale is not None:
+            lineset.linestyle.thickness *= scale
+            for mod in lineset.linestyle.thickness_modifiers:
+                for attr in ("value_min", "value_max"):
+                    if hasattr(mod, attr):
+                        setattr(mod, attr, getattr(mod, attr) * scale)
+        if hex_colour is not None:
+            lineset.linestyle.color = pack.rgb(hex_colour)
 
 
 def _atmosphere(scene, density, style):
@@ -469,8 +584,13 @@ def apply(style):
         for key, spec in _ORIG_SURFACES.items()
     }
     boost = style.get("sat_boost", 1.0)
+    # `lift` is where a family's whole ramp sits: pushing it down darkens the
+    # shade and deep steps of every colour in the game at once, without
+    # touching a light. That is a palette change, which is what an art style
+    # mostly is.
+    shift = style.get("lift_shift", 0.0)
     palette.FAMILIES = {
-        name: (hue, min(1.0, sat * boost), lift)
+        name: (hue, min(1.0, sat * boost), lift + shift)
         for name, (hue, sat, lift) in _ORIG_FAMILIES.items()
     }
 
@@ -535,6 +655,7 @@ def apply(style):
         volume = style.get("volume")
         if volume:
             _atmosphere(scene, volume, style)
+        _ink_weight(style)
         for obj in scene.objects:
             if obj.type == "LIGHT" and obj.data.type == "SUN":
                 key_hex = style.get("key_hex")

@@ -372,7 +372,18 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     return camera
 
 
-def ground(hex_near: str, hex_far: str = tone("grass", "lit"), centre: float = -48.5,
+# DEFAULT ARGUMENTS ARE EVALUATED AT IMPORT, so a `tone(...)` written as one
+# is a FROZEN COPY of the palette -- the same defect as `from ink import
+# CONTOUR`, in the shape Python makes easiest to write. It went unnoticed
+# because nothing changed the palette at runtime until the style probe tried
+# to: a round that pushed every family's chroma by 1.42 measured the rendered
+# saturation moving from 0.50 to 0.49, because the treeline, the far half of
+# the ground and every flower were painted from tones bound before the boost
+# existed -- and those are most of the frame.
+#
+# `None` and resolve in the body, so the palette in force when the scene is
+# BUILT is the one that gets painted.
+def ground(hex_near: str, hex_far: str | None = None, centre: float = -48.5,
            size: float = 183.0, tooth: float = 26.0, bump: float = 0.10,
            patch: float = 0.16):
     """The ground, as geometry. It receives shadow and it occludes.
@@ -391,6 +402,7 @@ def ground(hex_near: str, hex_far: str = tone("grass", "lit"), centre: float = -
     far edge lands near the top of the frame, with the treeline standing just
     inside it so canopies break the line into sky.
     """
+    hex_far = tone("grass", "lit") if hex_far is None else hex_far
     cx, cy = TURN(0.0, centre)
     bpy.ops.mesh.primitive_plane_add(size=size, location=(cx, cy, 0), rotation=(0, 0, THETA))
     plane = bpy.context.object
@@ -938,7 +950,8 @@ def _bush(x: float, y: float, s: float = 1.0):
                     (r * s, r * 0.85 * s, r * 0.78 * s), lit if i == 3 else dark)
 
 
-def _flowers(x: float, y: float, s: float = 1.0, petal_hex: str = tone("sun", "lit")):
+def _flowers(x: float, y: float, s: float = 1.0, petal_hex: str | None = None):
+    petal_hex = tone("sun", "lit") if petal_hex is None else petal_hex
     petal = pack.material(f"Petal{x:.2f}{y:.2f}", petal_hex, roughness=0.80)
     stem = pack.material(f"Stem{x:.2f}{y:.2f}", tone("grass", "shade"), roughness=0.90)
     for i in range(7):
@@ -1092,8 +1105,10 @@ def _bandstand(x: float, y: float, s: float = 1.0):
     pack.sphere(f"bandfin{x:.1f}", (cx, cy, 5.74 * s), (0.20 * s, 0.20 * s, 0.28 * s), finial)
 
 
-def _tree(x: float, y: float, s: float, canopy: str = tone("foliage", "base"),
-          trunk: str = tone("bark", "base")):
+def _tree(x: float, y: float, s: float, canopy: str | None = None,
+          trunk: str | None = None):
+    canopy = tone("foliage", "base") if canopy is None else canopy
+    trunk = tone("bark", "base") if trunk is None else trunk
     bark = pack.material(f"Bark{x:.1f}{y:.1f}", trunk, roughness=0.92)
     leaf = pack.material(f"Leaf{x:.1f}{y:.1f}", canopy, roughness=0.88)
     leaf_hi = pack.material(f"LeafHi{x:.1f}{y:.1f}", tone("foliage", "lit"), roughness=0.86)
