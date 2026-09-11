@@ -226,9 +226,20 @@ def _ink_pass(scene):
     # stroke on a bench four metres away and on a tuft of grass at the far
     # treeline, and the horizon fills in solid. The first attempt did exactly
     # that -- the treeline rendered as a band of ink with green holes in it.
+    # AND THE FADE HAS TO REACH THE TREELINE, which at 16-to-80 it did not.
+    # The far trees stand about 38 units out, which is a third of the way
+    # along that ramp -- so they were still taking 1.70 of the 2.40, and
+    # adjacent canopies at that weight merge into each other. Measured on the
+    # finest of the four line weights: 18% of the ink in the treeline band was
+    # strokes wider than 14 pixels (a filled-in clump, not a line) against 4
+    # to 5% in the rest of the frame.
+    #
+    # 10-to-48 puts the treeline three quarters along instead, and 0.12 at the
+    # far end is deliberately near-nothing: a horizon is a BAND, and drawing
+    # twenty-seven separate outlines into it is what stops it being one.
     fade = lineset.linestyle.thickness_modifiers.new("depth", type="DISTANCE_FROM_CAMERA")
-    fade.range_min, fade.range_max = 16.0, 80.0
-    fade.value_min, fade.value_max = 2.4, 0.35
+    fade.range_min, fade.range_max = 10.0, 48.0
+    fade.value_min, fade.value_max = 2.4, 0.12
     fade.mapping = "LINEAR"
 
 

@@ -60,7 +60,16 @@ from palette import tone  # noqa: E402
 #: renders are untouched, exactly as they were when the contour went on.
 #:
 #: Flip this to True and the whole game has its edge back.
-CONTOUR = False
+#:
+#: TRUE as of the line-weight round. The operator's earlier "it's too Big
+#: Nate" was a verdict on the weight and on WHERE it was, not on the idea: the
+#: scene plates were carrying an ungated line at full weight (see
+#: `world_scene_pack._ink_pass`) while the loose props had had theirs removed,
+#: so the world was drawn with a heavy edge and inconsistently. At 1.0x the
+#: line measures 4.1 pixels on a 390pt phone and Barkly's own cast contour
+#: measures 4.2 -- the same hand for the dog and for the place he stands in,
+#: which is the whole reason the edge exists.
+CONTOUR = True
 
 #: The world's darkest neutral, and the only colour any edge in the game is.
 INK = tone("ink", "deep")

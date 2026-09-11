@@ -20,6 +20,7 @@ writes to its own directory.
 """
 from __future__ import annotations
 
+import colorsys
 import math
 import os
 import sys
@@ -29,12 +30,36 @@ import bpy
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import palette  # noqa: E402
+from palette import light_hex  # noqa: E402  -- never a typed colour, see _tint
 import world_prop_pack as pack  # noqa: E402
 import world_scene_pack as scenes  # noqa: E402
 import ink  # noqa: E402
 
 OUT = Path(__file__).resolve().parents[2] / "art-review" / "style-probe"
 SCENE = "park"
+
+def _tint(warm: float = 0.0, value: float = 1.0, base: str = "key") -> str:
+    """A variation ON THE PALETTE'S OWN LIGHT -- never a new colour.
+
+    `tests/palette_source.test.ts` fails on a hex literal anywhere in
+    `tools/blender/`, and it is right to: three packs each typing their own
+    sun is exactly how the four locations came to be lit three different ways,
+    and this file sits in that directory like any other. A probe inventing
+    #FFCE86 for "golden" is the same mistake in a dev tool, and a dev tool's
+    colours end up in the game the moment a round is adopted.
+
+    So a warmer or cooler key here is the palette's key, shifted: `warm` moves
+    the hue toward orange and adds chroma, `value` scales brightness. Change
+    the palette and every round follows it.
+    """
+    r, g, b = palette.light_rgb(base)
+    h, sat, val = colorsys.rgb_to_hsv(r, g, b)
+    h = (h - warm * 0.035) % 1.0
+    sat = max(0.0, min(1.0, sat + warm * 0.38))
+    val = max(0.0, min(1.0, val * value))
+    return "#%02X%02X%02X" % tuple(
+        round(c * 255) for c in colorsys.hsv_to_rgb(h, sat, val))
+
 
 #: name -> (label, dials)
 #:
@@ -140,7 +165,7 @@ ROUND_TWO = {
 #: were, so this cannot quietly happen again.
 ROUND_THREE = {
     "1-golden": dict(label="GOLDEN HOUR", elevation=12.0, sun_scale=1.55,
-                     key_hex="#FFCE86", sky_fill=0.06, rim=3.0, ao=(2.6, 1.0),
+                     key_hex=_tint(warm=0.55), sky_fill=0.06, rim=3.0, ao=(2.6, 1.0),
                      sun_angle=1.0, cascade=60.0),
     # sun_scale 1.25 blew 63% of the ground to pure white. A high sun already
     # puts the key nearly normal to a flat field, so the production energy is
@@ -153,16 +178,16 @@ ROUND_THREE = {
                       sky_fill=0.05, elevation=30.0, sun_scale=1.2,
                       sun_angle=0.8, cascade=60.0),
     "5-dusk": dict(label="DUSK, COOL SHADOW", elevation=8.0, sun_scale=1.35,
-                   key_hex="#FFB067", world_hex="#2A3A72", sky_fill=0.34,
+                   key_hex=_tint(warm=0.80, value=0.98), world_hex=_tint(warm=-0.30, value=0.30, base="fill"), sky_fill=0.34,
                    rim=4.0, sun_angle=1.0, cascade=60.0),
     "6-haze": dict(label="ATMOSPHERIC HAZE", volume=0.010, elevation=16.0,
-                   sun_scale=1.9, key_hex="#FFDCA6", sky_fill=0.10,
+                   sun_scale=1.9, key_hex=_tint(warm=0.34), sky_fill=0.10,
                    sun_angle=1.0, cascade=60.0),
     "7-popbright": dict(label="HIGH-KEY POP", elevation=52.0, sun_scale=1.45,
                         sky_fill=0.40, fill_scale=1.8, ao=(1.2, 0.7),
                         sun_angle=2.4),
     "8-storybook": dict(label="STORYBOOK MATTE", elevation=38.0, sun_scale=1.0,
-                        key_hex="#FFE9CB", sky_fill=0.26, fill_scale=2.2,
+                        key_hex=_tint(warm=0.16), sky_fill=0.26, fill_scale=2.2,
                         ao=(3.2, 1.0), sun_angle=3.6, patch=0.30, bump=0.20),
 }
 
@@ -296,7 +321,7 @@ ROUND_SIX = {
     "4-brawl": dict(label="BRAWL: BANDED, LIT, RIMMED", shading="cel",
                     bands=4, roughness=1.0, coat=0.0, surface="smooth",
                     sat_boost=1.24, rim=8.0, elevation=14.0, sun_scale=1.5,
-                    key_hex="#FFCE86", sky_fill=0.07, ao=(2.6, 1.0),
+                    key_hex=_tint(warm=0.55), sky_fill=0.07, ao=(2.6, 1.0),
                     sun_angle=1.0, cascade=60.0),
     "5-candy": dict(label="CANDY GLOSS", roughness=0.13, coat=1.0,
                     surface="smooth", sat_boost=1.30, elevation=72.0,
@@ -304,16 +329,16 @@ ROUND_SIX = {
                     sun_angle=0.8, cascade=60.0),
     "6-watercolour": dict(label="WATERCOLOUR HAZE", roughness=0.92, coat=0.0,
                           surface="smooth", sat_boost=0.66, volume=0.010,
-                          elevation=16.0, sun_scale=1.9, key_hex="#FFDCA6",
+                          elevation=16.0, sun_scale=1.9, key_hex=_tint(warm=0.34),
                           sky_fill=0.10, sun_angle=1.0, cascade=60.0),
     "7-graphic": dict(label="GRAPHIC NOVEL", shading="cel", bands=2,
                       contour=True, roughness=1.0, coat=0.0, surface="smooth",
-                      elevation=8.0, sun_scale=1.35, key_hex="#FFB067",
-                      world_hex="#2A3A72", sky_fill=0.34, rim=4.0,
+                      elevation=8.0, sun_scale=1.35, key_hex=_tint(warm=0.80, value=0.98),
+                      world_hex=_tint(warm=-0.30, value=0.30, base="fill"), sky_fill=0.34, rim=4.0,
                       sun_angle=1.0, cascade=60.0),
     "8-painterly": dict(label="SUNSET PAINTERLY", roughness=0.88, coat=0.0,
                         mottle_scale=3.2, grain_scale=0.32, elevation=12.0,
-                        sun_scale=1.55, key_hex="#FFCE86", sky_fill=0.06,
+                        sun_scale=1.55, key_hex=_tint(warm=0.55), sky_fill=0.06,
                         rim=3.0, ao=(2.6, 1.0), sun_angle=1.0, cascade=60.0),
 }
 
@@ -347,7 +372,7 @@ ROUND_SEVEN = {
     "4-brawl": dict(label="BANDED, SATURATED, RIMMED", shading="cel", bands=4,
                     roughness=1.0, coat=0.0, surface="smooth", sat_boost=1.20,
                     rim=6.5, elevation=30.0, sun_scale=1.15,
-                    key_hex="#FFD9A6", sky_fill=0.13, ao=(2.4, 1.0),
+                    key_hex=_tint(warm=0.36), sky_fill=0.13, ao=(2.4, 1.0),
                     sun_angle=1.0, cascade=60.0),
     "5-candy": dict(label="GLOSS CANDY", roughness=0.15, coat=1.0,
                     surface="smooth", sat_boost=1.26, elevation=44.0,
@@ -358,7 +383,7 @@ ROUND_SEVEN = {
     # what separate "afternoon" from "midday" without dropping the sun to the
     # raking angle that made round six's painterly entry unusable.
     "6-afternoon": dict(label="WARM AFTERNOON", roughness=0.80, coat=0.10,
-                        key_hex="#FFC47E", elevation=24.0, sun_scale=1.42,
+                        key_hex=_tint(warm=0.62), elevation=24.0, sun_scale=1.42,
                         sky_fill=0.09, rim=6.0, ao=(2.9, 1.0), sun_angle=1.0,
                         cascade=60.0, patch=0.26, bump=0.16),
 }
@@ -382,7 +407,7 @@ ROUND_SEVEN = {
 #: has not been tried, and it is the one that separates most of the games
 #: anybody would name as a reference: they differ in what colour the art is,
 #: not in where the sun is.
-FIXED_LIGHT = dict(elevation=34.0, sun_scale=1.10, key_hex="#FFE2B4",
+FIXED_LIGHT = dict(elevation=34.0, sun_scale=1.10, key_hex=light_hex("key"),
                    sky_fill=0.13, fill_scale=0.55, ao=(2.4, 1.0),
                    sun_angle=1.1, cascade=60.0, rim=3.0)
 
@@ -567,7 +592,7 @@ def _atmosphere(scene, density, style):
     bg.inputs["Color"].default_value = (*palette.world_rgb(), 1.0)
     nt.links.new(bg.outputs["Background"], out.inputs["Surface"])
     scatter = nt.nodes.new("ShaderNodeVolumeScatter")
-    scatter.inputs["Color"].default_value = (*pack.rgb(style.get("key_hex", "#FFE6C2")), 1.0)
+    scatter.inputs["Color"].default_value = (*pack.rgb(style.get("key_hex", _tint(warm=0.22))), 1.0)
     scatter.inputs["Density"].default_value = density
     scatter.inputs["Anisotropy"].default_value = 0.45
     nt.links.new(scatter.outputs["Volume"], out.inputs["Volume"])
