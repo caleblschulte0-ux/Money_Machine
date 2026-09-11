@@ -138,12 +138,12 @@
       "displayWidth": 154,
       "anchor": "bottom",
       "form": {
-        "height": 1.763,
-        "parts": 5,
+        "height": 1.498,
+        "parts": 9,
         "widest": 3.412,
         "foot": 3.412,
-        "waist": 3.167,
-        "crown": 3.167
+        "waist": 2.978,
+        "crown": 3.301
       }
     },
     "town/store_coral": {
@@ -255,12 +255,12 @@
       "displayWidth": 74,
       "anchor": "bottom",
       "form": {
-        "height": 2.378,
-        "parts": 6,
-        "widest": 1.76,
+        "height": 2.398,
+        "parts": 9,
+        "widest": 1.963,
         "foot": 1.563,
         "waist": 1.563,
-        "crown": 1.616
+        "crown": 1.963
       }
     },
     "beach/umbrella": {
@@ -268,12 +268,12 @@
       "displayWidth": 152,
       "anchor": "bottom",
       "form": {
-        "height": 4.2,
-        "parts": 6,
-        "widest": 3.3,
+        "height": 4.371,
+        "parts": 23,
+        "widest": 4.372,
         "foot": 0.884,
         "waist": 0.357,
-        "crown": 3.3
+        "crown": 4.372
       }
     },
     "beach/lifeguard": {
