@@ -26,6 +26,7 @@ sentence asked for it:
   sat       mean saturation of the world band.
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -48,6 +49,9 @@ SCENE_MANIFEST = ROOT / "assets" / "world" / "scenes" / "manifest.json"
 #     I.open('/tmp/park.png').convert('RGB')).astype(float)[120:336,4:22
 #     ].mean(axis=1); I.fromarray(a.astype('uint8')[:,None,:]).save(
 #     'scripts/lib/park-sky-strip.png')"
+#: A scene-probe render: `scene__<style>.png` or `r<round>__<style>.png`.
+SCENE_ROUND = re.compile(r"^(scene|r\d+)__")
+
 SKY_STRIP = ROOT / "scripts" / "lib" / "park-sky-strip.png"
 
 #: The phone this sheet imitates: `scene-shot.mjs`'s default 390x844 viewport
@@ -87,9 +91,17 @@ def measure(im):
     r, g, b = band[..., 0], band[..., 1], band[..., 2]
     ground = (g > r + 0.03) & (g > b + 0.03)
     gv = band.max(axis=2)
+    # CLIPPING IS A FINDING, NOT A MISSING MEASUREMENT. `2-noon` in round
+    # three returned no flatness at all, and the reason was not that the
+    # ground could not be found -- 78% of the band is grass -- but that it is
+    # blown to pure white, so nothing ranks above the 55th percentile of
+    # itself. A column that prints "n/a" there hides the very thing that
+    # disqualifies the option. `>=` keeps the measurement working (a fully
+    # clipped ground honestly measures as perfectly flat) and `clip` says why.
+    clip = float((gv[ground] >= 0.99).mean()) if ground.sum() else 0.0
     flat = float("nan")
     if ground.sum() > 2000:
-        lit = ground & (gv > np.percentile(gv[ground], 55))
+        lit = ground & (gv >= np.percentile(gv[ground], 55))
         if lit.sum() > 500:
             # COLOUR distance, not value. The first version of this column
             # measured the value sd of the lit ground and reported 0.0485 ->
@@ -102,6 +114,7 @@ def measure(im):
 
     return {
         "flat": flat,
+        "clip": clip,
         "dark": float((v < 0.25).mean()),
         "ink": _ink_fraction(v),
         "sat": float(sat.mean()),
@@ -177,6 +190,51 @@ def _self_check():
 _self_check()
 
 
+#: The closest any two of round two's options came, as a mean per-channel
+#: difference over the framed tile. The operator's verdict on that round was
+#: *"I can't tell the difference between them"*, so this is the number a
+#: round has to BEAT, not meet.
+TOO_ALIKE = 6.0
+
+
+def _matrix(labels, thumbs):
+    """Print how far apart every pair of styles is, and fail if any are twins.
+
+    Round two shipped eight options of which five sat inside 2% of each other
+    on every column -- and the columns did not catch it, because each column
+    is a summary and two frames can summarise identically while looking
+    different, or differ by a point and look the same. The honest measure of
+    "can I tell these apart" is the distance between the PICTURES.
+
+    Mean absolute per-channel difference over the framed tile: the same thing
+    the eye integrates, in the units the renders are stored in.
+    """
+    arrays = [np.asarray(t.convert("RGB")).astype(float) for t in thumbs]
+    print("\npairwise difference (mean per-channel, 0-255):")
+    header = "".join(f"{l[:7]:>9}" for l in labels)
+    print(f"{'':<12}{header}")
+    worst = (1e9, "", "")
+    for i, li in enumerate(labels):
+        row = ""
+        for j in range(len(labels)):
+            if i == j:
+                row += f"{'-':>9}"
+                continue
+            d = float(np.abs(arrays[i] - arrays[j]).mean())
+            row += f"{d:>9.1f}"
+            if j > i and d < worst[0]:
+                worst = (d, li, labels[j])
+        print(f"{li[:12]:<12}{row}")
+    print(f"\nclosest pair: {worst[1]} vs {worst[2]} at {worst[0]:.1f}")
+    if worst[0] < TOO_ALIKE:
+        sys.exit(
+            f"\nTOO ALIKE: {worst[1]} and {worst[2]} differ by {worst[0]:.1f} "
+            f"of 255, under the {TOO_ALIKE} floor. Round two was shipped with "
+            "options this close and the operator could not tell them apart. "
+            "Move a whole art direction, not a dial."
+        )
+
+
 def _sky_behind(plate):
     """Put the app's real sky behind the plate's transparent top.
 
@@ -248,9 +306,58 @@ def _as_the_app_shows_it(plate, scene="park"):
     return frame
 
 
+def _spread(shots, want):
+    """Pick the `want` renders that are most different FROM EACH OTHER.
+
+    The operator's standing complaint across two rounds is the same one:
+    *"I can't tell the difference between them."* A round is authored by
+    guessing which dials matter, and the guesses have been wrong in a
+    consistent direction -- micro-surface, band count and decimation all
+    measured under the floor. Rather than guess again, this reads every
+    render that exists and chooses the set with the largest minimum pairwise
+    distance, so a sheet of eight is eight things somebody can actually
+    choose between.
+
+    Greedy farthest-point: start from the two furthest apart, then keep
+    adding whichever candidate is furthest from everything already chosen.
+    """
+    thumbs = {}
+    for shot in shots:
+        im = Image.open(shot)
+        thumbs[shot] = np.asarray(
+            _as_the_app_shows_it(im).resize((96, 208), Image.LANCZOS)
+        ).astype(float)
+    keys = list(thumbs)
+    dist = {}
+    for i, a in enumerate(keys):
+        for b in keys[i + 1:]:
+            dist[(a, b)] = dist[(b, a)] = float(np.abs(thumbs[a] - thumbs[b]).mean())
+    first = max(dist, key=dist.get)
+    chosen = [first[0], first[1]]
+    while len(chosen) < min(want, len(keys)):
+        rest = [k for k in keys if k not in chosen]
+        if not rest:
+            break
+        chosen.append(max(rest, key=lambda k: min(dist[(k, c)] for c in chosen)))
+    return sorted(chosen)
+
+
 def main(argv):
-    prefix = (argv[0] if argv else "r2").rstrip("_") + "__"
-    shots = sorted(PROBE.glob(f"{prefix}*.png"))
+    if argv and argv[0] == "--spread":
+        want = int(argv[1]) if len(argv) > 1 and argv[1].isdigit() else 8
+        # SCENE rounds only. This directory also holds the earlier PROP
+        # probe -- a bench and a lamp on a backdrop, named `J-sticker__town
+        # -lamp.png` -- and those glob identically. They are not options: a
+        # prop on a plain field is the test the operator already rejected
+        # ("I need more than a fucking lamp and a bench"), and being wildly
+        # unlike a park they win a farthest-point search every time.
+        shots = _spread(
+            [s for s in sorted(PROBE.glob("*__*.png"))
+             if SCENE_ROUND.match(s.name)], want)
+        prefix = ""
+    else:
+        prefix = (argv[0] if argv else "r2").rstrip("_") + "__"
+        shots = sorted(PROBE.glob(f"{prefix}*.png"))
     if not shots:
         sys.exit(f"no probe renders matching {prefix}*.png in {PROBE}")
 
@@ -262,7 +369,7 @@ def main(argv):
         # in every tile, so measuring him would drag every column toward the
         # same number and flatten exactly the differences being judged.
         stats.append(measure(im))
-        labels.append(shot.stem[len(prefix):])
+        labels.append(shot.stem[len(prefix):] if prefix else shot.stem.replace("__", " "))
         shown = _as_the_app_shows_it(im)
         thumbs.append(shown.resize(
             (tile_w, round(shown.height * tile_w / shown.width)), Image.LANCZOS))
@@ -284,17 +391,21 @@ def main(argv):
         flat = "n/a" if st["flat"] != st["flat"] else f"{st['flat']:.3f}"
         draw.text((x + 2, y + tile_h + 30),
                   f"flat {flat}   dark {st['dark']*100:.0f}%   "
-                  f"ink {st['ink']*100:.1f}%   sat {st['sat']:.2f}",
-                  font=small, fill=(150, 200, 160))
+                  f"ink {st['ink']*100:.1f}%   sat {st['sat']:.2f}"
+                  + (f"   BLOWN {st['clip']*100:.0f}%" if st["clip"] > 0.05 else ""),
+                  font=small,
+                  fill=(235, 150, 120) if st["clip"] > 0.05 else (150, 200, 160))
 
-    out = PROBE / f"sheet-{prefix.rstrip('_')}.png"
+    out = PROBE / (f"sheet-{prefix.rstrip('_')}.png" if prefix else "sheet-spread.png")
     sheet.save(out)
-    print(f"{'style':<14}{'flat':>8}{'dark':>8}{'ink':>8}{'sat':>8}")
+    print(f"{'style':<14}{'flat':>8}{'dark':>8}{'ink':>8}{'sat':>8}{'blown':>8}")
     for label, st in zip(labels, stats):
         flat = "n/a" if st["flat"] != st["flat"] else f"{st['flat']:.4f}"
         print(f"{label:<14}{flat:>8}{st['dark']*100:>7.1f}%"
-              f"{st['ink']*100:>7.1f}%{st['sat']:>8.2f}")
+              f"{st['ink']*100:>7.1f}%{st['sat']:>8.2f}{st['clip']*100:>7.1f}%")
     print(f"\nwrote {out}  ({sheet.width}x{sheet.height})")
+    if "--matrix" in argv:
+        _matrix(labels, thumbs)
 
 
 if __name__ == "__main__":

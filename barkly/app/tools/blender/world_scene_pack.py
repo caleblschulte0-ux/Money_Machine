@@ -44,7 +44,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import light_hex, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import crown, shaft, stack  # noqa: E402  -- and the one place a SHAPE comes from
-from ink import CONTOUR, INK  # noqa: E402  -- and the one place an EDGE comes from
+from ink import INK, contour_on  # noqa: E402  -- and the one place an EDGE comes from
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
@@ -192,11 +192,11 @@ def _ink_pass(scene):
     # `takes_ink()`. This one drew its own line and answered to nobody, which
     # is exactly the second-source-of-truth shape `ink.py` exists to prevent --
     # the file even names its three consumers, and this was one of them.
-    scene.render.use_freestyle = bool(CONTOUR)
+    scene.render.use_freestyle = contour_on()
     global NO_INK
     NO_INK = bpy.data.collections.new("Barkly no ink")
     scene.collection.children.link(NO_INK)
-    if not CONTOUR:
+    if not contour_on():
         return
     scene.render.line_thickness_mode = "ABSOLUTE"
     scene.render.line_thickness = 1.0

@@ -75,6 +75,23 @@ EXEMPT_PREFIXES = ("sky/",)
 EXEMPT_WORDS = ("shadow", "haze", "glow", "surf")
 
 
+def contour_on() -> bool:
+    """Is the drawn edge switched on? A FUNCTION, deliberately.
+
+    `CONTOUR` is a module constant, and `from ink import CONTOUR` binds its
+    VALUE at import -- a frozen copy of the switch in another module, which is
+    the second source of truth this file exists to prevent, just in a shape
+    that reads like an import. The scene pack did exactly that: flipping
+    `ink.CONTOUR` at runtime left its copy on False, so the style probe's
+    "inked storybook" and its "flat cel" rendered to a pairwise difference of
+    0.0 out of 255 -- the same picture, with the line silently missing.
+
+    Every consumer calls this instead, the way `takes_ink` is already called,
+    so there is one switch and nobody holds a copy of it.
+    """
+    return bool(CONTOUR)
+
+
 def takes_ink(path: str) -> bool:
     """Does the prop at this BUILDERS path get an edge at all?"""
     if not CONTOUR:

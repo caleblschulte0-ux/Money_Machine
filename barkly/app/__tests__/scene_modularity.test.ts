@@ -368,13 +368,20 @@ describe('renders record the builder that made them', () => {
       expect(enables.length).toBeGreaterThan(0);
       for (const line of enables) {
         // Either bound to the switch, or to a call that consults it.
-        expect(line).toMatch(/CONTOUR|takes_ink|bool\(enabled\)|enabled/);
+        expect(line).toMatch(/contour_on\(\)|takes_ink|bool\(enabled\)|enabled/);
         expect(line).not.toMatch(/=\s*True\s*$/);
       }
     }
     // And the switch has to be reachable from the scene pack at all.
     const scene = readFileSync(join(__dirname, '..', 'tools', 'blender', 'world_scene_pack.py'), 'utf8');
-    expect(scene).toMatch(/from ink import [^\n]*CONTOUR/);
+    // A FUNCTION, not the constant. `from ink import CONTOUR` binds the
+    // value at import, so the scene pack held a frozen copy of the switch and
+    // flipping `ink.CONTOUR` at runtime did nothing to it -- the probe's
+    // inked and un-inked styles rendered identically, 0.0 apart out of 255.
+    expect(scene).toMatch(/from ink import [^\n]*contour_on/);
+    expect(scene).not.toMatch(/from ink import [^\n]*\bCONTOUR\b/);
+    const inkModule = readFileSync(join(__dirname, '..', 'tools', 'blender', 'ink.py'), 'utf8');
+    expect(inkModule).toMatch(/def contour_on\(/);
     // The contour-off path RETURNS EARLY, and for one render it returned out
     // of `setup()` itself -- so with the line switched off the pack built no
     // camera, no sun and no world, and Blender refused the frame outright.
