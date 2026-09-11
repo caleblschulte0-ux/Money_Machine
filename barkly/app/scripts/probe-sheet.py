@@ -237,7 +237,7 @@ def _usable(labels, stats):
     return bad
 
 
-def _matrix(labels, thumbs):
+def _matrix(labels, thumbs, fail_on_close=True):
     """Print how far apart every pair of styles is, and fail if any are twins.
 
     Round two shipped eight options of which five sat inside 2% of each other
@@ -266,7 +266,7 @@ def _matrix(labels, thumbs):
                 worst = (d, li, labels[j])
         print(f"{li[:12]:<12}{row}")
     print(f"\nclosest pair: {worst[1]} vs {worst[2]} at {worst[0]:.1f}")
-    if worst[0] < TOO_ALIKE:
+    if worst[0] < TOO_ALIKE and fail_on_close:
         sys.exit(
             f"\nTOO ALIKE: {worst[1]} and {worst[2]} differ by {worst[0]:.1f} "
             f"of 255, under the {TOO_ALIKE} floor. Round two was shipped with "
@@ -446,7 +446,13 @@ def main(argv):
     print(f"\nwrote {out}  ({sheet.width}x{sheet.height})")
     if "--matrix" in argv:
         unusable = _usable(labels, stats)
-        _matrix(labels, thumbs)
+        # `--tune`: a deliberate one-axis fine-tune, where neighbours SHOULD
+        # be close. The distance floor exists to stop a round of supposed
+        # directions being padded out; applied to a fine-tune it would push
+        # toward exaggerating the very dial being dialled in. The usability
+        # floor still applies -- a fine-tune can still land somewhere nobody
+        # would ship.
+        _matrix(labels, thumbs, fail_on_close="--tune" not in argv)
         if unusable:
             sys.exit(
                 f"\n{len(unusable)} option(s) above are outside the usable "

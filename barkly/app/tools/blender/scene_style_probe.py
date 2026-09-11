@@ -453,10 +453,30 @@ ROUND_NINE = {
                         surface="smooth"),
 }
 
+#: ROUND TEN -- B'S LINE ON A'S VIBE, and nothing else moved.
+#:
+#: *"I like the lines of 2 with the vibe of number 1."* B carried three
+#: things at once -- the drawn line, cel banding, and a chroma boost -- and
+#: only the first of them was wanted. So this takes A exactly as it is
+#: (smooth gradient shading, the shipping palette, the shipping specular) and
+#: adds the contour, at four weights.
+#:
+#: This is a FINE-TUNE, not a set of directions: one axis, four points on it,
+#: and neighbours on one axis are supposed to be close. `--tune` reports the
+#: distances without failing on them, because the floor that stops a round of
+#: "directions" being padding would be wrong here -- it would push me to
+#: exaggerate the very dial being dialled in.
+ROUND_TEN = {
+    "1-hair": _style("LINE 1.0x (finest)", contour=True, ink_thickness=1.0),
+    "2-fine": _style("LINE 1.4x", contour=True, ink_thickness=1.4),
+    "3-mid": _style("LINE 1.8x (as in B)", contour=True, ink_thickness=1.8),
+    "4-bold": _style("LINE 2.4x (boldest)", contour=True, ink_thickness=2.4),
+}
+
 ROUNDS = {"1": ROUND_ONE, "2": ROUND_TWO, "3": ROUND_THREE, "4": ROUND_FOUR,
           "5": ROUND_FIVE, "6": ROUND_SIX, "7": ROUND_SEVEN, "8": ROUND_EIGHT,
-          "9": ROUND_NINE}
-ROUND = os.environ.get("PROBE_ROUND", "9")
+          "9": ROUND_NINE, "10": ROUND_TEN}
+ROUND = os.environ.get("PROBE_ROUND", "10")
 STYLES = ROUNDS[ROUND]
 PREFIX = "scene__" if ROUND == "1" else f"r{ROUND}__"
 
