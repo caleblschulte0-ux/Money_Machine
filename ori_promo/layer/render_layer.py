@@ -68,6 +68,17 @@ RAW = "../raw"
 HERO_SRC = os.path.join(_HERE, "..", "ai", "hero", "glasses_hero_chatgpt.jpg")
 WORN_SRC = os.path.join(_HERE, "..", "ai", "worn", "product_worn_falls_park_plate_chatgpt.jpg")
 ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_falls_visualization_r172_chatgpt.jpg")
+# r210: hook gets its own bespoke plate (ChatGPT's r209 delivery) matching
+# the exact real railing/two-sign overlook hook's own footage uses, rather
+# than sharing ICEAGE_SRC with examples_ice's totally different parapet/
+# rapids vantage -- r207's whole complaint was this SAME image being reused
+# across two unrelated real backgrounds. examples_ice keeps ICEAGE_SRC
+# unchanged: r209's own "examples" and "borrow/worn" generations were never
+# delivered as usable standalone plates (only baked into a mockup collage
+# with a fake AR-window graphic already burned in) and the "borrow" one
+# used an unrelated woman, not the actual wearer -- both rejected, see
+# r210's own report; a corrected re-request went out the same round.
+HOOK_ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_hook_railing_r209_chatgpt.jpg")
 DAK_SRC = os.path.join(_HERE, "..", "raw", "IMG_DAK1.MOV")
 
 
@@ -244,7 +255,7 @@ SOURCE_READERS = {
     # 0.5s (not 0.0s) skips a finger-over-lens artifact in the first
     # ~0.4s of the raw clip.
     "hook_world": lambda: read_clip("6790", 0.5, 8.0),
-    "hook_layer": lambda: build_photo_zoom(ICEAGE_SRC, 8.0, cap=1.06),
+    "hook_layer": lambda: build_photo_zoom(HOOK_ICEAGE_SRC, 8.0, cap=1.06),
     "borrow_hero": lambda: build_photo_zoom(HERO_SRC, 5.5, cap=1.05),
     "borrow_worn": lambda: build_photo_zoom(WORN_SRC, 5.0, cap=1.05),
     # r199: 12.0-20.0s and 20.0-29.5s of IMG_6794 -- continuing directly
