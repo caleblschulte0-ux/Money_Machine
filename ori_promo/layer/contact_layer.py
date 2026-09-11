@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
-"""r214 evidence pack: full-film contact sheet for v37 "The World / The
-Layer". Direct operator feedback on the shipped r213 hook frame: "not
-seamless... the puzzle piece don't match." A first attempt this round
-(widening/blurring the window's edge) was explicitly rejected -- "don't
-soften the edges... you're trying to cut the edges to make it fit."
-Correct: no edge treatment fixes content that doesn't belong. Root
-cause found by direct pixel inspection of the actual rendered boundary:
-the accepted r209 hook plate has its OWN railing/sign-stand baked in,
-generated at a completely different angle than the real one -- two
-differently-angled railings sitting on top of each other at the
-boundary, visibly failing to connect. Fixed by re-cropping that same
-plate to exclude its own conflicting railing entirely (mammoths/falls/
-skyline only, verified clean), so the window shows content with nothing
-left to fail to line up -- its edge now meets the one real railing,
-which was already close. Also reverted the rejected feather-widen/blur,
-and (independently, not itself the fix, kept because it's still
-correct) grades the window's content toward the real scene's own
-ambient color instead of a fixed cool push, and caps the corner-
-bracket/rim HUD well short of full strength so it doesn't stay a bold
-frame for the whole hold.
-Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208/r211/r213.
+"""r215 evidence pack: full-film contact sheet for v37 "The World / The
+Layer". Operator, on the r214 delivery: "what are you not getting...
+this should be seamless except for the little red lines." Measured the
+actual rendered pixels rather than trusting the r214 fix: the window's
+own sky was ~14 values BRIGHTER than the real sky directly above it,
+and ~25-30 values darker than the real sky beside it -- a real,
+measurable mismatch, not a perception problem. Root cause: r214's
+ambient-color sample averaged a ring around all four sides of the
+window, including the band BELOW it -- which for every current call
+site is the real railing/structure, not sky, contaminating the
+"ambient" target with non-sky pixels; and it compared that target
+against the crop's own full mixed average (sky+subject+background
+together), not sky-to-sky. Fixed: ambient now sampled ONLY from the
+clean band directly above the window, compared against the crop's own
+top ~35% (its own sky region specifically), applied at a much stronger
+blend now that the target is actually correct. Verified directly:
+zoomed to the pixel level at the boundary and confirmed no visible
+seam in the sky.
+Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208/r211/r213/r214.
 """
 import subprocess
 
@@ -27,7 +25,7 @@ import cv2
 import numpy as np
 
 W, H = 1920, 1080
-MASTER = "../out/ORI_WorldLayer_r214_final_master.mp4"
+MASTER = "../out/ORI_WorldLayer_r215_final_master.mp4"
 SECTION_BOUNDS = [0.0, 8.0, 20.0, 32.0, 40.0, 49.5, 54.0, 66.0, 74.0]
 EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
@@ -87,7 +85,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r214__claude__v37_norail_seam_fix__contact.png", sheet)
+    cv2.imwrite("r215__claude__v37_ambient_match_fix__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 

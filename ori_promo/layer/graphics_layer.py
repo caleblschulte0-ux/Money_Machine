@@ -301,30 +301,39 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
     #      brackets/rim are capped well short of full strength (see
     #      below) so they read as a brief focusing cue, not a sustained
     #      frame around the picture.
+    # r215 (operator, again, on the r214 delivery: measured the actual
+    # rendered pixels rather than trusting the fix -- the box's own sky
+    # was ~14 values BRIGHTER than the real sky directly above it, and
+    # ~25-30 darker than the real sky beside it: a real, measurable
+    # color mismatch, not a perception problem). The bug: the r214
+    # ambient sample averaged a ring around ALL FOUR sides of the
+    # window, including the band BELOW it -- which for every current
+    # call site is the real railing (dark green/black), not sky. That
+    # contaminated the "ambient" target with non-sky pixels, so the
+    # correction pulled toward a muddy, inconsistent average instead of
+    # the clean sky actually visible next to the box. Also, comparing
+    # the correction to the CROP'S OWN full-frame mean (sky + mammoths +
+    # trees + city all mixed together) compared two different kinds of
+    # average, not sky-to-sky.
+    # Fixed: ambient sampled ONLY from the band directly ABOVE the
+    # window (reliably clean sky at every call site), compared against
+    # the CROP'S OWN top ~35% (its own sky region, not its full mixed
+    # average) -- a genuine sky-to-sky match -- then applied at a much
+    # stronger blend now that the target is actually correct.
     world_u8 = np.clip(np.asarray(world_bgr, dtype=np.float32), 0, 255).astype(np.uint8)
     world_rgb = world_u8[:, :, ::-1].astype(np.float32)
-    band = 48
-    ry0, ry1 = max(0, wy - band), min(Hf, wy + wh + band)
-    rx0, rx1 = max(0, wx - band), min(Wf, wx + ww + band)
-    samples = []
-    if wy - band >= 0:
-        samples.append(world_rgb[wy - band:wy, rx0:rx1].reshape(-1, 3))
-    if wy + wh + band <= Hf:
-        samples.append(world_rgb[wy + wh:wy + wh + band, rx0:rx1].reshape(-1, 3))
-    if wx - band >= 0:
-        samples.append(world_rgb[ry0:ry1, wx - band:wx].reshape(-1, 3))
-    if wx + ww + band <= Wf:
-        samples.append(world_rgb[ry0:ry1, wx + ww:wx + ww + band].reshape(-1, 3))
-    ring = np.concatenate(samples) if samples else world_rgb.reshape(-1, 3)
-    ambient = ring.mean(axis=0)
+    band = 60
+    y0 = max(0, wy - band)
+    if y0 < wy:
+        ambient = world_rgb[y0:wy, wx:wx + ww].reshape(-1, 3).mean(axis=0)
+    else:
+        ambient = world_rgb[max(0, wy - 1):wy, wx:wx + ww].reshape(-1, 3).mean(axis=0)
 
     crop_rgb = np.asarray(crop.convert("RGB"), dtype=np.float32)
-    crop_mean = np.maximum(crop_rgb.reshape(-1, 3).mean(axis=0), 1.0)
-    # per-channel gain toward the real scene's ambient tone, blended at
-    # 45% -- enough to feel like the same light, not so much the
-    # visualization's own content (snow, sky, product color) washes out.
-    gain = np.clip(ambient / crop_mean, 0.7, 1.5)
-    crop_rgb = np.clip(crop_rgb * (0.55 + 0.45 * gain[None, None, :]), 0, 255)
+    sky_rows = max(1, int(wh * 0.35))
+    crop_sky_mean = np.maximum(crop_rgb[:sky_rows].reshape(-1, 3).mean(axis=0), 1.0)
+    gain = np.clip(ambient / crop_sky_mean, 0.6, 1.8)
+    crop_rgb = np.clip(crop_rgb * (0.15 + 0.85 * gain[None, None, :]), 0, 255)
     crop = Image.fromarray(crop_rgb.astype(np.uint8), mode="RGB").convert("RGBA")
 
     edge = max(16, int(min(ww, wh) * 0.14))
