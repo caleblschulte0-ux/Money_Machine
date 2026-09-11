@@ -478,7 +478,14 @@ def build_examples_audio():
     out = []
     for i in range(n):
         t = i / FPS
-        img = G.full_bleed(still)
+        # r208: this was a single frame held completely static for all
+        # 4.5s -- the one section in the film with LESS motion than
+        # loop had before r193's fix (loop was at least real footage;
+        # this was one frame from the start). Same gentle continuous
+        # push-in r193 already established for loop, scaled to this
+        # section's own duration.
+        frame = _zoom_frame(still, 1.0 + 0.07 * (t / seg_dur))
+        img = G.full_bleed(frame)
         if t >= 1.0:
             k = G.fade_k(t - 1.0, seg_dur - 1.0, in_t=0.4, out_margin=0.0, no_out=True)
             phase = ((t - 1.0) % 1.2) / 1.2

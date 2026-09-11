@@ -174,6 +174,12 @@ STRUCTURE = {
         "synchronized-audio visual, not a wipe) -- no disclosure tag, "
         "since this is a real-footage still, not fabricated imagery",
         "18.7-22.0s caption \"SPATIAL AUDIO, SYNCHRONIZED\"",
+        "17.5-22.0s r208: gentle continuous push-in (1.00x -> 1.07x "
+        "across the part's own 4.5s), the same device r193 established "
+        "for loop -- this still was previously held perfectly static "
+        "for its whole duration, the one section with LESS motion than "
+        "loop had before r193 (loop was at least real footage; this "
+        "was one frame from the very start)",
         "Durations 8.0 / 9.5 / 4.5s (including each part's own reset) "
         "are still distinct -- the unequal rhythm r176/r178/r184 all "
         "require is unchanged in spirit, applied with three genuinely "
@@ -657,6 +663,50 @@ def main():
              "entirely (screen recordings). Those remain a genuine "
              "capture gap; see r203__claude__v37_new_capture_brief.md "
              "for exactly what new footage would resolve it.")
+    L.append("")
+    L.append("R204-R206 -- CHATGPT CONFIRMS R203, REDUCES TO AN OPERATOR "
+             "CHOICE, THEN CONFIRMS THE WAIT STATE")
+    L.append("  r204 passed the hook fix and the audit outright, but "
+             "caught a real contradiction in r203's own capture brief "
+             "(its own section list totaled six clips while its "
+             "technical summary said four minimum/five total). r205 "
+             "corrected this with no render -- ChatGPT explicitly said "
+             "not to touch the source library or compositing again -- "
+             "superseding the r203 brief with the minimum real ask: two "
+             "staged setups (borrow, examples), three takes each. r206 "
+             "confirmed the correction and reduced the whole thread to "
+             "the operator's exact binary choice (provide the footage, "
+             "or accept the mismatch and freeze at r203), instructing "
+             "Claude to do nothing further until one of those happens. "
+             "Both remain open as of this round; r208 below is "
+             "independent of that decision and doesn't require it "
+             "resolved first.")
+    L.append("")
+    L.append("R208 -- SELF-DIRECTED CRAFT PASS: THE STATIC SPATIAL-AUDIO "
+             "STILL")
+    L.append("  Not a response to a flagged review finding -- the "
+             "operator asked to keep improving the film while r206's "
+             "capture decision and r207's bespoke-AI-image request "
+             "(sent to ChatGPT, seeking shot-matched Ice Age/hardware/ "
+             "software plates in place of the current mismatched/reused "
+             "generic ones -- see r207__claude__bespoke_ai_image_request.md) "
+             "both sit outside what Claude can resolve alone. A fresh "
+             "frame-by-frame re-watch of the whole film found one real, "
+             "previously uncaught defect squarely inside what Claude "
+             "CAN fix without new footage or new imagery: examples_audio "
+             "(17.5-22.0s, the spatial-audio beat) was a single frame, "
+             "grabbed once and held perfectly static for its entire "
+             "4.5s -- the same 'zero camera motion' defect r193 found "
+             "and fixed for loop, just never caught here because this "
+             "section was never even real video to begin with, only a "
+             "still. build_examples_audio() now applies the identical "
+             "gentle 1.00x->1.07x continuous push-in r193 established "
+             "for loop, scaled to this part's own duration. This is the "
+             "only change this round -- no footage swap, no wording, no "
+             "disclosure, no timing, no score/mix change, and the "
+             "74.000s runtime is unchanged; the full-film contact sheet "
+             "was re-reviewed end to end and shows no regression "
+             "elsewhere.")
     L.append("")
     L.append("SOUND")
     L.append("  r195: narration plus a synthesized score (score_layer.py) "
