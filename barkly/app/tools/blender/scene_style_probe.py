@@ -317,9 +317,55 @@ ROUND_SIX = {
                         rim=3.0, ao=(2.6, 1.0), sun_angle=1.0, cascade=60.0),
 }
 
+#: ROUND SEVEN -- SIX THAT ARE ALL CANDIDATES.
+#:
+#: Round six cleared the distance bar and the operator threw out half of it:
+#: *"watercolour all the way sucks... why the fuck is that just getting raped
+#: by the sun... it has to be something we could actually use. Give me good
+#: ones."* He was right, and `probe-sheet --matrix` now agrees with him
+#: independently -- its usability floor flags the fog-washed entry (no darks
+#: at all), the desaturated one, and both of the ones raked by a sub-15-degree
+#: sun. Being far from the other seven was never the same as being a
+#: candidate.
+#:
+#: So everything here stays inside the band that produces a usable frame:
+#: real cast shadows, no volumetric haze, the sun between 24 and 50 degrees,
+#: nothing clipped. The variety comes from the levers that survive that
+#: constraint -- banding, the drawn line, chroma, gloss, and a rim -- which
+#: round five measured as the ones with area behind them anyway.
+ROUND_SEVEN = {
+    "1-soft": dict(label="SOFT REALIST (ships now)", **LIT),
+    "2-storefront": dict(label="CEL, BRIGHT", shading="cel", bands=3,
+                         roughness=1.0, coat=0.0, surface="smooth",
+                         elevation=46.0, sun_scale=0.82, sky_fill=0.30,
+                         fill_scale=1.5, ao=(1.6, 0.9), sun_angle=1.6,
+                         cascade=60.0),
+    "3-inked": dict(label="CEL + DRAWN LINE", shading="cel", bands=3,
+                    contour=True, roughness=1.0, coat=0.0, surface="smooth",
+                    elevation=34.0, sun_scale=1.05, sky_fill=0.17,
+                    ao=(2.2, 1.0), sun_angle=1.2, cascade=60.0),
+    "4-brawl": dict(label="BANDED, SATURATED, RIMMED", shading="cel", bands=4,
+                    roughness=1.0, coat=0.0, surface="smooth", sat_boost=1.20,
+                    rim=6.5, elevation=30.0, sun_scale=1.15,
+                    key_hex="#FFD9A6", sky_fill=0.13, ao=(2.4, 1.0),
+                    sun_angle=1.0, cascade=60.0),
+    "5-candy": dict(label="GLOSS CANDY", roughness=0.15, coat=1.0,
+                    surface="smooth", sat_boost=1.26, elevation=44.0,
+                    sun_scale=0.90, sky_fill=0.24, ao=(1.8, 1.0),
+                    sun_angle=1.2, cascade=60.0),
+    # Landed 6.0 from the baseline on its first render -- exactly the floor,
+    # which is a pass on a technicality. A warmer key and a darker sky are
+    # what separate "afternoon" from "midday" without dropping the sun to the
+    # raking angle that made round six's painterly entry unusable.
+    "6-afternoon": dict(label="WARM AFTERNOON", roughness=0.80, coat=0.10,
+                        key_hex="#FFC47E", elevation=24.0, sun_scale=1.42,
+                        sky_fill=0.09, rim=6.0, ao=(2.9, 1.0), sun_angle=1.0,
+                        cascade=60.0, patch=0.26, bump=0.16),
+}
+
 ROUNDS = {"1": ROUND_ONE, "2": ROUND_TWO, "3": ROUND_THREE, "4": ROUND_FOUR,
-          "5": ROUND_FIVE, "6": ROUND_SIX}
-ROUND = os.environ.get("PROBE_ROUND", "6")
+          "5": ROUND_FIVE, "6": ROUND_SIX, "7": ROUND_SEVEN}
+ROUND = os.environ.get("PROBE_ROUND", "7")
 STYLES = ROUNDS[ROUND]
 PREFIX = "scene__" if ROUND == "1" else f"r{ROUND}__"
 

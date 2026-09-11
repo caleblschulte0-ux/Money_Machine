@@ -998,14 +998,70 @@ def _bandstand(x: float, y: float, s: float = 1.0):
     finial = pack.material(f"Band finial{x:.1f}", tone("sun", "lit"), roughness=0.60)
 
     cx, cy = TURN(x, y)
-    pack.cylinder(f"bandbase{x:.1f}", (cx, cy, 0.22 * s), 3.1 * s, 0.44 * s, base, vertices=24)
-    pack.cylinder(f"bandstep{x:.1f}", (cx, cy, 0.06 * s), 3.5 * s, 0.12 * s, base, vertices=24)
+    stone = pack.material(f"Band stone{x:.1f}", tone("stone", "base"), roughness=0.90)
+
+    # THE DECK, and it needs to MEET THE GROUND.
+    #
+    # It was two stacked discs, which from this camera is a tan plate floating
+    # over the grass with the path running under it -- and because the path
+    # recedes straight away from the deck's centre, the two together read as a
+    # trunk with a canopy on top. The park's landmark looked like a tree.
+    #
+    # A plinth that widens downward and three real steps on the camera side
+    # are what turn a floating disc into a building standing on the ground.
+    pack.cylinder(f"bandbase{x:.1f}", (cx, cy, 0.30 * s), 3.05 * s, 0.60 * s, base, vertices=24)
+    pack.cylinder(f"bandplinth{x:.1f}", (cx, cy, 0.09 * s), 3.34 * s, 0.18 * s, stone, vertices=24)
+    for i, (w, depth, z) in enumerate(((1.55, 0.62, 0.42), (1.75, 0.62, 0.26),
+                                       (1.95, 0.62, 0.10))):
+        sx, sy = TURN(x, y - (2.95 + i * 0.52) * s)
+        pack.cube(f"bandstep{x:.1f}{i}", (sx, sy, z * s),
+                  (w * s, depth * s, (z + 0.09) * s), stone, rotation=(0, 0, THETA))
+
+    # THE COLUMNS. Base, shaft, capital -- and the capital is the half of it
+    # that was missing. A tapered cone standing on a disc with nothing on top
+    # is a fang; what says "column" is that it visibly CARRIES something, and
+    # that is a wider block at the head taking the ring above it.
     for i in range(6):
         a = i / 6.0 * math.tau + 0.26
-        px, py = TURN(x + math.cos(a) * 2.5 * s, y + math.sin(a) * 2.5 * s)
-        pack.cone(f"bandpost{x:.1f}{i}", (px, py, 1.78 * s), 0.28 * s, shaft(0.28 * s), 2.76 * s, post, vertices=12)
-        pack.cylinder(f"bandfoot{x:.1f}{i}", (px, py, 0.52 * s), 0.40 * s, 0.30 * s, post, vertices=12, taper=0.78)
-    pack.cylinder(f"bandring{x:.1f}", (cx, cy, 3.18 * s), 2.72 * s, 0.22 * s, trim, vertices=24)
+        px, py = TURN(x + math.cos(a) * 2.42 * s, y + math.sin(a) * 2.42 * s)
+        pack.cylinder(f"bandfoot{x:.1f}{i}", (px, py, 0.72 * s), 0.34 * s, 0.26 * s,
+                      post, vertices=12, taper=0.86)
+        # Barely tapered: 0.28 -> 0.25 over its length. `shaft()` took it to a
+        # third of its base, which is a spike, not a post.
+        pack.cylinder(f"bandpost{x:.1f}{i}", (px, py, 1.96 * s), 0.26 * s, 2.22 * s,
+                      post, vertices=12, taper=0.90)
+        pack.cylinder(f"bandcap{x:.1f}{i}", (px, py, 3.18 * s), 0.35 * s, 0.24 * s,
+                      post, vertices=12, taper=1.0)
+
+    # THE BALUSTRADE, which did not exist. The code that claimed to build it
+    # put six short cylinders AT the six post positions -- inside the posts,
+    # spanning nothing, invisible in every render since. A railing is the
+    # thing between two posts, so it is built from the CHORD: a panel at the
+    # midpoint of each adjacent pair, turned to lie along it, with a rail over
+    # it. That is also what makes the bandstand read as enclosed below and
+    # open above, which is the silhouette the docstring above promises.
+    step = math.tau / 6.0
+    for i in range(6):
+        a0 = i * step + 0.26
+        a1 = a0 + step
+        mid = (a0 + a1) / 2.0
+        # The chord's midpoint sits inside the post circle by cos(half-angle).
+        r = 2.42 * s * math.cos(step / 2.0)
+        mx, my = TURN(x + math.cos(mid) * r, y + math.sin(mid) * r)
+        half = 2.42 * s * math.sin(step / 2.0)
+        yaw = THETA + mid + math.pi / 2.0
+        pack.cube(f"bandpanel{x:.1f}{i}", (mx, my, 1.06 * s),
+                  (half * 0.92, 0.08 * s, 0.46 * s), trim, rotation=(0, 0, yaw))
+        # The rail's own yaw is `yaw - 90`, not `yaw`, and the first render
+        # showed exactly why: a cylinder points along Z, tipping it by 90
+        # degrees about X lays it along Y, and the Z rotation that follows
+        # then puts it at yaw PLUS ninety. Handed the panel's yaw it came out
+        # radial -- six battering rams sticking out of the bandstand.
+        pack.cylinder(f"bandrail{x:.1f}{i}", (mx, my, 1.58 * s), 0.09 * s, half * 1.92,
+                      post, rotation=(math.pi / 2, 0, yaw - math.pi / 2),
+                      vertices=10, taper=1.0)
+
+    pack.cylinder(f"bandring{x:.1f}", (cx, cy, 3.40 * s), 2.66 * s, 0.24 * s, trim, vertices=24)
     # THE ROOF HAS THICKNESS AND AN EAVE, because a cone has neither.
     #
     # This was one 6-sided cone: a hexagonal pyramid whose rim comes to a
@@ -1015,25 +1071,25 @@ def _bandstand(x: float, y: float, s: float = 1.0):
     # or light: every part of the fountain is a closed form with a rolled edge,
     # and this was a folded sheet of paper.
     #
-    # Three parts now. A wider cone for the eave, a short cylinder under its
-    # rim that gives the edge a real face to catch light on, and the cone
-    # itself sitting on top. The eave overhangs the posts by 0.62 rather than
-    # 0.23, which is what makes a roof read as sheltering something.
-    # PITCH, not just width. The first version widened the cone to 3.20 and
-    # kept its old depth, which turned it into a saucer: a roof reads as a
-    # roof by its SLOPE, and the eave is what it slopes down to. 3.05 with a
-    # deeper cone gives both -- still a 0.55 overhang past the posts, twice
-    # what it had, without flattening the pitch to get there.
-    pack.cylinder(f"bandeave{x:.1f}", (cx, cy, 3.44 * s), 3.05 * s, 0.28 * s, roof,
+    # Three parts. A wider cone for the eave, a short cylinder under its rim
+    # that gives the edge a real face to catch light on, and the cone itself
+    # sitting on top. PITCH, not just width: the first version widened the
+    # cone and kept its old depth, which turned it into a saucer.
+    pack.cylinder(f"bandeave{x:.1f}", (cx, cy, 3.66 * s), 3.05 * s, 0.30 * s, roof,
                   vertices=6, taper=0.95)
-    pack.cone(f"bandroof{x:.1f}", (cx, cy, 4.42 * s), 2.92 * s, 0.20 * s, 1.92 * s, roof, vertices=6)
-    pack.sphere(f"bandfin{x:.1f}", (cx, cy, 5.50 * s), (0.20 * s, 0.20 * s, 0.28 * s), finial)
-    # A railing between the posts, which is what stops it reading as a canopy
-    # on sticks: a bandstand is enclosed at the bottom and open at the top.
+    pack.cone(f"bandroof{x:.1f}", (cx, cy, 4.66 * s), 2.92 * s, 0.20 * s, 1.92 * s, roof, vertices=6)
+    # Hip ribs down the six seams. A flat-shaded pyramid reads as a paper
+    # pentagon at this size -- the flat-cel style probe made that plain -- and
+    # a rib per seam is what gives the roof edges of its own to catch light on
+    # rather than relying on the facets happening to face differently.
     for i in range(6):
-        a = i / 6.0 * math.tau + 0.26
-        rx, ry = TURN(x + math.cos(a) * 2.5 * s, y + math.sin(a) * 2.5 * s)
-        pack.cylinder(f"bandrail{x:.1f}{i}", (rx, ry, 1.08 * s), 0.19 * s, 0.44 * s, trim, vertices=10, taper=0.92)
+        a = i / 6.0 * math.tau
+        rr = 2.98 * s * 0.5
+        rx, ry = TURN(x + math.cos(a) * rr, y + math.sin(a) * rr)
+        pack.cube(f"bandrib{x:.1f}{i}", (rx, ry, 4.62 * s),
+                  (0.07 * s, 1.55 * s, 0.07 * s),
+                  trim, rotation=(math.atan2(1.92 * s, 2.92 * s), 0, THETA + a + math.pi / 2))
+    pack.sphere(f"bandfin{x:.1f}", (cx, cy, 5.74 * s), (0.20 * s, 0.20 * s, 0.28 * s), finial)
 
 
 def _tree(x: float, y: float, s: float, canopy: str = tone("foliage", "base"),

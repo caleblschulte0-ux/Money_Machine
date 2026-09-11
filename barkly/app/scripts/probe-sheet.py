@@ -197,6 +197,46 @@ _self_check()
 TOO_ALIKE = 6.0
 
 
+#: WHAT MAKES AN OPTION SHIPPABLE, as opposed to merely different.
+#:
+#: A round was once judged only on how far apart its entries were, and the
+#: operator's answer was the right one: *"it has to be able to be something we
+#: could actually use... give me good ones."* Distance was a necessary bar and
+#: I let it become the only one, so the sheet offered a fog-washed frame, a
+#: flat-cel one with the light switched off, and one raked by an 8-degree sun
+#: that blew its highlights and crushed everything else. All three were
+#: comfortably far from the others and none of them was a candidate.
+#:
+#: These are the floors an entry has to clear to be shown as a choice. They
+#: are deliberately wide -- this is a "would anyone ship this" bar, not a
+#: taste bar, and taste is the operator's call, not the tool's.
+USABLE = {
+    # Below this the frame has no darks and reads as washed out; above it the
+    # picture is mostly shadow and the subject is lost.
+    "dark": (0.12, 0.48),
+    # Chroma. The watercolour entry came in under this with its fog on.
+    "sat": (0.42, 0.70),
+    # Highlights with nowhere to go. Two entries clipped a quarter of frame.
+    "clip": (0.0, 0.02),
+}
+
+
+def _usable(labels, stats):
+    """Refuse to present an option nobody would ship."""
+    bad = []
+    for label, st in zip(labels, stats):
+        for key, (lo, hi) in USABLE.items():
+            value = st[key]
+            if value != value:
+                continue
+            if not lo <= value <= hi:
+                bad.append(f"  {label}: {key} {value:.3f} outside {lo:.2f}-{hi:.2f}")
+    if bad:
+        print("\nNOT SHIPPABLE:")
+        print("\n".join(bad))
+    return bad
+
+
 def _matrix(labels, thumbs):
     """Print how far apart every pair of styles is, and fail if any are twins.
 
@@ -405,7 +445,15 @@ def main(argv):
               f"{st['ink']*100:>7.1f}%{st['sat']:>8.2f}{st['clip']*100:>7.1f}%")
     print(f"\nwrote {out}  ({sheet.width}x{sheet.height})")
     if "--matrix" in argv:
+        unusable = _usable(labels, stats)
         _matrix(labels, thumbs)
+        if unusable:
+            sys.exit(
+                f"\n{len(unusable)} option(s) above are outside the usable "
+                "band. Being far from the other entries is not the same as "
+                "being a candidate -- fix or drop them before presenting the "
+                "round as a set of choices."
+            )
 
 
 if __name__ == "__main__":
