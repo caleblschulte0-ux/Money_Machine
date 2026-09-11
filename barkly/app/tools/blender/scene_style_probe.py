@@ -21,6 +21,7 @@ writes to its own directory.
 from __future__ import annotations
 
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -42,7 +43,14 @@ SCENE = "park"
 #: `ao`         (distance, factor) for contact occlusion
 #: `shading`    "default" or "cel"
 #: `sun_scale`  multiplier on the key
-STYLES = {
+#: `sun_angle`  the sun's angular diameter in degrees -- how soft a cast
+#:              shadow's edge grows as it runs away from what casts it
+#: `cascade`    shadow cascade max distance: how many texels the sun spends
+#:              on the part of the scene the camera can actually see
+#: `patch`      ground colour-patch frequency, cycles per world unit
+#: `bump`       ground relief strength
+#: `elevation`  sun height for this scene, in degrees
+ROUND_ONE = {
     "1-now": dict(label="AS IT SHIPS NOW"),
     "2-inked": dict(label="OUTLINE BACK ON", contour=True),
     "3-contrast": dict(label="HIGH CONTRAST + RIM", fill_scale=0.30, rim=5.0,
@@ -53,8 +61,63 @@ STYLES = {
                      rim=2.5, elevation=18.0),
 }
 
+#: ROUND TWO. The operator picked #3 out of round one -- *"this is the best but
+#: there are still leaps and bounds that need to be made and the shading
+#: sucks"* -- so every entry below INHERITS #3's rig and moves one thing.
+#:
+#: Two defects were fixed at source before this round rather than offered as
+#: choices, because neither is a matter of taste:
+#:
+#:   * the contour was still on. `world_scene_pack` set `use_freestyle = True`
+#:     unconditionally, so round one's "outline off" and "outline on" rendered
+#:     IDENTICALLY (measured: mean 0.000/255) and every scene the operator
+#:     judged still carried a heavy black edge he had already rejected.
+#:   * the ground was one flat colour. Its noise ramp ran on GENERATED
+#:     coordinates across a 183-unit plane, so the visible frame crossed a
+#:     fifth of one cycle: open sunlit grass held a value sd of 0.0186 over
+#:     91,000 pixels. That is the "flat green", and it was albedo, not light.
+#:
+#: What is left to judge is the SHADING, which is what he actually said.
+BASE = dict(fill_scale=0.30, rim=5.0, ao=(2.4, 1.0), sun_scale=1.15)
+
+
+def _v(label, **dials):
+    return dict(BASE, label=label, **dials)
+
+
+ROUND_TWO = {
+    # The control: round one's winner, with the two defects above repaired.
+    "1-fixed": _v("#3 WITH THE TWO BUGS FIXED"),
+    # A cast shadow should have a SHAPE. At a 3.2-degree sun the penumbra
+    # grows about 56mm per metre of run, and at 26 degrees a tree's shadow
+    # runs twice its height -- so the far end of every shadow is a smudge.
+    "2-crisp": _v("CRISP SHADOWS", sun_angle=1.0, cascade=60.0),
+    # The opposite reading: keep them soft but give them somewhere to be, by
+    # spending the sun's texels on the visible scene instead of 200 units.
+    "3-defined": _v("SOFT BUT RESOLVED", sun_angle=2.2, cascade=45.0),
+    # A hard terminator over the contrast rig -- the toon reading.
+    "4-toon": _v("CEL OVER CONTRAST", shading="cel", bands=3, sun_angle=1.0,
+                 cascade=60.0),
+    "5-toon4": _v("CEL, FOUR BANDS", shading="cel", bands=4, sun_angle=1.4,
+                  cascade=60.0),
+    # Ground that carries its own value, not just the light landing on it.
+    "6-terrain": _v("GROUND WITH TERRAIN IN IT", patch=0.34, bump=0.22,
+                    sun_angle=1.0, cascade=60.0),
+    # Deeper contact darks: the thing that makes a form sit ON something.
+    "7-contact": _v("DEEP CONTACT SHADOW", ao=(4.0, 1.0), fill_scale=0.22,
+                    sun_angle=1.0, cascade=60.0),
+    # Late afternoon, crisp: long shapes with edges.
+    "8-lowsun": _v("LOW SUN, CRISP", elevation=19.0, sun_angle=0.9,
+                   cascade=60.0, sun_scale=1.3),
+}
+
+ROUNDS = {"1": ROUND_ONE, "2": ROUND_TWO}
+STYLES = ROUNDS[os.environ.get("PROBE_ROUND", "2")]
+PREFIX = "scene__" if os.environ.get("PROBE_ROUND", "2") == "1" else "r2__"
+
 _ORIG_MATERIAL = pack.material
 _ORIG_SETUP = scenes.setup
+_ORIG_GROUND = scenes.ground
 _ORIG_CONTOUR = ink.CONTOUR
 _ORIG_ELEVATION = dict(__import__("palette").SUN_ELEVATION)
 
@@ -107,6 +170,14 @@ def apply(style):
     pack.material = material_shim
     scenes.pack.material = material_shim
 
+    def ground_shim(*args, **kwargs):
+        for dial in ("patch", "bump"):
+            if dial in style:
+                kwargs[dial] = style[dial]
+        return _ORIG_GROUND(*args, **kwargs)
+
+    scenes.ground = ground_shim
+
     def setup_shim(ortho_scale, target, sun_energy, sun_color, ambient, scene_name=""):
         camera = _ORIG_SETUP(ortho_scale, target, sun_energy * style.get("sun_scale", 1.0),
                              sun_color, ambient, scene_name)
@@ -128,6 +199,20 @@ def apply(style):
         ao = style.get("ao")
         if ao:
             scene.eevee.gtao_distance, scene.eevee.gtao_factor = ao
+        for obj in scene.objects:
+            if obj.type == "LIGHT" and obj.data.type == "SUN":
+                angle = style.get("sun_angle")
+                if angle is not None:
+                    obj.data.angle = math.radians(angle)
+                cascade = style.get("cascade")
+                if cascade is not None and hasattr(obj.data, "shadow_cascade_max_distance"):
+                    # The sun spreads one shadow map over `cascade` units of
+                    # depth. Blender's default is 200, and this camera sees
+                    # about 60 -- so better than two thirds of every texel was
+                    # being spent behind the treeline.
+                    obj.data.shadow_cascade_max_distance = cascade
+                    if hasattr(scene.eevee, "shadow_cascade_size"):
+                        scene.eevee.shadow_cascade_size = "4096"
         return camera
 
     scenes.setup = setup_shim
@@ -141,6 +226,7 @@ def main():
         pack.material = _ORIG_MATERIAL
         scenes.pack.material = _ORIG_MATERIAL
         scenes.setup = _ORIG_SETUP
+        scenes.ground = _ORIG_GROUND
         ink.CONTOUR = _ORIG_CONTOUR
         palette.SUN_ELEVATION.update(_ORIG_ELEVATION)
         apply(style)
@@ -149,7 +235,7 @@ def main():
         scenes.ANCHORS.clear()
         scenes.setup(ortho, target, energy, sun_hex, ambient, SCENE)
         builder()
-        bpy.context.scene.render.filepath = str(OUT / f"scene__{name}.png")
+        bpy.context.scene.render.filepath = str(OUT / f"{PREFIX}{name}.png")
         bpy.ops.render.render(write_still=True)
         print(f"scene probe {name}  ({style.get('label', name)})")
     print(f"wrote {len(STYLES)} scene renders to {OUT}")

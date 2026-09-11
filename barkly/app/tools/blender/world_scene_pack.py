@@ -44,7 +44,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import light_hex, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import crown, shaft, stack  # noqa: E402  -- and the one place a SHAPE comes from
-from ink import INK  # noqa: E402  -- and the one place an EDGE comes from
+from ink import CONTOUR, INK  # noqa: E402  -- and the one place an EDGE comes from
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
@@ -148,6 +148,90 @@ def no_ink(obj):
     return obj
 
 
+def _ink_pass(scene):
+    """Configure the Freestyle edge, or switch it off. Called by `setup`.
+
+    THIS LIVES IN ITS OWN FUNCTION because the contour-off path returns
+    early, and for one render it returned out of `setup` itself -- which
+    meant that with the contour off there was no camera, no sun and no
+    world, and Blender refused the frame with "Cannot render, no camera".
+    A guard test that reads the file for `use_freestyle` assignments
+    passed the whole time, because the defect was not in the assignment.
+    """
+    # THE INK EDGE, ON THE ONE LOCATION THAT IS NOT MADE OF PROPS.
+    #
+    # Every prop in the game gets a dark contour at PROMOTION, grown off its
+    # own alpha (`scripts/promote-props.py`). A plate cannot: it is opaque
+    # edge to edge, so there is no silhouette to dilate -- which would have
+    # left the park as the one place in the world drawn without the line that
+    # every other place has, and that is precisely the "these are two games"
+    # read this whole pass is about.
+    #
+    # Freestyle draws it in the render instead, from the geometry. Same ink
+    # (`ink.INK`, the one colour every edge in this game is), at a weight that
+    # lands where a promoted prop's edge does once the plate is cover-scaled
+    # onto a phone.
+    #
+    # The PROP pack draws its internal edges this way too now, with one
+    # difference that is not a style choice: a prop is a turntable shot a fixed
+    # distance from the camera, so its line is a constant; this scene runs
+    # eighty units deep, so its line has to thin with distance or the treeline
+    # fills in solid.
+    #
+    # AND IT ASKS ink.CONTOUR, which it did not. This was a bare
+    # `use_freestyle = True` that consulted nothing, so when the contour was
+    # switched off game-wide the three PLATES kept theirs -- 4.69% of the park
+    # plate was still ink pixels after the commit that said the outline had
+    # come off everything. The plates are the largest art in the game, so that
+    # is most of the change, and it is why the operator looked at the live
+    # build and said he could not see a difference. He was right and the
+    # measurement I offered as the explanation ("it is a subtle change") was
+    # wrong: half of it had simply not been made.
+    #
+    # The other two consumers took the switch because they route through
+    # `takes_ink()`. This one drew its own line and answered to nobody, which
+    # is exactly the second-source-of-truth shape `ink.py` exists to prevent --
+    # the file even names its three consumers, and this was one of them.
+    scene.render.use_freestyle = bool(CONTOUR)
+    global NO_INK
+    NO_INK = bpy.data.collections.new("Barkly no ink")
+    scene.collection.children.link(NO_INK)
+    if not CONTOUR:
+        return
+    scene.render.line_thickness_mode = "ABSOLUTE"
+    scene.render.line_thickness = 1.0
+    view_layer = bpy.context.view_layer
+    view_layer.use_freestyle = True
+    settings = view_layer.freestyle_settings
+    while settings.linesets:
+        settings.linesets.remove(settings.linesets[0])
+    # ...and it skips the grass. A blade is thinner than the line, so an ink
+    # outline on a tuft fills it in solid: the first pass drew every tuft along
+    # the path as a black clump. `no_ink()` is how a builder opts a form out.
+    # (The collection itself is made above, before the early return, because
+    # builders call `no_ink()` whether or not a line is being drawn.)
+    lineset = settings.linesets.new("Barkly ink")
+    lineset.select_by_collection = True
+    lineset.collection = NO_INK
+    lineset.collection_negation = "EXCLUSIVE"
+    lineset.select_silhouette = True
+    lineset.select_border = True
+    lineset.select_crease = False       # interior creases turn a park into a sketch
+    lineset.select_edge_mark = False
+    lineset.select_contour = False
+    lineset.linestyle.color = pack.rgb(INK)
+    lineset.linestyle.thickness = 2.4
+    # AND IT THINS WITH DISTANCE. A constant line is what a plate cannot
+    # afford: this scene runs eighty units deep, so one weight puts the same
+    # stroke on a bench four metres away and on a tuft of grass at the far
+    # treeline, and the horizon fills in solid. The first attempt did exactly
+    # that -- the treeline rendered as a band of ink with green holes in it.
+    fade = lineset.linestyle.thickness_modifiers.new("depth", type="DISTANCE_FROM_CAMERA")
+    fade.range_min, fade.range_max = 16.0, 80.0
+    fade.value_min, fade.value_max = 2.4, 0.35
+    fade.mapping = "LINEAR"
+
+
 def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str,
           scene_name: str = ""):
     """One sun, real shadows, real occlusion -- the whole point of this pack.
@@ -201,60 +285,7 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
             except (TypeError, ValueError):
                 pass
 
-    # THE INK EDGE, ON THE ONE LOCATION THAT IS NOT MADE OF PROPS.
-    #
-    # Every prop in the game gets a dark contour at PROMOTION, grown off its
-    # own alpha (`scripts/promote-props.py`). A plate cannot: it is opaque
-    # edge to edge, so there is no silhouette to dilate -- which would have
-    # left the park as the one place in the world drawn without the line that
-    # every other place has, and that is precisely the "these are two games"
-    # read this whole pass is about.
-    #
-    # Freestyle draws it in the render instead, from the geometry. Same ink
-    # (`ink.INK`, the one colour every edge in this game is), at a weight that
-    # lands where a promoted prop's edge does once the plate is cover-scaled
-    # onto a phone.
-    #
-    # The PROP pack draws its internal edges this way too now, with one
-    # difference that is not a style choice: a prop is a turntable shot a fixed
-    # distance from the camera, so its line is a constant; this scene runs
-    # eighty units deep, so its line has to thin with distance or the treeline
-    # fills in solid.
-    scene.render.use_freestyle = True
-    scene.render.line_thickness_mode = "ABSOLUTE"
-    scene.render.line_thickness = 1.0
-    view_layer = bpy.context.view_layer
-    view_layer.use_freestyle = True
-    settings = view_layer.freestyle_settings
-    while settings.linesets:
-        settings.linesets.remove(settings.linesets[0])
-    # ...and it skips the grass. A blade is thinner than the line, so an ink
-    # outline on a tuft fills it in solid: the first pass drew every tuft along
-    # the path as a black clump. `no_ink()` is how a builder opts a form out.
-    global NO_INK
-    NO_INK = bpy.data.collections.new("Barkly no ink")
-    scene.collection.children.link(NO_INK)
-
-    lineset = settings.linesets.new("Barkly ink")
-    lineset.select_by_collection = True
-    lineset.collection = NO_INK
-    lineset.collection_negation = "EXCLUSIVE"
-    lineset.select_silhouette = True
-    lineset.select_border = True
-    lineset.select_crease = False       # interior creases turn a park into a sketch
-    lineset.select_edge_mark = False
-    lineset.select_contour = False
-    lineset.linestyle.color = pack.rgb(INK)
-    lineset.linestyle.thickness = 2.4
-    # AND IT THINS WITH DISTANCE. A constant line is what a plate cannot
-    # afford: this scene runs eighty units deep, so one weight puts the same
-    # stroke on a bench four metres away and on a tuft of grass at the far
-    # treeline, and the horizon fills in solid. The first attempt did exactly
-    # that -- the treeline rendered as a band of ink with green holes in it.
-    fade = lineset.linestyle.thickness_modifiers.new("depth", type="DISTANCE_FROM_CAMERA")
-    fade.range_min, fade.range_max = 16.0, 80.0
-    fade.value_min, fade.value_max = 2.4, 0.35
-    fade.mapping = "LINEAR"
+    _ink_pass(scene)
 
     # Ambient light stands in for the sky the app will draw behind this.
     scene.world.use_nodes = False
@@ -342,7 +373,8 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
 
 
 def ground(hex_near: str, hex_far: str = tone("grass", "lit"), centre: float = -48.5,
-           size: float = 183.0, tooth: float = 26.0, bump: float = 0.10):
+           size: float = 183.0, tooth: float = 26.0, bump: float = 0.10,
+           patch: float = 0.16):
     """The ground, as geometry. It receives shadow and it occludes.
 
     AN ORTHOGRAPHIC CAMERA HAS NO HORIZON. Every ray is parallel, so an
@@ -366,7 +398,7 @@ def ground(hex_near: str, hex_far: str = tone("grass", "lit"), centre: float = -
     # BOTH tones are the caller's. The first version hardcoded the park's
     # lighter green as the second stop, so the beach rendered green sand.
     plane.data.materials.append(
-        noise_material("Ground", hex_near, hex_far, scale=1.5, tooth=tooth, bump=bump))
+        noise_material("Ground", hex_near, hex_far, scale=patch, tooth=tooth, bump=bump))
     return plane
 
 
@@ -652,7 +684,7 @@ def town():
         _tuft(x, y, 0.45 + u * 0.35)
 
 
-def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2,
+def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 0.16,
                    detail: float = 4.0, tooth: float = 26.0, bump: float = 0.10):
     """Ground that varies CONTINUOUSLY, instead of in painted shapes.
 
@@ -671,7 +703,28 @@ def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2,
     nt = mat.node_tree
     bsdf = nt.nodes.get("Principled BSDF")
     bsdf.inputs["Roughness"].default_value = 0.95
+    coord = nt.nodes.new("ShaderNodeTexCoord")
     tex = nt.nodes.new("ShaderNodeTexNoise")
+    # OBJECT COORDINATES, for the same reason the tooth below uses them, and
+    # this one was measured wrong for four passes.
+    #
+    # A noise node with nothing in Vector falls back to GENERATED, which is
+    # normalised 0..1 across the object's bounding box -- and this plane's
+    # bounding box is 183 units wide. At the old scale of 1.5 that is one and
+    # a half cycles across the WHOLE FIELD, while the camera sees about
+    # twenty-five units of it: the visible ground traverses a fifth of one
+    # cycle, the ramp barely moves, and the field renders as one flat colour.
+    # Measured on the style probe the operator judged: the open sunlit grass
+    # held a value sd of 0.0186 over ninety-one thousand pixels -- a range of
+    # 0.075 across the entire field. That is the "completely flat green" he
+    # was looking at, and no amount of light rig fixes it, because the ALBEDO
+    # was never varying in the first place.
+    #
+    # On object coordinates `scale` is cycles per world unit, exactly as
+    # `tooth` is, so 0.16 means a patch about six units across -- big enough
+    # to read as ground rather than noise, small enough that several fall
+    # inside the frame.
+    nt.links.new(coord.outputs["Object"], tex.inputs["Vector"])
     tex.inputs["Scale"].default_value = scale
     tex.inputs["Detail"].default_value = detail
     ramp = nt.nodes.new("ShaderNodeValToRGB")
@@ -704,10 +757,6 @@ def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 2.2,
     # object coordinates are world units and `tooth` means cycles per unit,
     # exactly as it does in the prop pack.
     #
-    # The colour ramp above is deliberately LEFT on Generated: its scale was
-    # tuned against the bounding box to give the field broad patches, and
-    # moving it here would be retuning a thing that works.
-    coord = nt.nodes.new("ShaderNodeTexCoord")
     grain = nt.nodes.new("ShaderNodeTexNoise")
     nt.links.new(coord.outputs["Object"], grain.inputs["Vector"])
     grain.inputs["Scale"].default_value = tooth

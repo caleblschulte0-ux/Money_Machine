@@ -344,6 +344,50 @@ describe('renders record the builder that made them', () => {
     expect(src).not.toContain('hashlib.sha256(Path(__file__)');
   });
 
+  /*
+   * NO PACK DRAWS AN EDGE WITHOUT ASKING ink.py FIRST.
+   *
+   * `world_scene_pack.py` set `use_freestyle = True` flat, consulting nothing.
+   * So when the contour was switched off game-wide, the three PLATES kept
+   * theirs -- 4.69% of the shipped park plate was still ink pixels after the
+   * commit that said the outline had come off everything. The plates are the
+   * largest art in the game, which is most of the change, and it is why the
+   * operator looked at the live build and reported no difference. He was right;
+   * the explanation I gave him ("a subtle change") was wrong, because half of
+   * it had not been made.
+   *
+   * `ink.py` names its three consumers in its own docstring. This asserts all
+   * three actually route through it rather than deciding for themselves.
+   */
+  it('lets no pack turn Freestyle on without asking ink.py', () => {
+    for (const file of ['world_prop_pack.py', 'world_scene_pack.py']) {
+      const src = readFileSync(join(__dirname, '..', 'tools', 'blender', file), 'utf8');
+      // `scene.render.use_freestyle` is the master switch: with it off the
+      // per-view-layer flag is inert, so that one is allowed to be a literal.
+      const enables = src.match(/scene\.render\.use_freestyle\s*=\s*([^\n]+)/g) ?? [];
+      expect(enables.length).toBeGreaterThan(0);
+      for (const line of enables) {
+        // Either bound to the switch, or to a call that consults it.
+        expect(line).toMatch(/CONTOUR|takes_ink|bool\(enabled\)|enabled/);
+        expect(line).not.toMatch(/=\s*True\s*$/);
+      }
+    }
+    // And the switch has to be reachable from the scene pack at all.
+    const scene = readFileSync(join(__dirname, '..', 'tools', 'blender', 'world_scene_pack.py'), 'utf8');
+    expect(scene).toMatch(/from ink import [^\n]*CONTOUR/);
+    // The contour-off path RETURNS EARLY, and for one render it returned out
+    // of `setup()` itself -- so with the line switched off the pack built no
+    // camera, no sun and no world, and Blender refused the frame outright.
+    // The version of this test above passed the whole time: it reads the
+    // assignment, and the assignment was correct. So the early return has to
+    // live in a function whose only job is the ink pass.
+    expect(scene).toMatch(/def _ink_pass\(/);
+    const setupBody = scene.slice(scene.indexOf('\ndef setup('));
+    const setupOnly = setupBody.slice(0, setupBody.indexOf('\ndef ', 1));
+    expect(setupOnly).toContain('_ink_pass(scene)');
+    expect(setupOnly).not.toMatch(/^\s*return\s*$/m);
+  });
+
   it('fingerprints the whole shared layer, and every pack reaches all of it', () => {
     const packfile = readFileSync(join(__dirname, '..', 'tools', 'blender', 'packfile.py'), 'utf8');
     // It must FOLLOW imports rather than hard-coding a list, or the list is
