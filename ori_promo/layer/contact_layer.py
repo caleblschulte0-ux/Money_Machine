@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
-"""r208 evidence pack: full-film contact sheet for v37 "The World / The
-Layer". A self-directed craft pass (operator: "keep working, it needs
-improvement"), not a response to a flagged review finding -- a fresh
-frame-by-frame re-watch found examples_audio (49.5-54.0s) was a single
-still frame held perfectly static for its whole 4.5s, the same "zero
-camera motion" defect r193 already fixed for loop, just never caught
-here because this section was never a full-bleed video clip to begin
-with. build_examples_audio() now applies the identical gentle
-1.00x->1.07x continuous push-in r193 established for loop, scaled to
-this section's own duration. This is the only section this round
-touches -- no footage swap, no wording, no disclosure, no timing, no
-score/mix change, no new imagery.
-Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203, plus new
-dense samples across examples_audio's own push-in.
+"""r210 evidence pack: full-film contact sheet for v37 "The World / The
+Layer". ChatGPT's r209 round delivered a genuinely shot-matched hook
+Ice Age plate -- the same railing/two-sign overlook hook's own footage
+uses, winterized, small mammoth herd -- accepted and swapped in, the
+only change this round. r209's "examples" and "borrow/worn" generations
+were rejected (never delivered as usable standalone plates, and the
+borrow one used an unrelated woman instead of the actual wearer) -- see
+r210's own report and the corrected re-request sent back the same round.
+Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208.
 """
 import subprocess
 
@@ -20,7 +15,7 @@ import cv2
 import numpy as np
 
 W, H = 1920, 1080
-MASTER = "../out/ORI_WorldLayer_r208_master.mp4"
+MASTER = "../out/ORI_WorldLayer_r210_master.mp4"
 SECTION_BOUNDS = [0.0, 8.0, 20.0, 32.0, 40.0, 49.5, 54.0, 66.0, 74.0]
 EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
@@ -80,7 +75,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r208__claude__v37_audio_pushin__contact.png", sheet)
+    cv2.imwrite("r210__claude__v37_hook_bespoke__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 
