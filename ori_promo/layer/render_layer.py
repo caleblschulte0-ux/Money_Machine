@@ -79,6 +79,24 @@ ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_falls_visualizati
 # used an unrelated woman, not the actual wearer -- both rejected, see
 # r210's own report; a corrected re-request went out the same round.
 HOOK_ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_hook_railing_r209_chatgpt.jpg")
+# r212 (ChatGPT's delivery against r211's exact-box request, recovered via
+# the signed asset URLs in its transport_recovery.md after Drive's binary
+# upload rejected the connector-reference requirement): both purpose-built
+# for the exact box they land in, not generic references force-cropped
+# after the fact. Pre-cropped here (not left to build_photo_zoom's naive
+# stretch-scale) to a clean 16:9 asset so the pipeline's existing aspect
+# math applies with zero distortion, same convention every other plate in
+# this dict already follows (all pre-conformed to ~16:9 on disk):
+#   worn_glasses_sky: ChatGPT's 1584x672 (2.36:1) plate custom-cropped to
+#   x336-1264,y0-522 -- keeps full head/glasses/torso with margin inside
+#   the eventual 760x190 (4:1) window crop, ends at the waist rather than
+#   risking the product itself (verified against a direct simulation of
+#   windowed_reveal's own center-crop-to-aspect math before wiring in).
+#   iceage_examples_treeline: ChatGPT's 1376x768 (1.79:1) plate, trivially
+#   trimmed to exact 16:9 -- already the right low/open composition r211
+#   asked for (r209's mountain-valley background was the wrong kind).
+WORN_BORROW_SRC = os.path.join(_HERE, "..", "ai", "worn", "worn_glasses_sky_r212_chatgpt.jpg")
+EXAMPLES_ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_examples_treeline_r212_chatgpt.jpg")
 DAK_SRC = os.path.join(_HERE, "..", "raw", "IMG_DAK1.MOV")
 
 
@@ -257,13 +275,13 @@ SOURCE_READERS = {
     "hook_world": lambda: read_clip("6790", 0.5, 8.0),
     "hook_layer": lambda: build_photo_zoom(HOOK_ICEAGE_SRC, 8.0, cap=1.06),
     "borrow_hero": lambda: build_photo_zoom(HERO_SRC, 5.5, cap=1.05),
-    "borrow_worn": lambda: build_photo_zoom(WORN_SRC, 5.0, cap=1.05),
+    "borrow_worn": lambda: build_photo_zoom(WORN_BORROW_SRC, 5.0, cap=1.05),
     # r199: 12.0-20.0s and 20.0-29.5s of IMG_6794 -- continuing directly
     # from recognize_world's own 0.0-12.0s on the same unbroken take.
     "exhist_world": lambda: read_clip("6794", 12.0, 8.0),
     "exhist_layer": lambda: read_plate(DAK_SRC, 8.0),
     "exice_world": lambda: read_clip("6794", 20.0, 9.5),
-    "exice_layer": lambda: build_photo_zoom(ICEAGE_SRC, 9.5, cap=1.05),
+    "exice_layer": lambda: build_photo_zoom(EXAMPLES_ICEAGE_SRC, 9.5, cap=1.05),
     "close_world": lambda: read_clip("6790", 22.0, 8.0),
 }
 for _key, _parts in SPLIT_PARTS.items():
@@ -390,23 +408,24 @@ def build_borrow():
         # staying full-size around empty space. Every other
         # windowed_reveal call (this section's own opening included) is
         # unaffected.
-        # r211: the SAME non-occlusion measurement applies here as hook
-        # (real railing top edge y~=463 at the window's left edge to
-        # y~=486 at its right edge; the shared default window, wy=260..
-        # 660, covers most of it) -- but unlike hook, borrow's CURRENT
-        # images (both already flagged for replacement per r210) were
-        # composed as a wide black-void studio shot and a portrait face
-        # crop, neither of which reads well forced into the much
-        # shorter 760x190 letterbox the fix requires. Shipping the
-        # geometry now, with the old assets, would just trade one
-        # visible problem (railing overlap) for another (an awkward
-        # crop of an image already being replaced). Holding this
-        # specific geometry change until the corrected images land
-        # (r212's own request already specifies this exact box, so the
-        # image and the geometry ship together, not the fix alone
-        # against art that was never composed for it) -- see
-        # r211__claude__DONE.txt.
+        # r213: the SAME non-occlusion fix hook shipped in r211 lands
+        # here now that the art matches it. Real railing top edge
+        # y~=463 (window's left edge) to y~=486 (right edge); the old
+        # shared default window (wy=260..660) covered most of it. r211
+        # held this geometry back because borrow's OLD worn/software
+        # asset (a tight portrait face crop) broke visibly when forced
+        # into the shorter box -- verified, then discarded before that
+        # round's delivered cut. r212 delivered a purpose-built
+        # replacement composed exactly for this box (see
+        # WORN_BORROW_SRC's own comment above); the hero/hardware
+        # studio shot was RE-CHECKED against this same tighter box by
+        # direct simulation (not assumed) and already frames cleanly
+        # without any change, so both halves of this section now share
+        # one clean, non-occluding window: y 260-450 (was 260-660),
+        # bottom edge clearing the real railing with margin.
         img = G.windowed_reveal(world[i], layer, progress, direction="ttb",
+                                 win_cx=560 / W, win_cy=355 / H,
+                                 win_w=760 / W, win_h=190 / H,
                                  shrink_brackets=(t >= 11.0))
         if t < 1.6:
             k = G.fade_k(t, 1.6, in_t=0.3, out_margin=0.4)
