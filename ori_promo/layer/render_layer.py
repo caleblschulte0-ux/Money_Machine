@@ -332,12 +332,24 @@ def build_hook():
             progress = 1.0
         # r203: window repositioned to sit where he actually points
         # (raw IMG_6790 t~3.5-7.0s, local t~3.0-6.5s here -- right as
-        # the reveal opens/holds) -- x=1000/1920, y=470/1080, same w/h
-        # as the shared default. Every other windowed_reveal call in
-        # the film keeps the shared WIN_CX/CY_FRAC position; this is
-        # the one shot with a real gesture to align to.
+        # the reveal opens/holds) -- x=1000/1920, same as the shared
+        # default width. r211 (operator direct note: even a genuinely
+        # shot-matched image still "looks the same old shitty way"):
+        # measured the real railing's top edge directly on rendered
+        # frames -- it runs y~=474 at the window's left edge to y~=483
+        # at its right edge (a slight perspective rise, x=620..1380).
+        # The shared default window (wy=270..670) covered roughly the
+        # bottom HALF of that real railing -- the actual, concrete
+        # reason it read as "a photo taped over the real objects," no
+        # matter how well the photo itself matched. Shrunk and raised
+        # so its bottom edge (490) sits just past the railing's own top
+        # edge instead of through the middle of it -- the real railing,
+        # signage stands, and pavement stay fully visible and
+        # unobstructed in front; only the sky/falls/landscape actually
+        # "behind" the railing changes.
         img = G.windowed_reveal(world[i], layer[i], progress, direction="ltr",
-                                 win_cx=1000 / 1920, win_cy=470 / 1080)
+                                 win_cx=1000 / 1920, win_cy=380 / 1080,
+                                 win_w=760 / 1920, win_h=220 / 1080)
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)
             G.primary_label(img, "THE WORLD", k=k, y_frac=0.14)
@@ -378,6 +390,22 @@ def build_borrow():
         # staying full-size around empty space. Every other
         # windowed_reveal call (this section's own opening included) is
         # unaffected.
+        # r211: the SAME non-occlusion measurement applies here as hook
+        # (real railing top edge y~=463 at the window's left edge to
+        # y~=486 at its right edge; the shared default window, wy=260..
+        # 660, covers most of it) -- but unlike hook, borrow's CURRENT
+        # images (both already flagged for replacement per r210) were
+        # composed as a wide black-void studio shot and a portrait face
+        # crop, neither of which reads well forced into the much
+        # shorter 760x190 letterbox the fix requires. Shipping the
+        # geometry now, with the old assets, would just trade one
+        # visible problem (railing overlap) for another (an awkward
+        # crop of an image already being replaced). Holding this
+        # specific geometry change until the corrected images land
+        # (r212's own request already specifies this exact box, so the
+        # image and the geometry ship together, not the fix alone
+        # against art that was never composed for it) -- see
+        # r211__claude__DONE.txt.
         img = G.windowed_reveal(world[i], layer, progress, direction="ttb",
                                  shrink_brackets=(t >= 11.0))
         if t < 1.6:

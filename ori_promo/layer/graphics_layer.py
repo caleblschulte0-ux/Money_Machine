@@ -276,6 +276,32 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
         crop = layer_img.crop((0, y0, lw, y0 + new_h))
     crop = crop.resize((ww, wh), Image.LANCZOS)
 
+    # r211 (operator direct note: even with a genuinely shot-matched
+    # source image, "you're still putting them in the same old shitty
+    # way" -- the window itself, not the picture inside it, is the
+    # actual problem. Every prior fix (r197 windowing, r201 feather/rim)
+    # only ever touched the EDGE of the insert; the interior was always
+    # a flat, fully opaque photograph, which is exactly why even a
+    # perfectly matched plate still reads as "a picture taped over the
+    # video" rather than a projected AR layer. Three real, cheap
+    # projection cues, applied to every windowed_reveal call in the film
+    # at once (not a per-shot patch):
+    crop_rgb = np.asarray(crop.convert("RGB"), dtype=np.float32)
+    # (1) a cool, slightly desaturated push toward cyan/blue -- real
+    # photos read "warm capture," projected light reads "cool digital."
+    # Desaturate 18% toward luminance, then lift blue/cut red slightly.
+    luma = (crop_rgb[..., 0] * 0.299 + crop_rgb[..., 1] * 0.587 + crop_rgb[..., 2] * 0.114)
+    crop_rgb = crop_rgb * 0.82 + luma[..., None] * 0.18
+    crop_rgb[..., 2] = np.clip(crop_rgb[..., 2] * 1.06 + 4, 0, 255)
+    crop_rgb[..., 0] = np.clip(crop_rgb[..., 0] * 0.95, 0, 255)
+    # (2) faint horizontal scan lines -- the standard, cheap "this is a
+    # display, not a print" cue. Subtle: every 3rd row dimmed ~6%, never
+    # a strobe (progress-independent, doesn't flicker frame to frame).
+    scan = np.ones((wh, 1), dtype=np.float32)
+    scan[::3] = 0.94
+    crop_rgb = crop_rgb * scan[:, :, None]
+    crop = Image.fromarray(np.clip(crop_rgb, 0, 255).astype(np.uint8), mode="RGB").convert("RGBA")
+
     edge = max(16, int(min(ww, wh) * 0.14))
     if direction == "ltr":
         coord = np.tile(np.arange(ww, dtype=np.float32), (wh, 1))
@@ -314,6 +340,16 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
     if "right" in perp_edges:
         edge_mask *= np.clip((ww - 1 - np.arange(ww, dtype=np.float32)) / feather, 0, 1).reshape(1, ww)
     alpha = alpha * edge_mask
+
+    # (3) the actual biggest fix: content never reaches full 1.0 alpha
+    # even fully "open" and held -- a real AR projection lets the world
+    # underneath still show through faintly; a 100%-opaque insert is
+    # what makes it read as a pasted photo no matter how well the photo
+    # itself matches. Capped well short of invisible (0.90) so the
+    # visualization stays perfectly readable; the real railing/rocks
+    # ghost through at ~10%, which is what actually sells "layer," not
+    # "swap."
+    alpha = alpha * 0.90
 
     crop.putalpha(Image.fromarray((alpha * 255).astype(np.uint8), mode="L"))
     img.alpha_composite(crop, (wx, wy))

@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
-"""r210 evidence pack: full-film contact sheet for v37 "The World / The
-Layer". ChatGPT's r209 round delivered a genuinely shot-matched hook
-Ice Age plate -- the same railing/two-sign overlook hook's own footage
-uses, winterized, small mammoth herd -- accepted and swapped in, the
-only change this round. r209's "examples" and "borrow/worn" generations
-were rejected (never delivered as usable standalone plates, and the
-borrow one used an unrelated woman instead of the actual wearer) -- see
-r210's own report and the corrected re-request sent back the same round.
+"""r211 evidence pack: full-film contact sheet for v37 "The World / The
+Layer". Operator direct feedback on r210: even hook's genuinely
+matched image "still looks the same old shitty way" -- the window
+treatment itself, not image quality, was the actual problem. Two real
+fixes to windowed_reveal() this round (apply to every call site):
+content never reaches full opacity even fully open (a cheap, real
+"projected light" cue no prior round tried), plus a cool tint and
+faint scan lines. Separately, hook's own window was repositioned so it
+no longer overlaps the real railing at all (measured the railing's
+actual top edge on rendered frames) -- the concrete, specific reason a
+well-matched photo still read as "pasted on top of a real object."
+Borrow needs the identical reposition but is held back until its own
+new image arrives (r211's own request sends ChatGPT the exact pixel
+box plus the accepted hook example as calibration, per the operator's
+own instruction -- shipping the geometry against the old, already-
+rejected asset would trade one visible problem for another).
 Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208.
 """
 import subprocess
@@ -15,7 +23,7 @@ import cv2
 import numpy as np
 
 W, H = 1920, 1080
-MASTER = "../out/ORI_WorldLayer_r210_master.mp4"
+MASTER = "../out/ORI_WorldLayer_r211_final_master.mp4"
 SECTION_BOUNDS = [0.0, 8.0, 20.0, 32.0, 40.0, 49.5, 54.0, 66.0, 74.0]
 EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
@@ -75,7 +83,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r210__claude__v37_hook_bespoke__contact.png", sheet)
+    cv2.imwrite("r211__claude__v37_window_geometry__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 
