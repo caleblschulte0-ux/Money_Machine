@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-08-05. Phase 1 complete.
+Last updated: 2026-08-05, re-verified 2026-09-11. Phase 1 complete.
 
 This file is the honest inventory. If something says **Built**, it works and has
 tests. If it says **Scaffolded**, the structure exists but a real dependency is
@@ -24,6 +24,17 @@ Nothing below is described as working because it was designed to work.
 | Command Center pages | All 6 return HTTP 200 with real data under `pnpm dev` |
 | Money moved | $0.00 — every provider is a mock |
 | Live messages sent | 0 |
+
+**Re-verified 2026-09-11** (branch untouched since 2026-08-06, no code changed
+by this pass): `pnpm test` now passes **154 tests across 16 files**, 3
+consecutive clean runs — the branch had grown past the 133/14 figure above
+before this check, and this file had not been updated to say so.
+`pnpm typecheck` is clean across all 31 packages, ventures and apps.
+`pnpm build` succeeds for both Next.js apps: command-center (7 routes plus the
+built-in not-found page) and shots-app (4 routes). `pnpm seed`, `pnpm worker`
+and the Command Center pages under `pnpm dev` were not re-run this pass — the
+figures above for those three rows are as of 2026-08-05, not reconfirmed
+today.
 
 ---
 
