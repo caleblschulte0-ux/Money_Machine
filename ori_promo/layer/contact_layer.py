@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
-"""r215 evidence pack: full-film contact sheet for v37 "The World / The
-Layer". Operator, on the r214 delivery: "what are you not getting...
-this should be seamless except for the little red lines." Measured the
-actual rendered pixels rather than trusting the r214 fix: the window's
-own sky was ~14 values BRIGHTER than the real sky directly above it,
-and ~25-30 values darker than the real sky beside it -- a real,
-measurable mismatch, not a perception problem. Root cause: r214's
-ambient-color sample averaged a ring around all four sides of the
-window, including the band BELOW it -- which for every current call
-site is the real railing/structure, not sky, contaminating the
-"ambient" target with non-sky pixels; and it compared that target
-against the crop's own full mixed average (sky+subject+background
-together), not sky-to-sky. Fixed: ambient now sampled ONLY from the
-clean band directly above the window, compared against the crop's own
-top ~35% (its own sky region specifically), applied at a much stronger
-blend now that the target is actually correct. Verified directly:
-zoomed to the pixel level at the boundary and confirmed no visible
-seam in the sky.
-Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208/r211/r213/r214.
+"""r220 evidence pack: full-film contact sheet for v37 "The World / The
+Layer". After r216-r219 confirmed, with direct evidence, that true
+pixel-locked "same camera, different era" photo editing is not
+achievable by any tool available to either agent (ChatGPT's generator
+re-composes instead of editing in place; classical CV inpainting
+smears unusably at this scale), the operator's direct instruction:
+"you and ChatGPT are two of the smartest things on this planet, figure
+it out... you're gonna have better ideas than I will."
+
+The structural pivot: every round back to r196 tried to make a SOLID,
+opaque, hard-edged rectangular photo insert read as if it belonged in
+the real photo -- sharper crop, matched color, even attempting to
+erase the real railing to match pixel-for-pixel. All of that fights
+the same losing battle, because a fully opaque rectangle of different
+pixels always reads as "a photo taped on," regardless of how well
+graded -- and because real AR glasses don't show solid photographs in
+the first place, they show a translucent HUD you see the world
+through. windowed_reveal() now composites an elliptical, genuinely
+translucent (~60% peak alpha) vignette instead of a rectangle at
+90%-capped opacity -- an organic hologram with no hard edge or corner
+for the real scene to have to line up against, replacing the alignment
+problem instead of re-solving it.
+Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208/r211/r213/r214/r215.
 """
 import subprocess
 
@@ -25,7 +29,7 @@ import cv2
 import numpy as np
 
 W, H = 1920, 1080
-MASTER = "../out/ORI_WorldLayer_r215_final_master.mp4"
+MASTER = "../out/ORI_WorldLayer_r220_final_master.mp4"
 SECTION_BOUNDS = [0.0, 8.0, 20.0, 32.0, 40.0, 49.5, 54.0, 66.0, 74.0]
 EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
@@ -85,7 +89,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r215__claude__v37_ambient_match_fix__contact.png", sheet)
+    cv2.imwrite("r220__claude__v37_holographic_vignette__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 
