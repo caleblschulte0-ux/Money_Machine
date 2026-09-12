@@ -51,14 +51,30 @@ describe('both render packs proportion from one file', () => {
     }
   });
 
-  test('the park plate uses the shared helpers on its tree', () => {
-    // Not a style preference: `_tree` and `_bench` in the scene pack ARE
-    // park/tree.png and park/bench.png at plate scale.
+  test('both trees are built from ONE spec', () => {
+    /*
+     * Not a style preference: `_tree` in the scene pack is the park PLATE's
+     * tree and `park_tree` in the prop pack is the modular one, and a park
+     * whose plate trees are proportioned differently from its prop trees is
+     * two parks.
+     *
+     * This used to be held by asserting that the scene tree called the same
+     * proportion helpers -- `shaft`, `crown`, `stack`. That was a proxy: two
+     * files calling the same helpers with different numbers are still two
+     * trees. The shape is now a spec both of them read, so the invariant is
+     * the shape itself rather than a habit they share, and this asserts the
+     * thing instead of the proxy.
+     */
     const scene = read('world_scene_pack.py');
     const tree = scene.slice(scene.indexOf('def _tree('), scene.indexOf('def _bench('));
-    expect(tree).toMatch(/\bshaft\(/);
-    expect(tree).toMatch(/\bcrown\(/);
-    expect(tree).toMatch(/\bstack\(/);
+    const prop = read('world_prop_pack.py');
+    const modular = prop.slice(prop.indexOf('def park_tree('));
+    for (const src of [tree, modular.slice(0, modular.indexOf('\ndef ', 1))]) {
+      expect(src).toMatch(/forms\.TRUNK_PROFILE/);
+      expect(src).toMatch(/forms\.CANOPY_MASSES/);
+      // ...and states no canopy placement of its own.
+      expect(src).not.toMatch(/\(-?0\.\d+,\s*-?0\.\d+,\s*[23]\.\d+,/);
+    }
   });
 
   test('every primitive records its form, or the gate measures a subset', () => {

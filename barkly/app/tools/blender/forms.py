@@ -45,6 +45,43 @@ import bpy
 import bmesh
 
 
+def carve(obj, cutters, name="carve"):
+    """Cut shapes OUT of a form, and remove the cutters.
+
+    THE ONE THING STACKED MASSES CAN NEVER DO. Every form this module makes
+    is convex, and the union of convex masses is still a lumpy convex blob --
+    which is why a canopy built from overlapping balls, however well sized,
+    still reads as a lump. What a drawn canopy has is CONCAVITY: notches bitten
+    into the outline, gaps you see sky through. An outline that only ever
+    bulges outward reads as inflated; one that cuts back in reads as drawn.
+
+    Boolean difference is how a shape gets an edge that curves the wrong way.
+    """
+    for i, cutter in enumerate(cutters):
+        mod = obj.modifiers.new(f"{name}{i}", "BOOLEAN")
+        mod.operation = "DIFFERENCE"
+        mod.object = cutter
+        if hasattr(mod, "solver"):
+            mod.solver = "EXACT"
+        bpy.context.view_layer.objects.active = obj
+        try:
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+        except RuntimeError:
+            obj.modifiers.remove(mod)
+    for cutter in cutters:
+        bpy.data.objects.remove(cutter, do_unlink=True)
+    return obj
+
+
+def bite(name, loc, radius, segments=24):
+    """A plain sphere, made only to be subtracted. Never shaded or shown."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=segments, ring_count=segments // 2,
+                                         location=loc, radius=radius)
+    cutter = bpy.context.object
+    cutter.name = name
+    return cutter
+
+
 def _smooth(profile, per_span=5):
     """Catmull-Rom through the authored points, so the outline is a curve."""
     if len(profile) < 3:
@@ -220,3 +257,27 @@ CLUSTER = [(0.44, 0.00), (0.80, 0.16), (0.98, 0.40), (1.00, 0.58),
 #: A boulder or a dune: heavy, settled, flat where it meets the ground.
 MOUND = [(1.00, 0.00), (0.98, 0.22), (0.88, 0.48), (0.66, 0.72),
          (0.36, 0.90), (0.00, 1.00)]
+
+
+#: THE TREE, AS ONE SPEC, because there are two of them in this game and they
+#: have to be the same tree.
+#:
+#: `world_scene_pack._tree` is the park PLATE's tree and
+#: `world_prop_pack.park_tree` is the modular one, and a park whose plate
+#: trees are proportioned differently from its prop trees is two parks.
+#: That invariant used to be held by both files calling the same proportion
+#: helpers; rebuilding the shape moved it here, where it is the shape itself
+#: rather than a habit two files share.
+#:
+#: Three masses, each about two thirds of the canopy's width so every one
+#: owns a major arc of the outline. Taller than wide. One colour -- banded
+#: shading already separates a mass's top from its side, and painting a
+#: lighter material there as well lands as a pancake stuck on top.
+TRUNK_PROFILE = [(0.80, 0.0), (0.56, 0.30), (0.44, 1.2), (0.38, 2.3), (0.34, 2.9)]
+
+#: (dx, dy, dz, scale, rotation) per canopy mass, in trunk-heights.
+CANOPY_MASSES = (
+    (-0.62, 0.18, 2.48, 1.34, (0.06, -0.05, 0.4)),
+    (0.66, -0.10, 2.68, 1.22, (-0.05, 0.07, 2.2)),
+    (0.02, 0.05, 3.42, 1.16, (0.04, 0.03, 4.1)),
+)

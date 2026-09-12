@@ -54,6 +54,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # The prop builders, the palette conversion and the primitives are all shared.
 # This is a new way to COMPOSE the same world, not a second world.
+import forms
 import world_prop_pack as pack  # noqa: E402
 
 OUT = ROOT / "art-review" / "world-scenes"
@@ -1232,74 +1233,68 @@ def _bandstand(x: float, y: float, s: float = 1.0):
 
 def _tree(x: float, y: float, s: float, canopy: str | None = None,
           trunk: str | None = None, seed: int | None = None):
+    """A tree with a DRAWN silhouette. See `forms.py` for why, and this
+    docstring for what four failed attempts taught.
+
+    It was a cone with seven squashed spheres balanced on it. Every fix that
+    followed was a lighting fix, and none of them worked, because the shape
+    was the problem:
+
+    SEVEN SIMILAR EGGS give a lump. No single mass is big enough to own an
+    arc of the outline, so the silhouette is gravel.
+
+    CARVING THE RIM gives NICKS. A stylised canopy's outline is made of arcs
+    as big as a third of the whole form; a boolean bite is never that.
+
+    CARVING THE CAMERA-FACING SIDE gives HOLES -- a notch you look straight
+    into is not a notch, and these props are shot from one fixed camera.
+
+    RIBBING one mass gives a PUMPKIN, because modulating radius by angle cuts
+    vertical grooves top to bottom.
+
+    What reads is three big masses, each about two thirds of the canopy's
+    width, so every one owns a major arc. Plus two things the old one lacked:
+
+    ONE COLOUR. The old tree put `foliage lit` on its two topmost lobes, and
+    at this camera those face the light flat-on and rendered as PANCAKES stuck
+    to the top. Banded shading already separates a mass's top from its side;
+    painting a lighter material there as well is drawing a highlight the light
+    is drawing anyway, and it lands as a sticker.
+
+    TALLER THAN WIDE. The canopy was 3.1 across and 1.16 high, which is a
+    disc. A tree reads as a tree because it is vertical.
+
+    The trunk is lathed with a root flare and a slight lean, so it grows out
+    of the ground instead of being pushed into it.
+    """
     canopy = tone("foliage", "base") if canopy is None else canopy
     trunk = tone("bark", "base") if trunk is None else trunk
     bark = pack.material(f"Bark{x:.1f}{y:.1f}", trunk, roughness=0.92)
     leaf = pack.material(f"Leaf{x:.1f}{y:.1f}", canopy, roughness=0.88)
-    leaf_hi = pack.material(f"LeafHi{x:.1f}{y:.1f}", tone("foliage", "lit"), roughness=0.86)
-    # THE SAME TREE AS park/tree.png, at plate scale.
-    #
-    # The park is the one location drawn as a single composed plate, so it has
-    # its own tree -- and a tree here that is proportioned differently from the
-    # modular one is exactly the drift that makes a game look like two games.
-    # Both now flare the same amount from the same dial and hang one canopy
-    # mass over the shoulder instead of balancing lobes on top of it.
     wx, wy = TURN(x, y)
-    base_r = 0.62 * s
-    # The trunk and the core mass go into the returned list too, or a caller
-    # that opts a tree out of the ink gets outlined trunks under un-outlined
-    # canopies -- which is worse than either.
-    trunk_obj = pack.cone(f"trunk{x:.1f}{y:.1f}", (wx, wy, 1.28 * s), base_r,
-                          shaft(base_r, 0.32), 2.56 * s, bark)
-    crown_z = stack(2.56 * s, 1.16 * s)
-    mass = pack.sphere(f"leaf{x:.1f}{y:.1f}_mass", (wx, wy, crown_z),
-                       (crown(base_r), crown(base_r) * 0.94, 1.16 * s), leaf)
-    # A CLUSTER, matching park/tree.png lobe for lobe. Three bumps sunk into
-    # one big ellipsoid gave a smooth mass with a single outline: measured,
-    # 0.83% of the prop's interior carried any ink at all against the
-    # fountain's 12.5%, because Freestyle draws silhouette and border and two
-    # smoothly interpenetrating spheres share neither. Six squashed lobes,
-    # each tilted off axis and sitting proud enough to keep an arc of its own
-    # outline, and the low two in the shade tone so the canopy has an
-    # underside. The plate's tree and the modular tree have to be the same
-    # tree or the park is two parks.
-    #
-    # AND EVERY TREE IS A DIFFERENT TREE, which twenty-seven of them in a row
-    # made impossible to ignore. The treeline was this exact lobe table
-    # twenty-seven times over, varying only in scale, and it rendered as a
-    # row of identical lollipops across the whole top third of the frame --
-    # the single most "unrefined" thing in the picture, and nothing to do
-    # with shading. `seed` jitters each lobe deterministically, so a tree is
-    # reproducible from its position but no two are the same tree. The
-    # jitter is small (under a fifth) because the SHAPE is authored above and
-    # this is variation, not randomness: at half this the row still repeated,
-    # and at twice it the canopies came apart into loose balls.
-    def jitter(i: int, salt: int, amount: float) -> float:
+
+    def wobble(salt, amount):
         if seed is None:
             return 1.0
-        n = zlib.crc32(f"{seed}:{i}:{salt}".encode())
+        n = zlib.crc32(f"{seed}:{salt}".encode())
         return 1.0 + ((n % 1000) / 1000.0 - 0.5) * 2.0 * amount
 
-    made = [trunk_obj, mass]
-    for i, (dx, dy, dz, r, sq, tilt, mat) in enumerate((
-        (-0.58, -0.40, 0.56, 1.04, 0.64, (-0.20, 0.24), leaf_hi),
-        (0.52, 0.04, 0.62, 0.86, 0.58, (0.16, -0.30), leaf_hi),
-        (1.52, 0.28, -0.06, 0.92, 0.62, (-0.12, 0.34), leaf),
-        (-1.56, 0.32, -0.14, 0.86, 0.58, (0.22, -0.26), leaf),
-        (1.02, 0.50, -0.56, 0.72, 0.46, (-0.26, 0.14), leaf),
-        (-0.94, 0.48, -0.60, 0.66, 0.44, (0.28, 0.20), leaf),
-    )):
-        dx *= jitter(i, 1, 0.18)
-        dy *= jitter(i, 2, 0.18)
-        dz *= jitter(i, 3, 0.16)
-        r *= jitter(i, 4, 0.14)
-        sq *= jitter(i, 5, 0.14)
-        lx, ly = TURN(x + dx * s, y + dy * s)
-        made.append(pack.sphere(f"leaf{x:.1f}{y:.1f}_{i}",
-                    (lx, ly, crown_z + dz * s),
-                    (r * s, r * 0.86 * s, sq * s),
-                    mat, rotation=(tilt[0] * jitter(i, 6, 0.30),
-                                   tilt[1] * jitter(i, 7, 0.30), 0.0)))
+    made = [forms.lathe(
+        f"trunk{x:.1f}{y:.1f}",
+        forms.TRUNK_PROFILE,
+        bark, loc=(wx, wy, 0.0), segments=20, scale=(0.62 * s, 0.62 * s, 0.92 * s),
+        lobes=5, lobe_depth=0.05,
+        rotation=(0.0, 0.05 * wobble(1, 1.0), 0.0))]
+
+    for i, (dx, dy, dz, sc, rot) in enumerate(forms.CANOPY_MASSES):
+        lx, ly = TURN(x + dx * s * wobble(i * 3 + 2, 0.16),
+                      y + dy * s * wobble(i * 3 + 3, 0.16))
+        w = sc * s * wobble(i * 3 + 4, 0.10)
+        made.append(forms.lathe(
+            f"leaf{x:.1f}{y:.1f}_{i}", forms.CLUSTER, leaf,
+            loc=(lx, ly, dz * s), segments=56,
+            scale=(w, w * 0.94, w * 1.02), rotation=rot,
+            lobes=5, lobe_depth=0.075, jitter=0.035))
     return made
 
 

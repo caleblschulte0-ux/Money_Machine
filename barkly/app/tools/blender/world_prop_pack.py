@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import packfile  # noqa: E402  -- what a render depends on, for the freshness marker
 from palette import light_hex, light_rgb, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import BITE, OVERHANG, crown, flare, shaft, stack  # noqa: E402
+import forms
 from ink import INK, takes_ink  # noqa: E402  -- the one place an edge is decided
 from mathutils import Vector
 
@@ -981,83 +982,31 @@ def setup_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.4), resolution=(640
 
 
 def park_tree():
-    bark = material("Tree bark", tone("bark", "base"), roughness=0.72)
-    bark_light = material("Tree bark light", tone("bark", "lit"), roughness=0.66)
-    leaf = material("Leaf green", tone("foliage", "base"), roughness=0.76, coat=0.02)
-    leaf_light = material("Leaf light", tone("foliage", "lit"), roughness=0.72, coat=0.03)
-    # `deep` NOW, not `shade`, and the old note explains why it was not: it
-    # alternated with `leaf` over HALF the canopy, and half a tree at crevice
-    # value renders as holes in the crown. That stopped being true when the
-    # canopy became a cluster -- `deep` is on the low TWO lobes only, which is
-    # the underside, and an underside is meant to be dark.
-    #
-    # The bench measurement applies here too: the tree's darkest material was
-    # value 0.35 on a prop whose lit face is 0.80, so it lived in the top half
-    # of the ramp with the chroma turned up to compensate. 0.19 gives it a
-    # real floor.
-    leaf_dark = material("Leaf depth", tone("foliage", "deep"), roughness=0.80)
+    """The modular tree -- BUILT FROM THE SAME SPEC AS THE PLATE'S.
 
-    # PROPORTION, not detail. See tools/blender/proportion.py: the old tree was
-    # a gentle 0.54->0.28 cone under five same-sized balls alternating light and
-    # dark, which is a botanically reasonable tree and reads, at 190pt on a
-    # phone, as a lollipop with a rash. Reference trees are one enormous canopy
-    # dropped over a trunk that is nearly twice as fat at the roots as it is at
-    # the shoulder, and their dark tone is on the UNDERSIDE, never every other
-    # lobe.
-    contact_shadow(1.78, 0.84)
-    # Roots. A trunk that meets the ground at its own diameter looks pushed in.
-    for i, (x, y) in enumerate(((-0.66, 0.28), (0.62, 0.32), (-0.06, -0.36))):
-        sphere(f"root_{i}", (x, y, 0.15), (0.46, 0.36, 0.21), bark)
-    # A LESS EXTREME TAPER, and a shoulder that is not a flat disc.
-    #
-    # 0.95 -> shaft(0.95, 0.32) is a 3:1 squeeze over 2.56 of height, which is
-    # a traffic cone: the eye reads the straight sides and the wide foot before
-    # it reads "tree". Photographed against the fountain -- the prop the
-    # operator picked out as right -- what the fountain has and this did not is
-    # FORM SEPARATION: distinct closed shapes meeting at hard edges, each with
-    # its own outline. A single smooth cone has one outline and nothing inside
-    # it. So: a gentler trunk, and a collar where the canopy lands, so the
-    # join is an EDGE instead of a fade.
-    cone("trunk", (0, 0.12, 1.02), 0.90, shaft(0.90, 0.56), 2.04, bark)
-    # The shoulder. Two SHORT fat stubs reading as the first branch fork -- at
-    # 0.92 long and 0.26 thick they were sticks poking out of a tube, which is
-    # a different primitive tell, not a fix. Half the length and half again the
-    # thickness, buried in the canopy so only the fork shows.
-    for i, (bx, by, tilt) in enumerate(((-0.56, -0.16, -0.75), (0.60, 0.10, 0.68))):
-        cylinder(f"limb_{i}", (bx, by, 1.94), 0.34, 0.62, bark,
-                 rotation=(0, tilt, 0), vertices=16, taper=0.72)
-    # THE CANOPY IS A CLUSTER, NOT A BLOB.
-    #
-    # It was one big ellipsoid with four bumps sunk deep into it, and it
-    # measured 0.83% interior ink against the fountain's 12.5% -- i.e. almost
-    # no internal line at all, because Freestyle draws SILHOUETTE and BORDER
-    # and two smoothly interpenetrating spheres share neither. The canopy was
-    # one smooth green mass with a single outline, which is exactly the
-    # "smooth continuous masses whose lobes melt into one blob" this file's
-    # ink note already named -- the ink pass fixed the tiered props and could
-    # not fix this one, because the fix here is GEOMETRY.
-    #
-    # Seven lobes, each a squashed ellipsoid TILTED off axis (level ones stack
-    # like pancakes), sitting proud enough of their neighbours that each keeps
-    # a real arc of its own outline. Sizes run 0.62..1.15 so no two read as
-    # the same ball, and the lower three are the shade tone so the canopy has
-    # an underside instead of a flat cut-off bottom.
-    # WIDE AND FLATTISH, and no two lobes the same size. Round lobes of equal
-    # size are a bunch of grapes however they are arranged; what makes a canopy
-    # read as foliage is that the masses are SQUASHED (z about two thirds of x)
-    # and that the size runs 0.58..1.42, so the eye finds a big form with small
-    # ones breaking its edge rather than seven balls.
-    crown_z = stack(2.04, 0.86)
-    for name, (x, y, z), (sx, sy, sz), (rx, ry), mat in (
-        ("crown_core",  (0.04, 0.24, crown_z + 0.02), (1.42, 1.20, 0.86), (0.10, -0.08), leaf),
-        ("crown_sun",   (-0.58, -0.40, crown_z + 0.56), (1.04, 0.88, 0.66), (-0.20, 0.24), leaf_light),
-        ("crown_top",   (0.52, 0.04, crown_z + 0.62), (0.86, 0.76, 0.58), (0.16, -0.30), leaf_light),
-        ("crown_right", (1.52, 0.28, crown_z - 0.06), (0.92, 0.78, 0.62), (-0.12, 0.34), leaf),
-        ("crown_left",  (-1.56, 0.32, crown_z - 0.14), (0.86, 0.76, 0.58), (0.22, -0.26), leaf),
-        ("crown_lowr",  (1.02, 0.50, crown_z - 0.56), (0.72, 0.62, 0.46), (-0.26, 0.14), leaf_dark),
-        ("crown_lowl",  (-0.94, 0.48, crown_z - 0.60), (0.66, 0.58, 0.44), (0.28, 0.20), leaf_dark),
-    ):
-        sphere(name, (x, y, z), (sx, sy, sz), mat, rotation=(rx, ry, 0.0))
+    This and `world_scene_pack._tree` are the same tree at two scales, and a
+    park whose plate trees are proportioned differently from its prop trees is
+    two parks. That invariant used to be held by both files calling the same
+    proportion helpers; it now lives in `forms.TRUNK_PROFILE` and
+    `forms.CANOPY_MASSES`, which is the shape itself rather than a habit two
+    files happen to share.
+
+    What changed from the cone-and-five-balls version, and why, is written out
+    in the scene pack's `_tree`: three masses each owning a major arc instead
+    of five equal lumps, one colour instead of a painted-on highlight that
+    rendered as a pancake, and taller than wide because a tree is vertical.
+    """
+    bark = material("Tree bark", tone("bark", "base"), roughness=0.72)
+    leaf = material("Leaf green", tone("foliage", "base"), roughness=0.76, coat=0.02)
+
+    forms.lathe("trunk", forms.TRUNK_PROFILE, bark, loc=(0.0, 0.12, 0.0),
+                segments=24, scale=(0.95, 0.95, 1.05), lobes=5, lobe_depth=0.05,
+                rotation=(0.0, 0.04, 0.0))
+    for i, (dx, dy, dz, sc, rot) in enumerate(forms.CANOPY_MASSES):
+        forms.lathe(f"canopy_{i}", forms.CLUSTER, leaf,
+                    loc=(dx * 1.05, 0.12 + dy * 1.05, dz * 1.05),
+                    segments=64, scale=(sc * 1.05, sc * 0.99, sc * 1.07),
+                    rotation=rot, lobes=5, lobe_depth=0.075, jitter=0.035)
 
 
 def park_bench():
