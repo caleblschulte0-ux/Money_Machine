@@ -244,6 +244,72 @@ def _shift(linear_rgb, amount):
 # material darker than value 0.45 and now runs 0.31 to 0.83.
 
 
+#: BANDED SHADING -- the adopted look, and the one thing in it that is not a
+#: number in the palette.
+#:
+#: A Principled BSDF gives a smooth gradient from lit to shade, which is what
+#: this game shipped and what the operator moved off. Running that shading
+#: through ShaderToRGB and a CONSTANT colour ramp quantises it into flat
+#: tones with a hard terminator: the light either reaches a surface or it
+#: does not, and the step between is a drawn edge rather than a blur. It is
+#: the single biggest difference the style probe ever measured -- 12 to 13 of
+#: 255 against every other lever, where clay, felt and gouache came in at 0.4
+#: to 0.9.
+#:
+#: THREE bands, not two and not four: two reads as a poster and loses the
+#: form of anything round, and four measured 0.8 from three, which is nothing.
+#:
+#: Set to 0 for the smooth gradient this shipped with before. That is the way
+#: back, and it is one number.
+BANDS = 3
+
+#: Where the terminator falls and how dark the shade band is. The lit band is
+#: slightly over 1.0 so a surface facing the key keeps a little lift.
+BAND_FLOOR, BAND_CEIL = 0.52, 1.10
+
+
+def _band(mat):
+    """Quantise a material's shading into flat tones with a hard terminator."""
+    if not BANDS:
+        return mat
+    nt = mat.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    out = nt.nodes.get("Material Output")
+    if bsdf is None or out is None:
+        return mat
+    # The base colour may be a constant OR the output of the surface grain
+    # above, and banding has to keep whichever it is -- multiplying the bands
+    # against a flat colour would throw the tooth away on every prop that has
+    # any. So the mix takes the LINK when there is one.
+    base_input = bsdf.inputs["Base Color"]
+    to_rgb = nt.nodes.new("ShaderNodeShaderToRGB")
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    emit = nt.nodes.new("ShaderNodeEmission")
+    mix = nt.nodes.new("ShaderNodeMixRGB")
+    nt.links.new(bsdf.outputs["BSDF"], to_rgb.inputs["Shader"])
+    nt.links.new(to_rgb.outputs["Color"], ramp.inputs["Fac"])
+    ramp.color_ramp.interpolation = "CONSTANT"
+    elements = ramp.color_ramp.elements
+    while len(elements) > 1:
+        elements.remove(elements[-1])
+    elements[0].position = 0.0
+    elements[0].color = (BAND_FLOOR, BAND_FLOOR, BAND_FLOOR, 1.0)
+    for i in range(1, BANDS):
+        step = elements.new(i / BANDS)
+        v = BAND_FLOOR + (BAND_CEIL - BAND_FLOOR) * (i / max(1, BANDS - 1))
+        step.color = (v, v, v, 1.0)
+    mix.blend_type = "MULTIPLY"
+    mix.inputs["Fac"].default_value = 1.0
+    nt.links.new(ramp.outputs["Color"], mix.inputs["Color1"])
+    if base_input.links:
+        nt.links.new(base_input.links[0].from_socket, mix.inputs["Color2"])
+    else:
+        mix.inputs["Color2"].default_value = base_input.default_value
+    nt.links.new(mix.outputs["Color"], emit.inputs["Color"])
+    nt.links.new(emit.outputs["Emission"], out.inputs["Surface"])
+    return mat
+
+
 def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
@@ -264,7 +330,7 @@ def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None)
 
     spec = SURFACES.get(surface if surface is not None else _infer_surface(name))
     if spec is None:
-        return mat
+        return _band(mat)
 
     coord = nt.nodes.new("ShaderNodeTexCoord")
     mapping = nt.nodes.new("ShaderNodeMapping")
@@ -334,7 +400,7 @@ def material(name, color, roughness=0.55, metallic=0.0, coat=0.04, surface=None)
     bump.inputs["Distance"].default_value = spec["depth"]
     nt.links.new(tooth.outputs["Result"], bump.inputs["Height"])
     nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
-    return mat
+    return _band(mat)
 
 
 # ---------------------------------------------------------------------------

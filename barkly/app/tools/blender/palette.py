@@ -81,34 +81,32 @@ KEY = (1.00, 0.94, 0.74)       # warm sun, what lands on the tops
 # this game the player stands and taps -- inside its own buildings' shadow.
 # Measured at 26 degrees it ran median value 0.34 with a quarter of the frame
 # under 0.25; at 40, 0.41 and 22.4%; at 50 it reads as a lit square.
+# ONE TIME OF DAY, EVERYWHERE. Operator: *"the time of day should all be the
+# same."* These were 26 / 34 / 50 / 38, each argued for on its own scene, and
+# every argument was sound in isolation -- a plaza wants a higher sun than a
+# field. Four defensible angles still make four times of day, and a player
+# walking Home -> Park -> Town in ten seconds sees the sun jump twice.
+#
+# 34 is the angle the adopted style was chosen at. It keeps the long shadow
+# SHAPES a low sun gives (a tree casts about 1.5x its height) without putting
+# a plaza inside its own buildings' shade, which is what 26 did to town:
+# measured there, median value 0.34 with a quarter of the frame under 0.25.
+#
+# The per-scene notes that used to live here are kept because the reasoning
+# still applies to anything that moves this again: town is the one place the
+# player stands and taps, so it cannot go much lower; the beach is one open
+# plane and a huge sheet of water that takes the sun at the same glancing
+# angle the sand does, so it cannot either; home is lit through a window,
+# which is already directional.
 SUN_ELEVATION = {
-    "park": 26.0,
-    # 34, not the park's 26, and the reason is what is IN the scene rather
-    # than a preference. A beach is one open plane with a handful of palms on
-    # it, so a raking light buys very few shadow SHAPES -- and its other half
-    # is a huge flat sheet of water, which takes the sun at exactly the same
-    # glancing angle the sand does. At 26 the sea rendered mean value 0.31
-    # against 0.49 before the pass: a dark teal slab with a hard edge along
-    # the top. 34 keeps the palms' long shadows and gives the sand back its
-    # gold. (The sea itself is fixed properly, at the material -- see
-    # `depth_material`'s sky_mirror -- so this is a choice about SAND.)
+    "park": 34.0,
     "beach": 34.0,
-    "town": 50.0,
-    # A room, lit through one window. Not as raking as an open field -- a
-    # window is a small aperture and the light through it is already
-    # directional -- and not noon either.
-    "home": 38.0,
-    # Items are photographed, not staged: a biscuit or a collar is shown in a
-    # sheet at thumbnail size with no ground under it, so a long cast shadow
-    # is a shadow onto nothing. They keep a high key, and this is the note
-    # that says that is a decision rather than the old value left behind.
+    "town": 34.0,
+    "home": 34.0,
     "item": 48.0,
-    # Clouds float over all three locations at once, so they cannot take any
-    # one of their suns. They keep a high key for the same reason items do:
-    # a raking light on a cloud is a SUNSET cloud, and drawing one of those
-    # over a midday park is worse than a cloud lit a little too evenly.
     "sky": 48.0,
 }
+
 DEFAULT_ELEVATION = 38.0
 
 
@@ -167,7 +165,15 @@ STEPS = {
 #   lift    added to the ramp's value. Sand and cream sit high, bark and ink
 #           sit low, so a family's whole ramp moves together rather than each
 #           of its steps being renegotiated.
-FAMILIES = {
+#: THE ADOPTED RAMP. The style the operator chose is this palette with its
+#: ramp lifted and its chroma pulled back a touch -- lighter and airier than
+#: the shipping one, which read as heavy under banded shading. Applied here,
+#: once, rather than to each family by hand, so the relationships between the
+#: families are exactly as authored and only the whole ramp moves.
+ADOPTED_LIFT = 0.07
+ADOPTED_CHROMA = 0.90
+
+_AUTHORED = {
     # The ground the game stands on. Stone and paving are deliberately far
     # from sand in chroma even though they are neighbours in hue: measured
     # after the first pass, the beach was 61% of one hue band and the town's
@@ -233,6 +239,11 @@ FAMILIES = {
     "ink":     ( 28, 0.30, -0.26),
 }
 
+FAMILIES = {
+    name: (hue, min(1.0, sat * ADOPTED_CHROMA), lift + ADOPTED_LIFT)
+    for name, (hue, sat, lift) in _AUTHORED.items()
+}
+
 
 def light_rgb(kind: str):
     """The world's two lights, as linear RGB triples for Blender lamps.
@@ -287,7 +298,9 @@ def light_rgb(kind: str):
 #: the larger half of that. What it is NOT is an exposure change -- the key
 #: energies came up at the same time (props 4.0 -> 4.7, scenes 4.2 -> 9.2) so
 #: the picture gained contrast rather than just going dark.
-SKY_FILL_STRENGTH = 0.11
+# 0.13, from the adopted style. See the note above: this and the sun's height
+# move together, and 0.13 is what the chosen look was rendered at.
+SKY_FILL_STRENGTH = 0.13
 
 
 def world_rgb():

@@ -144,14 +144,22 @@ export const HAZE_MAX = 0.34;
  * the two tables against each other so they cannot drift again.
  */
 export const CAST_FORESHORTEN = 0.424;
+/*
+ * ONE SUN, SO ONE LENGTH. These were four different numbers because the four
+ * scenes had four different sun heights; `palette.SUN_ELEVATION` is a single
+ * 34 degrees now, so they are all 0.424 / tan(34) and the table exists only
+ * to keep the per-scene lookup in place for whenever one of them wants its
+ * own sun back. `scene_surfaces.test.ts` derives these from the palette and
+ * fails if they drift, which is how this got caught.
+ */
 export const CAST_LENGTH: Record<string, number> = {
-  park: 0.87,
-  beach: 0.63,
-  home: 0.54,
-  town: 0.36,
+  park: 0.629,
+  beach: 0.629,
+  home: 0.629,
+  town: 0.629,
 };
 /** Anything that does not name a scene: the same 38 degrees the packs default to. */
-export const CAST_LENGTH_DEFAULT = 0.54;
+export const CAST_LENGTH_DEFAULT = 0.629;   // the one sun, as above
 /** Day haze is the sky; night haze is the deep blue the master grade uses. */
 export const HAZE_DAY = DIORAMA.hazeDay;
 export const HAZE_NIGHT = DIORAMA.hazeNight;

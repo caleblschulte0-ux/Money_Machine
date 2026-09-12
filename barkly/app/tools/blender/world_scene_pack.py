@@ -283,11 +283,15 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
         # gazebo, where a trunk meets the grass -- and at 0.8 it only found
         # contacts an inch apart. A longer reach is what turns "these two
         # objects touch" into "this object is standing in a place".
-        ("gtao_distance", 1.5),
+        # 2.4, from the adopted style: occlusion is the only dark a scene has
+        # where a cast shadow cannot reach, and under banded shading it is
+        # also what keeps a contact from becoming one flat tone meeting
+        # another.
+        ("gtao_distance", 2.4),
         ("gtao_factor", 1.0),
         ("use_soft_shadows", True),
         ("shadow_cube_size", "2048"),
-        ("shadow_cascade_size", "2048"),
+        ("shadow_cascade_size", "4096"),
         ("use_shadow_high_bitdepth", True),
         ("taa_render_samples", 64),
     ):
@@ -368,19 +372,44 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     sun.data.color = pack.rgb(sun_color)
     # A disc, not a point: this is what makes a shadow soften with distance
     # from the thing casting it, which no ellipse under a prop can imitate.
-    sun.data.angle = math.radians(3.2)
+    # 1.1 degrees, from the adopted style. At 3.2 the penumbra grew about 56mm
+    # per metre of run, so at this sun's height the far end of every shadow
+    # was a smudge rather than a shape.
+    sun.data.angle = math.radians(1.1)
+    # And the sun spends its shadow map on the part of the scene the camera
+    # can see. Blender's default covers 200 units; this camera sees about 60,
+    # so better than two thirds of every texel was being spent behind the
+    # treeline.
+    if hasattr(sun.data, "shadow_cascade_max_distance"):
+        sun.data.shadow_cascade_max_distance = 60.0
     pack.look_at(sun, aim)
 
     # A cool bounce from the sky side, weak, no shadows of its own.
     bpy.ops.object.light_add(type="AREA", location=(5.0, -3.0, 5.0))
     fill = bpy.context.object
     fill.name = "Sky bounce"
-    fill.data.energy = 60
+    fill.data.energy = 33          # 60 * 0.55, from the adopted style
     fill.data.size = 9.0
     fill.data.color = pack.rgb(light_hex("fill"))
     if hasattr(fill.data, "use_shadow"):
         fill.data.use_shadow = False
     pack.look_at(fill, aim)
+
+    # A RIM, from behind and above. Banded shading gives a surface two or
+    # three flat tones and a hard step between them, which is the look -- but
+    # it also means a form facing away from the key is ONE tone with nothing
+    # in it. A lit edge along the silhouette is what puts that form back, and
+    # it is the thing every frame of the reference art has that this game did
+    # not. It casts nothing; it only draws edges.
+    bpy.ops.object.light_add(type="AREA", location=(6.0, 30.0, 9.0))
+    rim = bpy.context.object
+    rim.name = "Rim"
+    rim.data.energy = 660          # 3.0 * 220, from the adopted style
+    rim.data.size = 24.0
+    rim.data.color = pack.light_rgb("key")
+    if hasattr(rim.data, "use_shadow"):
+        rim.data.use_shadow = False
+    pack.look_at(rim, aim)
     return camera
 
 
@@ -807,6 +836,17 @@ def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 0.16,
     relief.inputs["Distance"].default_value = 0.02
     nt.links.new(spread.outputs["Result"], relief.inputs["Height"])
     nt.links.new(relief.outputs["Normal"], bsdf.inputs["Normal"])
+    # AND THE GROUND DOES NOT BAND. I banded it first, on the reasoning that
+    # the largest surface should not keep a smooth gradient while everything
+    # standing on it steps -- and it rendered a park with NO CAST SHADOWS AT
+    # ALL. A ground plane facing up at a 34-degree sun sits near the top of
+    # the ramp already, so quantising it puts the lit grass and the tree
+    # shadows into the same band and the shadows simply vanish.
+    #
+    # That is also, exactly, why the style the operator chose looked the way
+    # it did: the probe banded `pack.material` and the ground was never on
+    # that path, so the adopted look has always been banded FORMS on a
+    # continuous ground. The shadows are the picture.
     return mat
 
 
@@ -1720,9 +1760,9 @@ def _marram(x: float, y: float, s: float = 1.0):
 # darkness. Town takes the least of the three because its ground is a brick
 # plaza facing straight up into a 50-degree sun.
 SCENES = {
-    "park": (park, 18.5, (0.0, 20.0, 1.0), 9.2, light_hex("key"), light_hex("fill")),
-    "beach": (beach, 18.5, (0.0, 20.0, 1.0), 9.8, light_hex("key"), light_hex("fill")),
-    "town": (town, 18.5, (0.0, 20.0, 1.0), 8.4, light_hex("key"), light_hex("fill")),
+    "park": (park, 18.5, (0.0, 20.0, 1.0), 10.1, light_hex("key"), light_hex("fill")),
+    "beach": (beach, 18.5, (0.0, 20.0, 1.0), 10.8, light_hex("key"), light_hex("fill")),
+    "town": (town, 18.5, (0.0, 20.0, 1.0), 9.2, light_hex("key"), light_hex("fill")),
 }
 
 
