@@ -378,7 +378,14 @@ def windowed_reveal(world_bgr, layer_bgr, progress, direction="ltr",
     u = (xx - (ww - 1) / 2.0) / (ww / 2.0)
     v = (yy - (wh - 1) / 2.0) / (wh / 2.0)
     radial = np.sqrt(u * u + v * v)
-    vignette = np.clip(1.0 - (radial - 0.45) / 0.6, 0.0, 1.0)
+    # r226 (ChatGPT's r225 code audit, confirmed by direct calculation):
+    # with the old 0.6 divisor, vignette(radial=1.0) = 1 - 0.55/0.6 =
+    # 0.083, not 0 -- a real (if faint, ~5% alpha) straight-edge residual
+    # at the crop rectangle's own left/right/top/bottom midpoints,
+    # contradicting the claim above. Divisor = 1 - inset makes the ramp
+    # hit exactly 0 right at the rectangle boundary (radial == 1.0),
+    # closing the discontinuity instead of just describing it away.
+    vignette = np.clip(1.0 - (radial - 0.45) / 0.55, 0.0, 1.0)
     alpha = alpha * vignette
 
     # Genuinely translucent, not a capped-opacity photo: ~60% at its own

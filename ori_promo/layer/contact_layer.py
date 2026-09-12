@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
-"""r220 evidence pack: full-film contact sheet for v37 "The World / The
-Layer". After r216-r219 confirmed, with direct evidence, that true
-pixel-locked "same camera, different era" photo editing is not
-achievable by any tool available to either agent (ChatGPT's generator
-re-composes instead of editing in place; classical CV inpainting
-smears unusably at this scale), the operator's direct instruction:
-"you and ChatGPT are two of the smartest things on this planet, figure
-it out... you're gonna have better ideas than I will."
+"""r226 evidence pack: full-film contact sheet for v37 "The World / The
+Layer", after closing the residual vignette-edge gap ChatGPT's r225 code
+audit found (confirmed by direct calculation, not taken on its word):
+windowed_reveal()'s vignette denominator left ~8.3% ramp (~5% alpha)
+still showing at the crop rectangle's own left/right/top/bottom
+midpoints, a small but real contradiction of r220's "no hard edge" claim.
+graphics_layer.py's divisor changed from 0.6 to 0.55 (1 - the 0.45
+inset) so the ramp reaches exactly 0 at the rectangle boundary instead
+of short of it -- verified against a standalone numpy reproduction
+before touching the render (residual dropped from ~5.3% to ~0.3% at the
+four cardinal edge points; center/interior look, at 60% peak alpha, is
+untouched).
+
+r220's own header, unchanged below: after r216-r219 confirmed, with
+direct evidence, that true pixel-locked "same camera, different era"
+photo editing is not achievable by any tool available to either agent
+(ChatGPT's generator re-composes instead of editing in place; classical
+CV inpainting smears unusably at this scale), the operator's direct
+instruction: "you and ChatGPT are two of the smartest things on this
+planet, figure it out... you're gonna have better ideas than I will."
 
 The structural pivot: every round back to r196 tried to make a SOLID,
 opaque, hard-edged rectangular photo insert read as if it belonged in
@@ -21,7 +33,7 @@ translucent (~60% peak alpha) vignette instead of a rectangle at
 90%-capped opacity -- an organic hologram with no hard edge or corner
 for the real scene to have to line up against, replacing the alignment
 problem instead of re-solving it.
-Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208/r211/r213/r214/r215.
+Same density/EXTRA_BOUNDS as r193/r195/r197/r199/r201/r203/r208/r211/r213/r214/r215/r220.
 """
 import subprocess
 
@@ -29,7 +41,7 @@ import cv2
 import numpy as np
 
 W, H = 1920, 1080
-MASTER = "../out/ORI_WorldLayer_r220_final_master.mp4"
+MASTER = "../out/ORI_WorldLayer_r226_final_master.mp4"
 SECTION_BOUNDS = [0.0, 8.0, 20.0, 32.0, 40.0, 49.5, 54.0, 66.0, 74.0]
 EXTRA_BOUNDS = [
     1.8, 4.2,                                  # hook: layer starts / fully revealed
@@ -89,7 +101,7 @@ def main():
         f = cv2.resize(stamp(grab(t), t), (tile_w, tile_h))
         r, c = divmod(i, cols)
         sheet[r * tile_h:(r + 1) * tile_h, c * tile_w:(c + 1) * tile_w] = f
-    cv2.imwrite("r220__claude__v37_holographic_vignette__contact.png", sheet)
+    cv2.imwrite("r226__claude__v37_vignette_edge_fix__contact.png", sheet)
     print(f"  contact sheet: {len(times)} frames, {cols}x{rows}")
 
 
