@@ -42,11 +42,23 @@ def ease(x):
     return x * x * (3 - 2 * x)
 
 
-def fade_k(t, dur, in_t=0.35, out_margin=0.4):
+def fade_k(t, dur, in_t=0.35, out_margin=0.4, no_out=False):
     """Standard reveal/release envelope, shared by every card in this
-    kit so the whole film has one consistent rhythm."""
+    kit so the whole film has one consistent rhythm.
+
+    no_out=True SKIPS the release multiplier entirely rather than just
+    zeroing out_margin -- zeroing the margin alone still ramps the ease
+    curve down to exactly 0 at t=dur (confirmed by direct calculation,
+    r175: ~2.5% opacity one frame before the end, not the "held through
+    the literal last frame" a caller actually wants -- the same latent
+    defect r175 found and fixed in this project's sibling walk/
+    graphics_walk.py, flagged here at the time as a decision for v34
+    rather than silently re-opened. Applying the identical, already-
+    twice-verified fix now: skipping the multiplier is the only way k
+    genuinely stays at 1.0 all the way to dur)."""
     k = ease(min(1.0, t / in_t)) if in_t > 0 else 1.0
-    k *= ease(min(1.0, max(0.0, (dur - out_margin - t) / 0.35)))
+    if not no_out:
+        k *= ease(min(1.0, max(0.0, (dur - out_margin - t) / 0.35)))
     return k
 
 
@@ -118,7 +130,7 @@ def disclosure_tag(img, t, dur, text="PRODUCT VISUALIZATION", corner="bl", k=Non
     HUD chip. Small, plain, unmistakable -- a museum label, not an
     alert."""
     if k is None:
-        k = fade_k(t, dur, in_t=0.2, out_margin=(0.0 if no_fadeout else 0.35))
+        k = fade_k(t, dur, in_t=0.2, out_margin=0.35, no_out=no_fadeout)
     if k <= 0:
         return
     d = ImageDraw.Draw(img)
