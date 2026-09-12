@@ -310,11 +310,18 @@ def bed():
     # floor and at #1DBEE6 it was the brightest thing in the room after the
     # window -- and, measured against the shop panes its own card sits on, it
     # came out at 2.7:1 where 3:1 is the floor. Same colour, less light in it.
-    rim = make_material("Aqua plush rim", tone("sea", "base"), roughness=0.90)
-    rim_lump = make_material("Aqua plush lump", tone("sea", "lit"), roughness=0.92)
+    # A STEP DOWN, because this one also stands on the shop's pale panes.
+    # Pulling the world's chroma to 0.72 -- the fix for a build that hurt to
+    # look at -- lightened every family, and the bed came out at 2.95:1
+    # against four of the five panes, just under the 3:1 every item render is
+    # held to. Same answer the cheese got: the ITEM moves down its own ramp
+    # rather than the panes being darkened around it, because the panes are
+    # UI and the world is not allowed to push the UI around.
+    rim = make_material("Aqua plush rim", tone("sea", "shade"), roughness=0.90)
+    rim_lump = make_material("Aqua plush lump", tone("sea", "base"), roughness=0.92)
     rim_dark = make_material("Aqua plush cavity", tone("sea", "deep"), roughness=0.94)
-    cushion = make_material("Cream plush cushion", tone("cream", "base"), roughness=0.94)
-    cushion_shade = make_material("Cream plush shade", tone("cream", "shade"), roughness=0.95)
+    cushion = make_material("Cream plush cushion", tone("cream", "shade"), roughness=0.94)
+    cushion_shade = make_material("Cream plush shade", tone("sand", "shade"), roughness=0.95)
     stitch = make_material("Bed stitch", tone("wood", "lit"), roughness=0.95)
 
     contact_shadow(1.48, 0.76)

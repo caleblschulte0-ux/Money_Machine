@@ -66,7 +66,7 @@ def _smooth(profile, per_span=5):
 
 
 def lathe(name, profile, mat, loc=(0.0, 0.0, 0.0), segments=40, scale=(1.0, 1.0, 1.0),
-          rotation=(0.0, 0.0, 0.0), lobes=0, lobe_depth=0.0, jitter=0.0,
+          rotation=(0.0, 0.0, 0.0), lobes=0, lobe_depth=0.0, jitter=0.0, scallop=False,
           smooth_angle=72.0):
     """Revolve an authored profile into a solid.
 
@@ -85,7 +85,27 @@ def lathe(name, profile, mat, loc=(0.0, 0.0, 0.0), segments=40, scale=(1.0, 1.0,
     def radius_at(base_r, i, theta):
         r = base_r
         if lobes and lobe_depth:
-            r *= 1.0 + math.sin(theta * lobes + (seed % 628) / 100.0) * lobe_depth
+            if scallop:
+                # CUSPS, not waves. AND THIS IS THE WRONG TOOL FOR A CANOPY,
+                # which cost a render to learn: modulating one mass's radius
+                # by angle cuts vertical grooves from top to bottom, so a
+                # scalloped canopy came out as PUMPKIN RIBBING. The scalloped
+                # edge stylised foliage has is the union of several round
+                # masses overlapping -- the arcs are the sides of balls you
+                # can still see -- so a canopy wants round clusters in a size
+                # hierarchy, not one ribbed ball. This stays for the things
+                # that genuinely are fluted (a column, a pot, a shell) and is
+                # off by default. `sin` gives a gently undulating outline --
+                # a blob. Foliage, clouds, the classic stylised canopy: the
+                # silhouette is a row of ARCS meeting at sharp inward cusps,
+                # and that is |sin| pulled inward. It is the single biggest
+                # difference between a shape that reads as drawn foliage and
+                # one that reads as a lump, and no amount of lighting supplies
+                # it, because it is in the outline.
+                r *= 1.0 - lobe_depth * (1.0 - abs(math.sin(theta * lobes * 0.5
+                                                            + (seed % 628) / 100.0)))
+            else:
+                r *= 1.0 + math.sin(theta * lobes + (seed % 628) / 100.0) * lobe_depth
         if jitter:
             # SMOOTH, not per-vertex. Hashing on (ring, angle) gave every
             # vertex its own radius, which is a microscopically bumpy surface:
@@ -190,6 +210,12 @@ CANOPY = [(0.52, 0.00), (0.86, 0.14), (1.00, 0.40), (0.97, 0.62),
 #: lampshade. A shrub's widest point is a third of the way up.
 SHRUB = [(0.55, 0.00), (0.86, 0.18), (1.00, 0.40), (0.94, 0.62),
          (0.72, 0.80), (0.40, 0.94), (0.00, 1.00)]
+
+#: A leaf cluster: fuller than the canopy, meant to be SCALLOPED and stacked
+#: with gaps between siblings rather than used alone. Its widest point is high,
+#: so the mass sits up rather than sagging.
+CLUSTER = [(0.44, 0.00), (0.80, 0.16), (0.98, 0.40), (1.00, 0.58),
+           (0.90, 0.76), (0.62, 0.91), (0.00, 1.00)]
 
 #: A boulder or a dune: heavy, settled, flat where it meets the ground.
 MOUND = [(1.00, 0.00), (0.98, 0.22), (0.88, 0.48), (0.66, 0.72),
