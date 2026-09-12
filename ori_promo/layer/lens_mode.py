@@ -214,6 +214,66 @@ def screen_blend(base_rgb_uint8, overlay_rgba):
 
 # ---- hook proof composition (r231's exact 4-beat timing) ---------------
 
+def edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr, *,
+                       enter_start, freeze_in, freeze_out, exit_end,
+                       herd_in_start, herd_in_end, herd_out_start, herd_out_end):
+    """General form of r240's direct-edit reveal, parameterized so any
+    section can reuse the same grammar (hard-cut freeze, cross-dissolve
+    between two versions of the SAME real photo) with its own timing.
+    All times are seconds within that section's own local clock.
+
+    enter_start: when the whole-frame grade starts ramping in (live video
+      still playing).
+    freeze_in: when the hard cut to the frozen real photo happens (grade
+      must already be fully ramped in by here: freeze_in - enter_start
+      should be >= the ramp duration you want).
+    freeze_out: when the hard cut BACK to live video happens.
+    exit_end: when the grade finishes easing back to normal after the cut.
+    herd_in_start/herd_in_end: cross-dissolve window from the original
+      still to the edited (content-added) still.
+    herd_out_start/herd_out_end: cross-dissolve window back to original.
+    """
+    if t < enter_start - 0.5 or t > exit_end + 0.3:
+        return None  # caller should composite the live frame instead
+
+    ramp_in = max(1e-3, freeze_in - enter_start)
+    ramp_out = max(1e-3, exit_end - freeze_out)
+    if t < enter_start:
+        grade_amt = 0.0
+    elif t < freeze_in:
+        grade_amt = ease((t - enter_start) / ramp_in)
+    elif t < freeze_out:
+        grade_amt = 1.0
+    elif t < exit_end:
+        grade_amt = 1.0 - ease((t - freeze_out) / ramp_out)
+    else:
+        grade_amt = 0.0
+
+    frozen_now = freeze_in <= t < freeze_out
+
+    if herd_in_start <= t < herd_in_end:
+        herd_k = ease((t - herd_in_start) / max(1e-3, herd_in_end - herd_in_start))
+    elif herd_out_start <= t < herd_out_end:
+        herd_k = 1.0 - ease((t - herd_out_start) / max(1e-3, herd_out_end - herd_out_start))
+    elif herd_in_end <= t < herd_out_start:
+        herd_k = 1.0
+    else:
+        herd_k = 0.0
+
+    still = original_bgr * (1 - herd_k) + edited_bgr * herd_k
+    frozen = lens_grade(still, grade_amt)
+    live = lens_grade(world_bgr, grade_amt)
+    blended = frozen if frozen_now else live
+
+    hh, ww = world_bgr.shape[:2]
+    contour_amt = 0.5 if frozen_now else 0.0
+    img = full_bleed(blended)
+    base_rgb = np.array(img.convert("RGB"))
+    contours = contour_field_layer(still if frozen_now else world_bgr, contour_amt, ww, hh)
+    base_rgb = screen_blend(base_rgb, contours)
+    return Image.fromarray(base_rgb).convert("RGBA")
+
+
 def real_edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr):
     """r239's direct-edit breakthrough: ChatGPT edited the ACTUAL real
     hook frame (not a standalone generation) to add a mammoth herd,
@@ -238,43 +298,16 @@ def real_edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr):
     Original <-> edited still keeps its cross-dissolve (zero risk: same
     exact pose, only the mammoth region differs, so there is nothing to
     ghost). The mirror cut releases back to live video at the moment the
-    grade starts easing out."""
-    FREEZE_IN, FREEZE_OUT = 2.3, 6.5
-    if t < FREEZE_IN - 0.5 or t > FREEZE_OUT + 0.3:
-        return None  # caller should composite the live frame instead
+    grade starts easing out.
 
-    if t < 1.8:
-        grade_amt = 0.0
-    elif t < FREEZE_IN:
-        grade_amt = ease((t - 1.8) / (FREEZE_IN - 1.8))
-    elif t < FREEZE_OUT:
-        grade_amt = 1.0
-    elif t < FREEZE_OUT + 0.3:
-        grade_amt = 1.0 - ease((t - FREEZE_OUT) / 0.3)
-    else:
-        grade_amt = 0.0
-
-    frozen_now = FREEZE_IN <= t < FREEZE_OUT
-
-    if 4.2 <= t < 5.6:
-        herd_k = ease((t - 4.2) / 1.4)
-    elif 5.6 <= t < 6.2:
-        herd_k = 1.0 - ease((t - 5.6) / 0.6)
-    else:
-        herd_k = 0.0
-
-    still = original_bgr * (1 - herd_k) + edited_bgr * herd_k
-    frozen = lens_grade(still, grade_amt)
-    live = lens_grade(world_bgr, grade_amt)
-    blended = frozen if frozen_now else live
-
-    hh, ww = world_bgr.shape[:2]
-    contour_amt = 0.5 if frozen_now else 0.0
-    img = full_bleed(blended)
-    base_rgb = np.array(img.convert("RGB"))
-    contours = contour_field_layer(still if frozen_now else world_bgr, contour_amt, ww, hh)
-    base_rgb = screen_blend(base_rgb, contours)
-    return Image.fromarray(base_rgb).convert("RGBA")
+    This is the hook's own exact r240 timing, kept as a thin wrapper over
+    edit_reveal_frame() (r244's generalization for reuse on borrow/
+    examples_hist/examples_ice) so r240's already-approved-for-review
+    hook proof is byte-for-byte unchanged."""
+    return edit_reveal_frame(
+        world_bgr, t, original_bgr, edited_bgr,
+        enter_start=1.8, freeze_in=2.3, freeze_out=6.5, exit_end=6.8,
+        herd_in_start=4.2, herd_in_end=5.6, herd_out_start=5.6, herd_out_end=6.2)
 
 
 def hook_lens_frame(world_bgr, t, w, h, anchor=(950, 410), scale=1.15):
