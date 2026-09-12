@@ -214,6 +214,69 @@ def screen_blend(base_rgb_uint8, overlay_rgba):
 
 # ---- hook proof composition (r231's exact 4-beat timing) ---------------
 
+def real_edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr):
+    """r239's direct-edit breakthrough: ChatGPT edited the ACTUAL real
+    hook frame (not a standalone generation) to add a mammoth herd,
+    verified by direct pixel diff to be faithful everywhere outside the
+    herd itself (mean diff 4.6/255 outside the edit region, concentrated
+    at resample edges, not content drift -- checked against the wearer's
+    face/pose and both signs directly). Two versions of the SAME
+    photograph, so a plain cross-dissolve between them has no seam to
+    fail: there is no second image with different geometry, just one
+    photo with and without the herd.
+
+    The real video plays normally while the whole-frame grade ramps in,
+    then CUTS (no cross-dissolve) to the frozen captured moment once the
+    grade is already fully engaged -- measured directly against this
+    footage's own frames: the wearer never actually holds still (mean
+    diff from the t=4.0 capture is ~7-13/255 even within +-1.5s of it,
+    climbing past 20 by +-2.5s), so blending across that gap produced a
+    double-exposure ghost, not a clean hold. A hard cut timed to land
+    once the frame is already visibly in Lens Mode reads as a deliberate
+    mode-change, not a rendering glitch -- the same logic as a real
+    camera cutting to a freeze-frame rather than dissolving into one.
+    Original <-> edited still keeps its cross-dissolve (zero risk: same
+    exact pose, only the mammoth region differs, so there is nothing to
+    ghost). The mirror cut releases back to live video at the moment the
+    grade starts easing out."""
+    FREEZE_IN, FREEZE_OUT = 2.3, 6.5
+    if t < FREEZE_IN - 0.5 or t > FREEZE_OUT + 0.3:
+        return None  # caller should composite the live frame instead
+
+    if t < 1.8:
+        grade_amt = 0.0
+    elif t < FREEZE_IN:
+        grade_amt = ease((t - 1.8) / (FREEZE_IN - 1.8))
+    elif t < FREEZE_OUT:
+        grade_amt = 1.0
+    elif t < FREEZE_OUT + 0.3:
+        grade_amt = 1.0 - ease((t - FREEZE_OUT) / 0.3)
+    else:
+        grade_amt = 0.0
+
+    frozen_now = FREEZE_IN <= t < FREEZE_OUT
+
+    if 4.2 <= t < 5.6:
+        herd_k = ease((t - 4.2) / 1.4)
+    elif 5.6 <= t < 6.2:
+        herd_k = 1.0 - ease((t - 5.6) / 0.6)
+    else:
+        herd_k = 0.0
+
+    still = original_bgr * (1 - herd_k) + edited_bgr * herd_k
+    frozen = lens_grade(still, grade_amt)
+    live = lens_grade(world_bgr, grade_amt)
+    blended = frozen if frozen_now else live
+
+    hh, ww = world_bgr.shape[:2]
+    contour_amt = 0.5 if frozen_now else 0.0
+    img = full_bleed(blended)
+    base_rgb = np.array(img.convert("RGB"))
+    contours = contour_field_layer(still if frozen_now else world_bgr, contour_amt, ww, hh)
+    base_rgb = screen_blend(base_rgb, contours)
+    return Image.fromarray(base_rgb).convert("RGBA")
+
+
 def hook_lens_frame(world_bgr, t, w, h, anchor=(950, 410), scale=1.15):
     """t in seconds over the hook's 8.0s. Returns a PIL RGBA image, ready
     for the existing primary_label/disclosure calls on top."""
