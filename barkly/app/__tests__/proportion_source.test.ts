@@ -117,7 +117,18 @@ describe('one ink, read from one file', () => {
   });
 
   it('ink.py is the only file that names the edge colour', () => {
-    expect(readTool('ink.py')).toMatch(/^INK = tone\("ink", "deep"\)$/m);
+    /*
+     * THE FAMILY, NOT THE STEP. This froze `tone("ink", "deep")` as a
+     * literal, so moving the edge one step up the same ramp -- which is what
+     * took the line from 4.5:1 against what it borders to 3.3:1, after the
+     * operator said twice that the build hurt to look at -- failed here for
+     * no reason. The contract this test is for is that the edge colour comes
+     * from the palette's ink family and is named in exactly one file. Which
+     * STEP of that family is an art decision, and freezing an art decision in
+     * a test means the test has to be edited to make art, which is how a
+     * guard turns into a toll booth.
+     */
+    expect(readTool('ink.py')).toMatch(/^INK = tone\("ink", "\w+"\)$/m);
     for (const file of ['world_prop_pack.py', 'world_scene_pack.py', 'home_prop_pack.py']) {
       const src = readTool(file);
       const lines = src.split('\n').filter((l: string) => /linestyle\.color|CONTOUR_RGB/.test(l));

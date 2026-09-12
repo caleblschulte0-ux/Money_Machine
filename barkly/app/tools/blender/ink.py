@@ -71,8 +71,27 @@ from palette import tone  # noqa: E402
 #: which is the whole reason the edge exists.
 CONTOUR = True
 
-#: The world's darkest neutral, and the only colour any edge in the game is.
-INK = tone("ink", "deep")
+#: The colour of every edge in the game -- and it is `shade`, not `deep`.
+#:
+#: Operator, twice, on the live build: *"that hurts my eyes."* Pulling the
+#: chroma down took a third of the frame out of the loud band and he said it
+#: again, so the chroma was not the whole of it. Measured on the shipped park
+#: plate, this was:
+#:
+#:   the line covers                       5.2% of the frame
+#:   its contrast against what it borders  4.5:1
+#:   within 6px of a line                  17.9% of the frame
+#:   the treeline band alone                8.2% line pixels
+#:
+#: A fifth of the picture sitting right beside a near-black edge at 4.5:1 is
+#: a grid of maximum-contrast boundaries with nowhere for an eye to rest.
+#: That is a real cause of eye strain and it is a separate one from chroma.
+#:
+#: `deep` is value 0.16 against grass at 0.67. `shade` is 0.24 and still
+#: unmistakably a dark line -- the edge stays, it stops being a hole punched
+#: in the picture. `deep` is still the world's darkest neutral and is still
+#: what the shadow steps are made of; it is just not what a LINE is.
+INK = tone("ink", "shade")
 
 #: The same, as 0-255 RGB, for the PIL flood in promote-props.
 INK_RGB = tuple(int(INK[i:i + 2], 16) for i in (1, 3, 5))

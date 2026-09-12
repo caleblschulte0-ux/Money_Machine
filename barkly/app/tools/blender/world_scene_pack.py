@@ -484,9 +484,15 @@ def park():
     for i in range(18):
         x = -36.0 + i * 4.3 + ((i * 0.463) % 1.0) * 1.8
         y = 44.0 + ((i * 0.618) % 1.0) * 2.5
-        _tree(x, y, 1.15 + ((i * 0.271) % 1.0) * 0.40,
-              canopy=tone("foliage", "shade"), trunk=tone("bark", "shade"),
-              seed=9000 + i)
+        # NO LINE ON THE FAR ROW. The treeline band measured 8.2% pure line
+        # pixels -- by far the densest edge field in the frame, and it is the
+        # part of the picture that is meant to recede. A horizon does not need
+        # eighteen outlined canopies; it needs a soft mass behind the ones
+        # that do.
+        for obj in _tree(x, y, 1.15 + ((i * 0.271) % 1.0) * 0.40,
+                         canopy=tone("foliage", "shade"),
+                         trunk=tone("bark", "shade"), seed=9000 + i) or ():
+            no_ink(obj)
     for i in range(27):
         x = -34.0 + i * 2.6 + ((i * 0.317) % 1.0) * 1.1
         y = 37.5 + ((i * 0.618) % 1.0) * 3.0
@@ -1240,10 +1246,14 @@ def _tree(x: float, y: float, s: float, canopy: str | None = None,
     # mass over the shoulder instead of balancing lobes on top of it.
     wx, wy = TURN(x, y)
     base_r = 0.62 * s
-    pack.cone(f"trunk{x:.1f}{y:.1f}", (wx, wy, 1.28 * s), base_r, shaft(base_r, 0.32), 2.56 * s, bark)
+    # The trunk and the core mass go into the returned list too, or a caller
+    # that opts a tree out of the ink gets outlined trunks under un-outlined
+    # canopies -- which is worse than either.
+    trunk_obj = pack.cone(f"trunk{x:.1f}{y:.1f}", (wx, wy, 1.28 * s), base_r,
+                          shaft(base_r, 0.32), 2.56 * s, bark)
     crown_z = stack(2.56 * s, 1.16 * s)
-    pack.sphere(f"leaf{x:.1f}{y:.1f}_mass", (wx, wy, crown_z),
-                (crown(base_r), crown(base_r) * 0.94, 1.16 * s), leaf)
+    mass = pack.sphere(f"leaf{x:.1f}{y:.1f}_mass", (wx, wy, crown_z),
+                       (crown(base_r), crown(base_r) * 0.94, 1.16 * s), leaf)
     # A CLUSTER, matching park/tree.png lobe for lobe. Three bumps sunk into
     # one big ellipsoid gave a smooth mass with a single outline: measured,
     # 0.83% of the prop's interior carried any ink at all against the
@@ -1270,6 +1280,7 @@ def _tree(x: float, y: float, s: float, canopy: str | None = None,
         n = zlib.crc32(f"{seed}:{i}:{salt}".encode())
         return 1.0 + ((n % 1000) / 1000.0 - 0.5) * 2.0 * amount
 
+    made = [trunk_obj, mass]
     for i, (dx, dy, dz, r, sq, tilt, mat) in enumerate((
         (-0.58, -0.40, 0.56, 1.04, 0.64, (-0.20, 0.24), leaf_hi),
         (0.52, 0.04, 0.62, 0.86, 0.58, (0.16, -0.30), leaf_hi),
@@ -1284,11 +1295,12 @@ def _tree(x: float, y: float, s: float, canopy: str | None = None,
         r *= jitter(i, 4, 0.14)
         sq *= jitter(i, 5, 0.14)
         lx, ly = TURN(x + dx * s, y + dy * s)
-        pack.sphere(f"leaf{x:.1f}{y:.1f}_{i}",
+        made.append(pack.sphere(f"leaf{x:.1f}{y:.1f}_{i}",
                     (lx, ly, crown_z + dz * s),
                     (r * s, r * 0.86 * s, sq * s),
                     mat, rotation=(tilt[0] * jitter(i, 6, 0.30),
-                                   tilt[1] * jitter(i, 7, 0.30), 0.0))
+                                   tilt[1] * jitter(i, 7, 0.30), 0.0)))
+    return made
 
 
 def _bench(x: float, y: float):
