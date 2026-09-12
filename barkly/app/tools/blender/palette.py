@@ -171,7 +171,21 @@ STEPS = {
 #: once, rather than to each family by hand, so the relationships between the
 #: families are exactly as authored and only the whole ramp moves.
 ADOPTED_LIFT = 0.07
-ADOPTED_CHROMA = 0.90
+
+#: 0.72, and 0.90 was not nearly enough.
+#:
+#: Operator, on the live build: *"that hurts my eyes."* That is a physical
+#: complaint, not a taste one, and it measures. In the world band of the
+#: shipped park frame: mean saturation 0.487, with 34% of the pixels above
+#: 0.60 -- and 57% of every chromatic pixel in the green and yellow-green
+#: families. A third of the screen at high chroma in ONE hue is what fatigues
+#: an eye, and no amount of shape work fixes it.
+#:
+#: The chroma was pushed up deliberately in an earlier pass, measured against
+#: a reference frame that reads 0.52 -- but that reference spreads its chroma
+#: across a dozen hues and a park is green from edge to edge. The number that
+#: transfers is not the mean, it is how much of the frame is loud at once.
+ADOPTED_CHROMA = 0.72
 
 _AUTHORED = {
     # The ground the game stands on. Stone and paving are deliberately far
