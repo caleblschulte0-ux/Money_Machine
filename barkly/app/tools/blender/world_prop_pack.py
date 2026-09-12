@@ -2296,9 +2296,21 @@ def item_cheese():
     axis, holes sunk in the top and the side, and a rind that wraps the back
     instead of being a sheet stuck on the front.
     """
-    flesh = material("Cheese flesh", tone("sun", "lit"), roughness=0.60, coat=0.05)
-    rind = material("Cheese rind", tone("sun", "base"), roughness=0.64)
-    hole = material("Cheese hole", tone("sun", "shade"), roughness=0.72)
+    # BASE AND SHADE, not lit and base. The adopted palette lifts every ramp
+    # 0.07, and this item is a yellow standing on the store's pale panes --
+    # so the lift pushed it to 2.87:1 against four of them, under the 3:1
+    # this repo holds every item render to. An icon that cannot be told from
+    # the card it sits on is not a legibility nicety, it is the item being
+    # invisible, so the wedge takes its colours one step down the same ramp
+    # rather than the panes being lightened around it.
+    flesh = material("Cheese flesh", tone("sun", "base"), roughness=0.60, coat=0.05)
+    rind = material("Cheese rind", tone("sun", "shade"), roughness=0.64)
+    # The holes go a step deeper than the rind rather than matching it. They
+    # were both `sun.shade` once the flesh moved down a step, and two sibling
+    # materials at one tone is what `palette_source.test.ts` refuses -- with
+    # reason: a cavity that is the same colour as the rind around it is not a
+    # cavity, it is a dot.
+    hole = material("Cheese hole", tone("sun", "deep"), roughness=0.72)
     turn = math.radians(-22)
     cylinder("wedge", (0, 0, 0.54), 0.56, 0.50, flesh,
              rotation=(math.radians(90), 0, turn), vertices=3, taper=1.0)

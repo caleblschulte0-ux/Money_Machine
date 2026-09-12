@@ -1003,8 +1003,14 @@ def _hedge(x: float, y: float, length: float, s: float = 1.0):
 
 def _bush(x: float, y: float, s: float = 1.0):
     """A shrub for the near corners. Foreground is mass, not detail."""
-    dark = pack.material(f"Bush{x:.1f}{y:.1f}", tone("foliage", "shade"), roughness=0.92)
-    lit = pack.material(f"BushLit{x:.1f}{y:.1f}", tone("foliage", "base"), roughness=0.90)
+    # ONE STEP UP THE RAMP, all three. Built against the smooth shading these
+    # were shade / base with a deep skirt, and banding put the skirt's whole
+    # face into the bottom tone at once -- so a shrub read as a near-black
+    # blob with a green cap instead of a mass with a lit top. Banded art wants
+    # its darks chosen for the BAND they land in, not for the gradient they
+    # used to sit on.
+    dark = pack.material(f"Bush{x:.1f}{y:.1f}", tone("foliage", "base"), roughness=0.92)
+    lit = pack.material(f"BushLit{x:.1f}{y:.1f}", tone("foliage", "lit"), roughness=0.90)
     # SEVEN LOBES AND A SHADED SKIRT, not four even ones.
     #
     # Four similar spheres in a row rendered a caterpillar: identical ovals,
@@ -1013,7 +1019,7 @@ def _bush(x: float, y: float, s: float = 1.0):
     # a bush is lit from above like everything else, and the old one had its
     # lit lobe at the FRONT rather than the crown, so it read as a sticker
     # with a highlight rather than a form with a top.
-    deep = pack.material(f"BushDeep{x:.1f}{y:.1f}", tone("foliage", "deep"), roughness=0.93)
+    deep = pack.material(f"BushDeep{x:.1f}{y:.1f}", tone("foliage", "shade"), roughness=0.93)
     for i, (dx, dy, dz, r, sq, mat) in enumerate((
         (0.00, 0.10, 0.30, 1.02, 0.62, deep),
         (-0.66, 0.22, 0.26, 0.80, 0.56, deep),
@@ -1065,9 +1071,17 @@ def _path():
     # is neither path nor lawn. Two polygons, the wider one darker and
     # underneath, and the inner one inset -- which also breaks the hard
     # straight boundary the single shape had.
-    verge = pack.material("Path verge", tone("paving", "shade"), roughness=0.97)
+    # WORN GRASS, not darker dirt. A darker paving either side of paving is
+    # two browns a few values apart, and under banded shading they land in
+    # the same tone and vanish -- which is what the first verge did. What a
+    # path's edge actually is, is grass losing: the grass family's shade step,
+    # so the border reads as trodden lawn rather than a second path.
+    verge = pack.material("Path verge", tone("grass", "shade"), roughness=0.97)
     dirt = pack.material("Path", tone("paving", "base"), roughness=0.96)
-    for name, grow, z, mat in (("path_verge", 0.55, 0.008, verge),
+    # 1.25, not 0.55. At half a unit the verge rendered as a thin dark line
+    # either side of the path -- which reads as drawn edging, the opposite of
+    # the point. A worn border has to be wide enough to be a BAND.
+    for name, grow, z, mat in (("path_verge", 1.25, 0.008, verge),
                                ("path", 0.0, 0.014, dirt)):
         left, right = [], []
         for i in range(15):
