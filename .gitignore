@@ -6,3 +6,15 @@ __pycache__/
 # Drive mailbox, never into the repo itself).
 ori_promo/*/out/
 ori_promo/out/
+ori_promo/*/out_*/
+ori_promo/*/concat_*.txt
+
+# Locally-provisioned inputs -- large, regenerable, never committed
+# (storage rule: nothing >256KB in git). Raw footage is downloaded per
+# ori_promo/manifest.txt (Drive file IDs, all link-shared); fonts are
+# the open-source Inter family; the Piper voice model is fetched from
+# rhasspy/piper-voices on HuggingFace. All three are re-provisioned
+# fresh at the start of a session, not carried in the repo.
+ori_promo/raw/
+ori_promo/fonts/
+ori_promo/vo/voices/
