@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import math
+import zlib
 import os
 import sys
 from pathlib import Path
@@ -446,15 +447,27 @@ def park():
 
     # The far treeline, as real trees at distance rather than a painted band.
     # A treeline far enough back to be a horizon, spread wider than the frame.
+    # TWO ROWS, and the back one is DARKER. One row of evenly spaced trees at
+    # one tone is a fence; a treeline is a mass with depth in it. The far row
+    # takes `foliage shade`, which is what reads as "further away" without
+    # any haze, and sits behind the near one so the near canopies break its
+    # line instead of standing beside it.
+    for i in range(18):
+        x = -36.0 + i * 4.3 + ((i * 0.463) % 1.0) * 1.8
+        y = 44.0 + ((i * 0.618) % 1.0) * 2.5
+        _tree(x, y, 1.15 + ((i * 0.271) % 1.0) * 0.40,
+              canopy=tone("foliage", "shade"), trunk=tone("bark", "shade"),
+              seed=9000 + i)
     for i in range(27):
-        x = -34.0 + i * 2.6
+        x = -34.0 + i * 2.6 + ((i * 0.317) % 1.0) * 1.1
         y = 37.5 + ((i * 0.618) % 1.0) * 3.0
         # SMALL. Wired into the app the first treeline came out as a wall of
         # trunks filling the top half of the phone: a tree of scale 2 is eight
         # units tall, and eight units at this camera is most of the frame. A
         # horizon is made of trees you read as far away, which means small.
         s = 1.05 + ((i * 0.382) % 1.0) * 0.45
-        _tree(x, y, s, canopy=tone("foliage", "base"), trunk=tone("bark", "base"))
+        _tree(x, y, s, canopy=tone("foliage", "base"), trunk=tone("bark", "base"),
+              seed=i)
 
     # Then the trees that frame the shot: two near the edges, two mid-distance.
     for x, y, s in ((-7.6, -3.0, 1.6), (8.2, -1.4, 1.5), (-11.5, 11.0, 1.3), (12.5, 9.0, 1.25),
@@ -952,13 +965,30 @@ def _bush(x: float, y: float, s: float = 1.0):
     """A shrub for the near corners. Foreground is mass, not detail."""
     dark = pack.material(f"Bush{x:.1f}{y:.1f}", tone("foliage", "shade"), roughness=0.92)
     lit = pack.material(f"BushLit{x:.1f}{y:.1f}", tone("foliage", "base"), roughness=0.90)
-    for i, (dx, dy, dz, r) in enumerate((
-        (0.0, 0.0, 0.55, 1.0), (-0.72, 0.18, 0.42, 0.78),
-        (0.70, -0.12, 0.46, 0.82), (0.05, -0.35, 0.72, 0.66),
+    # SEVEN LOBES AND A SHADED SKIRT, not four even ones.
+    #
+    # Four similar spheres in a row rendered a caterpillar: identical ovals,
+    # each with its own outline, all at one tone. What makes a shrub a mass
+    # is that the lobes DIFFER and that the bottom is darker than the top --
+    # a bush is lit from above like everything else, and the old one had its
+    # lit lobe at the FRONT rather than the crown, so it read as a sticker
+    # with a highlight rather than a form with a top.
+    deep = pack.material(f"BushDeep{x:.1f}{y:.1f}", tone("foliage", "deep"), roughness=0.93)
+    for i, (dx, dy, dz, r, sq, mat) in enumerate((
+        (0.00, 0.10, 0.30, 1.02, 0.62, deep),
+        (-0.66, 0.22, 0.26, 0.80, 0.56, deep),
+        (0.72, -0.04, 0.28, 0.84, 0.58, deep),
+        (-0.30, -0.26, 0.48, 0.86, 0.70, dark),
+        (0.44, -0.20, 0.52, 0.78, 0.68, dark),
+        (-0.05, 0.02, 0.78, 0.72, 0.62, lit),
+        (0.50, 0.26, 0.70, 0.56, 0.50, lit),
     )):
         wx, wy = TURN(x + dx * s, y + dy * s)
+        n = zlib.crc32(f"bush{x:.1f}{y:.1f}{i}".encode())
+        wob = 1.0 + ((n % 1000) / 1000.0 - 0.5) * 0.22
         pack.sphere(f"bush{x:.1f}{y:.1f}{i}", (wx, wy, dz * s),
-                    (r * s, r * 0.85 * s, r * 0.78 * s), lit if i == 3 else dark)
+                    (r * wob * s, r * 0.86 * wob * s, sq * s), mat,
+                    rotation=(0.0, 0.0, (n % 360) * math.pi / 180.0))
 
 
 def _flowers(x: float, y: float, s: float = 1.0, petal_hex: str | None = None):
@@ -988,16 +1018,29 @@ def _path():
     boxes down the field and rendered a jagged staircase with a hard edge on
     every step -- a path is a shape, and a shape is one polygon.
     """
+    # AND IT HAS AN EDGE. One n-gon of one colour is a brown ribbon laid on
+    # green, and it runs the full height of the frame, so it is the largest
+    # single flat thing in the picture. A worn path has a WORN EDGE: the
+    # grass gives up gradually, so there is a scuffed border either side that
+    # is neither path nor lawn. Two polygons, the wider one darker and
+    # underneath, and the inner one inset -- which also breaks the hard
+    # straight boundary the single shape had.
+    verge = pack.material("Path verge", tone("paving", "shade"), roughness=0.97)
     dirt = pack.material("Path", tone("paving", "base"), roughness=0.96)
-    left, right = [], []
-    for i in range(15):
-        t = i / 14.0
-        y = -40.0 + t * 81.0
-        w = 2.2 - t * 1.95          # narrows with distance, because it does
-        wobble = math.sin(t * 5.2) * 0.5
-        left.append((wobble - w, y))
-        right.append((wobble + w, y))
-    _poly("path", left + right[::-1], 0.010, dirt)
+    for name, grow, z, mat in (("path_verge", 0.55, 0.008, verge),
+                               ("path", 0.0, 0.014, dirt)):
+        left, right = [], []
+        for i in range(15):
+            t = i / 14.0
+            y = -40.0 + t * 81.0
+            w = 2.2 - t * 1.95      # narrows with distance, because it does
+            # The verge wanders more than the path it borders, so the two
+            # edges are never parallel for long.
+            wobble = math.sin(t * 5.2) * 0.5 + math.sin(t * 9.1 + 1.3) * grow * 0.5
+            w += grow * (1.0 - t * 0.45)
+            left.append((wobble - w, y))
+            right.append((wobble + w, y))
+        _poly(name, left + right[::-1], z, mat)
 
 
 def _bandstand(x: float, y: float, s: float = 1.0):
@@ -1106,18 +1149,29 @@ def _bandstand(x: float, y: float, s: float = 1.0):
     # pentagon at this size -- the flat-cel style probe made that plain -- and
     # a rib per seam is what gives the roof edges of its own to catch light on
     # rather than relying on the facets happening to face differently.
+    # HIP RIBS, and the first pair of numbers made them stickers. They were
+    # bright teal on a dark red roof, 3.10 long against a 3.33 slant and
+    # centred at radius 1.49 against the slant's own 1.56 -- so they stopped
+    # short of both the finial and the eave and read as blue slashes laid on
+    # top rather than as the roof's own edges. A rib is structure: it runs the
+    # full slant, it is the colour of the other structure (the posts), and it
+    # is what keeps a flat-shaded pyramid from reading as a paper pentagon.
+    roof_run = 2.92 * s - 0.20 * s
+    roof_rise = 1.92 * s
+    slant = math.hypot(roof_run, roof_rise)
     for i in range(6):
         a = i / 6.0 * math.tau
-        rr = 2.98 * s * 0.5
+        rr = (2.92 * s + 0.20 * s) / 2.0
         rx, ry = TURN(x + math.cos(a) * rr, y + math.sin(a) * rr)
-        pack.cube(f"bandrib{x:.1f}{i}", (rx, ry, 4.62 * s),
-                  (0.07 * s, 1.55 * s, 0.07 * s),
-                  trim, rotation=(math.atan2(1.92 * s, 2.92 * s), 0, THETA + a + math.pi / 2))
+        pack.cube(f"bandrib{x:.1f}{i}", (rx, ry, 4.66 * s),
+                  (0.06 * s, slant / 2.0, 0.06 * s),
+                  post, rotation=(math.atan2(roof_rise, roof_run), 0,
+                                  THETA + a + math.pi / 2))
     pack.sphere(f"bandfin{x:.1f}", (cx, cy, 5.74 * s), (0.20 * s, 0.20 * s, 0.28 * s), finial)
 
 
 def _tree(x: float, y: float, s: float, canopy: str | None = None,
-          trunk: str | None = None):
+          trunk: str | None = None, seed: int | None = None):
     canopy = tone("foliage", "base") if canopy is None else canopy
     trunk = tone("bark", "base") if trunk is None else trunk
     bark = pack.material(f"Bark{x:.1f}{y:.1f}", trunk, roughness=0.92)
@@ -1145,6 +1199,23 @@ def _tree(x: float, y: float, s: float, canopy: str | None = None,
     # outline, and the low two in the shade tone so the canopy has an
     # underside. The plate's tree and the modular tree have to be the same
     # tree or the park is two parks.
+    #
+    # AND EVERY TREE IS A DIFFERENT TREE, which twenty-seven of them in a row
+    # made impossible to ignore. The treeline was this exact lobe table
+    # twenty-seven times over, varying only in scale, and it rendered as a
+    # row of identical lollipops across the whole top third of the frame --
+    # the single most "unrefined" thing in the picture, and nothing to do
+    # with shading. `seed` jitters each lobe deterministically, so a tree is
+    # reproducible from its position but no two are the same tree. The
+    # jitter is small (under a fifth) because the SHAPE is authored above and
+    # this is variation, not randomness: at half this the row still repeated,
+    # and at twice it the canopies came apart into loose balls.
+    def jitter(i: int, salt: int, amount: float) -> float:
+        if seed is None:
+            return 1.0
+        n = zlib.crc32(f"{seed}:{i}:{salt}".encode())
+        return 1.0 + ((n % 1000) / 1000.0 - 0.5) * 2.0 * amount
+
     for i, (dx, dy, dz, r, sq, tilt, mat) in enumerate((
         (-0.58, -0.40, 0.56, 1.04, 0.64, (-0.20, 0.24), leaf_hi),
         (0.52, 0.04, 0.62, 0.86, 0.58, (0.16, -0.30), leaf_hi),
@@ -1153,11 +1224,17 @@ def _tree(x: float, y: float, s: float, canopy: str | None = None,
         (1.02, 0.50, -0.56, 0.72, 0.46, (-0.26, 0.14), leaf),
         (-0.94, 0.48, -0.60, 0.66, 0.44, (0.28, 0.20), leaf),
     )):
+        dx *= jitter(i, 1, 0.18)
+        dy *= jitter(i, 2, 0.18)
+        dz *= jitter(i, 3, 0.16)
+        r *= jitter(i, 4, 0.14)
+        sq *= jitter(i, 5, 0.14)
         lx, ly = TURN(x + dx * s, y + dy * s)
         pack.sphere(f"leaf{x:.1f}{y:.1f}_{i}",
                     (lx, ly, crown_z + dz * s),
                     (r * s, r * 0.86 * s, sq * s),
-                    mat, rotation=(tilt[0], tilt[1], 0.0))
+                    mat, rotation=(tilt[0] * jitter(i, 6, 0.30),
+                                   tilt[1] * jitter(i, 7, 0.30), 0.0))
 
 
 def _bench(x: float, y: float):
