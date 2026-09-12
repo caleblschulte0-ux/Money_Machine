@@ -1521,19 +1521,40 @@ def _surf(y: float):
 
 
 def _headland(y: float):
-    far = pack.material("Headland", tone("stone", "base"), roughness=0.94)
-    far_b = pack.material("Headland b", tone("stone", "lit"), roughness=0.94)
-    for i in range(23):
-        x = -34.0 + i * 3.0
-        wx, wy = TURN(x, y + ((i * 0.618) % 1.0) * 2.0)
+    """The far shore. A LAND MASS, not a row of beads.
+
+    Twenty-three spheres of near-identical size at a dead-even 3.0 spacing,
+    alternating between two tones, rendered exactly what that description
+    says: a string of grey beads laid along the horizon. It is the treeline's
+    failure in a different scene -- the fix there was the same one, because
+    the cause is the same. What reads as a distant shore is one silhouette
+    with lumps in it, which means the lumps have to OVERLAP and they have to
+    differ.
+    """
+    # ONE TONE, and this took a second pass to accept. Alternating three
+    # steps of the stone ramp across neighbouring mounds rendered a cow-print
+    # ridge: adjacent lumps in visibly different colours read as separate
+    # objects, which is the opposite of a mass. Distant land is nearly one
+    # colour -- and under banded shading a single material is already broken
+    # into tones by which way each mound FACES, so the variation is there
+    # without painting it on.
+    stone_mat = pack.material("Headland", tone("stone", "shade"), roughness=0.94)
+    tones = [stone_mat, stone_mat, stone_mat]
+    for i in range(31):
+        n = zlib.crc32(f"headland{i}".encode())
+        jitter = ((n % 1000) / 1000.0 - 0.5)
+        # 2.2 apart against a 1.9 half-width: every mound runs into both its
+        # neighbours, so the row closes into one edge.
+        x = -34.0 + i * 2.2 + jitter * 1.1
+        wx, wy = TURN(x, y + ((i * 0.618) % 1.0) * 2.4 + jitter * 1.6)
         # SMALL. At the scale the app shows this plate, headland hills of
         # h 1.6-3.0 came out as green pillows filling a fifth of the phone.
-        # A far shore is a low band, not a range of hills.
-        # Rounded mounds, not discs. At (2.2, 1.5) wide and 0.3 tall they
-        # flattened into pale ellipses lying on the water -- lily pads.
-        h = 1.0 + ((i * 0.382) % 1.0) * 0.7
-        pack.sphere(f"head{i}", (wx, wy, h * 0.18), (1.7, 1.15, h * 0.85),
-                    far if i % 2 else far_b)
+        # A far shore is a low band, not a range of hills -- but the heights
+        # have to SPREAD, or a low band is a kerb.
+        h = 0.55 + ((n >> 8) % 1000) / 1000.0 * 0.75
+        w = 1.9 + ((n >> 16) % 1000) / 1000.0 * 1.1
+        pack.sphere(f"head{i}", (wx, wy, h * 0.16), (w, w * 0.68, h * 0.85),
+                    tones[n % 3], rotation=(0.0, 0.0, jitter * 0.6))
 
 
 def _dune(x: float, y: float, s: float = 1.0, flip: bool = False):
