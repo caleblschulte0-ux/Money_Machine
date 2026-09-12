@@ -8,6 +8,11 @@ ori_promo/*/out/
 ori_promo/out/
 ori_promo/*/out_*/
 ori_promo/*/concat_*.txt
+# The working-directory copy contact_layer.py-style scripts write before
+# this session copies the real one into handoff_media/ (the actual
+# tracked location) -- a stray duplicate left behind twice now (r226,
+# r234) rather than a one-off.
+ori_promo/*/r*__*__contact.*
 
 # Locally-provisioned inputs -- large, regenerable, never committed
 # (storage rule: nothing >256KB in git). Raw footage is downloaded per
