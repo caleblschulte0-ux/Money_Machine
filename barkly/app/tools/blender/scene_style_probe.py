@@ -498,10 +498,69 @@ ROUND_TEN = {
     "4-bold": _style("LINE 2.4x (boldest)", contour=True, ink_thickness=2.4),
 }
 
+#: ROUND ELEVEN -- ALTERNATES OFF THE ADOPTED LOOK.
+#:
+#: The jump-off is round ten's finest line, now the shipping default: smooth
+#: gradient shading, the shipping palette, and a contour at 1.0x -- 4.1 pixels
+#: on a 390pt phone, against the 4.2 Barkly's own cast carries.
+#:
+#: Every entry below keeps that line and that sun. What moves is what nine
+#: rounds of measuring says actually reaches the screen at this size:
+#:
+#:   banding      12-13 of 255
+#:   palette lift 17.5 at -0.24
+#:   line COLOUR  untried until now, and it is the biggest untested lever
+#:                left -- a near-black edge and a warm dark edge are as
+#:                different as a comic and a picture book, and the line is
+#:                on every silhouette in the frame, so it has the area
+#:
+#: Not moved, because the measuring says they do not read here: micro-surface
+#: (0.4-0.9), band count beyond three (0.8), decimation (2.0), chroma (3.9 --
+#: the palette already runs 0.52 to 1.00, so a boost mostly clamps).
+LINE = dict(contour=True, ink_thickness=1.0)
+
+
+def _alt(label, **dials):
+    return _style(label, **dict(LINE, **dials))
+
+
+ROUND_ELEVEN = {
+    "1-adopted": _alt("1 / ADOPTED (smooth, ink line)"),
+    "2-banded": _alt("2 / BANDED FILLS", shading="cel", bands=3,
+                     roughness=1.0, coat=0.0, surface="smooth"),
+    # LINE COLOUR IS NOT A DIRECTION, and this slot is the evidence rather
+    # than a guess. The lever works: pointed at `bark deep` the line's mean
+    # went 16/21/30 -> 29/28/31 and thinned from 74k pixels to 51k; pointed
+    # at `bark shade`, an actual brown, it is unmistakable where you look at
+    # it. The frame still moved only 1.5 of 255, because THE LINE IS ABOUT 2%
+    # OF THE PIXELS. Recoloring 2% of a picture cannot be one of six things
+    # somebody chooses between, however different those pixels look up close
+    # -- the same reason clay, felt and gouache measured 0.4 to 0.9 apart.
+    # It stays available as `ink_hex` for finishing the adopted look; it is
+    # not an alternate. What replaces it here is banding over the lighter
+    # ramp, which has the whole ground behind it.
+    "3-bandedairy": _alt("3 / BANDED + LIGHT", shading="cel", bands=3,
+                         lift_shift=0.07, sat_boost=0.90, roughness=1.0,
+                         coat=0.0, surface="smooth"),
+    "4-deep": _alt("4 / DEEP RE-GRADE", lift_shift=-0.20, roughness=0.88,
+                   coat=0.0),
+    # The other direction: a lighter, airier ramp with the chroma pulled back
+    # a touch, which is the picture-book reading rather than the toy one.
+    # 0.12 pushed 2.3% of the frame past white; a light style still needs
+    # somewhere above its highlights to go.
+    "5-airy": _alt("5 / LIGHT + AIRY", lift_shift=0.07, sat_boost=0.88,
+                   roughness=0.85, coat=0.06),
+    # Banding and a dropped ramp compound: at -0.20 the pair put 48.9% of the
+    # frame under value 0.25, past the point where the subject is lost.
+    "6-bandeddeep": _alt("6 / BANDED + DEEP", shading="cel", bands=3,
+                         lift_shift=-0.14, roughness=1.0, coat=0.0,
+                         surface="smooth"),
+}
+
 ROUNDS = {"1": ROUND_ONE, "2": ROUND_TWO, "3": ROUND_THREE, "4": ROUND_FOUR,
           "5": ROUND_FIVE, "6": ROUND_SIX, "7": ROUND_SEVEN, "8": ROUND_EIGHT,
-          "9": ROUND_NINE, "10": ROUND_TEN}
-ROUND = os.environ.get("PROBE_ROUND", "10")
+          "9": ROUND_NINE, "10": ROUND_TEN, "11": ROUND_ELEVEN}
+ROUND = os.environ.get("PROBE_ROUND", "11")
 STYLES = ROUNDS[ROUND]
 PREFIX = "scene__" if ROUND == "1" else f"r{ROUND}__"
 
