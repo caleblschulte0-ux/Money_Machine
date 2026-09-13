@@ -14,6 +14,46 @@ does not differ from GTA by palette — they differ in form language, surface,
 edge, light model and level of abstraction, and Barkly had never committed to
 any of those. It had defaults.
 
+> ## THE FINDING THAT OUTRANKS THIS WHOLE FILE — 2026-09-13
+>
+> Everything below is correct and none of it was enough. After roughly fifteen
+> style variants in one session the operator's verdict was *"none of those are
+> fucking hitting... Fundamentally."* He was right, and the reason is not in
+> this file. It is in `assets/barkly/README.md`, where it has been all along:
+>
+> > *"The original sheet came out of ChatGPT's image generation — the fastest
+> > quality upgrade is more renders in the identical style."*
+>
+> **Barkly was made by an image model. The world is a Python script stacking
+> Blender primitives.** Two production pipelines, and the one asset in this
+> project anybody likes is the one asset that did not come out of the second
+> one. That is not a style bug and no parameter closes it: a script makes five
+> decisions about a shape, and a designed object carries thousands.
+>
+> So the six decisions below stop being parameters and become a BRIEF —
+> `scripts/prop-briefs.py` — for the pipeline that can actually execute them.
+> The per-prop character list is the part that matters and is unchanged.
+>
+> The app needs no changes for this. `assets/world/manifest.json` already
+> states the contract: *"modular transparent props; app owns scene
+> composition"* — a file, a displayWidth, an anchor. A transparent PNG is a
+> transparent PNG whatever made it. `scripts/ingest-art.py` cuts out, trims
+> and files generated art against that manifest, and refuses any name the app
+> has never heard of.
+>
+> **What this needs from a human:** the image model. There is no image API key
+> in the build environment, and the Gemini free tier has zero quota for image
+> models (noted in the same README). Run `python3 scripts/prop-briefs.py`,
+> paste each brief into ChatGPT with `assets/barkly/concept/barkly-concept.png`
+> attached, save the results as `raw/<place>__<prop>.png`, then
+> `python3 scripts/ingest-art.py raw/`. Twelve props have character lists;
+> `--list-missing` names the other thirty-seven, and they need lists written
+> before they are generated, not filler.
+>
+> The Blender pipeline stays for now and nothing is deleted — it is what the
+> game currently ships, and it should be retired prop by prop as replacements
+> land, never in one swing.
+
 ## Where these come from
 
 Not from taste. From `assets/barkly/concept/barkly-concept.png` — the approved,
