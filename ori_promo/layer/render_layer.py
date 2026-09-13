@@ -132,6 +132,28 @@ def _load_edited_bgr(path, w, h):
 WORN_BORROW_SRC = os.path.join(_HERE, "..", "ai", "worn", "worn_glasses_sky_r212_chatgpt.jpg")
 EXAMPLES_ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_examples_treeline_r212_chatgpt.jpg")
 DAK_SRC = os.path.join(_HERE, "..", "raw", "IMG_DAK1.MOV")
+# r257 (ChatGPT's r256 creative review): historical/ice-age were captions
+# over live footage with nothing shown -- "the words assert a product/
+# reconstruction that the image never shows." Neither beat has a direct-
+# edit still yet (r245's briefs are staged, not generated), so rather than
+# reintroduce windowed_reveal's picture-window, these now HARD CUT to a
+# full-bleed plate and back -- the same grammar hook's own accepted
+# technique already uses (a full-frame cut to a held vision, never a
+# floating inset alongside continuously-different live content). Both
+# plates are already-approved, already-existing assets (ai/dak, ai/mam --
+# used previously in the one/v33 style for the same beats), not new
+# generation: one complete ChatGPT photograph each, the reconstruction
+# AND this exact rocks/river/mill location baked into a single image
+# (confirmed by eye against exhist_world/exice_world's own footage --
+# same riverbed, same mill tower, same bridge).
+MAM_SRC = os.path.join(_HERE, "..", "raw", "IMG_MAM1.MOV")
+# r257: real product footage for borrow/HARDWARE, replacing 7 seconds of
+# live footage with nothing on screen but a text label -- "the clearest
+# failure in the cut." ai/table/build_table_turntable12.py already builds
+# this from 12 already-approved ChatGPT turntable angles (r146/r160), hard
+# cuts only, no morph/cross-dissolve -- run once this round, not generated
+# fresh (see r257's report for the exact command).
+TABLE_SRC = os.path.join(_HERE, "..", "raw", "IMG_TABLE1.MOV")
 
 
 def _run_rawvideo(cmd, n, w=W, h=H):
@@ -282,14 +304,17 @@ SPLIT_PARTS = {
 }
 
 SOURCE_DUR = {
-    "hook_world": 8.0, "hook_layer": 8.0,
-    "borrow_world": 12.0, "borrow_hero": 5.5, "borrow_worn": 5.0,
+    "hook_world": 8.0,
+    "borrow_world": 12.0,
+    # r257: real turntable footage for borrow/HARDWARE -- 5.4s covers the
+    # label's own visible span (2.6-7.0s local) with margin either side.
+    "table_world": 5.4,
     "recognize_world": 12.0,
     # IMG_DAK1.MOV is exactly 8.0s -- exhist's own duration matches the
     # real plate length exactly rather than requesting more than exists.
     # exice absorbs the other 0.5s so examples' total stays 22.0s.
-    "exhist_world": 8.0, "exhist_layer": 8.0,
-    "exice_world": 9.5, "exice_layer": 9.5,
+    "exhist_world": 8.0, "exhist_plate": 5.0,
+    "exice_world": 9.5, "exice_plate": 6.0,
     "loop_world": 12.0,
     "close_world": 8.0,
 }
@@ -307,27 +332,32 @@ SOURCE_READERS = {
     # 0.5s (not 0.0s) skips a finger-over-lens artifact in the first
     # ~0.4s of the raw clip.
     "hook_world": lambda: read_clip("6790", 0.5, 8.0),
-    "hook_layer": lambda: build_photo_zoom(HOOK_ICEAGE_SRC, 8.0, cap=1.06),
-    "borrow_hero": lambda: build_photo_zoom(HERO_SRC, 5.5, cap=1.05),
-    "borrow_worn": lambda: build_photo_zoom(WORN_BORROW_SRC, 5.0, cap=1.05),
+    # r257: real product turntable (ai/table/build_table_turntable12.py's
+    # output, already built from 12 already-approved angles) for borrow's
+    # HARDWARE beat, replacing 7s of live footage with nothing shown.
+    "table_world": lambda: read_plate(TABLE_SRC, 5.4),
     # r199: 12.0-20.0s and 20.0-29.5s of IMG_6794 -- continuing directly
     # from recognize_world's own 0.0-12.0s on the same unbroken take.
     "exhist_world": lambda: read_clip("6794", 12.0, 8.0),
-    "exhist_layer": lambda: read_plate(DAK_SRC, 8.0),
+    "exhist_plate": lambda: read_plate(DAK_SRC, 5.0),
     "exice_world": lambda: read_clip("6794", 20.0, 9.5),
-    "exice_layer": lambda: build_photo_zoom(EXAMPLES_ICEAGE_SRC, 9.5, cap=1.05),
-    "close_world": lambda: read_clip("6790", 22.0, 8.0),
+    "exice_plate": lambda: read_plate(MAM_SRC, 6.0),
+    # r257: swapped from IMG_6790 (the same overlook hook/borrow already
+    # use) to a distinct real vantage -- ChatGPT's r256 review named the
+    # close beat's repetition of hook/borrow's own imagery as weakening
+    # its impact as a final hero shot.
+    "close_world": lambda: read_clip("6799", 2.0, 8.0),
 }
 for _key, _parts in SPLIT_PARTS.items():
     for _i, (_clip, _tin, _dur) in enumerate(_parts):
         SOURCE_READERS[f"{_key}_p{_i}"] = (lambda clip=_clip, tin=_tin, dur=_dur: read_clip(clip, tin, dur))
 
 SECTION_SOURCES = {
-    "hook": ["hook_world", "hook_layer"],
-    "borrow": ["borrow_world", "borrow_hero", "borrow_worn"],
+    "hook": ["hook_world"],
+    "borrow": ["borrow_world", "table_world"],
     "recognize": ["recognize_world"],
-    "examples_hist": ["exhist_world", "exhist_layer"],
-    "examples_ice": ["exice_world", "exice_layer"],
+    "examples_hist": ["exhist_world", "exhist_plate"],
+    "examples_ice": ["exice_world", "exice_plate"],
     "examples_audio": [],
     "loop": ["loop_world"],
     "close": ["close_world"],
@@ -376,8 +406,17 @@ def build_hook():
     ghosting fix) to the frozen real photo -- the SAME photograph before
     and after ChatGPT's edit, cross-dissolved, so there is no second
     image with different geometry ever composited over this one. See
-    lens_mode.py's real_edit_reveal_frame()/edit_reveal_frame() and
-    lens_proof_hook_v2.py, which this reproduces exactly."""
+    lens_mode.py's real_edit_reveal_frame()/edit_reveal_frame().
+
+    r257 (ChatGPT's r256 review): the herd's cross-dissolve peaked for a
+    single instant (herd_in_end == herd_out_start == 5.6) and immediately
+    reversed, so it read as invisible in ordinary contact-sheet sampling
+    at 4.5s/6.0s -- "the hook does not visibly deliver its promise."
+    Calls edit_reveal_frame() directly (not the real_edit_reveal_frame()
+    wrapper, which stays byte-for-byte r240's own approved-for-review
+    timing for lens_proof_hook_v2.py's own record) with a genuine
+    1.2s hold at full opacity (4.8-6.0s) between the ramp in and out,
+    inside the same overall 2.3-6.5s freeze window."""
     dur = 8.0
     n = int(round(dur * FPS))
     world = load_source("hook_world")
@@ -386,7 +425,10 @@ def build_hook():
     out = []
     for i in range(n):
         t = i / FPS
-        frozen = L.real_edit_reveal_frame(world[i], t, original_bgr, edited_bgr)
+        frozen = L.edit_reveal_frame(
+            world[i], t, original_bgr, edited_bgr,
+            enter_start=1.8, freeze_in=2.3, freeze_out=6.5, exit_end=6.8,
+            herd_in_start=4.0, herd_in_end=4.8, herd_out_start=6.0, herd_out_end=6.4)
         img = frozen if frozen is not None else G.full_bleed(world[i])
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)
@@ -406,33 +448,48 @@ def build_borrow():
     (IMG_6790-6799) looking for one where the wearer physically grips
     something a product could be composited into -- none exists, and
     ChatGPT's r245/r247 review separately confirmed no synthesized grip
-    reads as physically honest either. Rather than keep shipping the
-    windowed image-over-image r196 already rejected once (the technique
-    itself was the defect, per every r207-r226 attempt to rescue it by
-    better cropping/grading/alignment), this section is real footage +
-    typography only -- the same language recognize/loop/close already
-    use successfully, and zero risk of the "photo taped on" read. The
-    HARDWARE/SOFTWARE beat structure and captions are unchanged; only
-    the picture window is gone. Revisit once the operator either stages
-    a real grip shot at this exact overlook or rules on an alternate
-    approach (r206's original two options)."""
+    reads as physically honest either.
+
+    r257 (ChatGPT's r256 review): real footage + bare text alone was "the
+    clearest failure in the cut -- the words assert a product that the
+    image never shows." Two fixes, neither a new picture-window:
+    HARDWARE now hard-cuts to the real turntable (ai/table's already-
+    approved 12-angle build, hard cuts only, the same non-ghosting
+    technique that shipped it originally) -- genuine product footage, full
+    frame, same grammar as hook's own accepted cut-to-a-held-vision rather
+    than a floating inset. SOFTWARE keeps live footage but adds the same
+    zone_trace/anchor_pulse AR graphic recognize already uses -- there is
+    no literal object to film for "software," so this shows the system
+    doing something instead of leaving the claim to bare type."""
     dur = 12.0
     n = int(round(dur * FPS))
     world = load_source("borrow_world")
+    table = load_source("table_world")
     out = []
     for i in range(n):
         t = i / FPS
-        img = G.full_bleed(world[i])
+        if 2.4 <= t < 7.0:
+            tbl_i = min(int(round((t - 2.4) * FPS)), len(table) - 1)
+            img = G.full_bleed(table[tbl_i])
+        else:
+            img = G.full_bleed(world[i])
         if t < 1.6:
             k = G.fade_k(t, 1.6, in_t=0.3, out_margin=0.4)
             G.primary_label(img, "BORROW THE LAYER", k=k, y_frac=0.14, accent_bg=False)
         if t < 7.0:
+            if t >= 2.4:
+                G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr")
             if t >= 2.6:
                 G.primary_label(img, "HARDWARE", k=G.fade_k(t - 2.6, 7.0 - 2.6, in_t=0.3, out_margin=0.3),
                                  y_frac=0.14, font_size=76, accent_bg=False)
             if t >= 3.2:
                 G.caption(img, t - 3.2, 7.0 - 3.2, CAPTIONS["hardware"])
         else:
+            if t >= 7.3:
+                k = G.fade_k(t - 7.3, dur - 7.3, in_t=0.4, out_margin=0.0, no_out=True)
+                G.zone_trace(img, ZONE_CX, ZONE_CY, ZONE_W, ZONE_H, k=k)
+                phase = ((t - 7.3) % 1.6) / 1.6
+                G.anchor_pulse(img, ANCHOR_X, ANCHOR_Y, k=k, phase=phase)
             if t < 11.4:
                 G.primary_label(img, "SOFTWARE", k=G.fade_k(t - 7.0, 11.4 - 7.0, in_t=0.3, out_margin=0.3),
                                  y_frac=0.14, font_size=76, accent_bg=False)
@@ -473,37 +530,56 @@ def build_recognize():
 
 
 def build_examples_hist():
-    """r252 propagation: dropped the windowed_reveal DAK-plate insert for
-    the same reason as build_borrow() -- no direct-edit source exists
-    yet for this beat (r245's tightened brief is staged, conditionally
-    approved, but ChatGPT has not generated the actual edited photo), so
-    the only honest option today is real footage + caption, not another
-    instance of the rejected picture-window. Swap the direct-edit still
-    in here once it exists."""
+    """r252 propagation: dropped the windowed_reveal DAK-plate insert (no
+    direct-edit still exists yet for this beat -- r245's tightened brief
+    is staged, conditionally approved, but ChatGPT hasn't generated it).
+
+    r257 (ChatGPT's r256 review): real footage + caption alone was an
+    "empty promise" -- 8s of nearly identical footage with no
+    reconstruction actually shown. Hard cuts to ai/dak's already-approved
+    plate (dak_family_v2_chatgpt.jpg -- one complete photograph, the
+    reconstructed family AND this exact rocks/river/mill location baked
+    in together, already used for this same beat in the one/v33 style)
+    for a genuine hold, then cuts back -- the same full-frame-cut grammar
+    hook's own accepted technique uses, never a floating window."""
     seg_dur = 8.0
     n = int(round(seg_dur * FPS))
     world = load_source("exhist_world")
+    plate = load_source("exhist_plate")
     out = []
     for i in range(n):
         t = i / FPS
-        img = G.full_bleed(world[i])
+        if 1.0 <= t < 6.0:
+            img = G.full_bleed(plate[min(int(round((t - 1.0) * FPS)), len(plate) - 1)])
+            G.disclosure(img, "VISUALIZATION", corner="tr")
+        else:
+            img = G.full_bleed(world[i])
         G.caption(img, t, seg_dur, CAPTIONS["historical"])
         out.append(from_pil(img))
     return out
 
 
 def build_examples_ice():
-    """r252 propagation: same as build_examples_hist() -- dropped the
-    windowed_reveal ice-age-plate insert; no direct-edit still exists
-    yet for this beat either. Real footage + caption only until one
-    does."""
+    """r252 propagation: dropped the windowed_reveal ice-age-plate insert
+    (no direct-edit still exists yet for this beat either).
+
+    r257: same fix as build_examples_hist() -- hard cuts to ai/mam's
+    already-approved plate (mammoth_falls_chatgpt.jpg, the mammoth AND
+    this exact riverbed/mill/bridge baked into one photograph, already
+    used for this beat in the one/v33 style) instead of holding on live
+    footage with only a caption."""
     seg_dur = 9.5
     n = int(round(seg_dur * FPS))
     world = load_source("exice_world")
+    plate = load_source("exice_plate")
     out = []
     for i in range(n):
         t = i / FPS
-        img = G.full_bleed(world[i])
+        if 1.0 <= t < 7.0:
+            img = G.full_bleed(plate[min(int(round((t - 1.0) * FPS)), len(plate) - 1)])
+            G.disclosure(img, "VISUALIZATION", corner="tr")
+        else:
+            img = G.full_bleed(world[i])
         G.caption(img, t, seg_dur, CAPTIONS["iceage"])
         out.append(from_pil(img))
     return out

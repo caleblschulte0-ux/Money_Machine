@@ -103,7 +103,18 @@ END_CARD_START = 70.5
 # here. Named explicitly so qa.py can tell "the film froze because it's
 # supposed to" from "the film froze because something broke" -- the
 # same distinction END_CARD_START already draws for the closing hold.
-INTENTIONAL_FREEZE_WINDOWS = [(2.3, 6.5)]
+#
+# r257: two more genuine holds, added the same way, confirmed against a
+# real qa.py run rather than predicted -- build_examples_hist()/
+# build_examples_ice() now hard-cut to a slow-push-in plate (ai/dak,
+# ai/mam) for a real hold instead of live footage. The push-in is subtle
+# enough that freezedetect reads the tail of each hold as frozen: actual
+# run against the r257 master reported freeze intervals [37.0, 38.0]
+# (inside historical's global [33.0, 38.0) plate window) and
+# [44.0, 47.0] (inside ice-age's global [41.0, 47.0) window, split into
+# two adjacent detected runs) -- both exactly where designed, both listed
+# here with their real window bounds rather than guessed ones.
+INTENTIONAL_FREEZE_WINDOWS = [(2.3, 6.5), (33.0, 38.0), (41.0, 47.0)]
 
 RAW = "../raw"
 
