@@ -82,6 +82,18 @@ W, H = 1920, 1080
 FPS = 30
 TOTAL = 74.0
 
+# Global timestamp where the true held end card begins, for qa.py's
+# freeze/black/silence excuse window -- see field/spec_field.py's
+# END_CARD_START comment for the general reasoning. render_layer.py's
+# build_close(): close section starts at 66.0, dur=8.0, end_dur=3.5, so
+# the end card holds from local t=4.5 -- global 66.0+4.5=70.5. qa.py's old
+# `dur - 3.0` guess (71.0) is 0.5s late, AND this spec uses SECTIONS
+# instead of BEATS (also, map/spec_map.py's TOTAL is the same 74.0 --
+# without this constant qa.py's old spec-matching-by-duration could have
+# picked either spec's beat data for a video that is actually the other
+# one). This is the v37 style currently in production.
+END_CARD_START = 70.5
+
 RAW = "../raw"
 
 # (name, start, dur, description)

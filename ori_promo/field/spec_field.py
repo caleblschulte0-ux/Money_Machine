@@ -60,6 +60,15 @@ W, H = 1920, 1080
 FPS = 30
 TOTAL = 70.0
 
+# Global timestamp where the true held/frozen end card begins, for qa.py's
+# freeze/black/silence excuse window. NOT the "close" beat's own start
+# (60.0) -- build_close() plays 6.0s of real footage first, then holds the
+# last frame under the title card for the remaining 4.0s. qa.py used to
+# guess this as `dur - 3.0` (=67.0), which is 1.0s late: a real freeze
+# between 66.0 and 67.0, squarely inside the deliberate hold, would have
+# been reported as an unexcused defect. See qa.py's end_card_start().
+END_CARD_START = 66.0
+
 RAW = "../raw"
 
 # (name, start, dur, description)

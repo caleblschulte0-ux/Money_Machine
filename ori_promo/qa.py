@@ -46,8 +46,50 @@ def end_card_start(dur, default=None):
     next to this script for the one whose own TOTAL matches the probed
     file's duration, and reading THAT spec's `end` beat -- works for any
     future explain3/4/5 without touching this file again.
+
+    STILL WRONG FOR THE ENTIRE CURRENT FIVE-STYLE SLATE UNTIL THIS SECOND
+    FIX: that BEATS-scanning approach silently matched NOTHING for
+    field/walk/map/layer (v34-v37) and fell through to the same naive
+    `dur - 3.0` guess this function exists to replace -- three different
+    ways, each swallowed by the bare `except Exception` below. field's and
+    walk's BEATS entries are 4-tuples (name, start, dur, note), not the
+    6-tuple `one`/explain1-5 shape this loop unpacks, so every iteration
+    raised ValueError. map's and layer's specs don't have BEATS at all --
+    they moved to a SECTIONS list -- so this raised AttributeError before
+    even reaching the loop. And even where unpacking would have survived,
+    none of field/walk/map/layer name their last beat/section "end" (it's
+    "close"), so the name check would never have matched anyway. Checked
+    directly: `end_card_start(70.0, default=X)` returned X (unmatched) for
+    field, same for walk (72.0), same for map/layer (74.0) -- confirmed
+    with a real qa.py import, not just read from the source. The actual
+    gap this produced: field's true hold starts at 66.0 vs. the guessed
+    67.0 (1.0s of a deliberate freeze would fail); map's and layer's true
+    hold starts at 70.5 vs. the guessed 71.0 (0.5s). walk's happened to
+    match by coincidence (its end_dur is exactly the guessed 3.0).
+
+    Fixed the same way as before, one level up: rather than teach this
+    function a third beat/section shape (guaranteed to need a fourth
+    the next time a style's close-section layout differs), each spec now
+    exports its own END_CARD_START -- the one number only that spec's
+    render code actually knows (how much of its close beat/section is
+    real motion vs. held frame is a render-side fact, not reliably
+    derivable from section boundaries alone). This function reads that
+    directly when present, and only falls back to the old BEATS-scanning
+    path for specs that don't have it yet (one, explain1-5) -- preserving
+    their already-correct behavior without touching them.
+
+    Also closes a related latent bug: map's and layer's TOTAL are both
+    74.0 exactly, so matching a spec by TOTAL alone is ambiguous between
+    them. It happened not to matter for the BEATS-scanning path (neither
+    ever matched, so neither was ever silently substituted for the
+    other) but WOULD have mattered the moment either gained working
+    BEATS/SECTIONS support without this fix. Now collects every spec
+    whose TOTAL matches and requires their END_CARD_START values to
+    agree (they do: both 70.5) rather than silently returning whichever
+    directory happened to sort first.
     """
     here = os.path.dirname(os.path.abspath(__file__))
+    found = []
     for name in sorted(os.listdir(here)):
         d = os.path.join(here, name)
         if not os.path.isdir(d):
@@ -61,16 +103,26 @@ def end_card_start(dur, default=None):
                 m = __import__(mod)
                 if abs(float(m.TOTAL) - dur) > 0.05:
                     continue
+                if hasattr(m, "END_CARD_START"):
+                    found.append((f"{name}/{fn}", float(m.END_CARD_START)))
+                    continue
                 for name_, _clip, _tin, start, _dur, _note in m.BEATS:
                     if name_ == "end":
-                        return start
+                        found.append((f"{name}/{fn}", float(start)))
             except Exception:
                 pass
             finally:
                 if d in sys.path:
                     sys.path.remove(d)
                 sys.modules.pop(mod, None)
-    return default
+    if not found:
+        return default
+    distinct = {round(v, 3) for _, v in found}
+    if len(distinct) > 1:
+        raise SystemExit(
+            f"end_card_start: ambiguous specs for duration {dur}: {found} "
+            "-- give each a distinct TOTAL or reconcile END_CARD_START")
+    return found[0][1]
 
 
 def probe(p):

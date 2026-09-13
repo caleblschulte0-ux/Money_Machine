@@ -84,6 +84,17 @@ W, H = 1920, 1080
 FPS = 30
 TOTAL = 72.0
 
+# Global timestamp where the true held end card begins, for qa.py's
+# freeze/black/silence excuse window -- see field/spec_field.py's
+# END_CARD_START comment for why this isn't just "close beat start" or a
+# guessed `dur - 3.0`. build_close()'s close beat starts at 64.0 and holds
+# the end card for its final end_dur=3.0s, so this happens to equal the
+# old `dur - 3.0` guess exactly (69.0 either way) -- unlike field/map/layer,
+# where that guess is measurably wrong. Recorded explicitly anyway so qa.py
+# has one consistent mechanism across every spec instead of one that works
+# by coincidence here and by luck nowhere else.
+END_CARD_START = 69.0
+
 RAW = "../raw"
 
 # (name, start, dur, description)
