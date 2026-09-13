@@ -89,13 +89,17 @@ describe('world scenery stays modular', () => {
   });
 
   it('keeps every rendered module on one front-weighted camera', () => {
-    const camera = 'CAMERA_LOCATION = (3.0, -10.8, 4.5)';
+    // v4, on Barkly's own axis. It was (3.0, -10.8, 4.5): 15.5 degrees off
+    // axis, so the world was turned while the character -- who is `front.png`,
+    // a straight-on view -- was not. What this test protects is that all three
+    // packs share ONE camera, and that is unchanged; the value moved.
+    const camera = 'CAMERA_LOCATION = (0.0, -11.2, 4.5)';
     for (const factory of [worldFactory, homeFactory, architectureFactory]) {
       expect(factory).toContain(camera);
     }
     expect(homeFactory).toContain('yaw = 0');
-    expect(worldFactory).toContain('front-weighted orthographic v3');
-    expect(worldManifest).toContain('Barkly shared front-weighted orthographic v3');
+    expect(worldFactory).toContain('on-axis orthographic v4');
+    expect(worldManifest).toContain('Barkly shared on-axis orthographic v4');
   });
 
   /*

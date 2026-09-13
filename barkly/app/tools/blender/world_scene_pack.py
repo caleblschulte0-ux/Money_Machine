@@ -84,7 +84,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 # as a zoomed-in park with enormous trees. With the crop gone the plate can
 # afford a wider view instead, which is what it wanted all along.
 RESOLUTION = (768, 1792)
-CAMERA_LOCATION = (3.0, -10.8, 4.5)
+CAMERA_LOCATION = (0.0, -11.2, 4.5)
 # How far back the camera stands along its OWN axis. An orthographic camera's
 # framing does not change when it dollies back -- only its clipping does -- and
 # the first two renders came out with the bottom two fifths of the frame empty

@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "art-review" / "home-architecture"
 OUT.mkdir(parents=True, exist_ok=True)
 
-CAMERA_LOCATION = (3.0, -10.8, 4.5)
+CAMERA_LOCATION = (0.0, -11.2, 4.5)
 
 
 def _srgb_to_linear(channel: float) -> float:

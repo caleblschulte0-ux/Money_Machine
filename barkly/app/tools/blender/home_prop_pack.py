@@ -35,7 +35,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 # Must match world_prop_pack.py. A subtle side plane supplies depth; the
 # objects still face the player and share one vanishing direction.
-CAMERA_LOCATION = (3.0, -10.8, 4.5)
+CAMERA_LOCATION = (0.0, -11.2, 4.5)
 
 
 def _srgb_to_linear(channel: float) -> float:

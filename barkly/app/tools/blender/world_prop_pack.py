@@ -37,7 +37,26 @@ OUT.mkdir(parents=True, exist_ok=True)
 # them looked as if every object had been rotated toward a different vanishing
 # point. Fifteen degrees keeps a readable side plane without turning the world
 # into a shelf of diagonal product renders.
-CAMERA_LOCATION = (3.0, -10.8, 4.5)
+# THE CAMERA IS ON BARKLY'S AXIS, and it was not.
+#
+# At (3.0, -10.8, 4.5) this camera stood 15.5 degrees off-axis and 21.9
+# degrees above -- so the whole world was turned, and you saw the left side of
+# the bandstand and the paths arrived on a slant. BARKLY IS `front.png`: a
+# straight-on view, zero yaw. A character drawn face-on standing in a world
+# turned fifteen degrees away from him is a projection mismatch, and a
+# projection mismatch is what reads as WEIRD rather than as crude.
+#
+# That is a different fault from everything else this art went through. Each
+# of those was a quality problem -- eggs for shapes, chroma too loud, a
+# near-black line -- and fixing them made the picture better and still left it
+# strange, because none of them was this. The operator kept saying a version
+# of "it still looks weird" and I kept hearing "it still looks rough".
+#
+# Zero yaw. The pitch stays at 21.9: the ground plane has to recede or there
+# is nowhere to stand. Everything that CANCELS this yaw (the care tray's
+# rotation, the bandstand's rails) keeps working -- those now cancel zero,
+# which is what they were always compensating for.
+CAMERA_LOCATION = (0.0, -11.2, 4.5)
 
 
 def _srgb_to_linear(channel: float) -> float:
@@ -2799,7 +2818,7 @@ def stamp_pack(out_dir):
 
 def main():
     manifest = {
-        "camera": "Barkly shared front-weighted orthographic v3",
+        "camera": "Barkly shared on-axis orthographic v4",
         "light": "warm upper-left key + cool fill + warm rim",
         "contract": "modular transparent props; app owns scene composition",
         "assets": {},
