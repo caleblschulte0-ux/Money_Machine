@@ -52,7 +52,7 @@ CORNER_SEGMENTS = 6
 
 
 def rounded(name, size, mat, loc=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0),
-            corner=CORNER, taper=1.0):
+            corner=CORNER, taper=1.0, flare=1.0):
     """A rounded rectangular mass -- the only primitive this style has.
 
     `size` is (x, y, z) full extents. `taper` scales the TOP face, which is how
@@ -67,14 +67,21 @@ def rounded(name, size, mat, loc=(0.0, 0.0, 0.0), rotation=(0.0, 0.0, 0.0),
     obj.rotation_euler = rotation
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 
-    if taper != 1.0:
+    # `taper` narrows the TOP, `flare` widens the BOTTOM. Both are draft
+    # angles on a moulded part, and both are also where a prop gets a stance:
+    # a trunk that flares into the ground is gripping it, and a trunk that does
+    # not is a dowel pushed into a hole.
+    if taper != 1.0 or flare != 1.0:
         mesh = obj.data
         zs = [v.co.z for v in mesh.vertices]
-        top = max(zs)
+        top, bottom = max(zs), min(zs)
         for v in mesh.vertices:
-            if abs(v.co.z - top) < 1e-5:
+            if taper != 1.0 and abs(v.co.z - top) < 1e-5:
                 v.co.x *= taper
                 v.co.y *= taper
+            if flare != 1.0 and abs(v.co.z - bottom) < 1e-5:
+                v.co.x *= flare
+                v.co.y *= flare
 
     radius = corner * min(size)
     bevel = obj.modifiers.new("corner", "BEVEL")
@@ -169,6 +176,35 @@ CHARCOAL_NOTE = "ink"
 #: they were lit. This is a rule about MATERIAL assignment, not about light,
 #: and it is the one a renderer cannot supply for you.
 CREAM_NOTE = "cream"
+
+#: AND THE RULE THAT MATTERS MORE THAN ALL SIX OF THE ABOVE.
+#:
+#: Operator, on seeing the first toy tree next to the flat outlined one it was
+#: meant to replace: *"I like the one on the left more... not because I like
+#: the realism of either one. It's because the one on the left has character
+#: and personality. The one on the right doesn't."* He did not like the left
+#: one's vibe either. He still preferred it, and he was right to.
+#:
+#: The concept sheet answers this too, and more directly than anything else on
+#: it. Down its left edge is a BULLET LIST of eight named, deliberate
+#: oddities -- rectangular head; long nose with a rounded square tip; stiff
+#: bent ears that angle outward; tiny snaggletooth; striped knit-sock paws;
+#: thick collar; ring-shaped tail curl; low-slung body. That list IS the
+#: personality. Take those eight away and what is left is a well-rendered dog
+#: shape that nobody would put on a shelf.
+#:
+#: The first toy tree had ZERO such decisions. It was three boxes, correctly
+#: flocked, correctly lit, measuring within a few percent of the canon on every
+#: axis I had thought to measure -- and dead, because none of those axes is
+#: character. A flat outlined drawing with a lumpy canopy and a flared trunk
+#: beat it, and should have.
+#:
+#: So: NO PROP GETS BUILT WITHOUT ITS OWN LIST FIRST. Three to five specific,
+#: slightly odd, exaggerated decisions, written down before any geometry. Not
+#: "a tree" -- a tree that does something. This is a process rule, it is the
+#: one the renderer cannot supply, and it is the difference between an asset
+#: and a character.
+QUIRKS_PER_PROP = (3, 5)
 
 
 def studio(target=(0.0, 0.0, 1.2), key_energy=2400.0):

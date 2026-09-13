@@ -39,6 +39,56 @@ columns, his body a rounded box. There is not one revolved surface on him.
 is the other family of shapes entirely. A revolved canopy next to a boxed dog
 reads as two toys off two different shelves whatever colour either one is.
 
+## The rule that outranks all six
+
+Operator, on seeing the first toy tree beside the flat outlined one it was
+meant to replace:
+
+> *"I like the one on the left more than the one on the right. Not because I
+> like the realism of either one. It's because the one on the left has
+> character and personality. The one on the right doesn't."*
+
+He did not like the left one's vibe either. He preferred it anyway, and he was
+right to.
+
+The sheet answers this more directly than anything else on it. Down its left
+edge is a **bullet list of eight named oddities** — rectangular head; long nose
+with a rounded square tip; stiff bent ears that angle outward; tiny
+snaggletooth; striped knit-sock paws; thick collar; ring-shaped tail curl;
+low-slung body. **That list is the personality.** Take those eight away and
+what remains is a well-rendered dog shape nobody would put on a shelf.
+
+The first toy tree had *zero* such decisions. It was three boxes — correctly
+flocked, correctly lit, measuring within a few percent of the canon on every
+axis below — and dead, because every one of those axes describes a MATERIAL
+and none of them is character.
+
+**So no prop gets built without its own list first.** Three to five specific,
+slightly odd, exaggerated decisions, written down before any geometry. The
+park tree's list, as built:
+
+- Fat flared foot, like it is gripping the ground
+- Leans, and the canopy leans back to catch itself
+- Canopy overhangs the trunk on one side like a hat brim
+- Three lobes at three heights — a scalloped top, never a dome
+- One snapped-off branch stub, high on the lean side
+
+Two corollaries, both learned by getting them wrong first:
+
+**Character lives inside a readable silhouette, not instead of one.** The first
+pass at that list let the overhang run until the tree measured 1.04 wide over
+tall. The flat tree is 0.83 and Barkly is 0.79 — both taller than wide, both
+widest about a quarter of the way down. A square canopy reads as a smear
+however much intent is authored into it.
+
+**One colour per organ. The masses make the outline; the light makes the
+shading.** Painting the three canopy lobes three greens — to satisfy the
+charcoal/cream rule below — made them read as a pile of pillows. Those three
+swatches belong to the OBJECT (charcoal trunk, green canopy), not to each mass
+of one organ. Painted the same, the lobes fuse into a single bold shape with a
+scalloped edge, which is exactly what the flat tree does and why its
+silhouette lands instantly.
+
 ## The two rules a renderer cannot give you
 
 These took longest to find because neither looks like a rule about style.

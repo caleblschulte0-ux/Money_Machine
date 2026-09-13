@@ -36,55 +36,77 @@ def clean():
 
 
 def toy_tree():
-    """A tree as a moulded toy: a drafted rectangular trunk and three boxed
-    canopy masses, stacked and rotated off-axis so the silhouette is not
-    symmetrical.
+    """THE PARK TREE. Its bullet list, written before any geometry:
 
-    The old tree revolved a profile: a lathe canopy is a shape with one axis
-    and infinite sides, which photographs as an egg from every angle. A boxed
-    mass has four faces, so the light gives it a BRIGHT side and a DARK side --
-    that is where a toy's readability comes from, and a revolve cannot have it.
+      - Fat flared foot, like it is gripping the ground
+      - Leans, and the canopy leans the other way to catch itself
+      - Canopy overhangs the trunk on one side like a hat brim
+      - Three lobes at three heights -- a scalloped top, never a dome
+      - One snapped-off branch stub, high on the lean side
+
+    Five decisions, which is what the concept sheet gives Barkly (it gives him
+    eight). The version of this tree without them measured within a few percent
+    of the canon on flocking, value spread, darks and lights, and was still
+    dead: those are the axes of a MATERIAL, and none of them is character.
+
+    The construction is still rounded boxes -- that part was right. What
+    changed is that the boxes now do something.
     """
-    # One step DOWN the ramp from the obvious choice. The canon puts 18% of
-    # Barkly below value 0.25; a canopy painted base/lit/pop has no dark end to
-    # sit the tree on, and the first cut measured 0.0% dark.
     bark = toybox.flock("Toy bark", tone("bark", "deep"), sheen=0.48)
-    leaf_mid = toybox.flock("Toy leaf mid", tone("foliage", "base"))
-    leaf_lit = toybox.flock("Toy leaf lit", tone("foliage", "lit"))
-    leaf_dark = toybox.flock("Toy leaf dark", tone("foliage", "deep"))
+    # ONE GREEN FOR THE WHOLE CANOPY. The previous cut painted the three lobes
+    # three different greens to satisfy the charcoal/cream rule, and that was a
+    # misreading of it: the three swatches belong to the OBJECT, not to each
+    # mass of one organ. Painted separately the lobes read as a pile of
+    # pillows; painted the same they fuse into one bold shape whose edge is
+    # scalloped, which is exactly what the flat tree does and why its
+    # silhouette lands instantly. The masses make the OUTLINE. The light makes
+    # the shading. Doing both with colour does neither.
+    leaf = toybox.flock("Toy leaf", tone("foliage", "base"))
+    leaf_mid = leaf_lit = leaf_dark = leaf
 
+    LEAN = 0.085          # radians. Small enough to read as a stance, not a fall.
+
+    # SILHOUETTE TARGET, measured rather than judged: the flat tree this
+    # replaces is 0.83 wide-over-tall and Barkly himself is 0.79. Both are
+    # TALLER than wide, and both put their widest point about a quarter of the
+    # way down. The first pass at this list let the overhang run to 1.04 -- a
+    # square canopy, which reads as a smear rather than a tree no matter how
+    # much character is authored into it. Character has to live INSIDE a
+    # readable silhouette, not instead of one.
     made = [
-        # trunk -- drafted, so it leaves the tool
-        # CHUNKY, and weight low. The canon is a low-slung dog with a big head
-        # and short thick legs; a tree in the same language is a fat short
-        # trunk under a canopy wider than it is tall, not a pole with a ball.
-        # The trunk carries the tree up to eye height and stays CENTRED under
-        # the canopy. The previous cut hid it behind an off-centre canopy and
-        # the whole thing read as a pillow on a peg -- "BOLD SILHOUETTE, EASY
-        # TO RECOGNIZE" is on the concept sheet and a silhouette you have to
-        # work out is not one.
-        toybox.rounded("trunk", (0.62, 0.58, 2.05), bark, loc=(0.0, 0.0, 1.02),
-                       corner=0.30, taper=0.74),
-        # Three masses that STAY three. The first cut overlapped them so
-        # heavily they fused into one blob -- the point of a boxed canopy is
-        # that each mass turns a different face to the key, so they have to
-        # keep their own corners.
-        # Broad and low, the way a deciduous tree reads at a glance: the
-        # widest mass sits at the BOTTOM of the canopy, not the middle.
-        toybox.rounded("canopy_back", (2.85, 1.75, 1.10), leaf_dark,
-                       loc=(0.30, 0.40, 2.42), rotation=(0.0, 0.0, 0.34),
+        # FAT FLARED FOOT. 1.9x at the bottom -- the trunk spreads into the
+        # ground rather than meeting it at a right angle. It needs a tall
+        # enough trunk to be visible at all; at 2.0 the canopy covered it.
+        toybox.rounded("trunk", (0.60, 0.56, 2.55), bark, loc=(0.0, 0.0, 1.27),
+                       rotation=(0.0, LEAN, 0.0), corner=0.30,
+                       taper=0.60, flare=1.90),
+        # THE SNAPPED STUB, high on the lean side. One small wrong thing is
+        # worth more than any amount of correct symmetry.
+        toybox.rounded("branch_stub", (0.56, 0.22, 0.20), bark,
+                       loc=(0.52, -0.04, 2.24), rotation=(0.0, 0.66, 0.0),
+                       corner=0.34, taper=0.55),
+        # CANOPY: three lobes at three heights, stacked so the SCALLOP is on
+        # top where the silhouette shows it. Overhang is deliberate but modest
+        # -- one side only, and less than half a lobe.
+        toybox.rounded("canopy_low", (2.30, 1.62, 0.98), leaf_dark,
+                       loc=(0.50, 0.38, 3.02), rotation=(0.0, 0.0, 0.30),
                        corner=0.46),
-        toybox.rounded("canopy_main", (3.05, 2.05, 1.30), leaf_mid,
-                       loc=(-0.06, -0.08, 2.62), rotation=(0.0, 0.0, -0.18),
+        toybox.rounded("canopy_main", (2.42, 1.78, 1.26), leaf_mid,
+                       loc=(-0.30, -0.08, 3.42), rotation=(0.0, -0.06, -0.16),
                        corner=0.46),
-        toybox.rounded("canopy_top", (1.86, 1.42, 1.00), leaf_lit,
-                       loc=(0.10, -0.22, 3.32), rotation=(0.0, 0.0, 0.52),
+        toybox.rounded("canopy_high", (1.58, 1.24, 1.00), leaf_lit,
+                       loc=(0.22, -0.22, 4.06), rotation=(0.0, 0.10, 0.48),
+                       corner=0.46),
+        # The heavy lobe that makes the canopy hang to one side -- small, and
+        # tucked under, so it weights the mass without widening it.
+        toybox.rounded("canopy_drop", (1.02, 0.92, 0.74), leaf_mid,
+                       loc=(1.06, 0.04, 2.74), rotation=(0.0, 0.24, -0.34),
                        corner=0.46),
     ]
     return made
 
 
-def render(name, builder, ortho=5.6, target=(0.0, 0.0, 1.95)):
+def render(name, builder, ortho=6.0, target=(0.0, 0.0, 2.45)):
     clean()
     toybox.studio(target=target, key_energy=3600.0)
     builder()
