@@ -425,14 +425,20 @@ def build_hook():
     frame width, so it reads as a faint, indistinct row of shapes at the
     actual 320px-wide contact-sheet review scale, not "clearly, fully
     visible" as r257's report overclaimed -- confirmed by re-extracting
-    the exact 4.5s/6.0s samples at that real width. Adds a motivated
-    push-in on EXISTING pixels only (no new imagery, per ChatGPT's
-    explicit instruction): zoom_target is the herd's measured center,
-    zoom_max=1.7 ramps in with herd_k so the camera pushes in as the herd
-    resolves and pulls back as it fades. Validated standalone against a
-    320x180 crop before wiring in -- herd reads as 5-6 distinct animals
-    against the treeline, unmistakable, with the railing/signage context
-    still present."""
+    the exact 4.5s/6.0s samples at that real width. r259 added a push-in
+    tied to herd_k (ramping in/out with the dissolve).
+
+    r263 (operator watched the r259 MP4 in motion, not stills -- exactly
+    the gap r261/r262 flagged this whole review protocol has): the herd_k-
+    tied zoom left the frame dead-static at full width for ~1.7s, then
+    visibly zoomed in and back out mid-hold -- a live camera move on an
+    otherwise frozen photo, reading as a cheap slideshow effect rather
+    than a deliberate cut. Fixed at the lens_mode.py level: the tighter
+    framing is now locked in at the hard cut to the frozen photo and held
+    constant for the entire freeze (see edit_reveal_frame()'s docstring),
+    never moving mid-hold. zoom_max raised to 2.0 (from 1.7) since the
+    herd is now framed tight for the WHOLE freeze rather than only during
+    its brief opacity hold, so it can afford to run stronger."""
     dur = 8.0
     n = int(round(dur * FPS))
     world = load_source("hook_world")
@@ -445,7 +451,7 @@ def build_hook():
             world[i], t, original_bgr, edited_bgr,
             enter_start=1.8, freeze_in=2.3, freeze_out=6.5, exit_end=6.8,
             herd_in_start=4.0, herd_in_end=4.8, herd_out_start=6.0, herd_out_end=6.4,
-            zoom_target=(833, 470), zoom_max=1.7)
+            zoom_target=(833, 470), zoom_max=2.0)
         img = frozen if frozen is not None else G.full_bleed(world[i])
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)

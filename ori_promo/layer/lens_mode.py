@@ -238,15 +238,27 @@ def edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr, *,
     bounding box in the source photo is only ~230x26px within a 1920x1080
     frame, ~12% of frame width, and reads as illegible background clutter
     at ordinary contact-sheet review scale even though it's clearly
-    visible on a full-resolution frame). Optional herd-following push-in:
-    when given, (cx, cy) in the edited photo's own pixel coordinates,
-    zoomed toward by a factor that tracks herd_k (1.0 at herd_k=0, up to
-    zoom_max at herd_k=1.0) -- the camera pushes in as the herd resolves
-    and pulls back out as it fades, the same motivated-camera-move
-    language as every other push-in already used across this whole
-    project's other styles. Crops and rescales the FINAL composited
-    frame -- existing pixels only, no new imagery, same discipline as
-    every zoompan plate elsewhere in this codebase."""
+    visible on a full-resolution frame).
+
+    r263 (operator direct feedback on r259's delivered MP4, watched in
+    motion, not stills: concept right, execution wrong): the first
+    attempt tied the crop to herd_k, so the frame sat dead-static at full
+    width for the first ~1.7s of the freeze, then visibly zoomed in mid-
+    hold, held, and zoomed back out before the exit cut -- a live "camera
+    move" happening on what is otherwise an unmoving frozen photo, which
+    reads exactly like a slideshow Ken Burns effect, not a considered
+    edit. Fixed by decoupling the crop from herd_k entirely: when
+    zoom_target is given, that tighter framing is now LOCKED IN at the
+    moment of the hard cut to the frozen photo and held constant for the
+    WHOLE freeze (frozen_now), releasing only on the hard cut back to
+    live video -- the same cut-grammar every other transition in this
+    function already uses (a framing change belongs on a cut, never as
+    motion in the middle of a hold). This also gives the herd more total
+    screen time at the readable scale, since the tighter framing is
+    already in place before it starts fading in, not just during its
+    hold. (cx, cy) is in the edited photo's own pixel coordinates;
+    zoom_max is the fixed crop factor. Crops and rescales the FINAL
+    composited frame -- existing pixels only, no new imagery."""
     if t < enter_start - 0.5 or t > exit_end + 0.3:
         return None  # caller should composite the live frame instead
 
@@ -286,8 +298,8 @@ def edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr, *,
     contours = contour_field_layer(still if frozen_now else world_bgr, contour_amt, ww, hh)
     base_rgb = screen_blend(base_rgb, contours)
 
-    if zoom_target is not None and frozen_now and herd_k > 1e-3:
-        zoom = 1.0 + (zoom_max - 1.0) * herd_k
+    if zoom_target is not None and frozen_now:
+        zoom = zoom_max
         cw, ch = ww / zoom, hh / zoom
         cx, cy = zoom_target
         x0 = min(max(0, cx - cw / 2), ww - cw)
