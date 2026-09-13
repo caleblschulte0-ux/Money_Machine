@@ -416,7 +416,23 @@ def build_hook():
     wrapper, which stays byte-for-byte r240's own approved-for-review
     timing for lens_proof_hook_v2.py's own record) with a genuine
     1.2s hold at full opacity (4.8-6.0s) between the ramp in and out,
-    inside the same overall 2.3-6.5s freeze window."""
+    inside the same overall 2.3-6.5s freeze window.
+
+    r259 (ChatGPT's r258 review): the herd hold from r257 is real in the
+    render, but its on-image bounding box (~717-950px x, ~457-483px y in
+    the 1920x1080 frame -- measured directly against
+    ai/iceage/hook_mammoths_direct_edit_r239_chatgpt.jpg) is only ~12% of
+    frame width, so it reads as a faint, indistinct row of shapes at the
+    actual 320px-wide contact-sheet review scale, not "clearly, fully
+    visible" as r257's report overclaimed -- confirmed by re-extracting
+    the exact 4.5s/6.0s samples at that real width. Adds a motivated
+    push-in on EXISTING pixels only (no new imagery, per ChatGPT's
+    explicit instruction): zoom_target is the herd's measured center,
+    zoom_max=1.7 ramps in with herd_k so the camera pushes in as the herd
+    resolves and pulls back as it fades. Validated standalone against a
+    320x180 crop before wiring in -- herd reads as 5-6 distinct animals
+    against the treeline, unmistakable, with the railing/signage context
+    still present."""
     dur = 8.0
     n = int(round(dur * FPS))
     world = load_source("hook_world")
@@ -428,7 +444,8 @@ def build_hook():
         frozen = L.edit_reveal_frame(
             world[i], t, original_bgr, edited_bgr,
             enter_start=1.8, freeze_in=2.3, freeze_out=6.5, exit_end=6.8,
-            herd_in_start=4.0, herd_in_end=4.8, herd_out_start=6.0, herd_out_end=6.4)
+            herd_in_start=4.0, herd_in_end=4.8, herd_out_start=6.0, herd_out_end=6.4,
+            zoom_target=(833, 470), zoom_max=1.7)
         img = frozen if frozen is not None else G.full_bleed(world[i])
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)

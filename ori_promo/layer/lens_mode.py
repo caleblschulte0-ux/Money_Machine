@@ -216,7 +216,8 @@ def screen_blend(base_rgb_uint8, overlay_rgba):
 
 def edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr, *,
                        enter_start, freeze_in, freeze_out, exit_end,
-                       herd_in_start, herd_in_end, herd_out_start, herd_out_end):
+                       herd_in_start, herd_in_end, herd_out_start, herd_out_end,
+                       zoom_target=None, zoom_max=1.0):
     """General form of r240's direct-edit reveal, parameterized so any
     section can reuse the same grammar (hard-cut freeze, cross-dissolve
     between two versions of the SAME real photo) with its own timing.
@@ -232,7 +233,20 @@ def edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr, *,
     herd_in_start/herd_in_end: cross-dissolve window from the original
       still to the edited (content-added) still.
     herd_out_start/herd_out_end: cross-dissolve window back to original.
-    """
+
+    zoom_target/zoom_max: r259 (ChatGPT's r258 review -- the herd's real
+    bounding box in the source photo is only ~230x26px within a 1920x1080
+    frame, ~12% of frame width, and reads as illegible background clutter
+    at ordinary contact-sheet review scale even though it's clearly
+    visible on a full-resolution frame). Optional herd-following push-in:
+    when given, (cx, cy) in the edited photo's own pixel coordinates,
+    zoomed toward by a factor that tracks herd_k (1.0 at herd_k=0, up to
+    zoom_max at herd_k=1.0) -- the camera pushes in as the herd resolves
+    and pulls back out as it fades, the same motivated-camera-move
+    language as every other push-in already used across this whole
+    project's other styles. Crops and rescales the FINAL composited
+    frame -- existing pixels only, no new imagery, same discipline as
+    every zoompan plate elsewhere in this codebase."""
     if t < enter_start - 0.5 or t > exit_end + 0.3:
         return None  # caller should composite the live frame instead
 
@@ -271,6 +285,16 @@ def edit_reveal_frame(world_bgr, t, original_bgr, edited_bgr, *,
     base_rgb = np.array(img.convert("RGB"))
     contours = contour_field_layer(still if frozen_now else world_bgr, contour_amt, ww, hh)
     base_rgb = screen_blend(base_rgb, contours)
+
+    if zoom_target is not None and frozen_now and herd_k > 1e-3:
+        zoom = 1.0 + (zoom_max - 1.0) * herd_k
+        cw, ch = ww / zoom, hh / zoom
+        cx, cy = zoom_target
+        x0 = min(max(0, cx - cw / 2), ww - cw)
+        y0 = min(max(0, cy - ch / 2), hh - ch)
+        crop = Image.fromarray(base_rgb).crop((int(x0), int(y0), int(x0 + cw), int(y0 + ch)))
+        base_rgb = np.array(crop.resize((ww, hh), Image.LANCZOS))
+
     return Image.fromarray(base_rgb).convert("RGBA")
 
 
