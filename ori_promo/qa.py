@@ -141,12 +141,25 @@ def _find_specs(dur, style=None):
                 if style is None and abs(float(m.TOTAL) - dur) > 0.05:
                     continue
                 out.append((f"{name}/{fn}", m))
-            except Exception:
-                pass
+            except Exception as e:
+                # r254 (ChatGPT's r254 review, correct): swallowing every
+                # import error here is exactly right for the duration-
+                # guessing path (a spec that doesn't match this file's
+                # shape just isn't a candidate) but exactly wrong once the
+                # CALLER already named the style -- a broken spec_layer.py
+                # would then silently produce zero candidates, and the
+                # caller falls back to defaults thinking nothing applies
+                # here, not that this ONE spec it explicitly asked for is
+                # broken. Fatal only in that explicit case.
+                if style is not None:
+                    raise SystemExit(f"_find_specs: style={style!r} spec {fn} "
+                                      f"failed to import: {e!r}")
             finally:
                 if d in sys.path:
                     sys.path.remove(d)
                 sys.modules.pop(mod, None)
+    if style is not None and not out:
+        raise SystemExit(f"_find_specs: style={style!r} has no spec_*.py file")
     return out
 
 
@@ -214,15 +227,36 @@ def main(path, want_dur=None, style=None):
     # beat's duration changes (see end_card_start's docstring).
     excuse_from = end_card_start(dur, default=dur - 3.0, style=style)
     freeze_windows = intentional_freeze_windows(dur, style=style)
-    for tag in ("black_start", "freeze_start", "silence_start"):
+    for tag in ("black_start", "silence_start"):
         hits = re.findall(tag + r":\s*([0-9.]+)", r.stderr)
         hits = [h for h in hits if float(h) < excuse_from]
-        if tag == "freeze_start":
-            hits = [h for h in hits
-                    if not any(w0 <= float(h) < w1 for w0, w1 in freeze_windows)]
         print(f"  {tag:14s} {len(hits)}  {hits[:4]}")
         if hits:
             bad.append(f"{tag} at {hits[:3]}")
+
+    # r254 (ChatGPT's r254 review, correct): freeze_start alone is not
+    # enough to excuse a freeze against an intentional mid-film window --
+    # checking only where a freeze BEGAN would also excuse one that
+    # started inside the window but ran on past it (a real defect wearing
+    # the intentional hold's alibi). freezedetect emits matched
+    # freeze_start/freeze_end pairs, in order, one per detected run;
+    # excuse a pair only if the WHOLE interval (both ends, with a small
+    # frame-level tolerance for detector rounding) sits inside a declared
+    # window or before the end-card excuse point -- never on start alone.
+    starts = [float(x) for x in re.findall(r"freeze_start:\s*([0-9.]+)", r.stderr)]
+    ends = [float(x) for x in re.findall(r"freeze_end:\s*([0-9.]+)", r.stderr)]
+    tol = 1.0 / 30  # one frame at this project's fixed 30fps
+    freeze_hits = []
+    for i, s in enumerate(starts):
+        e = ends[i] if i < len(ends) else dur  # still frozen at EOF: no end event
+        if s >= excuse_from:
+            continue  # inside the end-card hold, which runs to the true end
+        if any(w0 - tol <= s and e <= w1 + tol for w0, w1 in freeze_windows):
+            continue  # fully contained in a declared intentional window
+        freeze_hits.append(f"{s}-{e}")
+    print(f"  {'freeze_start':14s} {len(freeze_hits)}  {freeze_hits[:4]}")
+    if freeze_hits:
+        bad.append(f"freeze_start at {freeze_hits[:3]}")
     print("  VERDICT:", "PASS" if not bad else "FAIL -- " + "; ".join(bad))
     return 0 if not bad else 1
 
