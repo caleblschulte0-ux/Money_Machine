@@ -17,7 +17,7 @@ import subprocess
 import sys
 
 
-def end_card_start(dur, default=None):
+def end_card_start(dur, default=None, style=None):
     """Where the deliberate held end-card frame begins, read from the
     RIGHT spec rather than guessed as a fixed offset from the total
     duration.
@@ -88,12 +88,49 @@ def end_card_start(dur, default=None):
     agree (they do: both 70.5) rather than silently returning whichever
     directory happened to sort first.
     """
-    here = os.path.dirname(os.path.abspath(__file__))
+    specs = _find_specs(dur, style=style)
+    if not specs:
+        return default
     found = []
-    for name in sorted(os.listdir(here)):
+    for label, m in specs:
+        if hasattr(m, "END_CARD_START"):
+            found.append((label, float(m.END_CARD_START)))
+            continue
+        for name_, _clip, _tin, start, _dur, _note in getattr(m, "BEATS", []):
+            if name_ == "end":
+                found.append((label, float(start)))
+    if not found:
+        return default
+    distinct = {round(v, 3) for _, v in found}
+    if len(distinct) > 1:
+        raise SystemExit(
+            f"end_card_start: ambiguous specs for duration {dur}: {found} "
+            "-- pass an explicit style to main()/the CLI instead of guessing by duration")
+    return found[0][1]
+
+
+def _find_specs(dur, style=None):
+    """Returns [(label, imported module), ...] for every sibling spec_*.py
+    whose own TOTAL matches `dur` (within 0.05s) -- or, if `style` names a
+    directory next to this script directly, just that one spec, no
+    duration guessing at all.
+
+    r252: map/spec_map.py and layer/spec_layer.py share the exact same
+    TOTAL (74.0) AND, as of this round, genuinely disagree on more than
+    END_CARD_START -- layer's hook now holds an intentional mid-film
+    freeze (see INTENTIONAL_FREEZE_WINDOWS) that map has no reason to
+    share. Duration alone can no longer safely stand in for "which style
+    is this actually," so any caller that already KNOWS the style (this
+    file's own __main__ block, when given one) should pass it here
+    rather than let two same-length specs get silently conflated."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    out = []
+    names = [style] if style else sorted(
+        n for n in os.listdir(here) if os.path.isdir(os.path.join(here, n)))
+    for name in names:
         d = os.path.join(here, name)
         if not os.path.isdir(d):
-            continue
+            raise SystemExit(f"_find_specs: no such style directory {d!r}")
         for fn in os.listdir(d):
             if not (fn.startswith("spec_") and fn.endswith(".py")):
                 continue
@@ -101,28 +138,36 @@ def end_card_start(dur, default=None):
             try:
                 sys.path.insert(0, d)
                 m = __import__(mod)
-                if abs(float(m.TOTAL) - dur) > 0.05:
+                if style is None and abs(float(m.TOTAL) - dur) > 0.05:
                     continue
-                if hasattr(m, "END_CARD_START"):
-                    found.append((f"{name}/{fn}", float(m.END_CARD_START)))
-                    continue
-                for name_, _clip, _tin, start, _dur, _note in m.BEATS:
-                    if name_ == "end":
-                        found.append((f"{name}/{fn}", float(start)))
+                out.append((f"{name}/{fn}", m))
             except Exception:
                 pass
             finally:
                 if d in sys.path:
                     sys.path.remove(d)
                 sys.modules.pop(mod, None)
-    if not found:
-        return default
-    distinct = {round(v, 3) for _, v in found}
+    return out
+
+
+def intentional_freeze_windows(dur, style=None):
+    """[(start, end), ...] global timestamps of freezes that are part of
+    the design, not a defect -- e.g. layer/spec_layer.py's hook hard-cut
+    to a frozen direct-edit photo. Empty when the matched spec(s) don't
+    declare any (every style except layer, currently). Same ambiguity
+    guard as end_card_start(): if `style` isn't given and duration-
+    matched specs disagree, raise rather than silently pick one."""
+    specs = _find_specs(dur, style=style)
+    if not specs:
+        return []
+    found = [(label, tuple(map(tuple, getattr(m, "INTENTIONAL_FREEZE_WINDOWS", []))))
+             for label, m in specs]
+    distinct = {v for _, v in found}
     if len(distinct) > 1:
         raise SystemExit(
-            f"end_card_start: ambiguous specs for duration {dur}: {found} "
-            "-- give each a distinct TOTAL or reconcile END_CARD_START")
-    return found[0][1]
+            f"intentional_freeze_windows: ambiguous specs for duration {dur}: {found} "
+            "-- pass an explicit style to main()/the CLI instead of guessing by duration")
+    return list(distinct.pop()) if distinct else []
 
 
 def probe(p):
@@ -131,7 +176,7 @@ def probe(p):
     return json.loads(r.stdout)
 
 
-def main(path, want_dur=None):
+def main(path, want_dur=None, style=None):
     j = probe(path)
     v = next(s for s in j["streams"] if s["codec_type"] == "video")
     a = next((s for s in j["streams"] if s["codec_type"] == "audio"), None)
@@ -164,13 +209,17 @@ def main(path, want_dur=None):
                         "freezedetect=n=0.001:d=0.7", "-af", "silencedetect=n=-52dB:d=0.7",
                         "-f", "null", "-"], capture_output=True, text=True)
     # the held end card is a deliberate freeze; ignore anything inside it.
-    # Read from spec_one.py's actual `end` beat start where possible, since
-    # a fixed "last N seconds" guess goes stale the moment that beat's
-    # duration changes (see end_card_start's docstring).
-    excuse_from = end_card_start(dur, default=dur - 3.0)
+    # Read from the matching spec's actual end-card start where possible,
+    # since a fixed "last N seconds" guess goes stale the moment that
+    # beat's duration changes (see end_card_start's docstring).
+    excuse_from = end_card_start(dur, default=dur - 3.0, style=style)
+    freeze_windows = intentional_freeze_windows(dur, style=style)
     for tag in ("black_start", "freeze_start", "silence_start"):
         hits = re.findall(tag + r":\s*([0-9.]+)", r.stderr)
         hits = [h for h in hits if float(h) < excuse_from]
+        if tag == "freeze_start":
+            hits = [h for h in hits
+                    if not any(w0 <= float(h) < w1 for w0, w1 in freeze_windows)]
         print(f"  {tag:14s} {len(hits)}  {hits[:4]}")
         if hits:
             bad.append(f"{tag} at {hits[:3]}")
@@ -179,5 +228,10 @@ def main(path, want_dur=None):
 
 
 if __name__ == "__main__":
+    # third arg: optional style directory name (e.g. "layer") to skip
+    # duration-based spec guessing entirely -- see _find_specs's docstring
+    # for why that guess can no longer be trusted alone once two specs
+    # share a TOTAL and diverge on intentional freeze windows.
     want = float(sys.argv[2]) if len(sys.argv) > 2 else None
-    sys.exit(main(sys.argv[1], want))
+    style_arg = sys.argv[3] if len(sys.argv) > 3 else None
+    sys.exit(main(sys.argv[1], want, style=style_arg))

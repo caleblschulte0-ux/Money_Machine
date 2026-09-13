@@ -59,6 +59,7 @@ import numpy as np
 from PIL import Image
 
 import graphics_layer as G
+import lens_mode as L
 from spec_layer import W, H, FPS, TOTAL, SECTIONS, CAPTIONS, LOOP_WORDS
 
 OUT = "out_layer"
@@ -94,6 +95,24 @@ ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_falls_visualizati
 # its bottom edge meets the one real railing already measured to sit
 # right at the window's own boundary (see graphics_layer.py notes).
 HOOK_ICEAGE_SRC = os.path.join(_HERE, "..", "ai", "iceage", "iceage_hook_norail_r214_chatgpt.jpg")
+# r240/r252 propagation: the operator was told to "keep working" rather
+# than wait further on a ruling, and every windowed_reveal call in this
+# file is the exact "image over image ... not Apple level" pattern r196
+# already rejected once and r207-r226 kept failing to rescue by better
+# cropping/grading/alignment -- the technique itself was the defect, not
+# the execution. hook now uses r239/r240's direct-edit real photo instead
+# (ChatGPT edited THIS ACTUAL captured frame -- ../ai/iceage/hook_
+# mammoths_direct_edit_r239_chatgpt.jpg -- so there is no second image
+# with different geometry to fail to line up; verified in lens_proof_
+# hook_v2.py and reviewed without objection across r241/r243/r245/r252).
+HOOK_EDITED_SRC = os.path.join(_HERE, "..", "ai", "iceage", "hook_mammoths_direct_edit_r239_chatgpt.jpg")
+
+
+def _load_edited_bgr(path, w, h):
+    im = Image.open(path).convert("RGB")
+    if im.size != (w, h):
+        im = im.resize((w, h), Image.LANCZOS)
+    return np.array(im).astype(np.float32)[:, :, ::-1]  # RGB -> BGR
 # r212 (ChatGPT's delivery against r211's exact-box request, recovered via
 # the signed asset URLs in its transport_recovery.md after Drive's binary
 # upload rejected the connector-reference requirement): both purpose-built
@@ -350,112 +369,70 @@ def load_source(key):
 # -graded source clips; no raw footage read happens here. -------------
 
 def build_hook():
+    """r240/r252: direct-edit real-photo technique, replacing the
+    windowed_reveal picture-window this section used through r239.
+    Live video plays, whole-frame grade ramps in, then a hard CUT (timed
+    to land once the grade is already fully engaged, per r240's own
+    ghosting fix) to the frozen real photo -- the SAME photograph before
+    and after ChatGPT's edit, cross-dissolved, so there is no second
+    image with different geometry ever composited over this one. See
+    lens_mode.py's real_edit_reveal_frame()/edit_reveal_frame() and
+    lens_proof_hook_v2.py, which this reproduces exactly."""
     dur = 8.0
     n = int(round(dur * FPS))
     world = load_source("hook_world")
-    layer = load_source("hook_layer")
+    edited_bgr = _load_edited_bgr(HOOK_EDITED_SRC, W, H)
+    original_bgr = world[int(round(4.0 * FPS))]
     out = []
     for i in range(n):
         t = i / FPS
-        if t < 1.8:
-            progress = 0.0
-        elif t < 4.2:
-            progress = G.ease((t - 1.8) / 2.4)
-        else:
-            progress = 1.0
-        # r203: window repositioned to sit where he actually points
-        # (raw IMG_6790 t~3.5-7.0s, local t~3.0-6.5s here -- right as
-        # the reveal opens/holds) -- x=1000/1920, same as the shared
-        # default width. r211 (operator direct note: even a genuinely
-        # shot-matched image still "looks the same old shitty way"):
-        # measured the real railing's top edge directly on rendered
-        # frames -- it runs y~=474 at the window's left edge to y~=483
-        # at its right edge (a slight perspective rise, x=620..1380).
-        # The shared default window (wy=270..670) covered roughly the
-        # bottom HALF of that real railing -- the actual, concrete
-        # reason it read as "a photo taped over the real objects," no
-        # matter how well the photo itself matched. Shrunk and raised
-        # so its bottom edge (490) sits just past the railing's own top
-        # edge instead of through the middle of it -- the real railing,
-        # signage stands, and pavement stay fully visible and
-        # unobstructed in front; only the sky/falls/landscape actually
-        # "behind" the railing changes.
-        img = G.windowed_reveal(world[i], layer[i], progress, direction="ltr",
-                                 win_cx=1000 / 1920, win_cy=380 / 1080,
-                                 win_w=760 / 1920, win_h=220 / 1080)
+        frozen = L.real_edit_reveal_frame(world[i], t, original_bgr, edited_bgr)
+        img = frozen if frozen is not None else G.full_bleed(world[i])
         if t <= 1.9:
             k = G.fade_k(t, 1.9, in_t=0.4, out_margin=0.5)
             G.primary_label(img, "THE WORLD", k=k, y_frac=0.14)
         else:
             k = G.fade_k(t - 1.9, dur - 1.9, in_t=0.4, out_margin=0.4)
             G.primary_label(img, "THE LAYER", k=k, y_frac=0.14)
-        if progress > 0.001:
+        if t >= 1.8:
             G.disclosure(img, "VISUALIZATION", corner="tr")
         out.append(from_pil(img))
     return out
 
 
 def build_borrow():
+    """r252 propagation: dropped the windowed_reveal hero/worn picture
+    insert. r244/r249/r251 exhausted every real frame in this shoot
+    (IMG_6790-6799) looking for one where the wearer physically grips
+    something a product could be composited into -- none exists, and
+    ChatGPT's r245/r247 review separately confirmed no synthesized grip
+    reads as physically honest either. Rather than keep shipping the
+    windowed image-over-image r196 already rejected once (the technique
+    itself was the defect, per every r207-r226 attempt to rescue it by
+    better cropping/grading/alignment), this section is real footage +
+    typography only -- the same language recognize/loop/close already
+    use successfully, and zero risk of the "photo taped on" read. The
+    HARDWARE/SOFTWARE beat structure and captions are unchanged; only
+    the picture window is gone. Revisit once the operator either stages
+    a real grip shot at this exact overlook or rules on an alternate
+    approach (r206's original two options)."""
     dur = 12.0
     n = int(round(dur * FPS))
     world = load_source("borrow_world")
-    hero = load_source("borrow_hero")
-    worn = load_source("borrow_worn")
     out = []
     for i in range(n):
         t = i / FPS
-        if t < 7.0:
-            layer = hero[min(int(round(max(0.0, t - 1.5) * FPS)), len(hero) - 1)]
-        else:
-            layer = worn[min(int(round((t - 7.0) * FPS)), len(worn) - 1)]
-        if t < 1.5:
-            progress = 0.0
-        elif t < 3.0:
-            progress = G.ease((t - 1.5) / 1.5)
-        elif t < 11.0:
-            progress = 1.0
-        else:
-            progress = G.ease(1.0 - (t - 11.0) / 1.0)
-        # r201: shrink_brackets=True only during THIS section's own
-        # closing sweep (t>=11.0) -- the one call site in the whole
-        # film that actually closes back to 0 -- so the bracket
-        # rectangle tracks the shrinking revealed content instead of
-        # staying full-size around empty space. Every other
-        # windowed_reveal call (this section's own opening included) is
-        # unaffected.
-        # r213: the SAME non-occlusion fix hook shipped in r211 lands
-        # here now that the art matches it. Real railing top edge
-        # y~=463 (window's left edge) to y~=486 (right edge); the old
-        # shared default window (wy=260..660) covered most of it. r211
-        # held this geometry back because borrow's OLD worn/software
-        # asset (a tight portrait face crop) broke visibly when forced
-        # into the shorter box -- verified, then discarded before that
-        # round's delivered cut. r212 delivered a purpose-built
-        # replacement composed exactly for this box (see
-        # WORN_BORROW_SRC's own comment above); the hero/hardware
-        # studio shot was RE-CHECKED against this same tighter box by
-        # direct simulation (not assumed) and already frames cleanly
-        # without any change, so both halves of this section now share
-        # one clean, non-occluding window: y 260-450 (was 260-660),
-        # bottom edge clearing the real railing with margin.
-        img = G.windowed_reveal(world[i], layer, progress, direction="ttb",
-                                 win_cx=560 / W, win_cy=355 / H,
-                                 win_w=760 / W, win_h=190 / H,
-                                 shrink_brackets=(t >= 11.0))
+        img = G.full_bleed(world[i])
         if t < 1.6:
             k = G.fade_k(t, 1.6, in_t=0.3, out_margin=0.4)
             G.primary_label(img, "BORROW THE LAYER", k=k, y_frac=0.14, accent_bg=False)
-        if 1.5 <= t < 7.0:
-            if progress > 0.001:
-                G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr")
+        if t < 7.0:
             if t >= 2.6:
                 G.primary_label(img, "HARDWARE", k=G.fade_k(t - 2.6, 7.0 - 2.6, in_t=0.3, out_margin=0.3),
                                  y_frac=0.14, font_size=76, accent_bg=False)
             if t >= 3.2:
                 G.caption(img, t - 3.2, 7.0 - 3.2, CAPTIONS["hardware"])
-        elif t >= 7.0:
-            if progress > 0.001:
-                G.disclosure(img, "PRODUCT VISUALIZATION", corner="tr")
+        else:
             if t < 11.4:
                 G.primary_label(img, "SOFTWARE", k=G.fade_k(t - 7.0, 11.4 - 7.0, in_t=0.3, out_margin=0.3),
                                  y_frac=0.14, font_size=76, accent_bg=False)
@@ -496,47 +473,38 @@ def build_recognize():
 
 
 def build_examples_hist():
+    """r252 propagation: dropped the windowed_reveal DAK-plate insert for
+    the same reason as build_borrow() -- no direct-edit source exists
+    yet for this beat (r245's tightened brief is staged, conditionally
+    approved, but ChatGPT has not generated the actual edited photo), so
+    the only honest option today is real footage + caption, not another
+    instance of the rejected picture-window. Swap the direct-edit still
+    in here once it exists."""
     seg_dur = 8.0
     n = int(round(seg_dur * FPS))
     world = load_source("exhist_world")
-    layer = load_source("exhist_layer")
     out = []
     for i in range(n):
         t = i / FPS
-        if t < 1.0:
-            progress = 0.0
-        elif t < 2.2:
-            progress = G.ease((t - 1.0) / 1.2)
-        else:
-            progress = 1.0
-        img = G.windowed_reveal(world[i], layer[i], progress, direction="ltr")
-        if progress > 0.001:
-            G.disclosure(img, "VISUALIZATION", corner="tr")
-        if t >= 2.2:
-            G.caption(img, t - 2.2, seg_dur - 2.2, CAPTIONS["historical"])
+        img = G.full_bleed(world[i])
+        G.caption(img, t, seg_dur, CAPTIONS["historical"])
         out.append(from_pil(img))
     return out
 
 
 def build_examples_ice():
+    """r252 propagation: same as build_examples_hist() -- dropped the
+    windowed_reveal ice-age-plate insert; no direct-edit still exists
+    yet for this beat either. Real footage + caption only until one
+    does."""
     seg_dur = 9.5
     n = int(round(seg_dur * FPS))
     world = load_source("exice_world")
-    layer = load_source("exice_layer")
     out = []
     for i in range(n):
         t = i / FPS
-        if t < 1.0:
-            progress = 0.0
-        elif t < 2.4:
-            progress = G.ease((t - 1.0) / 1.4)
-        else:
-            progress = 1.0
-        img = G.windowed_reveal(world[i], layer[i], progress, direction="diag")
-        if progress > 0.001:
-            G.disclosure(img, "VISUALIZATION", corner="tr")
-        if t >= 2.4:
-            G.caption(img, t - 2.4, seg_dur - 2.4, CAPTIONS["iceage"])
+        img = G.full_bleed(world[i])
+        G.caption(img, t, seg_dur, CAPTIONS["iceage"])
         out.append(from_pil(img))
     return out
 

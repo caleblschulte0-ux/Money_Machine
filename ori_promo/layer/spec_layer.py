@@ -94,6 +94,17 @@ TOTAL = 74.0
 # one). This is the v37 style currently in production.
 END_CARD_START = 70.5
 
+# r252 propagation: build_hook() now uses r239/r240's direct-edit still,
+# which deliberately hard-CUTS to a frozen real photo from local t=2.3
+# to t=6.5 (lens_mode.real_edit_reveal_frame's own freeze_in/freeze_out)
+# -- a genuine, intentional freeze, not a rendering defect. qa.py's
+# freezedetect correctly finds it (freeze_start ~2.3) and, same as an
+# unlisted end card, would report it as an unexcused FAIL with no fix
+# here. Named explicitly so qa.py can tell "the film froze because it's
+# supposed to" from "the film froze because something broke" -- the
+# same distinction END_CARD_START already draws for the closing hold.
+INTENTIONAL_FREEZE_WINDOWS = [(2.3, 6.5)]
+
 RAW = "../raw"
 
 # (name, start, dur, description)
