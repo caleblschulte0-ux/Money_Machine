@@ -51,8 +51,35 @@ import math
 # Doing this in the palette rather than per material is the whole idea. 255
 # hand-picked colours cannot share a light source, because nobody was holding
 # one when they were picked.
-AMBIENT = (0.17, 0.22, 0.46)   # sky-blue, what fills the shadows
-KEY = (1.00, 0.94, 0.74)       # warm sun, what lands on the tops
+# ...and the ambient is WARM, measured off the canon rather than off physics.
+#
+# This was (0.17, 0.22, 0.46) -- a saturated sky blue, on the reasoning that a
+# shadow outdoors is filled by the sky and therefore blue. That reasoning is
+# sound for a photograph and wrong for this game, and the concept sheet says
+# so in numbers. Taking the darkest 15% of each image as its shadow family:
+#
+#                    shadow hue      warm     blue
+#   concept sheet       36 deg      98.4%     0.3%
+#   Barkly alone        33 deg      99.8%     0.0%
+#   park plate         200 deg       4.4%    49.0%
+#
+# The canon has NO blue in it. Not "less blue" -- 0.3%, which is noise. Barkly
+# is a vinyl toy lit in a studio and the sheet's three swatches are Mustard
+# Tan, Cream and Charcoal; there is no sky in that picture to fill anything.
+#
+# This hid for as long as every family ran near full chroma, because a
+# saturated green in shadow is still visibly green and the blue only tinted
+# it. With the field pulled back to 0.30 there is no family hue left to fight
+# the mix, so the ambient simply IS the shadow colour -- and the whole world
+# went grey-green the moment the chroma came down. Same root cause surfacing,
+# not a new one.
+#
+# So the ambient is the canon's own shadow: hue 36, saturation 0.52, at a
+# shadow's value. The key was already warm and stays exactly where it is; the
+# warm/cool contrast that used to give form now comes from the VALUE spread in
+# STEPS, which is where a three-colour palette has to get it from.
+AMBIENT = (0.340, 0.269, 0.163)   # hsv(36, 0.52, 0.34) -- the canon's shadow
+KEY = (1.00, 0.94, 0.74)          # warm sun, what lands on the tops
 
 # --- and WHERE that sun stands ------------------------------------------
 #
@@ -149,12 +176,28 @@ def sun_height(reach: float, scene: str = "") -> float:
 # black holes -- a third of a tree is not a crevice. 0.23 keeps a real dark end
 # without swallowing whole forms, and anything that wants a genuine shadow gets
 # it from ambient occlusion, which is what AO is for.
+#
+# ...and the note above about `deep` being a CREVICE value was written when
+# every family ran near full chroma, where a dark step is a dark GREEN and a
+# third of a tree reading as one is a hole. It was raised 0.16 -> 0.23 for
+# that, and with ADOPTED_LIFT on top the world's darkest rendered pixel sat at
+# 0.30. Measured across the park plate: **0.0% of the frame below value 0.20,
+# and 1.4% above 0.80** -- against 3.1% and 78.0% on the concept sheet and
+# 14.3% and 26.9% on Barkly himself. The world had no darks and no lights. It
+# was mid-tone from edge to edge, which is the same failure as the one-band
+# saturation histogram and the same word from the operator: weak.
+#
+# With the field families now near-neutral, a dark step is CHARCOAL -- the
+# sheet's own third swatch -- not a coloured hole, so the range can open back
+# up. This widens the ramp at both ends rather than sliding it: `deep` goes
+# below the sheet's darks, `pop` reaches white. The middle is untouched, so
+# every surface's base colour is exactly where it was.
 STEPS = {
-    "deep":  (0.94, 0.23, -0.30),
-    "shade": (0.88, 0.43, -0.16),
+    "deep":  (0.94, 0.13, -0.30),
+    "shade": (0.88, 0.36, -0.16),
     "base":  (0.80, 0.60,  0.00),
-    "lit":   (0.62, 0.82,  0.16),
-    "pop":   (0.34, 0.97,  0.30),
+    "lit":   (0.62, 0.86,  0.16),
+    "pop":   (0.34, 1.00,  0.30),
 }
 
 # --- the families -------------------------------------------------------
@@ -172,85 +215,118 @@ STEPS = {
 #: families are exactly as authored and only the whole ramp moves.
 ADOPTED_LIFT = 0.07
 
-#: 0.72, and 0.90 was not nearly enough.
+#: 1.00 -- and the two passes that set it to 0.90 and then 0.72 were the
+#: wrong instrument, aimed at the right complaint.
 #:
-#: Operator, on the live build: *"that hurts my eyes."* That is a physical
-#: complaint, not a taste one, and it measures. In the world band of the
-#: shipped park frame: mean saturation 0.487, with 34% of the pixels above
-#: 0.60 -- and 57% of every chromatic pixel in the green and yellow-green
-#: families. A third of the screen at high chroma in ONE hue is what fatigues
-#: an eye, and no amount of shape work fixes it.
+#: Operator, on the live build: *"that hurts my eyes,"* then *"it still just
+#: looks weak,"* then *"it still just looks weird."* Three complaints, and I
+#: answered all three by turning this one dial down. It is a MULTIPLIER on
+#: every family at once, so it can move where the frame's chroma sits and it
+#: can never change the SHAPE of the distribution. The shape was the problem.
 #:
-#: The chroma was pushed up deliberately in an earlier pass, measured against
-#: a reference frame that reads 0.52 -- but that reference spreads its chroma
-#: across a dozen hues and a park is green from edge to edge. The number that
-#: transfers is not the mean, it is how much of the frame is loud at once.
-ADOPTED_CHROMA = 0.72
+#: Measured, park plate against the approved concept sheet, as a histogram of
+#: saturation rather than a mean:
+#:
+#:                   <.1  .1-2 .2-3 .3-4 .4-5 .5-6 .6-7 .7-8  >.8
+#:   concept sheet  73.7   1.9  5.9  4.4  1.6  1.0  1.7  6.2  3.6
+#:   Barkly alone    0.0   4.3 21.0 22.6  6.9  4.2  6.6 20.0 14.3
+#:   park plate      6.0   4.4  9.3  2.9 12.8 64.4  0.2  0.0  0.0
+#:
+#: The canon is BIMODAL: three quarters of it near-neutral, then about a tenth
+#: of it loud. A quiet field with accents that sing, which is what a product
+#: shot of a vinyl toy is and what the sheet says in words -- "MADE TO STAND
+#: OUT ON ANY SHELF."
+#:
+#: The park is the opposite and it is not close: **64.4% of the entire frame
+#: sits in one 0.10-wide saturation band, and 0.2% of it is above 0.60.** Not
+#: a loud world -- a UNIFORM one. Every shape in it competing at exactly the
+#: same volume, nothing quiet, nothing singing. That is what "weak" and
+#: "unrefined" measure as, and it is why more contour, better forms, a lower
+#: sun and two chroma cuts all failed to touch it: none of them changes the
+#: shape of that histogram, and neither does this dial.
+#:
+#: So the dial goes back to 1.00 and the STRUCTURE moves into the per-family
+#: chroma below, where it can differ per surface. A global multiplier on top
+#: of an authored spread only squeezes it flat again -- at 0.72 the accents
+#: cannot reach past 0.70 no matter what they are authored at, and accents
+#: that cannot get loud are the half of the canon we were missing.
+ADOPTED_CHROMA = 1.00
 
+# THE FIELD / STRUCTURE / ACCENT SPLIT.
+#
+# Every family used to sit near full chroma: ten of the seventeen were between
+# 0.80 and 1.00, and those ten are the big surfaces -- grass, foliage, sand,
+# sea, bark, wood, brick, roof. The whole world was painted at one volume by
+# the things that cover the most pixels, and the five quiet families (stone,
+# paving, metal, cream, ink) were all small props. That is the 64% band.
+#
+# The canon's split is by HOW MUCH OF THE FRAME a surface covers, so that is
+# the rule here:
+#
+#   FIELD      the big masses -- ground, foliage, water, sky. Near-neutral.
+#              These are the 74% the sheet keeps under 0.10-0.30. A field is
+#              what an accent is loud AGAINST; if it has its own opinion there
+#              is nothing to be loud against.
+#   STRUCTURE  the built and grown world -- bark, wood, brick, roof. Mid. The
+#              sheet's "Mustard Tan" lives here, and so does Barkly's own hue
+#              band, deliberately: he is made of the same warm family as the
+#              things he stands next to, one step louder.
+#   ACCENT     berry, sun, grape -- and only those three. Full chroma, and now
+#              they can actually reach it. These are a handful of pixels each
+#              and they are the things the player looks at and taps.
+#
+# The two ends of the range are the sheet's other two swatches: `cream` is its
+# Cream and `ink` is its Charcoal. They were already right.
 _AUTHORED = {
-    # The ground the game stands on. Stone and paving are deliberately far
-    # from sand in chroma even though they are neighbours in hue: measured
-    # after the first pass, the beach was 61% of one hue band and the town's
-    # street read as more beach, because sand at 41 and paving at 44 with
-    # similar chroma is the same colour twice. A street is grey and a beach is
-    # gold, and the palette has to say so.
-    "grass":   (100, 1.00,  0.00),
-    "foliage": (132, 0.94, -0.05),
-    # 0.80, not 0.66. `sand.base` was #B09353 -- an olive khaki -- and the
-    # beach plate rendered as a drab field because its single largest surface
-    # was that colour under a blue sky fill. The app has drawn the beach's near
-    # sand at #BC7B33 since an earlier pass, which is a far warmer gold: one
-    # beach, two opinions about what sand is, exactly as town had about its
-    # pavement. Raised to match the app rather than the other way round,
-    # because the app's value is the one that was measured against the
-    # reference.
-    "sand":    ( 41, 0.80,  0.09),
-    # 0.30 and 0.34, up from 0.16 and 0.20 -- and NOT up to sand's 0.66, which
-    # is what the note above forbids and it is still right. This file's own
-    # legend three lines up says "0.3 is masonry", and stone was sitting at
-    # 0.16: under the value this palette defines for the material it is.
+    # --- FIELD ------------------------------------------------------------
+    # The field also sits HIGHER than it did (lift raised on all seven), for
+    # the same reason the ramp widened: the sheet's ground is a pale, airy
+    # near-white at value 0.87 and ours was mud at 0.51. Structure and accent
+    # keep their lifts, so the gap between a quiet high field and a darker,
+    # louder object standing on it IS the contrast. Lifting everything -- which
+    # is what ADOPTED_LIFT does -- cannot make that gap, only move it.
+    # The ground the game stands on, and the single biggest surface in three
+    # of the four locations. 1.00 -> 0.30. Nothing else in this change matters
+    # as much as this line: grass alone is most of that 64% band.
     #
-    # Measured across the four locations in the app: town ran median saturation
-    # 0.292 where park ran 0.495, with 11.6% of its frame under 0.15 chroma.
-    # Stone and paving are town's two biggest surfaces -- the pavement, the
-    # kerb, the fountain -- and a family at 0.16 chroma cannot be lit into
-    # colour. It is grey pigment, and everything made of it is grey. It also
-    # left `stone.lit` with nowhere to go but white: under the sun key it blew
-    # 4.4% of the fountain to pure white, twenty times any other prop, because
-    # a near-neutral pale step has no colour to climb into.
-    #
-    # And a straight inconsistency: the app already draws town's road at
-    # #D9A75B and its pavement at #F4C562, warm and saturated, from a
-    # deliberate earlier pass. The grey `town/paving.png` prop was laid on top
-    # of that. One town, two opinions about what its ground is made of.
-    "stone":   ( 28, 0.30,  0.06),
-    # ...and the LIFT comes down with it, 0.12 -> 0.02. Chroma alone did not
-    # fix town: plated, its pavement rendered at median value 0.576 -- pale
-    # concrete filling most of the frame -- and the scene's saturation went
-    # DOWN to 0.234 even as its brightness went up. A big surface sitting that
-    # high on the ramp has little colour left to show whatever chroma it is
-    # given. Lower and warmer is a street; pale and warm is a pavement in
-    # direct sun with the exposure wrong.
-    "paving":  ( 40, 0.42,  0.02),
+    # Stone and paving stay deliberately far from sand in chroma even though
+    # they are neighbours in hue -- a street is grey and a beach is gold, and
+    # at similar chroma they are the same colour twice. That reasoning held
+    # when the numbers were higher and it still holds now they are lower.
+    # ...and both greens come WARMER, 100 -> 92 and 132 -> 98. Hue survived
+    # every previous pass untouched because at full chroma a blue-green canopy
+    # is simply a colour choice. At 0.34 chroma and a lifted value it is MINT:
+    # pale, cold, and the one note in the frame with no relative anywhere on
+    # the concept sheet, whose entire range is hue 24-46. Low chroma does not
+    # forgive a hue that does not belong -- it exposes it, because there is no
+    # saturation left to read as deliberate. 92 and 98 are sage and olive: warm
+    # greens that sit in the same family as Mustard Tan, three steps away
+    # rather than across the wheel.
+    "grass":   ( 92, 0.30,  0.10),
+    "foliage": ( 98, 0.34,  0.04),
+    "sand":    ( 41, 0.26,  0.14),
+    "stone":   ( 28, 0.18,  0.12),
+    "paving":  ( 40, 0.22,  0.10),
+    # Water and air. The sea is the largest single shape on the beach; at full
+    # chroma it was a field pretending to be an accent.
+    "sea":     (193, 0.44,  0.02),
+    "sky":     (205, 0.26,  0.18),
+    # --- STRUCTURE --------------------------------------------------------
     # things made of wood -- Barkly's own hue family, deliberately
-    "bark":    ( 24, 0.84, -0.11),
-    "wood":    ( 32, 0.92, -0.02),
+    "bark":    ( 24, 0.46, -0.11),
+    "wood":    ( 32, 0.52, -0.02),
     # the built world
-    "brick":   ( 10, 0.80,  0.02),
-    "roof":    (355, 0.90, -0.02),
-    "metal":   (206, 0.26,  0.02),
-    # Water and air. The sea carries full chroma: it is the largest single
-    # shape on the beach and at 0.88 it sat back into the sand.
-    # water and air
-    "sea":     (193, 1.00,  0.02),
-    "sky":     (205, 0.68,  0.10),
+    "brick":   ( 10, 0.50,  0.02),
+    "roof":    (355, 0.62, -0.02),
+    "metal":   (206, 0.18,  0.02),
+    # --- ACCENT -----------------------------------------------------------
     # the three accents, and only three
-    "berry":   (348, 0.94,  0.00),
-    "sun":     ( 46, 0.94,  0.06),
-    "grape":   (276, 0.74,  0.00),
-    # the ends of the range
-    "cream":   ( 38, 0.20,  0.15),
-    "ink":     ( 28, 0.30, -0.26),
+    "berry":   (348, 1.00,  0.00),
+    "sun":     ( 46, 1.00,  0.06),
+    "grape":   (276, 0.92,  0.00),
+    # --- the ends of the range: the sheet's Cream and Charcoal ------------
+    "cream":   ( 38, 0.12,  0.15),
+    "ink":     ( 28, 0.22, -0.26),
 }
 
 FAMILIES = {
@@ -273,16 +349,24 @@ def light_rgb(kind: str):
     if kind == "key":
         return KEY
     if kind == "fill":
-        # The ambient is the colour of a SHADOW -- deep and violet, which is
-        # right for the shadow side of a surface and wrong for a lamp. The
-        # fill lamp is the SKY: the sky family's hue at daylight value.
-        # 0.30, not 0.42. A whole hemisphere of skylight is blue but it is not
-        # THAT blue, and at 0.42 it green-shifts every warm surface it fills:
-        # the beach plate's sand is authored at #B08C3F, a real gold, and
-        # rendered as olive khaki because its largest surface was being filled
-        # by a strongly saturated blue. Hue unchanged -- shadows are still sky
-        # coloured, which is the whole point of the fill -- just less of it.
-        return colorsys.hsv_to_rgb(FAMILIES["sky"][0] / 360.0, 0.30, 0.94)
+        # THE SKY YOU SEE AND THE LIGHT IT CASTS ARE NOT THE SAME COLOUR, and
+        # tying them together is what kept the world grey-green. This returned
+        # the `sky` family's hue at saturation 0.30 -- twice reduced, from 0.42,
+        # each time because it was green-shifting the warm surfaces it filled,
+        # and each time the hue was left alone as "the whole point of the fill".
+        #
+        # The hue WAS the point. Measured on the park plate, its shadow family
+        # sits at 200 degrees -- five degrees off this lamp, so the fill lamp,
+        # not the authored dark steps, is what was painting every shadow in the
+        # game. Against a concept sheet whose shadows are 36 degrees and 0.3%
+        # blue (see AMBIENT above), that is not a tint, it is the wrong light.
+        #
+        # So the fill is decoupled from the sky family: a warm near-neutral
+        # bounce at the canon's hue, saturation low enough that it lifts a
+        # shadow without painting it. `sky` stays blue -- it is still the
+        # colour of the actual sky, which the player still sees -- but it no
+        # longer decides what colour the shade side of a tree is.
+        return colorsys.hsv_to_rgb(36.0 / 360.0, 0.14, 0.94)
     raise KeyError(f"no such light: {kind!r}")
 
 

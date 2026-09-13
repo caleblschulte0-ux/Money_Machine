@@ -54,15 +54,15 @@ const PARK_NEAR_GRASS = require('../../../assets/world/park/props/near_grass.png
 /* The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds these
    against the real PNGs, the same way the shop's item art is held. */
 const TREELINE_ASPECT = 654 / 138;
-const TUFT_ASPECT = 300 / 303;
-const FLOWERS_ASPECT = 246 / 288;
-const CLUMP_ASPECT = 410 / 302;
+const TUFT_ASPECT = 303 / 297;
+const FLOWERS_ASPECT = 244 / 291;
+const CLUMP_ASPECT = 415 / 301;
 /*
  * THE NEAR-GROUND BANDS. Wide strips of ground cover rendered for the plane
  * closest to the viewer, spanning the whole width and hung off the bottom.
  * `__tests__/scene_surfaces.test.ts` holds these against the real PNGs.
  */
-const NEAR_GRASS_ASPECT = 631 / 101;
+const NEAR_GRASS_ASPECT = 632 / 99;
 
 type Cover = { fx: number; dy: number; s: number; depth: number; flip?: boolean; flower?: boolean };
 const PARK_COVER: readonly Cover[] = [
@@ -126,8 +126,8 @@ const AIR: Record<SkyBand, { haze: string; ground: string }> = {
  */
 const CLOUD = require('../../../assets/world/sky/cloud.png');
 const CLOUD_FAR = require('../../../assets/world/sky/cloud_far.png');
-const CLOUD_ASPECT = 536 / 137;
-const CLOUD_FAR_ASPECT = 361 / 93;
+const CLOUD_ASPECT = 538 / 137;
+const CLOUD_FAR_ASPECT = 362 / 93;
 /*
  * Widths as a FRACTION of the viewport, capped. A flat 168 is 43% of a 390pt
  * phone and 39% of a 430pt one, which is a cloud that dominates the sky on the
@@ -189,7 +189,7 @@ const TOWN_KERB = require('../../../assets/world/town/props/kerb.png');
 const TOWN_PAVING = require('../../../assets/world/town/props/paving.png');
 const TOWN_NEAR_PAVING = require('../../../assets/world/town/props/near_paving.png');
 /* Trimmed renders' own aspects; __tests__/scene_surfaces.test.ts holds them. */
-const ROOFTOPS_ASPECT = 654 / 166;
+const ROOFTOPS_ASPECT = 654 / 167;
 const KERB_ASPECT = 624 / 54;
 const NEAR_PAVING_ASPECT = 654 / 78;
 const PAVING_ASPECT = 654 / 43;
@@ -255,23 +255,23 @@ const BEACH_MARRAM = require('../../../assets/world/beach/props/dune_grass.png')
  * re-render can never distort a prop again. `npm run check:aspects` restates
  * these from the real PNGs.
  */
-const TREE_ASPECT = 482 / 417;
-const BENCH_ASPECT = 491 / 312;
-const HEDGE_ASPECT = 512 / 254;
-const LAMP_ASPECT = 213 / 562;
-const FOUNTAIN_ASPECT = 498 / 425;
-const PLANTER_ASPECT = 345 / 416;
-const UMBRELLA_ASPECT = 552 / 516;
-const PALM_ASPECT = 403 / 553;
-const DUNE_ASPECT = 468 / 244;
-const CASTLE_ASPECT = 412 / 493;
-const LIFEGUARD_ASPECT = 396 / 448;
-const STORE_AQUA_ASPECT = 480 / 519;
+const TREE_ASPECT = 426 / 512;
+const BENCH_ASPECT = 508 / 290;
+const HEDGE_ASPECT = 526 / 241;
+const LAMP_ASPECT = 213 / 561;
+const FOUNTAIN_ASPECT = 514 / 426;
+const PLANTER_ASPECT = 345 / 417;
+const UMBRELLA_ASPECT = 528 / 516;
+const PALM_ASPECT = 424 / 551;
+const DUNE_ASPECT = 484 / 231;
+const CASTLE_ASPECT = 399 / 487;
+const LIFEGUARD_ASPECT = 363 / 455;
+const STORE_AQUA_ASPECT = 460 / 501;
 const HEADLAND_ASPECT = 654 / 86;
 const SURF_ASPECT = 640 / 55;
-const SHELLS_ASPECT = 286 / 155;
+const SHELLS_ASPECT = 321 / 143;
 const NEAR_SAND_ASPECT = 624 / 57;
-const DUNE_GRASS_ASPECT = 221 / 256;
+const DUNE_GRASS_ASPECT = 233 / 251;
 
 /**
  * WHAT GOES ON THE SAND.

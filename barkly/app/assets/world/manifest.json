@@ -6,15 +6,7 @@
     "park/tree": {
       "file": "park/tree.png",
       "displayWidth": 190,
-      "anchor": "bottom",
-      "form": {
-        "height": 3.992,
-        "parts": 13,
-        "widest": 4.787,
-        "foot": 2.178,
-        "waist": 1.765,
-        "crown": 4.787
-      }
+      "anchor": "bottom"
     },
     "park/bench": {
       "file": "park/bench.png",
@@ -75,10 +67,10 @@
       "form": {
         "height": 0.236,
         "parts": 29,
-        "widest": 9.935,
-        "foot": 9.756,
-        "waist": 8.766,
-        "crown": 9.758
+        "widest": 10.352,
+        "foot": 10.18,
+        "waist": 9.107,
+        "crown": 10.141
       }
     },
     "town/near_paving": {
@@ -88,10 +80,10 @@
       "form": {
         "height": 0.277,
         "parts": 44,
-        "widest": 13.232,
-        "foot": 13.232,
-        "waist": 12.858,
-        "crown": 12.863
+        "widest": 13.24,
+        "foot": 13.24,
+        "waist": 13.2,
+        "crown": 13.2
       }
     },
     "home/near_floor": {
@@ -101,10 +93,10 @@
       "form": {
         "height": 0.153,
         "parts": 8,
-        "widest": 12.836,
-        "foot": 12.836,
-        "waist": 12.546,
-        "crown": 12.546
+        "widest": 12.8,
+        "foot": 12.8,
+        "waist": 12.522,
+        "crown": 12.522
       }
     },
     "park/wildflowers": {
@@ -127,10 +119,10 @@
       "form": {
         "height": 1.146,
         "parts": 39,
-        "widest": 6.695,
-        "foot": 6.695,
-        "waist": 6.653,
-        "crown": 6.663
+        "widest": 6.928,
+        "foot": 6.928,
+        "waist": 6.777,
+        "crown": 6.895
       }
     },
     "park/hedge": {
@@ -192,10 +184,10 @@
       "form": {
         "height": 1.556,
         "parts": 30,
-        "widest": 7.33,
-        "foot": 6.976,
-        "waist": 6.976,
-        "crown": 7.33
+        "widest": 7.609,
+        "foot": 7.075,
+        "waist": 7.075,
+        "crown": 7.609
       }
     },
     "town/paving": {
@@ -205,10 +197,10 @@
       "form": {
         "height": 0.05,
         "parts": 27,
-        "widest": 6.715,
-        "foot": 6.715,
-        "waist": 6.715,
-        "crown": 6.715
+        "widest": 6.833,
+        "foot": 6.833,
+        "waist": 6.833,
+        "crown": 6.833
       }
     },
     "town/kerb": {
@@ -218,10 +210,10 @@
       "form": {
         "height": 0.24,
         "parts": 28,
-        "widest": 6.288,
-        "foot": 6.288,
-        "waist": 6.287,
-        "crown": 6.287
+        "widest": 6.414,
+        "foot": 6.414,
+        "waist": 6.414,
+        "crown": 6.414
       }
     },
     "town/fountain": {
@@ -296,10 +288,10 @@
       "form": {
         "height": 1.157,
         "parts": 2,
-        "widest": 4.241,
-        "foot": 4.241,
-        "waist": 3.376,
-        "crown": 3.376
+        "widest": 4.361,
+        "foot": 4.361,
+        "waist": 3.477,
+        "crown": 3.477
       }
     },
     "sky/cloud_far": {
@@ -309,10 +301,10 @@
       "form": {
         "height": 0.478,
         "parts": 2,
-        "widest": 1.976,
-        "foot": 1.976,
-        "waist": 1.443,
-        "crown": 1.443
+        "widest": 2.023,
+        "foot": 2.023,
+        "waist": 1.478,
+        "crown": 1.478
       }
     },
     "home/vista": {
@@ -322,10 +314,10 @@
       "form": {
         "height": 1.628,
         "parts": 23,
-        "widest": 5.557,
-        "foot": 5.557,
-        "waist": 5.091,
-        "crown": 5.091
+        "widest": 5.521,
+        "foot": 5.521,
+        "waist": 5.226,
+        "crown": 5.226
       }
     },
     "beach/headland": {
@@ -335,10 +327,10 @@
       "form": {
         "height": 0.666,
         "parts": 31,
-        "widest": 6.722,
-        "foot": 6.722,
-        "waist": 6.34,
-        "crown": 6.716
+        "widest": 6.979,
+        "foot": 6.979,
+        "waist": 6.562,
+        "crown": 6.968
       }
     },
     "beach/surf": {
@@ -346,12 +338,12 @@
       "displayWidth": 440,
       "anchor": "bottom",
       "form": {
-        "height": 0.572,
+        "height": 0.571,
         "parts": 8,
-        "widest": 7.26,
-        "foot": 5.516,
-        "waist": 5.516,
-        "crown": 5.516
+        "widest": 7.509,
+        "foot": 5.7,
+        "waist": 5.7,
+        "crown": 5.7
       }
     },
     "beach/shells": {
@@ -452,10 +444,10 @@
       "form": {
         "height": 1.333,
         "parts": 64,
-        "widest": 6.554,
-        "foot": 6.554,
-        "waist": 6.554,
-        "crown": 6.554
+        "widest": 6.775,
+        "foot": 6.775,
+        "waist": 6.775,
+        "crown": 6.775
       }
     },
     "home/skirting": {
@@ -465,10 +457,10 @@
       "form": {
         "height": 0.356,
         "parts": 48,
-        "widest": 6.516,
-        "foot": 6.516,
-        "waist": 6.509,
-        "crown": 6.515
+        "widest": 6.727,
+        "foot": 6.726,
+        "waist": 6.726,
+        "crown": 6.727
       }
     },
     "home/rug": {
@@ -491,10 +483,10 @@
       "form": {
         "height": 0.498,
         "parts": 10,
-        "widest": 5.661,
-        "foot": 5.66,
-        "waist": 5.66,
-        "crown": 5.661
+        "widest": 5.608,
+        "foot": 5.608,
+        "waist": 5.608,
+        "crown": 5.608
       }
     },
     "item/treat_biscuit": {

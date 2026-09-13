@@ -63,11 +63,11 @@ const NEAR_FLOOR = require('../../../assets/world/home/props/near_floor.png');
  * lock by the require path in this file, which is what lets LAMP_ASPECT
  * and the town's LAMP_ASPECT both exist.
  */
-const WINDOW_FRAME_ASPECT = 471 / 510;
-const CHAIR_ASPECT = 349 / 351;
+const WINDOW_FRAME_ASPECT = 466 / 485;
+const CHAIR_ASPECT = 350 / 342;
 const LAMP_ASPECT = 244 / 515;
-const BED_ASPECT = 546 / 193;
-const SHELF_ASPECT = 292 / 439;
+const BED_ASPECT = 559 / 188;
+const SHELF_ASPECT = 282 / 425;
 
 const NEAR_FLOOR_ASPECT = 654 / 66;
 const PANELLING = require('../../../assets/world/home/props/panelling.png');
@@ -75,7 +75,7 @@ const VISTA = require('../../../assets/world/home/props/vista.png');
 /** The trimmed renders' own aspects. __tests__/scene_surfaces.test.ts holds them. */
 const SKIRTING_ASPECT = 649 / 55;
 const PANELLING_ASPECT = 653 / 139;
-const VISTA_ASPECT = 654 / 279;
+const VISTA_ASPECT = 654 / 277;
 /**
  * Window sun/moon geometry, as FRACTIONS of the aperture.
  *

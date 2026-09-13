@@ -204,6 +204,15 @@ def lathe(name, profile, mat, loc=(0.0, 0.0, 0.0), segments=40, scale=(1.0, 1.0,
     obj.location = loc
     obj.rotation_euler = rotation
     obj.scale = scale
+    # transform_apply acts on the SELECTION, not on the active object, so it
+    # has to be cleared first. Without this the scene pack got away with it
+    # (nothing else is ever selected there) and the prop pack died outright --
+    # its light rig is built before any prop, stays selected, and a lamp
+    # refuses a rotation: "Area Lights can only have scale applied: Barkly
+    # cool fill". Every prop in the game was unrenderable through this path
+    # while the identical call in the scene pack worked fine.
+    for other in bpy.context.selected_objects:
+        other.select_set(False)
     bpy.context.view_layer.objects.active = obj
     obj.select_set(True)
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
