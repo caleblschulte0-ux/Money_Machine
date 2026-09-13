@@ -15,9 +15,9 @@ export type ToneStep = 'deep' | 'shade' | 'base' | 'lit' | 'pop';
 
 /** Every family, deep to pop. */
 export const TONE = {
-  grass: { deep: '#484A33', shade: '#6F7D5A', base: '#ABC495', lit: '#EAFDCD', pop: '#F5FAD9' },
-  foliage: { deep: '#3C3F2A', shade: '#5F704D', base: '#96B584', lit: '#DDF6C2', pop: '#F2FAD6' },
-  sand: { deep: '#574E3F', shade: '#887F6D', base: '#CFC5B1', lit: '#FFF5DC', pop: '#FFF7E0' },
+  grass: { deep: '#434A2B', shade: '#677D4A', base: '#9EC47C', lit: '#DEFDB7', pop: '#F0FACF' },
+  foliage: { deep: '#383F22', shade: '#55703D', base: '#85B56A', lit: '#CEF6AB', pop: '#EBFACC' },
+  sand: { deep: '#574C38', shade: '#887B61', base: '#CFBF9D', lit: '#FFF0CD', pop: '#FFF5D9' },
   stone: { deep: '#53493C', shade: '#84776A', base: '#C9BAAC', lit: '#FFF0DC', pop: '#FFF5E0' },
   paving: { deep: '#504637', shade: '#7F7562', base: '#C4B9A2', lit: '#FFF3D7', pop: '#FFF6DE' },
   sea: { deep: '#313834', shade: '#496367', base: '#72A3B0', lit: '#BDE6EA', pop: '#E4F5EB' },

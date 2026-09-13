@@ -279,6 +279,13 @@ ADOPTED_CHROMA = 1.00
 # Cream and `ink` is its Charcoal. They were already right.
 _AUTHORED = {
     # --- FIELD ------------------------------------------------------------
+    # CORRECTED 2026-09-13, same day: the first cut of this split took the
+    # field to 0.30/0.34/0.26 and that was an over-correction. The operator's
+    # ruling on seeing it was that the palette was never the problem at all --
+    # the ART STYLE was (see docs/ART_STYLE.md) -- and a world at 0.19 measured
+    # saturation next to a character at 0.51 is not a quiet field, it is an
+    # anaemic one. The SPLIT is what mattered and it stays; the depth of the
+    # cut was mine and it was too deep.
     # The field also sits HIGHER than it did (lift raised on all seven), for
     # the same reason the ramp widened: the sheet's ground is a pale, airy
     # near-white at value 0.87 and ours was mud at 0.51. Structure and accent
@@ -302,13 +309,13 @@ _AUTHORED = {
     # saturation left to read as deliberate. 92 and 98 are sage and olive: warm
     # greens that sit in the same family as Mustard Tan, three steps away
     # rather than across the wheel.
-    "grass":   ( 92, 0.30,  0.10),
-    "foliage": ( 98, 0.34,  0.04),
+    "grass":   ( 92, 0.46,  0.10),
+    "foliage": ( 98, 0.52,  0.04),
     # 0.18, not 0.26. The hierarchy check (scripts/art-hierarchy.py) put the
     # beach at 51.6% of its frame inside the 0.30-0.40 band -- sand is to the
     # beach what grass is to the park, the single surface that IS the picture,
     # and it was still authored as if it were one field among several.
-    "sand":    ( 41, 0.18,  0.14),
+    "sand":    ( 41, 0.30,  0.14),
     "stone":   ( 28, 0.18,  0.12),
     "paving":  ( 40, 0.22,  0.10),
     # Water and air. The sea is the largest single shape on the beach; at full
