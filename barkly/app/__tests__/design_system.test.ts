@@ -47,6 +47,13 @@ const ART = new Set([
   'StageProps.tsx',
   'Scenes.tsx',
   'PolishedScenes.tsx',
+  // GENERATED, and the narrowest exemption in this list: worldPalette.ts is
+  // written by scripts/export-palette.py straight out of tools/blender/
+  // palette.py, so its hex IS the single source of truth crossing a language
+  // boundary rather than a second opinion about colour. It is the one file
+  // here that cannot drift, because __tests__/palette_export.test.ts fails if
+  // it is even one byte behind its generator.
+  'worldPalette.ts',
   // LivingScenes.tsx, CandyScenes.tsx and depth.tsx were exempted here until
   // 2026-09-07, when it turned out nothing had imported any of them for a long
   // time. An exemption for a file that does not exist is worse than none: it

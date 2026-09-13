@@ -304,7 +304,11 @@ _AUTHORED = {
     # rather than across the wheel.
     "grass":   ( 92, 0.30,  0.10),
     "foliage": ( 98, 0.34,  0.04),
-    "sand":    ( 41, 0.26,  0.14),
+    # 0.18, not 0.26. The hierarchy check (scripts/art-hierarchy.py) put the
+    # beach at 51.6% of its frame inside the 0.30-0.40 band -- sand is to the
+    # beach what grass is to the park, the single surface that IS the picture,
+    # and it was still authored as if it were one field among several.
+    "sand":    ( 41, 0.18,  0.14),
     "stone":   ( 28, 0.18,  0.12),
     "paving":  ( 40, 0.22,  0.10),
     # Water and air. The sea is the largest single shape on the beach; at full
@@ -317,13 +321,30 @@ _AUTHORED = {
     "wood":    ( 32, 0.52, -0.02),
     # the built world
     "brick":   ( 10, 0.50,  0.02),
-    "roof":    (355, 0.62, -0.02),
+    # 0.50, and grape 0.42 below. In TOWN the storefronts are not structure
+    # standing on a field -- they ARE the field, half the frame, and the check
+    # measured exactly that: 50.4% of town in one band and a chroma gap of
+    # +0.109, meaning Barkly barely separated from the shops behind him. The
+    # rule this file states is that chroma falls off with how much of the frame
+    # a surface covers, and town is where that bites hardest. Three shops at
+    # similar chroma stay obviously different because their HUES are 60 to 120
+    # degrees apart; loudness was never what told them apart.
+    "roof":    (355, 0.50, -0.02),
     "metal":   (206, 0.18,  0.02),
+    "grape":   (276, 0.42,  0.00),
     # --- ACCENT -----------------------------------------------------------
-    # the three accents, and only three
+    # TWO accents, and only two. This said "the three accents, and only three"
+    # and counted `grape` among them -- but grape has exactly one consumer in
+    # the entire repo, `town/store_violet`, which is a whole BUILDING. It is a
+    # structure family that was carrying an accent's label, and the label was
+    # the thing deciding its chroma. At 0.92 it painted the largest object in
+    # town at the volume reserved for a collar stud, which is the category
+    # error this whole split exists to stop. It moves up with the other
+    # storefront families instead: coral is `roof` at 0.62 and aqua is `sea`
+    # at 0.44, so violet at 0.56 sits between them and the three shops stay
+    # tellable apart without any of them shouting.
     "berry":   (348, 1.00,  0.00),
     "sun":     ( 46, 1.00,  0.06),
-    "grape":   (276, 0.92,  0.00),
     # --- the ends of the range: the sheet's Cream and Charcoal ------------
     "cream":   ( 38, 0.12,  0.15),
     "ink":     ( 28, 0.22, -0.26),

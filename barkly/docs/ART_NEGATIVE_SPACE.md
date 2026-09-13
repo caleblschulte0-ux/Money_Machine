@@ -68,16 +68,45 @@ Not taste. What survives the eliminations above:
 - **Authored silhouettes.** Every form's outline is drawn, not a side effect
   of scaling a primitive.
 
-## STILL UNDECIDED
+## SETTLED, 2026-09-13 — and it was written down all along
 
-The things the eliminations do NOT settle, and which a reference or a
-finished hero asset has to settle instead:
+Two of the three below are now decided, and not by another style round. The
+answer was on `assets/barkly/concept/barkly-concept.png`, the approved and
+locked concept sheet, in words, at the bottom of the image:
 
-- Banded fills or smooth gradient. He liked banding in one round and the soft
-  vibe in another; those were never shown to him at equal finish.
-- How saturated the world is in absolute terms, as opposed to how much of it
-  is loud at once.
-- Whether the world is 3D-rendered at all.
+> COLLECTIBLE TOY CHARACTER / BOLD SILHOUETTE, EASY TO RECOGNIZE /
+> SATISFYING TO HOLD, SOLID + STURDY FEEL / MADE TO STAND OUT ON ANY SHELF
+
+...over a palette of exactly three swatches: Mustard Tan, Cream, Charcoal.
+Nobody in this arc had opened the file. Measured off it: mean saturation
+0.165 with 73.7% of the image under 0.10, background value 0.98, shadows 98.4%
+warm. Barkly himself measures 0.510 with 34% of him above 0.70.
+
+**Barkly is a vinyl toy photographed on a neutral ground. The colour IS the
+object; the environment is pale, warm and quiet.** We had built the opposite --
+a world at 0.455 mean saturation, as loud as the character standing in it, so
+he never separated from it. That single fact explains every rejection in the
+list above, including the two that read as contradictory.
+
+- ~~How saturated the world is in absolute terms~~ — **settled.** Not by an
+  absolute number: by a HIERARCHY. The field is quiet, the character is loud,
+  and the gap between them is the measurement
+  (`scripts/art-hierarchy.py`, targets in `docs/ART_DIRECTION.md`).
+- ~~Whether the world is 3D-rendered at all~~ — **settled, YES.** Two flat 2D
+  samples were built and pitched; the operator's verdict was *"I think this is
+  the wrong direction."* 3D stays.
+- Banded fills or smooth gradient — **still open, and now narrower.** The
+  shipping answer is banded forms on a continuous ground, and that is not a
+  taste call: banding the ground removed every cast shadow in the park. Any
+  future round has to keep the ground continuous or find another way to get
+  its shadows back.
+
+## THE ELIMINATIONS ABOVE STILL STAND
+
+Nothing in the settled section overrules a rejection. The sheet says what the
+world should be; the list above says what it must not be, and both had to be
+true at once. What the sheet added was the reason they could all be true at
+once -- they were all the same problem.
 
 ## THE STANDING PROCESS RULE
 

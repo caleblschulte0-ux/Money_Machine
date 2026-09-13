@@ -1,3 +1,5 @@
+import { TONE } from './worldPalette';
+
 /**
  * Colours of the WORLD, as opposed to colours of the interface.
  *
@@ -11,10 +13,10 @@
 
 /** The ground he stands on, per place. Used to tint his shadow. */
 export const GROUND = {
-  home: '#6F471D',
-  park: '#386024',
-  town: '#584227',
-  beach: '#956F37',
+  home: TONE.wood.deep,
+  park: TONE.grass.deep,
+  town: TONE.paving.deep,
+  beach: TONE.sand.deep,
 } as const;
 
 /** The dig spot at the park: turned earth. */
@@ -93,23 +95,23 @@ export const DIORAMA = {
   white: '#FFFFFF',
   ink: '#2B2119',
   inkSoft: '#574638',
-  shadow: '#231A14',
-  cream: '#FFFBF0',
+  shadow: TONE.ink.deep,
+  cream: TONE.cream.lit,
   paleCream: '#FFFBF0',
   butter: '#FFE97B',
-  butterDeep: '#FFBF23',
-  lemon: '#FFDB59',
-  coral: '#FF7D71',
-  coralDeep: '#E52F23',
+  butterDeep: '#FFD87A',
+  lemon: '#FFE27A',
+  coral: '#FF867A',
+  coralDeep: '#E5756E',
   coralLight: '#FFBBA4',
-  violet: '#B449DB',
-  violetDeep: '#722497',
-  violetNight: '#67377C',
-  aqua: '#47D3FF',
-  aquaDeep: '#049AD0',
+  violet: '#BD69DB',
+  violetDeep: '#7E4897',
+  violetNight: '#683C7C',
+  aqua: '#7ADFFF',
+  aquaDeep: '#64B3D0',
   aquaLight: '#BCF2FF',
-  mint: '#65F483',
-  mintDeep: '#25A94D',
+  mint: '#75F490',
+  mintDeep: '#51A96C',
 
   /*
    * SKY AND HIGHLIGHTS KEEP THEIR CHROMA.
@@ -135,34 +137,34 @@ export const DIORAMA = {
    * sky actually is. The warm end of morning and evening now sits where the
    * sun is rather than above the player's head.
    */
-  skyMorningZenith: '#6FA8DC',
+  skyMorningZenith: TONE.sky.shade,
   skyMorningA: '#FFDB90',
-  skyMorningB: '#B9E7FF',
+  skyMorningB: TONE.sky.pop,
   /* Aerial perspective. `hazeDay` is the sky a distant prop wears; `hazeNight`
      is the blue the master grade already washes the world with after dark. */
-  hazeMorning: '#FFE2C4',
-  hazeDay: '#CFEAFF',
-  hazeEvening: '#FFC9A6',
-  hazeNight: '#4A4E9E',
-  groundHazeMorning: '#FFDDB8',
-  groundHazeDay: '#CBE7FF',
-  groundHazeEvening: '#FFBE97',
-  groundHazeNight: '#4A4E9E',
-  groundDeepenDay: '#2E1E3A',
-  groundDeepenNight: '#0C0A22',
-  skyDayZenith: '#3E9FE0',
-  skyDayA: '#74CFFF',
-  skyDayB: '#B7E9FF',
+  hazeMorning: TONE.sand.lit,
+  hazeDay: TONE.sky.lit,
+  hazeEvening: TONE.brick.lit,
+  hazeNight: '#4C509E',
+  groundHazeMorning: TONE.sand.lit,
+  groundHazeDay: TONE.sky.lit,
+  groundHazeEvening: TONE.brick.lit,
+  groundHazeNight: '#4C509E',
+  groundDeepenDay: TONE.ink.deep,
+  groundDeepenNight: '#121022',
+  skyDayZenith: TONE.sky.base,
+  skyDayA: TONE.sky.lit,
+  skyDayB: TONE.sky.pop,
   skyEveningZenith: '#7A6BA8',
   skyEveningA: '#FF9C88',
-  skyEveningB: '#FFDFBA',
-  skyNightZenith: '#23245F',
-  skyNightA: '#3E409B',
+  skyEveningB: TONE.sand.lit,
+  skyNightZenith: '#2E2E5F',
+  skyNightA: '#4A4C9B',
   skyNightB: '#7D6EC5',
 
-  wallDayA: '#FFF9E8',
-  wallDayB: '#FFD2A5',
-  wallNightA: '#5650AC',
+  wallDayA: TONE.cream.lit,
+  wallDayB: TONE.sand.lit,
+  wallNightA: '#5853AC',
   wallNightB: '#6A5DA8',
 
   /*
@@ -183,11 +185,11 @@ export const DIORAMA = {
    * couch standing in it come from one sky. That is the whole reason the four
    * locations read as one game, and the room was outside it.
    */
-  roomShade: '#243E51',
+  roomShade: '#273F51',
 
   floorDayFar: '#EEC273',
-  floorDayNear: '#BC6A31',
-  floorDayEdge: '#793C1E',
+  floorDayNear: '#BC825A',
+  floorDayEdge: '#794F3A',
   /*
    * THE NIGHT FLOOR IS COOL, BECAUSE THE NIGHT IS.
    *
@@ -220,39 +222,39 @@ export const DIORAMA = {
    * because it moved a number. The floor change is the one that did the work.
    */
   woodNight: '#453458',
-  woodWarm: '#CD7530',
-  woodDark: '#422819',
-  woodMid: '#78411F',
+  woodWarm: '#CD9162',
+  woodDark: '#422C20',
+  woodMid: '#78513A',
   woodDeep: '#271A13',
-  woodSoft: '#FFB051',
+  woodSoft: '#FFC37A',
   woodShine: '#FFDFAB',
 
-  gold: '#FFCE6A',
-  goldDeep: '#DC8A00',
+  gold: '#FFD37A',
+  goldDeep: '#DCB16A',
   goldLight: '#FFF6D0',
   goldGlow: '#FFED9D',
   goldGlowSoft: '#FFF4BA',
 
-  windowFrameDay: '#FFA938',
-  windowFrameDayEdge: '#BB6109',
-  windowFrameNight: '#FED574',
-  windowFrameNightEdge: '#A27422',
-  windowSillNight: '#DEB54A',
-  hillDay: '#6FDA61',
+  windowFrameDay: '#FFC67A',
+  windowFrameDayEdge: '#BB8A5A',
+  windowFrameNight: '#FED77A',
+  windowFrameNightEdge: '#A2844E',
+  windowSillNight: '#DEBE6B',
+  hillDay: '#76DA69',
   hillNight: '#325D55',
 
-  couchDay: '#FF746A',
+  couchDay: '#FF837A',
   couchDayTop: '#FFAE9F',
   couchDaySeat: '#FFC2AF',
-  couchDayEdge: '#D0352F',
+  couchDayEdge: '#D06864',
   couchNight: '#8B4356',
-  couchNightTop: '#B5566B',
+  couchNightTop: '#B5576C',
   couchNightSeat: '#C77277',
   couchNightEdge: '#522838',
 
-  parkHillDay: '#90D95E',
+  parkHillDay: '#96D968',
   parkHillDayLight: '#C2ED85',
-  parkHillDayEdge: '#5C993D',
+  parkHillDayEdge: '#649949',
   parkHillNight: '#3E6335',
   /*
    * THE LIGHT ON THE CHARACTER, per hour and per place.
@@ -281,26 +283,26 @@ export const DIORAMA = {
   lightNightOpen: '#7C93D8',
   lightNightStreet: '#8C9AD6',
   lightNightShore: '#7488D2',
-  parkGrassDay: '#5DCB3F',
+  parkGrassDay: '#78CB61',
   parkGrassDayLight: '#A9E873',
-  parkGrassDayEdge: '#2F7C2E',
+  parkGrassDayEdge: '#3C7C3C',
   parkGrassNight: '#2A4E2B',
   parkGrassNightLight: '#4B7547',
   parkGrassNightEdge: '#19321F',
-  parkTreeDay: '#43C22C',
-  parkTreeDayLight: '#7EF447',
-  parkTreeDayEdge: '#1D7F21',
+  parkTreeDay: '#6DC25D',
+  parkTreeDayLight: '#9DF475',
+  parkTreeDayEdge: '#3D7F40',
   parkTreeNight: '#254B26',
   parkTreeNightLight: '#3E6940',
   parkTreeNightEdge: '#142A15',
   parkPathDay: '#FFE9B3',
   parkPathDayLight: '#FFEFC4',
-  parkPathDayEdge: '#E0A046',
+  parkPathDayEdge: '#E0B06C',
   parkPathNight: '#817149',
   parkPathNightLight: '#AD9D6F',
   parkPathNightEdge: '#51442C',
 
-  townBlueEdge: '#25829F',
+  townBlueEdge: '#4C8B9F',
   /*
    * The road is the single biggest surface in Town and it was a desaturated
    * warm grey (#BFB09F), which is why Town alone stayed at 34% dead-grey
@@ -325,8 +327,8 @@ export const DIORAMA = {
    * nothing darkens, the ramp keeps its shape, and the accessibility contrast
    * checks see the same luminance family they passed on.
    */
-  townRoadDay: '#D9A75B',
-  townRoadDayEdge: '#A67132',
+  townRoadDay: '#D9AC68',
+  townRoadDayEdge: '#A67F50',
   townRoadNight: '#4E3B45',
   townRoadNightEdge: '#2E2130',
   /*
@@ -337,10 +339,10 @@ export const DIORAMA = {
    * greens rather than one fill. Same treatment: a far tone that holds warmth
    * at the horizon, a near tone with real chroma under the player's feet.
    */
-  townSidewalkDay: '#F4C562',
+  townSidewalkDay: '#F4CB75',
   townSidewalkDayFar: '#FFDC8A',
-  townSidewalkDayNear: '#E0A543',
-  townSidewalkDayEdge: '#B98025',
+  townSidewalkDayNear: '#E0B46C',
+  townSidewalkDayEdge: '#B99459',
   townSidewalkNight: '#6E5740',
   townSidewalkNightFar: '#87694C',
   townSidewalkNightNear: '#574333',
@@ -357,43 +359,43 @@ export const DIORAMA = {
    * keeps its darks, and both were missing: the sea was two bright cyans and
    * the damp strip was a 24%-opacity wash.
    */
-  oceanDayDeep: '#0C5877',
-  oceanNightDeep: '#08202F',
-  sandDayWet: '#9C6229',
-  sandDayNearDeep: '#BC7B33',
+  oceanDayDeep: '#396577',
+  oceanNightDeep: '#17262F',
+  sandDayWet: '#9C734B',
+  sandDayNearDeep: '#BC8E5A',
   sandNightNearDeep: '#3A2F20',
   sandNightWet: '#33291C',
-  oceanDayA: '#23ADD6',
-  oceanDayB: '#67D3E3',
+  oceanDayA: '#67BDD6',
+  oceanDayB: '#6DD4E3',
   oceanDayLight: '#C4EEEE',
-  oceanDayEdge: '#1D718F',
-  oceanNightA: '#194469',
-  oceanNightB: '#2D6A85',
+  oceanDayEdge: '#457B8F',
+  oceanNightA: '#325069',
+  oceanNightB: '#407085',
   oceanNightLight: '#68A2BF',
-  oceanNightEdge: '#102F49',
-  sandDayFar: '#EFC56F',
+  oceanNightEdge: '#233849',
+  sandDayFar: '#EFC673',
   sandDayNear: '#FFDC93',
   sandDayLight: '#FFE6AE',
-  sandDayEdge: '#A9723C',
+  sandDayEdge: '#A97D51',
   sandNightFar: '#7F653D',
   sandNightNear: '#5B4A32',
   sandNightLight: '#9E8361',
   sandNightEdge: '#3E3324',
-  starfish: '#FF8567',
+  starfish: '#FF957A',
 
 
   glassNight: '#FFE189',
-  glassNightEdge: '#AF7E19',
+  glassNightEdge: '#AF9154',
   glassDay: '#F0FBFF',
   glassDayEdge: '#79C2DD',
 
-  bedRim: '#7E42CD',
-  bedWall: '#AE71F1',
+  bedRim: '#9062CD',
+  bedWall: '#AF74F1',
   bedCushion: '#FAF0FF',
-  bedEdge: '#502286',
+  bedEdge: '#604086',
 
   /** Small reusable accents used by scenery, never UI chrome. */
-  planter: '#FF8E54',
+  planter: '#FFA77A',
   signFace: '#FFF9DE',
 } as const;
 
@@ -405,33 +407,33 @@ export const DIORAMA = {
  */
 export const TREASURE = {
   cloth: '#7FB3E8',
-  clothShade: '#4B7FB8',
+  clothShade: '#5886B8',
   clothCuff: '#FFF3DC',
-  leather: '#C98B4B',
-  leatherShade: '#8A5526',
+  leather: '#C99660',
+  leatherShade: '#8A6442',
   stone: '#A9A296',
   stoneShade: '#6F6A60',
   stoneLight: '#D2CCC1',
   bone: '#FFF4DC',
   boneShade: '#CBB794',
   shell: '#FFD9C2',
-  shellShade: '#D08D63',
+  shellShade: '#D08E64',
   seaGlass: '#7FE0B4',
-  seaGlassShade: '#2F9C71',
-  crab: '#FF7A59',
-  crabShade: '#C0402A',
+  seaGlassShade: '#4B9C7C',
+  crab: '#FF957A',
+  crabShade: '#C06B5C',
   paper: '#F6E7C2',
   paperShade: '#C6A971',
-  ink: '#4A3A22',
-  kelp: '#3E8B4B',
+  ink: '#4A3B24',
+  kelp: '#438B4F',
   kelpLight: '#69C06B',
-  rubber: '#FFD84D',
-  rubberShade: '#D9A314',
-  bill: '#FF9A33',
+  rubber: '#FFE27A',
+  rubberShade: '#D9BA68',
+  bill: '#FFBD7A',
   bread: '#F0C173',
-  breadShade: '#C08838',
+  breadShade: '#C0975C',
   filling: '#8FC46A',
-  disc: '#5EC8E8',
-  discShade: '#2C7FA0',
+  disc: '#6FCCE8',
+  discShade: '#4D88A0',
   shine: '#FFFFFF',
 } as const;

@@ -26,13 +26,25 @@ export const color = {
   fill: '#D9F0FF',
   line: '#9EC9E1',
 
-  gold: '#F3C63F',
+  gold: '#F3D375',
   goldSoft: '#FFE49A',
-  goldInk: '#6A5118',
+  goldInk: '#6A5933',
   goldWell: '#FFF0A8',
 
-  brand: '#C43C50',
-  danger: '#842A1D',
+  // #A8515E. Two constraints meet on this one token and both are hard.
+  //
+  // Chroma: it was #C43C50 at saturation 0.69, and the whole UI is now capped
+  // at 0.52 -- Barkly's own level -- because a HUD louder than the character
+  // inverts the hierarchy the concept sheet states ("made to stand out on any
+  // shelf"). Contrast: reversed text sits on this colour, so it has to clear
+  // AA 4.5:1 against the three light surfaces, and pulling saturation out of a
+  // mid-value red RAISES its luminance -- capping alone dropped it to 3.88.
+  //
+  // Saturation is what the hierarchy cares about and VALUE is what contrast
+  // cares about, so they are separable: the chroma stays capped and the value
+  // comes down from 0.77 to 0.66 instead. Clears at 4.97 / 5.25 / 5.07.
+  brand: '#A8515E',
+  danger: '#84483F',
   dangerWell: '#FFD8D0',
   dangerLine: '#D77D70',
 
@@ -40,12 +52,12 @@ export const color = {
   goodWell: '#D7F4CC',
   goodLine: '#6EAE64',
 
-  warm: '#A95730',
+  warm: '#A96D51',
   warmWell: '#FFE0C2',
-  warmLine: '#DB9965',
+  warmLine: '#DB9B69',
 
-  pop: '#4CC9F0',
-  popDeep: '#249FC8',
+  pop: '#73D2F0',
+  popDeep: '#60AEC8',
   /*
    * The blue that is legible at 10px. `popDeep` is a SURFACE colour: measured
    * against pure white it is 3.06:1, so any small text in it fails WCAG AA
@@ -53,17 +65,17 @@ export const color = {
    * on is 78% white over the live scene, which pushed the "BARKLY BRAIN" chip
    * to 2.96:1 in the audit. 6.03:1 on white, and it still reads as his blue.
    */
-  popInk: '#1A6B84',
+  popInk: '#3F7484',
 
   violet: '#BDA7FF',
   violetWell: '#EDE4FF',
-  violetDeep: '#7253BD',
+  violetDeep: '#775BBD',
   mint: '#79E08A',
-  mintDeep: '#43AF59',
-  lemon: '#FFD84D',
-  lemonDeep: '#DCAF24',
-  coral: '#FF7A59',
-  coralDeep: '#D65238',
+  mintDeep: '#54AF67',
+  lemon: '#FFE27A',
+  lemonDeep: '#DCC06A',
+  coral: '#FF957A',
+  coralDeep: '#D67967',
 
   /**
    * The grounds the ITEM ART stands on, in the shop and the food tray.

@@ -1,5 +1,68 @@
 # Barkly art direction — the Supercell target, as numbers
 
+> ## AMENDMENT, 2026-09-13 — the targets below are SUPERSEDED
+>
+> **This revises a standing operator ruling (2026-09-02), so it is flagged
+> rather than quietly applied.** The Supercell references below are unchanged
+> and still right. The NUMBERS are not, and the reason they are not is that
+> the world hit them and the operator rejected it, repeatedly and in
+> escalating terms: *"that hurts my eyes"*, *"it still just looks weak"*,
+> *"it still just looks weird"*, *"I don't like any of them."* A target you
+> can hit while the result is rejected is a broken instrument, not a goal.
+>
+> **What was wrong with it.** `mean_sat` is an average over the whole frame,
+> and an average cannot see the thing that was actually broken. Measured as a
+> histogram instead:
+>
+> ```
+>                   <.1  .1-2 .2-3 .3-4 .4-5 .5-6 .6-7 .7-8  >.8
+>   concept sheet  73.7   1.9  5.9  4.4  1.6  1.0  1.7  6.2  3.6
+>   Barkly alone    0.0   4.3 21.0 22.6  6.9  4.2  6.6 20.0 14.3
+>   park plate      6.0   4.4  9.3  2.9 12.8 64.4  0.2  0.0  0.0
+> ```
+>
+> The park was **64.4% of one frame inside a single 0.10-wide saturation band,
+> with 0.2% of it above 0.60.** Its `mean_sat` of 0.455 was comfortably inside
+> the 0.42–0.55 target and it was the most uniform picture in the project.
+> Every shape competing at the same volume is what "weak" and "unrefined"
+> measure as, and chasing a higher mean made it worse each time, because the
+> only way to raise a mean that is already mid is to push the middle harder.
+>
+> A Supercell frame has a high mean for a reason this metric cannot express:
+> a loud character and a few loud props against a quiet ground, spread over
+> many hues. Copying the mean without the structure gets a loud ground, which
+> is the one thing that guarantees the character cannot read.
+>
+> **The replacement target comes from the approved concept sheet**, which had
+> been in the repo the whole time and states the direction in words at the
+> bottom of it: *"COLLECTIBLE TOY CHARACTER / BOLD SILHOUETTE, EASY TO
+> RECOGNIZE / SATISFYING TO HOLD, SOLID + STURDY FEEL / MADE TO STAND OUT ON
+> ANY SHELF"*, over a palette of exactly three swatches — Mustard Tan, Cream,
+> Charcoal. Barkly is a vinyl toy photographed on a neutral ground. The colour
+> IS the object; the environment is pale, warm and quiet.
+>
+> | metric | meaning | target | why |
+> |---|---|---|---|
+> | `peak_sat_band` | biggest share of the frame in one 0.10 saturation band | **under 45%** | a uniform frame has no hierarchy at any mean |
+> | `chroma_gap` | Barkly's mean saturation minus the ground he stands on | **+0.18 or better** | this is "stands out on any shelf", as a number |
+> | `dark_frac` | pixels under value 0.20 | **2–6%** | the world had 0.0%; the sheet has 3.1% |
+> | `shadow_warm` | share of the darkest 15% at hue <70 or >330 | **over 80%** | the sheet is 98.4% warm, Barkly 99.8%, the old park 4.4% |
+> | `mean_sat` | average chroma | **no target** | superseded; it is the metric that certified the rejected frames |
+>
+> Measured after the change: peak band 64.4% → 44.1%, chroma_gap +0.032 →
+> +0.203, dark_frac 0.0% → 2.7%, shadow hue 200° → 62°.
+>
+> **What did NOT change.** The Supercell reference list, the value-range
+> discipline, and the finding two sections down that town and beach live in
+> Blender rather than in the code palette — that one was right and is now
+> enforced by `__tests__/palette_export.test.ts`, which fails if the two
+> palettes drift.
+>
+> The rest of this file is kept as written. It is the record of how the
+> project got here, and the "Supercell target" framing is still the goal;
+> only the way it was being measured is retired.
+
+
 Operator ruling, 2026-09-02. The look we are building toward is the Supercell
 toy-diorama family. In the operator's own ranking:
 

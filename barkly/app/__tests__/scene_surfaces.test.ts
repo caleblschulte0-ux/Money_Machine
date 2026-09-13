@@ -230,9 +230,24 @@ describe('scene surface renders', () => {
     const rows = [...table.matchAll(/(\w+): \{ haze: DIORAMA\.(\w+), ground: DIORAMA\.(\w+) \}/g)];
     expect(rows.map((m) => m[1]).sort()).toEqual(['day', 'evening', 'morning', 'night']);
     const palette = readFileSync(join(ROOT, 'src', 'ui', 'scenes', 'artPalette.ts')).toString();
+    // A band's colour may now be a hex literal OR a reference into the shared
+    // world palette (`TONE.sky.lit`). The scene-level colours were repointed at
+    // tools/blender/palette.py so that the app and the renderer cannot disagree
+    // about what colour the sky is -- before that they were two independent
+    // palettes, and the app's was the louder of the two. What this test is
+    // actually about is unchanged: four bands, four different airs. So it
+    // follows the reference instead of demanding the literal stay put.
+    const TONE = require('../src/ui/scenes/worldPalette').TONE as
+      Record<string, Record<string, string>>;
     const hex = (token: string) => {
+      const ref = new RegExp(`${token}: TONE\\.(\\w+)\\.(\\w+)`).exec(palette);
+      if (ref) {
+        const value = TONE[ref[1]]?.[ref[2]];
+        if (!value) throw new Error(`${token} -> TONE.${ref[1]}.${ref[2]} is not a colour`);
+        return value.toUpperCase();
+      }
       const m = new RegExp(`${token}: '(#[0-9A-Fa-f]{6})'`).exec(palette);
-      if (!m) throw new Error(`${token} is not in the palette`);
+      if (!m) throw new Error(`${token} is neither a hex literal nor a TONE reference`);
       return m[1].toUpperCase();
     };
     for (const col of [1, 2] as const) {
