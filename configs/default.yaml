@@ -157,3 +157,49 @@ control:
     heater_setpoint_min_f: 72.0
     heater_setpoint_max_f: 82.0
     feed_max_portions_per_day: 3
+
+# ---------------------------------------------------------------- live loop
+live:
+  # Close a session (summaries, identity, deviations, retention) every N seconds.
+  session_s: 600
+  # Process at most this many frames per second from a camera.
+  target_fps: 10
+  assumed_fps: 30            # when the source does not report one
+  # Rolling buffer of raw frames (JPEG in memory) for event clips.
+  buffer_s: 30
+  # Keep recording this long after an event starts.
+  clip_post_s: 20
+  clip_dir: runs/clips
+  status_file: runs/live/status.json
+  requests_dir: runs/live/requests
+  reconnect_s: 5
+  # No detection for this long after fish were seen -> tracking_loss event + clip.
+  no_detection_alert_s: 120
+  # Which events save a clip.
+  clip_on: [feeding, deviation, tracking_loss, request]
+  # Run the reasoner at the end of every session (else only `fishai daily`).
+  assess_each_session: false
+  # Write an annotated video per session (large; off by default).
+  store_annotated: false
+
+# ------------------------------------------------------------------ feeding
+feeding:
+  # Where food lands, as fractions of the frame (top band by default).
+  zone: {x1: 0.0, y1: 0.0, x2: 1.0, y2: 0.25}
+  before_s: 60
+  after_s: 120
+  # A fish that never approaches within the window counts as this latency.
+  latency_max_s: 120
+
+# ---------------------------------------------------------------- retention
+retention:
+  observations_days: 14      # raw per-frame rows; summaries are kept forever
+  clips_days: 30
+  clips_max_gb: 5
+  keep_clips_with_confirmation: true
+
+# ------------------------------------------------------------------- export
+export:
+  min_confidence: 0.6
+  max_frames_per_video: 50
+  image_format: jpg

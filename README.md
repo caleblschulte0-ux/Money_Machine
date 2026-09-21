@@ -21,13 +21,14 @@ The reasoning model never sees a video frame. It sees this:
 
 | Phase | What | State |
 |---|---|---|
-| 1 | Eyes: video -> detection -> tracking -> telemetry -> SQLite -> JSON -> annotated video | **Working.** 83 tests. Runs with no model at all (motion detector) or with the Fishial YOLO detector + ByteTrack. Verified on real aquarium footage. |
+| 1 | Eyes: video -> detection -> tracking -> telemetry -> SQLite -> JSON -> annotated video | **Working.** 100 tests. Runs with no model at all (motion detector) or with the Fishial YOLO detector + ByteTrack. Verified on real aquarium footage. |
 | 2 | Identity: keep Fish #3 as Fish #3 | **First rung.** Appearance re-id inside a clip and across clips (colour histograms), confidence exposed, fragments merged only when they never coexist. Deep re-id: not built. |
-| 3 | Behaviour: activity, zones, surface time, hiding | **Measured.** Feeding, aggression, erratic swimming: not built (see docs/ROADMAP.md). |
+| 3 | Behaviour: activity, zones, surface time, hiding, feeding response | **Measured.** Feeding events with per-fish approach latency, zone shift and activity change, judged against that fish's prior feedings. Aggression, erratic swimming: not built (see docs/ROADMAP.md). |
 | 4 | Baselines per fish per tank, deviations | **Working.** Rolling window, prior-sessions-only comparison, z-score and percent thresholds. |
 | 5 | Local Qwen reasoning | **Working with a fallback.** Ollama client with schema-validated JSON; deterministic rules when no model is reachable, and the result says which one answered. |
 | 6 | Sensors | **Simulators + file bridge.** Temperature, water level, pH, dissolved oxygen simulators; a JSON-file sensor for any logger. No hardware driver yet. |
 | 7 | Control | **Permission system + simulated actuators.** AUTO / APPROVAL / FORBIDDEN tiers, deterministic limits, rate limits, journaled. No hardware driver yet. |
+| Data | Live loop, event clips, retention, owner confirmations, dataset export | **Working.** `fishai watch` runs unattended in sessions with a rolling buffer and clips on feeding / deviation / tracking loss / request; `fishai ingest` drains a folder; `fishai daily` reviews; `fishai confirm` records outcomes; `fishai export` writes YOLO frames + labels with a manifest. Windows scheduled tasks via `scripts/install_tasks.ps1`. |
 
 See `docs/ROADMAP.md` for what is deliberately not built.
 
@@ -48,6 +49,42 @@ Linux/macOS: `./scripts/setup.sh`, then `python -m fishai ...`.
 Requirements: Python 3.10+, git. Optional: [Ollama](https://ollama.com)
 with `ollama pull qwen2.5:7b` for the reasoner; an NVIDIA GPU
 (`setup.ps1 -Gpu`) for faster detection.
+
+## Start feeding it data (the part that matters now)
+
+Pick one of two paths; both accumulate the same database.
+
+**A camera on the tank, unattended:**
+
+```powershell
+.\scripts\install_tasks.ps1 -Source 0        # or an RTSP URL; registers "FishAI Watch" at logon + "FishAI Daily" at 07:00
+Start-ScheduledTask -TaskName "FishAI Watch"
+.\scripts\run.ps1 status                      # live line: session, fish now, fps, sessions done
+.\scripts\run.ps1 feed                        # when you feed them: marks the event, saves a clip, measures the response
+.\scripts\run.ps1 clip --note "chasing"       # save the last 30 s + 20 s whenever you see something
+```
+
+**A folder of recordings (phone, webcam recorder, camera SD card):**
+
+```powershell
+.\scripts\install_tasks.ps1 -IngestFolder "D:\tank-videos"   # or: .\scripts\run.ps1 ingest D:\tank-videos --watch
+.\scripts\run.ps1 feed --video latest --at 42      # food went in 42 s into the latest clip
+```
+
+Then, every morning (the daily task does this): baselines are recomputed,
+every new session is compared with them, one assessment is written to
+`runs/reports/daily-<date>.json`. When something is flagged, tell it what
+really happened; that is the label the dataset is built on:
+
+```powershell
+.\scripts\run.ps1 confirm                                # what is waiting
+.\scripts\run.ps1 confirm 12 --outcome false_alarm --note "it was the new plant"
+.\scripts\run.ps1 export dataset --name tank1_week1      # frames + YOLO labels for review, manifest in datasets/manifests/
+```
+
+Retention keeps it bounded: raw per-frame rows older than 14 days are
+pruned (summaries stay), clips older than 30 days or beyond 5 GB are
+deleted oldest-first, and clips from sessions you confirmed are kept.
 
 ## What a run produces
 
@@ -73,8 +110,17 @@ fishai assess [VIDEO_ID] [--act]  run the reasoner; --act sends proposals throug
 fishai sensors [--store]          read configured sensors
 fishai control ACTION k=v         request an action (AUTO runs, APPROVAL waits, FORBIDDEN refuses)
 fishai approve ACTION k=v         the owner's yes for an APPROVAL action; limits still apply
-fishai status                     what the database holds
+fishai status                     what the database holds, and the live watcher if running
 fishai doctor                     what is installed, downloaded and will actually run
+
+fishai watch --source 0|URL|FILE  the live loop (sessions, clips, status file); Ctrl+C or `fishai stop`
+fishai feed [--video ID --at S]   mark a feeding, live or at S seconds into a processed video
+fishai clip [--note ...]          save the live buffer as a clip
+fishai ingest FOLDER [--watch]    process every new video in a folder
+fishai daily [--act]              baselines + deviations for new sessions + one assessment + report
+fishai confirm [ID --outcome ...] what really happened for a flagged anomaly
+fishai export dataset|summaries   training frames + YOLO labels with a manifest, or a CSV of every track
+fishai maintain                   retention now
 ```
 
 Every command takes `--config FILE` and `-o key.path=value` overrides; all
@@ -89,7 +135,9 @@ fishai/                 the package (importable; `python -m fishai`)
   perception/tracking   built-in IoU + appearance re-id tracker; ByteTrack adapter
   perception/behavior   telemetry, track summaries, baselines and deviations
   perception/classification  cross-session fish identity (species: not built)
-  pipeline/             process_video, annotation, JSON summary
+  pipeline/             SessionProcessor (shared frame loop), process_video, live watcher, annotation, summary
+  jobs/                 ingest a folder, the daily review, dataset/CSV export
+  feedback.py           owner confirmations;  retention.py: pruning and clip bounds
   storage/              SQLite schema and repository
   reasoning/            schema-validated assessments; Ollama/Qwen client; rules fallback
   sensors/              sensor interface, simulators, file bridge
@@ -97,7 +145,7 @@ fishai/                 the package (importable; `python -m fishai`)
   evaluation/           detection/tracking scoring against ground truth
 configs/default.yaml    every tunable
 models/registry.json    downloadable weights, URLs, checksums, licences (weights git-ignored)
-scripts/                setup.ps1, run.ps1, setup.sh, download_models.py
+scripts/                setup.ps1, run.ps1, install_tasks.ps1, setup.sh, download_models.py
 tests/                  pytest suite (runs without torch; ML tests skip when absent)
 docs/                   ARCHITECTURE, DATA, THIRD_PARTY, ROADMAP, SETUP
 ```

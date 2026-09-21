@@ -36,8 +36,21 @@ python -m fishai demo
 ```
 fishai doctor            # each line is a real check, not an import
 fishai demo              # writes runs/demo_tank.summary.json and .annotated.mp4
-python -m pytest         # 83 tests; ML tests skip when torch/weights are absent
+python -m pytest         # 100 tests; ML tests skip when torch/weights are absent
 ```
+
+## Running unattended (Windows)
+
+```powershell
+.\scripts\install_tasks.ps1 -Source 0               # camera index or RTSP URL
+.\scripts\install_tasks.ps1 -IngestFolder D:\tank    # or: drain a folder instead of a camera
+.\scripts\install_tasks.ps1 -Uninstall
+```
+
+Registers "FishAI Watch" (at logon, restarts on exit) and "FishAI Daily"
+(07:00 by default, `-DailyAt 06:30`). `fishai status` shows the watcher's
+live line from `runs/live/status.json`; `fishai feed`, `fishai clip` and
+`fishai stop` talk to it through `runs/live/requests/`.
 
 ## Configuration
 

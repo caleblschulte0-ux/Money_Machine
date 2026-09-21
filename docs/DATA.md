@@ -20,6 +20,8 @@ every derived number can be recomputed when the arithmetic improves.
 | `events` | RAW | event | feeding, video processed, halt/resume, **owner-confirmed outcomes** |
 | `assessments` | derived | reasoner call | the exact state shown to the model and its validated output |
 | `actions` | RAW | control request | action, params, who asked, tier/permission, executed, reason |
+| `clips` | RAW (index) | saved clip | kind (feeding / deviation / tracking_loss / request), path, session, event, span, size |
+| `feeding_responses` | derived | fish x feeding event | approached, latency, zone fraction before/after, activity before/after |
 
 ## Where files live
 
@@ -44,19 +46,22 @@ A video's id is a hash of its size, name and first/last megabyte, so the
 same file processed on two machines gets the same id and re-processing
 replaces rather than duplicates.
 
-## Retention plan (24/7 operation)
+## Retention (24/7 operation)
 
-Not built yet; designed for. The live loop will keep:
+Built (`fishai/retention.py`, run at every live session end and by
+`fishai maintain`):
 
-- **Always:** observations and summaries (cheap; a day of 10 fps telemetry
-  for 6 fish is roughly 5 million small rows or ~500 MB uncompressed, so
-  telemetry should be thinned to summaries after N days).
-- **Event clips:** short raw clips around anomalies, feedings, tracking
-  confidence drops, owner requests and data selected for training.
-- **Rolling buffer:** an optional short ring buffer of raw video so an event
-  clip can include the seconds before it was detected.
-- **Nothing else** in raw form: routine footage is deleted after the
-  telemetry is extracted.
+- **Always:** track summaries, identities, baselines, anomalies, events,
+  assessments, actions, feeding responses.
+- **Raw observations** for `retention.observations_days` (14): a day of 10
+  fps telemetry for 6 fish is roughly 5 million small rows, so they are
+  pruned once summaries exist. Recompute nothing you cannot: summaries are
+  derived before pruning.
+- **Event clips:** the rolling buffer (`live.buffer_s`) plus `live.clip_post_s`
+  on feeding, deviation, tracking loss and request; deleted after
+  `retention.clips_days` or oldest-first beyond `retention.clips_max_gb`,
+  except clips from sessions with an owner confirmation.
+- **Nothing else** in raw form: routine footage is never written to disk.
 
 ## The dataset this produces
 
@@ -65,7 +70,9 @@ Every processed session adds: tracks, behaviour metrics, feeding events
 owner-confirmed outcomes recorded as `events`. That combination is the
 proprietary dataset. Bootstrap order:
 
-1. Third-party detector (Fishial) produces boxes on our footage.
+1. Third-party detector (Fishial) produces boxes on our footage;
+   `fishai export dataset` writes them as YOLO labels with a manifest that
+   says they are model-assisted, not ground truth.
 2. Human review corrects a sample (model-assisted, never box-by-box from
    scratch); SAM-style tools can tighten boxes to masks.
 3. Train our own detector on the reviewed set (Apache-licensed family).

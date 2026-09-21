@@ -26,6 +26,24 @@ SensorHub ──▶ readings ─────────────────
                                                     permissions.tier_for + safety.check ──▶ Actuator (or pending / refused)
 ```
 
+## The live loop (`fishai/pipeline/live.py`)
+
+```
+camera/file ──frames──▶ LiveWatcher ──▶ SessionProcessor (same code as process_video)
+                            │  ├─ RollingBuffer (last buffer_s as JPEG)
+                            │  ├─ requests_dir/*.json  (feed, clip, note, stop)  ◀── fishai feed / clip / stop
+                            │  ├─ status.json                                  ──▶ fishai status
+                            │  └─ ClipRecorder: buffer + clip_post_s -> clips/<stamp>_<kind>.mp4
+                            └─ every session_s: finish() -> deviations -> feeding deviations -> retention -> (assess)
+```
+
+Frames from a file and frames from a camera go through the same
+``SessionProcessor``, so nothing the live loop does is untestable: the
+tests drive it with a synthetic file and a ground-truth detector. A file
+source is read as fast as it decodes; a camera is paced to
+``live.target_fps``. Frame indices are the SOURCE frame numbers so an
+exported dataset can seek back to them.
+
 ## Contracts (`fishai/types.py`)
 
 | Type | Meaning |
@@ -52,6 +70,9 @@ one module that calls `register_*` and one line in `configs/default.yaml`.
 | Reasoning | `Reasoner.assess(state) -> Assessment` | `ollama` (Qwen), `rules` (deterministic) | `reasoning.backend` |
 | Sensors | `Sensor.read() -> Reading` | simulated temperature / water level / pH / DO, `file` | `sensors[]` |
 | Control | `Actuator.apply(action, params)` | `simulated`, `none` | `control.backend` |
+| Feeding | `mark_feeding`, `compute_feeding_responses`, `feeding_deviations` | food zone + windows | `feeding.*` |
+| Jobs | `ingest_folder`, `run_daily`, `export_dataset` | | `export.*` |
+| Retention | `run_retention` | | `retention.*` |
 
 ## Model resolution
 

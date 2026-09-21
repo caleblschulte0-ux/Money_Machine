@@ -18,32 +18,35 @@ in the repo pretends otherwise.
 - Phase 5: Ollama/Qwen reasoner with schema validation and rules fallback.
 - Phase 6: sensor interface with simulators and a file bridge.
 - Phase 7: permission tiers, deterministic safety rules, simulated actuators.
+- Data collection (2026-09-21, second pass): the live loop (`fishai watch`)
+  with sessions, a rolling JPEG buffer, event clips on feeding / deviation /
+  tracking loss / request, a status file and file-based requests; feeding
+  events with per-fish response and feeding baselines; owner confirmations
+  (`fishai confirm`); folder ingestion; the daily review with a report;
+  retention; YOLO dataset export with manifests; Windows scheduled tasks.
 
 ## Next
 
-1. **Live loop.** `fishai watch --source 0` reading a camera continuously,
-   writing telemetry, rolling video buffer, event clips, retention. All
-   pieces exist; the loop and the buffer do not.
-2. **Feeding.** A `feeding` event (manual now, feeder later) plus per-fish
-   approach latency, time near the food zone, and feeding-response baseline.
-   Needs a food-zone definition in config.
-3. **Behaviour classifiers.** Chasing (two tracks with sustained pursuit
+1. **Behaviour classifiers.** Chasing (two tracks with sustained pursuit
    geometry), erratic swimming (acceleration variance), lethargy (activity
    under baseline for N sessions), circular movement (turning-rate
    histogram), loss of balance (box aspect-ratio anomalies). Each as a
    measured metric with a baseline, never as a diagnosis.
-4. **Identity, second rung.** Deep re-id embeddings behind
+2. **Identity, second rung.** Deep re-id embeddings behind
    `appearance.describe`, species from Fishial classification as a hard
    constraint on matching, and a per-fish confidence history.
-5. **Real sensors.** First a serial/USB temperature probe and a water-level
+3. **Real sensors.** First a serial/USB temperature probe and a water-level
    float via the `file` bridge or a new `kind`; then pH and DO.
-6. **Real actuators.** Smart plug for aeration/light first (reversible), then
+4. **Real actuators.** Smart plug for aeration/light first (reversible), then
    a feeder. Heater control stays APPROVAL-tier with the 1 F step.
-7. **Data strategy.** Export reviewed boxes to a YOLO-format dataset under
-   `datasets/manifests/`, a `training/` script for an Apache-licensed
-   detector, and an evaluation run against the Fishial baseline.
-8. **Owner feedback.** `fishai confirm <anomaly_id> --outcome ...` to record
-   ground truth for what the system flagged.
+5. **Training.** A `training/` script that takes a reviewed export
+   (`datasets/manifests/*.json`) and fine-tunes an Apache-licensed detector,
+   plus an evaluation run against the Fishial baseline with
+   `fishai.evaluation`.
+6. **A review tool for exports.** Something faster than editing label files:
+   accept / fix / reject per frame, writing back to the export.
+7. **Feeder integration.** `fishai feed --source feeder` from the feeder's own
+   trigger so feedings are never missed.
 
 ## Deliberately not built
 
@@ -60,4 +63,10 @@ APPROVAL action with a 5 ml ceiling and never proposable by the model.
 - ByteTrack via the `trackers` package returns ids from 0; the built-in
   tracker from 1. Ids are per run, not stable names; `fish_id` is.
 - The Fishial detector runs at roughly 0.25 to 0.7 s per 960 px frame on a
-  CPU; use `video.frame_stride` or a GPU for long footage.
+  CPU; use `video.frame_stride` or a GPU for long footage. The live loop's
+  `live.target_fps` must be below what the detector sustains or frames are
+  dropped (the status file's `fps_measured` shows the truth).
+- Live sessions from a camera cannot be exported as training frames unless a
+  clip was saved; `fishai export` only reads files that still exist.
+- Feeding response is measured against a fixed food zone; a feeder that
+  drops food elsewhere needs `feeding.zone` changed.

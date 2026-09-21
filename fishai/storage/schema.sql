@@ -161,3 +161,36 @@ CREATE TABLE IF NOT EXISTS fish (
     last_seen       TEXT NOT NULL,
     n_sessions      INTEGER NOT NULL DEFAULT 1
 );
+
+-- Event clips saved from the live buffer (feeding, deviation, tracking loss, request).
+CREATE TABLE IF NOT EXISTS clips (
+    id          INTEGER PRIMARY KEY,
+    kind        TEXT NOT NULL,
+    path        TEXT NOT NULL,
+    video_id    TEXT,
+    event_id    INTEGER,
+    start_ts    REAL NOT NULL,
+    end_ts      REAL NOT NULL,
+    reason      TEXT NOT NULL DEFAULT '',
+    size_bytes  INTEGER NOT NULL DEFAULT 0,
+    recorded_at TEXT NOT NULL
+);
+
+-- DERIVED: per-fish response to one feeding event.
+CREATE TABLE IF NOT EXISTS feeding_responses (
+    id                   INTEGER PRIMARY KEY,
+    event_id             INTEGER NOT NULL,
+    video_id             TEXT NOT NULL,
+    fish_id              INTEGER,
+    track_id             INTEGER NOT NULL,
+    approached           INTEGER NOT NULL,
+    latency_s            REAL,
+    zone_fraction_before REAL NOT NULL,
+    zone_fraction_after  REAL NOT NULL,
+    activity_before      REAL NOT NULL,
+    activity_after       REAL NOT NULL,
+    n_before             INTEGER NOT NULL,
+    n_after              INTEGER NOT NULL,
+    recorded_at          TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_feeding_fish ON feeding_responses(fish_id, recorded_at);

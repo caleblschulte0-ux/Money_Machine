@@ -307,3 +307,112 @@ class Database:
         """track_id -> fish_id for one video (only linked tracks)."""
         rows = self._conn.execute("SELECT track_id, fish_id FROM fish_identities WHERE video_id = ?", (video_id,))
         return {r["track_id"]: r["fish_id"] for r in rows}
+
+    # ---------------------------------------------------------------- clips
+    def add_clip(self, kind: str, path: str, start_ts: float, end_ts: float, reason: str = "", video_id: str | None = None,
+                 event_id: int | None = None, size_bytes: int = 0) -> int:
+        with self._conn:
+            cur = self._conn.execute(
+                "INSERT INTO clips (kind, path, video_id, event_id, start_ts, end_ts, reason, size_bytes, recorded_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (kind, path, video_id, event_id, start_ts, end_ts, reason, size_bytes, utc_now()),
+            )
+            return int(cur.lastrowid)
+
+    def clips(self, kind: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        q, args = "SELECT * FROM clips", []
+        if kind:
+            q += " WHERE kind = ?"
+            args.append(kind)
+        q += " ORDER BY id DESC LIMIT ?"
+        args.append(limit)
+        return [dict(r) for r in self._conn.execute(q, args)]
+
+    def delete_clip(self, clip_id: int) -> None:
+        with self._conn:
+            self._conn.execute("DELETE FROM clips WHERE id = ?", (clip_id,))
+
+    # -------------------------------------------------------------- feeding
+    def add_feeding_response(self, row: dict[str, Any]) -> int:
+        with self._conn:
+            cur = self._conn.execute(
+                """INSERT INTO feeding_responses (event_id, video_id, fish_id, track_id, approached, latency_s, zone_fraction_before,
+                   zone_fraction_after, activity_before, activity_after, n_before, n_after, recorded_at)
+                   VALUES (:event_id, :video_id, :fish_id, :track_id, :approached, :latency_s, :zone_fraction_before,
+                   :zone_fraction_after, :activity_before, :activity_after, :n_before, :n_after, :recorded_at)""",
+                dict(row, approached=int(bool(row["approached"])), recorded_at=row.get("recorded_at") or utc_now()),
+            )
+            return int(cur.lastrowid)
+
+    def feeding_responses(self, fish_id: int | None = None, event_id: int | None = None, limit: int = 200) -> list[dict[str, Any]]:
+        q, args, where = "SELECT * FROM feeding_responses", [], []
+        if fish_id is not None:
+            where.append("fish_id = ?")
+            args.append(fish_id)
+        if event_id is not None:
+            where.append("event_id = ?")
+            args.append(event_id)
+        if where:
+            q += " WHERE " + " AND ".join(where)
+        q += " ORDER BY id DESC LIMIT ?"
+        args.append(limit)
+        out = []
+        for r in self._conn.execute(q, args):
+            d = dict(r)
+            d["approached"] = bool(d["approached"])
+            out.append(d)
+        return out
+
+    # ------------------------------------------------------------- windows
+    def observations_between(self, video_id: str, t0: float, t1: float) -> list[Observation]:
+        rows = self._conn.execute(
+            "SELECT * FROM observations WHERE video_id = ? AND timestamp_s >= ? AND timestamp_s <= ? ORDER BY frame_index, track_id",
+            (video_id, t0, t1),
+        )
+        return [
+            Observation(
+                video_id=r["video_id"], frame_index=r["frame_index"], timestamp_s=r["timestamp_s"], track_id=r["track_id"],
+                bbox=BBox(r["x1"], r["y1"], r["x2"], r["y2"]), confidence=r["confidence"], cx=r["cx"], cy=r["cy"], nx=r["nx"], ny=r["ny"],
+                zone=Zone(r["zone"]), dx=r["dx"], dy=r["dy"], displacement_px=r["displacement_px"], speed_px_s=r["speed_px_s"],
+                speed_norm_s=r["speed_norm_s"], identity_confidence=r["identity_confidence"],
+            )
+            for r in rows
+        ]
+
+    def prune_observations(self, before_iso: str) -> int:
+        """Delete raw observations of videos processed before ``before_iso`` that already have summaries."""
+        with self._conn:
+            cur = self._conn.execute(
+                """DELETE FROM observations WHERE video_id IN (
+                       SELECT v.video_id FROM videos v WHERE v.processed_at < ?
+                       AND EXISTS (SELECT 1 FROM track_summaries s WHERE s.video_id = v.video_id))""",
+                (before_iso,),
+            )
+            return int(cur.rowcount)
+
+    def event(self, event_id: int) -> dict[str, Any] | None:
+        r = self._conn.execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
+        if not r:
+            return None
+        d = dict(r)
+        d["payload"] = json.loads(d.pop("payload_json") or "{}")
+        return d
+
+    def anomaly(self, anomaly_id: int) -> dict[str, Any] | None:
+        r = self._conn.execute("SELECT * FROM anomalies WHERE id = ?", (anomaly_id,)).fetchone()
+        return dict(r) if r else None
+
+    def vacuum(self) -> None:
+        self._conn.execute("VACUUM")
+
+    def relink_feeding_responses(self, video_id: str) -> int:
+        """Fill fish_id on feeding responses recorded before the session's identities existed."""
+        mapping = self.fish_for_video(video_id)
+        n = 0
+        with self._conn:
+            for track_id, fish_id in mapping.items():
+                cur = self._conn.execute(
+                    "UPDATE feeding_responses SET fish_id = ? WHERE video_id = ? AND track_id = ? AND fish_id IS NULL",
+                    (fish_id, video_id, track_id),
+                )
+                n += int(cur.rowcount)
+        return n

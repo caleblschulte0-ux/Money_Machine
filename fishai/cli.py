@@ -8,8 +8,18 @@
     fishai sensors                      read the configured sensors once
     fishai control ACTION [k=v ...]     request an action through permissions and safety
     fishai approve ACTION [k=v ...]     the owner's yes for an approval-tier action
-    fishai status                       what the database holds
+    fishai status                       what the database holds, and the live watcher if running
     fishai doctor                       what is installed, what is downloaded, what will work
+
+    fishai watch --source 0|URL|FILE    the live loop: sessions, clips, status file (Ctrl+C or `fishai stop`)
+    fishai feed [--video ID --at S]     mark a feeding (live, or at S seconds into a processed video)
+    fishai clip [--note ...]            ask the running watcher to save the buffer as a clip
+    fishai stop                         ask the running watcher to stop
+    fishai ingest FOLDER [--watch]      process every new video file in a folder
+    fishai daily [--act]                baselines + deviations for new sessions + one assessment
+    fishai confirm ID --outcome ...     record what really happened for a flagged anomaly
+    fishai export dataset|summaries     training frames + YOLO labels, or a CSV of every track
+    fishai maintain                     retention: prune old raw rows and clips
 """
 
 from __future__ import annotations
@@ -155,6 +165,9 @@ def cmd_assess(args: argparse.Namespace) -> int:
         readings = hub.read_all(db)
         executor = ControlExecutor(db, cfg.section("control"))
         state = build_state(db, vid, devs, SensorHub.state_for_reasoner(readings), executor.actuator.state(), db.events(limit=10))
+        from fishai.perception.behavior.feeding import feeding_summary
+
+        state["feeding"] = feeding_summary(db)
         rcfg = dict(cfg.section("reasoning"))
         result = assess(state, rcfg, db=db, reasoner=None if not args.rules else __import__("fishai.reasoning.rules", fromlist=["RulesReasoner"]).RulesReasoner(), video_id=vid)
         actions = executor.run_assessment_actions(result.safe_actions) if args.act else []
@@ -210,8 +223,29 @@ def cmd_status(args: argparse.Namespace) -> int:
         anomalies = db.anomalies()
         assessments = db.assessments(limit=3)
         pending = [a for a in db.actions(limit=100) if a["permission"] == "pending"]
-    obj = {"database": str(cfg.resolve_path("paths.database")), "videos": len(videos), "fish": len(fish), "anomalies": len(anomalies), "pending_actions": pending, "latest_assessments": assessments}
-    lines = [f"database: {obj['database']}", f"videos processed: {len(videos)}", f"fish known: {len(fish)}", f"anomalies recorded: {len(anomalies)}"]
+        from fishai.feedback import unconfirmed_anomalies
+
+        unconfirmed = unconfirmed_anomalies(db)
+        feedings = db.events("feeding", limit=3)
+        clips = db.clips(limit=5)
+    from fishai.pipeline.live import read_status
+
+    live = read_status(cfg)
+    obj = {"database": str(cfg.resolve_path("paths.database")), "videos": len(videos), "fish": len(fish), "anomalies": len(anomalies),
+           "unconfirmed_anomalies": len(unconfirmed), "pending_actions": pending, "latest_assessments": assessments, "live": live,
+           "recent_feedings": feedings, "recent_clips": clips}
+    lines = [f"database: {obj['database']}", f"videos processed: {len(videos)}", f"fish known: {len(fish)}", f"anomalies recorded: {len(anomalies)} ({len(unconfirmed)} awaiting your confirmation)"]
+    if live:
+        state = "running" if live.get("running") else "stopped"
+        lines.append(f"live watcher: {state} on {live.get('source')}; session {live.get('session_id')}; {live.get('fish_now')} fish now; {live.get('fps_measured', 0):.1f} fps; {live.get('sessions_completed')} sessions done; updated {live.get('updated_at')}")
+        if live.get("last_error"):
+            lines.append(f"  last error: {live['last_error']}")
+        for d in live.get("last_deviations", [])[:5]:
+            lines.append(f"  deviation: {d}")
+    if feedings:
+        lines.append("recent feedings: " + ", ".join(f"{e['recorded_at']} ({e['payload'].get('source')})" for e in feedings))
+    if clips:
+        lines.append("recent clips: " + ", ".join(Path(c["path"]).name for c in clips))
     for v in videos[-5:]:
         lines.append(f"  {v['video_id']}  {Path(v['path']).name}  {v['duration_s']:.1f}s  {v['detector']}/{v['tracker']}  {v['processed_at']}")
     if pending:
@@ -234,6 +268,156 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     lines.append(f"ready: {report['ready']}")
     _emit(args, report, "\n".join(lines))
     return 0 if report["ready"] else 1
+
+
+def cmd_watch(args: argparse.Namespace) -> int:
+    from fishai.pipeline.live import LiveWatcher
+
+    cfg = _cfg(args)
+    if args.session_s:
+        cfg.set_path("live.session_s", args.session_s)
+    if args.detector:
+        cfg.set_path("detection.backend", args.detector)
+    if args.tracker:
+        cfg.set_path("tracking.backend", args.tracker)
+    if args.assess:
+        cfg.set_path("live.assess_each_session", True)
+    w = LiveWatcher(cfg, args.source, duration_s=args.duration, max_sessions=args.max_sessions, realtime=None if args.realtime is None else args.realtime)
+    print(f"watching {args.source!r}; sessions every {cfg.get_path('live.session_s')}s; status in {w.status_path}")
+    results = w.run()
+    _emit(args, [r.summary["counts"] for r in results], f"stopped after {len(results)} session(s); {w.status.frames_total} frames")
+    return 0
+
+
+def cmd_feed(args: argparse.Namespace) -> int:
+    from fishai.perception.behavior.feeding import (
+        compute_feeding_responses,
+        feeding_deviations,
+        mark_feeding,
+    )
+    from fishai.pipeline.live import read_status, send_request
+    from fishai.storage import Database
+
+    cfg = _cfg(args)
+    if args.video is None:
+        st = read_status(cfg)
+        if not st or not st.get("running"):
+            raise SystemExit("no watcher is running; to mark a feeding in a processed video use --video ID --at SECONDS")
+        p = send_request(cfg, "feed", source=args.source, portions=args.portions, note=args.note or "")
+        _emit(args, {"request": str(p)}, f"feeding request sent to the watcher (session {st.get('session_id')})")
+        return 0
+    if args.at is None:
+        raise SystemExit("--at SECONDS is required with --video")
+    with Database(cfg.resolve_path("paths.database")) as db:
+        vid = _resolve_video_id(db, args.video)
+        eid = mark_feeding(db, vid, args.at, args.source, args.portions, args.note or "")
+        rows = compute_feeding_responses(db, eid, cfg.section("feeding"))
+        devs = feeding_deviations(db, eid)
+    lines = [f"feeding event {eid} at {args.at}s in {vid}: {len(rows)} fish measured"]
+    for r in rows:
+        who = f"fish {r['fish_id']}" if r["fish_id"] is not None else f"track {r['track_id']}"
+        came = f"approached in {r['latency_s']:.1f}s" if r["approached"] else "did not approach"
+        lines.append(f"  {who}: {came}; zone {r['zone_fraction_before']:.2f} -> {r['zone_fraction_after']:.2f}; activity {r['activity_before']:.2f} -> {r['activity_after']:.2f}")
+    lines += [f"  [{d.severity}] {d.sentence()}" for d in devs]
+    _emit(args, {"event_id": eid, "responses": rows, "deviations": [d.to_dict() for d in devs]}, "\n".join(lines))
+    return 0
+
+
+def cmd_request(args: argparse.Namespace) -> int:
+    from fishai.pipeline.live import read_status, send_request
+
+    cfg = _cfg(args)
+    st = read_status(cfg)
+    if not st or not st.get("running"):
+        raise SystemExit("no watcher is running")
+    p = send_request(cfg, args.cmd, note=getattr(args, "note", "") or "")
+    _emit(args, {"request": str(p)}, f"{args.cmd} request sent to the watcher")
+    return 0
+
+
+def cmd_ingest(args: argparse.Namespace) -> int:
+    from fishai.jobs.ingest import ingest_folder
+
+    cfg = _cfg(args)
+    if args.detector:
+        cfg.set_path("detection.backend", args.detector)
+    if args.tracker:
+        cfg.set_path("tracking.backend", args.tracker)
+
+    def done(r: Any) -> None:
+        c = r.summary["counts"]
+        print(f"{Path(r.summary['video']['path']).name}: {r.observations} observations, {c['tracks']} tracks, ~{c['distinct_fish_estimate']} fish")
+
+    results = ingest_folder(cfg, args.folder, watch=args.watch, poll_s=args.poll, annotate=not args.no_annotate, on_done=done, max_files=args.max_files)
+    if args.then_baseline and results:
+        cmd_baseline(args)
+    if not results:
+        print("nothing new to process")
+    return 0
+
+
+def cmd_daily(args: argparse.Namespace) -> int:
+    from fishai.jobs.daily import run_daily
+
+    cfg = _cfg(args)
+    rep = run_daily(cfg, act=args.act, rules_only=args.rules, all_sessions=args.all)
+    a = rep["assessment"]
+    lines = [f"daily {rep['date']}: {len(rep['sessions_reviewed'])} session(s) reviewed, {len(rep['deviations'])} deviation(s), severity {a['severity']} ({a['source']})"]
+    lines += [f"  - {o}" for o in a["observations"][:10]]
+    lines += [f"  * {c}" for c in a["recommended_checks"][:8]]
+    lines.append(f"report: {rep['path']}")
+    _emit(args, rep, "\n".join(lines))
+    return 0
+
+
+def cmd_confirm(args: argparse.Namespace) -> int:
+    from fishai.feedback import OUTCOMES, confirm, unconfirmed_anomalies
+    from fishai.storage import Database
+
+    cfg = _cfg(args)
+    with Database(cfg.resolve_path("paths.database")) as db:
+        if args.anomaly_id is None:
+            rows = unconfirmed_anomalies(db)
+            lines = [f"{a['id']:5d}  fish {a['fish_id']}  {a['metric']}  {a['value']:.2f} vs {a['baseline']:.2f}  [{a['severity']}]  {a['detected_at']}" for a in rows]
+            _emit(args, rows, "\n".join(lines) or "nothing awaiting confirmation")
+            if not args.json:
+                print(f"confirm one with: fishai confirm ID --outcome {'|'.join(OUTCOMES)}")
+            return 0
+        if not args.outcome:
+            raise SystemExit("--outcome is required when confirming an anomaly")
+        eid = confirm(db, args.outcome, anomaly_id=args.anomaly_id, note=args.note or "")
+    _emit(args, {"event_id": eid}, f"recorded: anomaly {args.anomaly_id} -> {args.outcome}")
+    return 0
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    from fishai.jobs.export import export_dataset, export_summaries_csv
+    from fishai.storage import Database
+
+    cfg = _cfg(args)
+    with Database(cfg.resolve_path("paths.database")) as db:
+        if args.what == "summaries":
+            out = args.out or str(cfg.resolve_path("paths.output_dir") / "summaries.csv")
+            n = export_summaries_csv(db, out)
+            _emit(args, {"rows": n, "path": out}, f"wrote {n} track summaries to {out}")
+            return 0
+        out = args.out or str(cfg.resolve_path("paths.output_dir").parent / "datasets" / args.name)
+        m = export_dataset(db, cfg, out, args.name, min_confidence=args.min_confidence, max_frames_per_video=args.per_video)
+    _emit(args, m, f"{m['frames']} frames, {m['boxes']} boxes from {len(m['sources'])} video(s) -> {m['out_dir']}\nmanifest: {m['manifest_path']}\n({m['labels_are']})")
+    return 0
+
+
+def cmd_maintain(args: argparse.Namespace) -> int:
+    from fishai.retention import run_retention
+    from fishai.storage import Database
+
+    cfg = _cfg(args)
+    with Database(cfg.resolve_path("paths.database")) as db:
+        rep = run_retention(db, cfg.section("retention"))
+        if args.vacuum:
+            db.vacuum()
+    _emit(args, rep, f"pruned {rep['observations_deleted']} raw observations; deleted {len(rep['clips_deleted'])} clips; clips now {rep.get('clip_bytes_after', 0) / 1e9:.2f} GB")
+    return 0
 
 
 def _resolve_video_id(db: Any, ref: str) -> str:
@@ -309,6 +493,76 @@ def build_parser() -> argparse.ArgumentParser:
         s.add_argument("params", nargs="*", metavar="key=value")
         _add_common(s)
         s.set_defaults(fn=cmd_control)
+
+    s = sub.add_parser("watch", help="live loop on a camera, stream or file")
+    s.add_argument("--source", required=True, help="camera index (0), URL, or a video file")
+    s.add_argument("--session-s", type=float, help="seconds per session (default from config)")
+    s.add_argument("--duration", type=float, help="stop after this many seconds")
+    s.add_argument("--max-sessions", type=int)
+    s.add_argument("--detector", choices=["motion", "yolo"])
+    s.add_argument("--tracker", choices=["simple", "bytetrack"])
+    s.add_argument("--assess", action="store_true", help="run the reasoner at the end of each session")
+    s.add_argument("--realtime", dest="realtime", action="store_true", default=None, help="pace a file like a camera")
+    s.add_argument("--no-realtime", dest="realtime", action="store_false", help="read a camera/file as fast as possible")
+    _add_common(s)
+    s.set_defaults(fn=cmd_watch)
+
+    s = sub.add_parser("feed", help="mark a feeding (live watcher, or a processed video)")
+    s.add_argument("--video", help="video id (or 'latest') for a processed video")
+    s.add_argument("--at", type=float, help="seconds into that video when food went in")
+    s.add_argument("--source", default="manual", help="manual | feeder | ...")
+    s.add_argument("--portions", type=float, default=1.0)
+    s.add_argument("--note")
+    _add_common(s)
+    s.set_defaults(fn=cmd_feed)
+
+    for name, help_ in (("clip", "save the live buffer as a clip"), ("stop", "stop the live watcher")):
+        s = sub.add_parser(name, help=help_)
+        s.add_argument("--note", default="")
+        _add_common(s)
+        s.set_defaults(fn=cmd_request)
+
+    s = sub.add_parser("ingest", help="process every new video in a folder")
+    s.add_argument("folder")
+    s.add_argument("--watch", action="store_true", help="keep polling the folder")
+    s.add_argument("--poll", type=float, default=30.0, help="seconds between polls with --watch")
+    s.add_argument("--max-files", type=int)
+    s.add_argument("--detector", choices=["motion", "yolo", "synthetic"])
+    s.add_argument("--tracker", choices=["simple", "bytetrack"])
+    s.add_argument("--no-annotate", action="store_true")
+    s.add_argument("--then-baseline", action="store_true")
+    _add_common(s)
+    s.set_defaults(fn=cmd_ingest)
+
+    s = sub.add_parser("daily", help="baselines, deviations for new sessions, one assessment")
+    s.add_argument("--act", action="store_true", help="send proposed safe actions through the control layer")
+    s.add_argument("--rules", action="store_true", help="deterministic reasoner only")
+    s.add_argument("--all", action="store_true", help="review every session, not just new ones")
+    _add_common(s)
+    s.set_defaults(fn=cmd_daily)
+
+    s = sub.add_parser("confirm", help="record what really happened for a flagged anomaly")
+    s.add_argument("anomaly_id", nargs="?", type=int, help="omit to list anomalies awaiting confirmation")
+    from fishai.feedback import OUTCOMES
+
+    s.add_argument("--outcome", choices=OUTCOMES)
+    s.add_argument("--note")
+    _add_common(s)
+    s.set_defaults(fn=cmd_confirm)
+
+    s = sub.add_parser("export", help="training dataset or CSV of summaries")
+    s.add_argument("what", choices=["dataset", "summaries"])
+    s.add_argument("--name", default="auto_v1", help="dataset name (manifest goes to datasets/manifests/NAME.json)")
+    s.add_argument("--out", help="output directory (dataset) or file (summaries)")
+    s.add_argument("--min-confidence", type=float)
+    s.add_argument("--per-video", type=int, help="max frames per video")
+    _add_common(s)
+    s.set_defaults(fn=cmd_export)
+
+    s = sub.add_parser("maintain", help="retention: prune raw rows and old clips")
+    s.add_argument("--vacuum", action="store_true")
+    _add_common(s)
+    s.set_defaults(fn=cmd_maintain)
 
     s = sub.add_parser("status", help="what the database holds")
     _add_common(s)
