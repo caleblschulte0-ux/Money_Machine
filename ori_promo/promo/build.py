@@ -88,8 +88,8 @@ def prep_shot(sid, src, t_in, dur, opt):
         vf.append(f"vidstabtransform=input={trf}:smoothing=24:zoom={opt.get('zoom', 3)}:optzoom=0:crop=black:interpol=bicubic")
     vf.append(f"trim=start={lead:.4f}:duration={src_dur:.4f},setpts=PTS-STARTPTS")
     if speed != 1.0:
-        vf.append(f"minterpolate=fps={FPS/speed:.4f}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,setpts=PTS*{speed}")
-    vf.append(f"fps={FPS},scale={W}:{H}")
+        vf.append(f"minterpolate=fps={FPS/speed:.4f}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,setpts=PTS/{speed}")
+    vf.append(f"fps={FPS},scale={W}:{H},tpad=stop_mode=clone:stop_duration=1")
     run(["ffmpeg", "-v", "error", "-y", "-i", seg, "-vf", ",".join(vf), "-frames:v", n_frames, *ENC, out])
     # natural sound, time-stretched if slow-mo
     af = f"atrim=start=0:duration={src_dur:.4f},asetpts=PTS-STARTPTS"
@@ -230,10 +230,10 @@ def scan_reveal(sprite_bgra, u):
     return out
 
 
-def contact_shadow(frame, cx, feet_y, width, alpha=0.32):
+def contact_shadow(frame, cx, feet_y, width, alpha=0.24):
     sh = np.zeros((H, W), np.float32)
-    cv2.ellipse(sh, (int(cx), int(feet_y)), (int(width * 0.48), int(width * 0.07)), 0, 0, 360, 1.0, -1)
-    sh = cv2.GaussianBlur(sh, (0, 0), width * 0.05)
+    cv2.ellipse(sh, (int(cx), int(feet_y)), (int(width * 0.46), int(width * 0.06)), 0, 0, 360, 1.0, -1)
+    sh = cv2.GaussianBlur(sh, (0, 0), width * 0.08)
     frame[:] = (frame * (1 - sh[:, :, None] * alpha)).astype(np.uint8)
 
 
@@ -485,10 +485,10 @@ def stage_fx():
 
 # --------------------------------------------------------------------------- picture
 
-GRADE = ("eq=contrast=1.10:saturation=1.06:brightness=-0.02,"
-         "curves=master='0/0 0.14/0.10 0.5/0.5 0.86/0.91 1/0.985':red='0/0 1/0.985':blue='0/0.012 1/0.972',"
-         "colorbalance=rs=-0.02:bs=0.045:rh=0.025:bh=-0.03,"
-         "unsharp=5:5:0.35")
+GRADE = ("eq=contrast=1.07:saturation=1.03:brightness=-0.015,"
+         "curves=master='0/0 0.14/0.115 0.5/0.5 0.86/0.905 1/0.99',"
+         "colorbalance=rs=-0.012:bs=0.025:rh=0.01:bh=-0.012,"
+         "unsharp=5:5:0.3")
 
 
 def stage_picture():
@@ -518,7 +518,7 @@ def stage_picture():
                 u_in = ease_out((t - a) / 0.38)
                 u_out = ease((b - t) / 0.3)
                 al = min(u_in, u_out)
-                scrim_lower_left(f, al * 0.55)
+                scrim_lower_left(f, al * 0.38)
                 blit(f, sp, 120, H - 150 - sp.shape[0] + int(16 * (1 - u_in)), al)
         for a, b, sp in tags:
             if a <= t < b:
@@ -622,7 +622,7 @@ def scrim_lower_left(frame, strength):
     if _SCRIM is None:
         yy = np.linspace(0, 1, H).reshape(-1, 1)
         xx = np.linspace(0, 1, W).reshape(1, -1)
-        g = np.clip((yy - 0.55) / 0.45, 0, 1) ** 1.4 * np.clip(1.15 - xx * 1.1, 0, 1) ** 0.8
+        g = np.clip((yy - 0.62) / 0.38, 0, 1) ** 1.3 * np.clip(1.05 - xx * 1.25, 0, 1) ** 0.9
         _SCRIM = g.astype(np.float32)[:, :, None]
     frame[:] = (frame * (1 - _SCRIM * strength)).astype(np.uint8)
 
@@ -739,7 +739,7 @@ def write_wav(path, a):
 
 # --------------------------------------------------------------------------- final
 
-FINISH = "vignette=angle=PI/4.6:mode=forward,noise=alls=7:allf=t+u"
+FINISH = "vignette=angle=PI/6:mode=forward,noise=alls=4:allf=t+u"
 
 
 def stage_final():
@@ -750,6 +750,9 @@ def stage_final():
              "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p", "-profile:v", "high",
              "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest", f"../out/{name}"])
         print("  ->", f"../out/{name}", ffprobe_dur(f"../out/{name}"))
+        web = name.replace(".mp4", "_web.mp4")
+        run(["ffmpeg", "-v", "error", "-y", "-i", f"../out/{name}", "-c:v", "libx264", "-preset", "slow", "-crf", "22",
+             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", f"../out/{web}"])
 
 
 if __name__ == "__main__":

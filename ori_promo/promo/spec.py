@@ -32,7 +32,7 @@ SHOTS = [
     ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.0, dict(stab=True)),
     ("product", "../ai/table/active_hardware_hero_plate_chatgpt.jpg", 0.0, 1.5, dict(still=True)),
     ("turn",    f"{RAW_MORE}/IMG_6802.MOV",  2.5, 2.5, dict(stab=True)),
-    ("close",   f"{RAW}/IMG_6799.MOV",       8.5, 4.5, dict(stab=True)),
+    ("close",   f"{RAW}/IMG_6799.MOV",       7.8, 4.5, dict(stab=True)),
 ]
 
 assert abs(sum(s[3] for s in SHOTS) - TOTAL) < 1e-6, sum(s[3] for s in SHOTS)
