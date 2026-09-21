@@ -1,0 +1,6 @@
+# Core runtime. Enough to run the whole pipeline with the model-free motion
+# detector and the built-in tracker. Install the ML extras for YOLO/ByteTrack:
+#   pip install -r requirements-ml.txt
+numpy>=1.26
+opencv-python-headless>=4.9
+pyyaml>=6.0

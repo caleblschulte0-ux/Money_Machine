@@ -1,0 +1,159 @@
+# FishAI default configuration. Every tunable lives here.
+# Override with a second YAML (`fishai process --config configs/mytank.yaml`)
+# or dotted keys on the command line (`fishai process ... -o tracking.backend=bytetrack`).
+
+paths:
+  # Where processed results go (annotated video, JSON summaries).
+  output_dir: runs
+  # SQLite database holding raw observations and derived metrics.
+  database: runs/fishai.db
+  # Where download_models.py puts weights (git-ignored).
+  models_dir: models
+
+video:
+  # Process every Nth frame (1 = all). Higher values are faster and
+  # coarser; speeds are still computed against real timestamps.
+  frame_stride: 1
+  # Optional cap for quick experiments; null = whole video.
+  max_frames: null
+  # Resize longest side to this before detection; null = native.
+  max_side: null
+
+detection:
+  # motion | yolo | synthetic
+  #   motion    - background-subtraction blobs, needs no model (static camera).
+  #   yolo      - ultralytics model (Fishial fish detector by default).
+  #   synthetic - ground truth from a synthetic video; tests only.
+  backend: motion
+  min_confidence: 0.25
+  motion:
+    # median (temporal median background, F1 0.89 on the synthetic tank)
+    # or mog2 (OpenCV mixture model, F1 0.85 there; adapts faster to light).
+    method: median
+    buffer_frames: 40        # median: frames kept in the background buffer
+    sample_every: 3          # median: add every Nth frame to the buffer
+    diff_threshold: 30       # median: per-pixel |frame - background| to count as foreground
+    history: 300             # mog2
+    var_threshold: 32        # mog2
+    min_area_px: 250
+    max_area_fraction: 0.25
+    blur_kernel: 5
+    dilate_iterations: 0
+    # Frames used to warm the background model before detections count.
+    warmup_frames: 10
+  yolo:
+    # Key in models/registry.json, or a path to a .pt/.onnx file.
+    model: fishial_detector_v26
+    image_size: 640
+    iou_threshold: 0.45
+    device: auto            # auto | cpu | cuda | 0
+    # Class names accepted as fish; empty = accept all classes.
+    fish_classes: []
+
+tracking:
+  # simple | bytetrack
+  #   simple    - built-in IoU + appearance tracker, no extra dependencies.
+  #   bytetrack - supervision's ByteTrack (pip install -r requirements-ml.txt).
+  backend: simple
+  simple:
+    iou_threshold: 0.3
+    # Frames a track survives without a match before being retired.
+    max_age_frames: 30
+    # Minimum consecutive hits before a track is reported.
+    min_hits: 2
+    # Appearance re-identification for lost tracks (Phase 2).
+    reid:
+      enabled: true
+      # Lost tracks are eligible for re-linking for this long.
+      max_lost_s: 20.0
+      # Minimum HSV-histogram similarity (0..1) to re-link.
+      min_similarity: 0.6
+      # Max distance (fraction of frame diagonal) between where the track
+      # vanished and where the new detection appears.
+      max_distance_frac: 0.35
+      # A live track unmatched this many frames is also eligible for re-linking.
+      stale_frames: 3
+  bytetrack:
+    # auto | trackers | supervision  (auto prefers the `trackers` package)
+    provider: auto
+    track_activation_threshold: 0.25
+    lost_track_buffer: 30
+    minimum_matching_threshold: 0.8
+    minimum_consecutive_frames: 1
+
+behavior:
+  zones:
+    # Fractions of frame height, top-down. y < surface -> SURFACE,
+    # y > bottom -> BOTTOM, otherwise MIDDLE.
+    surface_below: 0.2
+    bottom_above: 0.8
+  # Activity score maps mean normalised speed to 0..100.
+  activity:
+    # Normalised speed (tank heights per second) that maps to score 100.
+    full_score_speed: 0.5
+  # A track absent longer than this counts as a hiding candidate.
+  hiding_gap_s: 5.0
+
+baselines:
+  # Rolling window of prior sessions used to compute "normal" per fish.
+  window_sessions: 14
+  # Minimum sessions before deviations are reported at all.
+  min_sessions: 3
+  # Deviation flagged when |z| >= this or |percent change| >= percent.
+  z_threshold: 2.0
+  percent_threshold: 50.0
+  # Per-metric direction that matters ("high", "low", "both").
+  metrics:
+    activity_score: both
+    surface_fraction: high
+    bottom_fraction: high
+    missing_time_s: high
+    mean_speed_norm_s: both
+
+annotate:
+  enabled: true
+  trail_length: 30
+  draw_zones: true
+  font_scale: 0.5
+
+reasoning:
+  # ollama | rules
+  backend: ollama
+  ollama:
+    host: http://127.0.0.1:11434
+    model: qwen2.5:7b
+    timeout_s: 120
+    temperature: 0.1
+    keep_alive: 5m
+
+sensors:
+  # Each entry: name, kind (simulated_temperature | simulated_water_level |
+  # file), and kind-specific settings. Real drivers register under new kinds
+  # with the same interface.
+  - name: water_temperature
+    kind: simulated_temperature
+    unit: F
+    baseline: 78.0
+    noise: 0.2
+  - name: water_level
+    kind: simulated_water_level
+    unit: cm
+    baseline: 40.0
+    noise: 0.1
+
+# Limits that turn a reading into "low" / "high" for the reasoner. Keyed by sensor name.
+sensor_limits:
+  water_temperature: {low: 74.0, high: 82.0}
+  water_level: {low: 35.0, high: 45.0}
+
+control:
+  # Actuator backend: simulated | none
+  backend: simulated
+  # Hard limits enforced by deterministic safety rules before any actuator moves.
+  limits:
+    lighting_min_percent: 0
+    lighting_max_percent: 100
+    heater_max_setpoint_change_f: 1.0
+    heater_setpoint_min_f: 72.0
+    heater_setpoint_max_f: 82.0
+    feed_max_portions_per_day: 3

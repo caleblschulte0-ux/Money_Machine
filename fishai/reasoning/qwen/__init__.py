@@ -1,0 +1,1 @@
+"""Local Qwen via Ollama."""

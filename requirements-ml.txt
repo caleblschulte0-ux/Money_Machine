@@ -1,0 +1,8 @@
+# Optional: real neural detectors and ByteTrack. Heavy (torch).
+# On Windows with an NVIDIA GPU, install torch first from https://pytorch.org
+# for CUDA support; otherwise the CPU build is fine for development.
+-r requirements.txt
+ultralytics>=8.3
+supervision>=0.25,<0.31
+trackers>=0.1
+scipy>=1.11

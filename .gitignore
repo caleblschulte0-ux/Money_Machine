@@ -1,0 +1,55 @@
+# ---- FishAI: large / local-only things never go to GitHub ----
+# Raw video, datasets, model weights and local databases live on the machine
+# that produced them. See docs/DATA.md for what is kept and where.
+datasets/*
+!datasets/README.md
+!datasets/manifests/
+models/*
+!models/README.md
+!models/registry.json
+runs/
+output/
+outputs/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.pt
+*.pth
+*.onnx
+*.ts
+*.ckpt
+*.safetensors
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.npy
+*.npz
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Secrets and local overrides
+.env
+.env.*
+configs/local.yaml

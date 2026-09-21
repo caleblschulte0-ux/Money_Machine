@@ -1,0 +1,50 @@
+{
+  "_comment": "Committed description of downloadable weights. The files themselves are git-ignored. Keep the licence field honest: code licence and weight licence are separate questions. See docs/THIRD_PARTY.md. sha256 is of the downloaded object (the zip archive or the bare file, see sha256_of), measured 2026-09-21; null means unpinned.",
+  "models": {
+    "fishial_detector_v26": {
+      "description": "Fishial.ai fish detector, YOLO26 nano, 640px. Best default for real aquarium footage.",
+      "task": "detection",
+      "framework": "ultralytics",
+      "url": "https://storage.googleapis.com/fishial-ml-resources/detector_v26_n3.zip",
+      "archive": "zip",
+      "archive_member": "model.pt",
+      "file": "fishial_detector_v26.pt",
+      "size_bytes": 120279627,
+      "sha256": "4f33cfdd724ffd26a5863774e157e8a43e590fdc183d854017a99b6dbf3a85ec",
+      "source": "https://github.com/fishial/fish-identification",
+      "code_license": "MIT",
+      "weights_license": "Not separately stated by the publisher; trained with ultralytics (AGPL-3.0). Treat as bootstrap-only until clarified.",
+      "default": true,
+      "sha256_of": "archive"
+    },
+    "fishial_detector_v10_m": {
+      "description": "Fishial.ai fish detector, YOLOv10 medium. Heavier, older.",
+      "task": "detection",
+      "framework": "ultralytics",
+      "url": "https://storage.googleapis.com/fishial-ml-resources/detector_v10_m3.zip",
+      "archive": "zip",
+      "archive_member": "model.pt",
+      "file": "fishial_detector_v10_m.pt",
+      "size_bytes": null,
+      "sha256": null,
+      "source": "https://github.com/fishial/fish-identification",
+      "code_license": "MIT",
+      "weights_license": "Not separately stated by the publisher; trained with ultralytics (AGPL-3.0). Treat as bootstrap-only until clarified."
+    },
+    "yolov8n_coco": {
+      "description": "Generic COCO YOLOv8 nano. Has NO fish class; useful only to prove the adapter works or as a fine-tuning starting point.",
+      "task": "detection",
+      "framework": "ultralytics",
+      "url": "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.pt",
+      "archive": null,
+      "archive_member": null,
+      "file": "yolov8n.pt",
+      "size_bytes": 6549796,
+      "sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+      "source": "https://github.com/ultralytics/ultralytics",
+      "code_license": "AGPL-3.0",
+      "weights_license": "AGPL-3.0 (ultralytics states weights are covered by the same licence)",
+      "sha256_of": "file"
+    }
+  }
+}
