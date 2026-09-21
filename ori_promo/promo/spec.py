@@ -11,8 +11,8 @@ product -> tagline -> end card.
 """
 
 W, H, FPS = 1920, 1080, 30
-TOTAL = 36.5
-END_CARD_START = 33.5
+TOTAL = 40.0
+END_CARD_START = 37.0
 
 RAW = "../raw"
 RAW_MORE = "../raw_more"
@@ -29,10 +29,16 @@ SHOTS = [
     ("mammoth", f"{RAW_MORE}/IMG_6806.MOV", 43.0, 3.5, dict(stab=True, fx="mammoth")),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV", 12.0, 2.5, dict(stab=True, fx="dakota")),
     ("point",   f"{RAW}/IMG_6794.MOV",      45.9, 2.0, dict(stab=True, speed=0.7)),
-    ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.4, dict(stab=True)),
-    ("product", "../ai/table/active_hardware_hero_plate_chatgpt.jpg", 0.0, 1.5, dict(still=True)),
+    ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.5, dict(stab=True)),
+    # product: four angles cut on the beat (1 beat = 0.5s), then the hero, then worn
+    ("turn30",  "../ai/table/glasses_turn_30_chatgpt.jpg",  0.0, 0.5, dict(still=True)),
+    ("turn120", "../ai/table/glasses_turn_120_chatgpt.jpg", 0.0, 0.5, dict(still=True)),
+    ("turn210", "../ai/table/glasses_turn_210_chatgpt.jpg", 0.0, 0.5, dict(still=True)),
+    ("turn300", "../ai/table/glasses_turn_300_chatgpt.jpg", 0.0, 0.5, dict(still=True)),
+    ("hero",    "../ai/table/active_hardware_hero_plate_chatgpt.jpg", 0.0, 1.5, dict(still=True)),
+    ("worn",    "../ai/worn/product_worn_falls_park_plate_chatgpt.jpg", 0.0, 1.5, dict(still=True)),
     ("visitors", f"{RAW_MORE}/IMG_6808.MOV", 15.0, 2.5, dict(stab=True)),
-    ("close",   f"{RAW_MORE}/IMG_6803.MOV",  3.0, 4.1, dict(stab=True)),
+    ("close",   f"{RAW_MORE}/IMG_6803.MOV",  3.0, 4.0, dict(stab=True)),
 ]
 
 assert abs(sum(s[3] for s in SHOTS) - TOTAL) < 1e-6, sum(s[3] for s in SHOTS)
@@ -56,7 +62,7 @@ CARDS = [
     (21.8, 23.9, ["The people who stood here."]),
     (24.3, 25.9, ["Right in front of you."]),
     (26.4, 27.9, ["Borrow a pair at the park."]),
-    (29.9, 31.9, ["See the story where you stand."]),
+    (33.7, 35.7, ["See the story where you stand."]),
 ]
 
 # Small honesty tags, top-right, during generated imagery.
@@ -64,7 +70,7 @@ TAGS = [
     (13.0, 17.9, "ICE AGE  ·  VISUALIZATION"),
     (18.4, 21.4, "VISUALIZATION"),
     (21.9, 23.9, "VISUALIZATION"),
-    (28.0, 29.4, "PRODUCT VISUALIZATION"),
+    (28.5, 33.4, "PRODUCT VISUALIZATION"),
 ]
 
 # Optional narration variant (Piper, offline). Timeline placement.

@@ -413,6 +413,22 @@ def fx_iceage(frames, t0):
     median[:, xs_ - 20:xs_ + 20] = (A_[:, xs_ - 20:xs_ + 20] * (1 - wgt) + B_[:, xs_ - 20:xs_ + 20] * wgt).astype(np.uint8)
     plate = build_ice_plate()
     keep = keep_real_mask(median)
+    # The mammoth the operator liked, standing on the snow just beyond the
+    # rail: legs behind the real rails, head and tusks above them. A
+    # second, smaller one further back. Both dissolve in once the wipe has
+    # passed their position.
+    herd = []
+    for (mx, my, msc, delay) in [(560, 690, 0.92, 0.0), (900, 648, 0.58, 0.25)]:
+        sp = crop_alpha(cv2.imread(f"{WORK}/mam_rembg.png", cv2.IMREAD_UNCHANGED))
+        a_ = sp[:, :, 3].astype(np.float32)
+        sp[:, :, 3] = np.clip((a_ - 40) * (255.0 / 215.0), 0, 255).astype(np.uint8)
+        sw_, sh_ = int(sp.shape[1] * msc), int(sp.shape[0] * msc)
+        reg = plate[max(0, my - sh_):my + 20, max(0, mx - sw_ // 2):mx + sw_ // 2]
+        sp = color_transfer(sp, reg, strength=0.7)
+        sp = cv2.resize(sp, (sw_, sh_), interpolation=cv2.INTER_AREA)
+        sp, _ = match_focus(sp, reg)
+        sp = cv2.flip(sp, 1)                       # face the falls
+        herd.append((sp, mx - sw_ // 2, my - sh_, delay))
     cv2.imwrite(f"{WORK}/_ice_keep.png", keep)
     cv2.imwrite(f"{WORK}/_ice_plate.png", plate)
     world = cv2.bitwise_not(keep).astype(np.float32) / 255.0
@@ -460,7 +476,15 @@ def fx_iceage(frames, t0):
         seam = -200 + p * (W + 400)
         a = np.clip((seam - xs) / 110.0 + 0.5, 0, 1)      # 1 left of the seam
         a = a * world
-        comp = f.astype(np.float32) * (1 - a[:, :, None]) + plate.astype(np.float32) * a[:, :, None]
+        plate_i = plate
+        if p >= 1.0 or t > wipe_t1 - 0.3:
+            plate_i = plate.copy()
+            for sp, sx_, sy_, delay in herd:
+                uu = ease((t - (wipe_t1 - 0.3) - delay) / 0.9)
+                if uu > 0:
+                    contact_shadow(plate_i, sx_ + sp.shape[1] // 2, sy_ + sp.shape[0] - 2, sp.shape[1] * 0.9, alpha=0.22 * uu)
+                    blit(plate_i, sp, sx_, sy_, uu)
+        comp = f.astype(np.float32) * (1 - a[:, :, None]) + plate_i.astype(np.float32) * a[:, :, None]
         # frost bloom just behind the leading edge
         if 0 < p < 1:
             bloom = np.clip(1 - np.abs(xs - seam + 40) / 90.0, 0, 1) * world * 28
@@ -626,7 +650,7 @@ def stage_fx():
                              reflection=dict(squash=0.45, alpha=0.28,
                                              water_poly=[(0, 950), (900, 900), (1200, 960), (1200, 1080), (0, 1080)]))
         elif fx == "dakota":
-            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1300, 735), scale=0.78,
+            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1300, 738), scale=0.9,
                              exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
         else:
             raise KeyError(fx)
@@ -638,10 +662,10 @@ def stage_fx():
 
 # --------------------------------------------------------------------------- picture
 
-GRADE = ("eq=contrast=1.07:saturation=1.03:brightness=-0.015,"
-         "curves=master='0/0 0.14/0.115 0.5/0.5 0.86/0.905 1/0.99',"
-         "colorbalance=rs=-0.012:bs=0.025:rh=0.01:bh=-0.012,"
-         "unsharp=5:5:0.3")
+# Clean and neutral: the phone footage's own colour, a touch of contrast,
+# no cast. The teal/orange balance and heavy vignette+grain of the first
+# two cuts read as "off" -- because they were.
+GRADE = "eq=contrast=1.03:saturation=1.01,unsharp=5:5:0.2"
 
 
 def stage_picture():
@@ -660,7 +684,7 @@ def stage_picture():
     cards = [(a, b, card_sprite(lines)) for a, b, lines in CARDS]
     tags = [(a, b, tag_sprite(txt)) for a, b, txt in TAGS]
     end = end_card_sprites()
-    prod_t = shot_start("product")
+    prod_t = shot_start("turn30")
     for i in range(frames_n):
         ok, f = cap.read()
         if not ok:
@@ -820,7 +844,7 @@ def stage_audio():
     # music: sneaks in under the cold open, lifts into the markers, hits at the wipe
     m = load_audio(MUSIC, MUSIC_OFFSET, TOTAL + 1)[:n]
     m *= env_points([(0, -15), (4.4, -13), (9.5, -7), (11.3, -6), (12.55, -6), (12.6, 0), (25.9, 0),
-                     (26.0, -3), (29.4, -3), (29.5, 0), (33.5, 0), (34.6, -3), (36.5, -40)], n)
+                     (26.0, -3), (33.4, -3), (33.5, 0), (37.0, 0), (38.1, -3), (40.0, -40)], n)
     bus += m * 0.9
     # natural sound per shot, light, crossfaded at the cuts
     t = 0.0
@@ -831,7 +855,9 @@ def stage_audio():
         if len(a) < k:
             a = np.vstack([a, np.zeros((k - len(a), 2), np.float32)])
         lvl = {"open": -14, "falls": -8, "plaque": -22, "reading": -16, "markers": -14, "iceage": -20,
-               "mammoth": -12, "dakota": -12, "point": -16, "walk": -16, "product": -60, "visitors": -14, "close": -16}.get(sid, -16)
+               "mammoth": -12, "dakota": -12, "point": -16, "walk": -16, "visitors": -14, "close": -16}.get(sid, -16)
+        if opt.get("still"):
+            lvl = -60
         a = fade_edges(a * db(lvl), 0.08, 0.12)
         i0 = int(t * SR)
         bus[i0:i0 + k] += a
@@ -854,7 +880,10 @@ def stage_audio():
     sfx("pop", shot_start("markers") + 1.3, -18)
     sfx("whoosh", shot_start("mammoth") + 0.3, -18, trim=0.8)
     sfx("whoosh", shot_start("dakota") + 0.25, -18, trim=0.8)
-    sfx("whoosh", shot_start("product") - 0.08, -16, trim=0.6)
+    sfx("whoosh", shot_start("turn30") - 0.08, -16, trim=0.6)
+    for sid_ in ("turn120", "turn210", "turn300"):
+        sfx("pop", shot_start(sid_), -22)
+    sfx("whoosh", shot_start("hero") - 0.05, -20, trim=0.5)
     sfx("boom", END_CARD_START, -12)
     write_wav(f"{WORK}/mix.wav", bus)
     # narration variant
@@ -892,7 +921,7 @@ def write_wav(path, a):
 
 # --------------------------------------------------------------------------- final
 
-FINISH = "vignette=angle=PI/6:mode=forward,noise=alls=4:allf=t+u"
+FINISH = "vignette=angle=PI/9:mode=forward"
 
 
 def stage_final():
