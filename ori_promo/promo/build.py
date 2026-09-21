@@ -418,13 +418,13 @@ def fx_iceage(frames, t0):
     # second, smaller one further back. Both dissolve in once the wipe has
     # passed their position.
     herd = []
-    for (mx, my, msc, delay) in [(560, 690, 0.92, 0.0), (900, 648, 0.58, 0.25)]:
+    for (mx, my, msc, delay) in [(560, 700, 0.62, 0.0), (230, 708, 0.46, 0.25)]:
         sp = crop_alpha(cv2.imread(f"{WORK}/mam_rembg.png", cv2.IMREAD_UNCHANGED))
         a_ = sp[:, :, 3].astype(np.float32)
         sp[:, :, 3] = np.clip((a_ - 40) * (255.0 / 215.0), 0, 255).astype(np.uint8)
         sw_, sh_ = int(sp.shape[1] * msc), int(sp.shape[0] * msc)
         reg = plate[max(0, my - sh_):my + 20, max(0, mx - sw_ // 2):mx + sw_ // 2]
-        sp = color_transfer(sp, reg, strength=0.7)
+        sp = color_transfer(sp, reg, strength=0.3)   # cool it, don't bleach it
         sp = cv2.resize(sp, (sw_, sh_), interpolation=cv2.INTER_AREA)
         sp, _ = match_focus(sp, reg)
         sp = cv2.flip(sp, 1)                       # face the falls
@@ -482,8 +482,9 @@ def fx_iceage(frames, t0):
             for sp, sx_, sy_, delay in herd:
                 uu = ease((t - (wipe_t1 - 0.3) - delay) / 0.9)
                 if uu > 0:
-                    contact_shadow(plate_i, sx_ + sp.shape[1] // 2, sy_ + sp.shape[0] - 2, sp.shape[1] * 0.9, alpha=0.22 * uu)
-                    blit(plate_i, sp, sx_, sy_, uu)
+                    walk = int(9 * max(0.0, t - wipe_t1))           # the herd ambles toward the falls
+                    contact_shadow(plate_i, sx_ + walk + sp.shape[1] // 2, sy_ + sp.shape[0] - 2, sp.shape[1] * 0.9, alpha=0.22 * uu)
+                    blit(plate_i, sp, sx_ + walk, sy_, uu)
         comp = f.astype(np.float32) * (1 - a[:, :, None]) + plate_i.astype(np.float32) * a[:, :, None]
         # frost bloom just behind the leading edge
         if 0 < p < 1:
