@@ -99,9 +99,11 @@ def prep_shot(sid, src, t_in, dur, opt):
     vf = []
     if opt.get("stab"):
         trf = f"{WORK}/_{sid}.trf"
+        tri = ":tripod=1" if opt.get("tripod") else ""
         run(["ffmpeg", "-v", "error", "-y", "-i", seg,
-             "-vf", f"vidstabdetect=shakiness=6:accuracy=15:stepsize=4:result={trf}", "-f", "null", "-"])
-        vf.append(f"vidstabtransform=input={trf}:smoothing=24:zoom={opt.get('zoom', 3)}:optzoom=0:crop=black:interpol=bicubic")
+             "-vf", f"vidstabdetect=shakiness=8:accuracy=15:stepsize=4{tri}:result={trf}", "-f", "null", "-"])
+        mode = "tripod=1" if opt.get("tripod") else f"smoothing={opt.get('smooth', 24)}"
+        vf.append(f"vidstabtransform=input={trf}:{mode}:zoom={opt.get('zoom', 3)}:optzoom=0:crop=black:interpol=bicubic")
     vf.append(f"trim=start={lead:.4f}:duration={src_dur:.4f},setpts=PTS-STARTPTS")
     if speed != 1.0:
         vf.append(f"minterpolate=fps={FPS/speed:.4f}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,setpts=PTS/{speed}")
