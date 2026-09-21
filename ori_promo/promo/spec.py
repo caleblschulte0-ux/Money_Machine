@@ -34,9 +34,8 @@ SHOTS = [
     ("point",   f"{RAW}/IMG_6794.MOV",          45.9, 2.0, dict(stab=True, speed=0.7)),
     ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True)),
     ("sync",    f"{RAW_MORE}/IMG_6808.MOV",     16.0, 4.5, dict(stab=True, fx="sync", speed=0.9)),
-    ("bridge",  f"{RAW}/IMG_6798.MOV",          12.5, 2.5, dict(stab=True, smooth=90, zoom=6, move=("in", 0.04))),
-    ("away",    f"{RAW}/IMG_6797.MOV",           2.0, 2.5, dict(stab=True, smooth=90, zoom=6)),
-    ("close",   f"{RAW_MORE}/IMG_6803.MOV",      3.0, 3.5, dict(stab=True, tripod=True, zoom=14, move=("in", 0.05))),
+    ("bridge",  f"{RAW}/IMG_6798.MOV",          12.5, 3.0, dict(stab=True, smooth=90, zoom=6, move=("in", 0.04))),
+    ("close",   f"{RAW_MORE}/IMG_6803.MOV",      0.8, 5.5, dict(stab=True, tripod=True, zoom=14, move=("in", 0.05))),
 ]
 
 assert abs(sum(s[3] for s in SHOTS) - TOTAL) < 1e-6, sum(s[3] for s in SHOTS)
@@ -61,7 +60,7 @@ CARDS = [
     (21.6, 24.0, ["Then it was home."]),
     (24.4, 26.0, ["Right where you're standing."]),
     (30.3, 33.9, ["Walk past another group.", "You only hear yours."]),
-    (34.6, 36.5, ["Any place. Any story."]),
+    (34.6, 36.9, ["Any place. Any story."]),
 ]
 
 # Small documentary eyebrows, lower-left. (t_in, t_out, text)
