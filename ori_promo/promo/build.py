@@ -31,6 +31,8 @@ FONTS = "/home/user/Shorts-pipeline/assets/fonts"
 os.makedirs(SHOTS_DIR, exist_ok=True)
 
 ENC = ["-c:v", "libx264", "-preset", "medium", "-crf", "12", "-pix_fmt", "yuv420p"]
+TONEMAP = ("zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,"
+           "tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p")
 ACCENT = (255, 190, 90)          # RGB, warm amber -- the one accent
 ACCENT_BGR = ACCENT[::-1]
 INK = (245, 243, 238)
@@ -88,8 +90,11 @@ def prep_shot(sid, src, t_in, dur, opt):
     ss = max(0.0, t_in - pad)
     lead = t_in - ss
     seg = f"{WORK}/_seg_{sid}.mp4"
+    # The phone shoots 10-bit HLG BT.2020 (Dolby Vision profile 8). Decoding
+    # that as SDR is what made every cut look grey and flat; tone-map here,
+    # once, and never "correct" it afterwards.
     run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
-         "-vf", f"scale={W}:{H}:flags=lanczos,fps={FPS}", "-an", *ENC, seg])
+         "-vf", f"{TONEMAP},scale={W}:{H}:flags=lanczos,fps={FPS}", "-an", *ENC, seg])
     vf = []
     if opt.get("stab"):
         trf = f"{WORK}/_{sid}.trf"
@@ -820,7 +825,7 @@ def stage_fx():
 # black and white points normalised to the same targets so shots match,
 # a gentle S for contrast, a little saturation. Stills and the end card
 # are left alone.
-GRADE = "unsharp=5:5:0.2"
+GRADE = "null"
 
 
 def levels_lut(sample_frames, lo_p=1.5, hi_p=99.8, lo_t=0, hi_t=255, contrast=1.42, gamma=1.12):
@@ -900,8 +905,7 @@ def stage_picture():
         t = i / FPS
         for a, b_, lut in luts:
             if a <= t < b_:
-                if lut is not None:
-                    f = correct(f, lut)
+                pass   # tone-mapped at decode; no further correction
                 break
         for a, b_ in sweep_shots:
             if a + 0.3 <= t < a + 1.9:
@@ -1136,7 +1140,7 @@ def write_wav(path, a):
 
 # --------------------------------------------------------------------------- final
 
-FINISH = "vignette=angle=PI/9:mode=forward"
+FINISH = "null"
 
 
 def stage_final():
