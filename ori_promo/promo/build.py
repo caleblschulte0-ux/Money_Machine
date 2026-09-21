@@ -20,8 +20,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spec import (W, H, FPS, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, EYEBROWS,
-                  MUSIC, MUSIC_OFFSET, SFX, BRAND, TAGLINE, shot_start)
+from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, EYEBROWS,
+                  MUSIC, MUSIC_OFFSET, SFX, AMBIENCE, BRAND, BRAND_SUB, TAGLINE, shot_start)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
@@ -67,6 +67,11 @@ def prep_shot(sid, src, t_in, dur, opt):
         print(f"  {sid}: cached")
         return
     n_frames = int(round(dur * FPS))
+    if opt.get("black"):
+        run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c=black:s={W}x{H}:r={FPS}", "-t", dur,
+             "-frames:v", n_frames, *ENC, out])
+        run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", dur, wav])
+        return
     if opt.get("still"):
         zp = lambda n: (f"scale=2400:-1,zoompan=z='1.0+0.07*on/{n}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
                         f":d=1:s={W}x{H}:fps={FPS},format=yuv420p")
@@ -107,7 +112,12 @@ def prep_shot(sid, src, t_in, dur, opt):
     vf.append(f"trim=start={lead:.4f}:duration={src_dur:.4f},setpts=PTS-STARTPTS")
     if speed != 1.0:
         vf.append(f"minterpolate=fps={FPS/speed:.4f}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,setpts=PTS/{speed}")
-    vf.append(f"fps={FPS},scale={W}:{H},tpad=stop_mode=clone:stop_duration=1")
+    if opt.get("crop"):
+        cx, cy, sc = opt["crop"]
+        cw, ch = int(W / sc), int(H / sc)
+        x0 = int(min(max(0, cx - cw / 2), W - cw)); y0 = int(min(max(0, cy - ch / 2), H - ch))
+        vf.append(f"crop={cw}:{ch}:{x0}:{y0}")
+    vf.append(f"fps={FPS},scale={W}:{H}:flags=lanczos,tpad=stop_mode=clone:stop_duration=1")
     run(["ffmpeg", "-v", "error", "-y", "-i", seg, "-vf", ",".join(vf), "-frames:v", n_frames, *ENC, out])
     # natural sound, time-stretched if slow-mo
     af = f"atrim=start=0:duration={src_dur:.4f},asetpts=PTS-STARTPTS"
@@ -327,6 +337,45 @@ def draw_reticle(frame, cx, cy, u, done):
     if done:
         tag = text_sprite("SITE RECOGNIZED", 24, "SemiBold", ACCENT, tracking=4)
         blit(frame, tag, int(cx - tag.shape[1] / 2), int(cy + half * 0.62 + 18), 1.0)
+
+
+def fx_activate(frames, t0):
+    """Tight on his glasses: a small bracket locks onto the lens, a glint
+    crosses it, an amber dot and 'ACTIVE' hold -- the glasses switching on."""
+    cx, cy = 920, 320
+    out = []
+    for i, f in enumerate(frames):
+        t = i / FPS
+        g = f.copy()
+        u = ease_out((t - 0.4) / 0.5)
+        if u > 0:
+            half = int(150 - 70 * u)
+            L = 22
+            ov = g.copy()
+            col = ACCENT_BGR if u >= 1 else (250, 250, 250)
+            for sx, sy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+                x, y = int(cx + sx * half * 1.35), int(cy + sy * half * 0.7)
+                cv2.line(ov, (x, y), (x - sx * L, y), col, 2, cv2.LINE_AA)
+                cv2.line(ov, (x, y), (x, y - sy * L), col, 2, cv2.LINE_AA)
+            cv2.addWeighted(ov, 0.9, g, 0.1, 0, g)
+        if 0.9 <= t < 1.5:
+            # glint across the lens
+            k = (t - 0.9) / 0.6
+            xs = np.arange(W, dtype=np.float32).reshape(1, -1); ys = np.arange(H, dtype=np.float32).reshape(-1, 1)
+            pos = (cx - 260) + 520 * k
+            band = np.exp(-(((xs + 0.6 * (ys - cy)) - pos) / 40.0) ** 2)
+            win = np.exp(-(((xs - cx) / 230.0) ** 2 + ((ys - cy) / 110.0) ** 2))
+            g = np.clip(g.astype(np.float32) + (band * win)[:, :, None] * 110, 0, 255).astype(np.uint8)
+        if t >= 1.0:
+            pu = 0.7 + 0.3 * math.sin(2 * math.pi * 1.4 * t)
+            ov = g.copy()
+            cv2.circle(ov, (cx, cy), 6, ACCENT_BGR, -1, cv2.LINE_AA)
+            cv2.circle(ov, (cx, cy), int(10 + 6 * pu), ACCENT_BGR, 2, cv2.LINE_AA)
+            cv2.addWeighted(ov, 0.9, g, 0.1, 0, g)
+            tag = text_sprite("ACTIVE", 24, "SemiBold", ACCENT, tracking=5)
+            blit(g, tag, int(cx - tag.shape[1] / 2), int(cy + 150 * 0.7 + 14), min(1.0, (t - 1.0) / 0.3))
+        out.append(g)
+    return out
 
 
 def fx_markers(frames, t0):
@@ -837,6 +886,8 @@ def stage_fx():
                                              water_poly=[(0, 950), (900, 900), (1200, 960), (1200, 1080), (0, 1080)]))
         elif fx == "sync":
             res = fx_sync(frames, t0)
+        elif fx == "activate":
+            res = fx_activate(frames, t0)
         elif fx == "dakota":
             res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1300, 738), scale=0.9,
                              exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
@@ -898,6 +949,70 @@ def shot_luts():
     return luts
 
 
+_FILM = None
+
+
+def filmic(frame, i):
+    """The look, applied once after the tone map: soft S with gently lifted
+    warm shadows and rolled highlights, a touch of split tone, highlight
+    bloom, fine grain, a faint vignette."""
+    global _FILM
+    if _FILM is None:
+        x = np.linspace(0, 1, 256)
+        s = 1 / (1 + np.exp(-(x - 0.5) * 6.2))
+        s = (s - s[0]) / (s[-1] - s[0])
+        y = 0.55 * s + 0.45 * x
+        y = 0.035 + y * (0.985 - 0.035)
+        lut = (np.clip(y, 0, 1) * 255).astype(np.uint8)
+        yy = np.linspace(-1, 1, H).reshape(-1, 1); xx = np.linspace(-1, 1, W).reshape(1, -1)
+        vig = 1 - 0.16 * np.clip(np.sqrt((xx * 0.85) ** 2 + yy ** 2) - 0.55, 0, 1) ** 1.6
+        rng = np.random.default_rng(3)
+        grains = [rng.normal(0, 2.4, (H // 2, W // 2)).astype(np.float32) for _ in range(12)]
+        _FILM = (lut, vig.astype(np.float32)[:, :, None], grains)
+    lut, vig, grains = _FILM
+    g = cv2.LUT(frame, lut).astype(np.float32)
+    lum = g.mean(axis=2, keepdims=True) / 255.0
+    # split tone: cool the shadows a hair, warm the highlights a hair
+    g[:, :, 0] += (1 - lum[:, :, 0]) * 5 - lum[:, :, 0] * 4
+    g[:, :, 2] += lum[:, :, 0] * 6 - (1 - lum[:, :, 0]) * 3
+    # bloom on the brightest 10%
+    hi = np.clip((lum - 0.78) / 0.22, 0, 1)
+    bl = cv2.GaussianBlur((g * hi).astype(np.float32), (0, 0), 22)
+    g = g + bl * 0.16
+    g = g * vig
+    grain = cv2.resize(grains[i % len(grains)], (W, H), interpolation=cv2.INTER_LINEAR)
+    g = g + grain[:, :, None] * (0.5 + 0.5 * (1 - lum))
+    return np.clip(g, 0, 255).astype(np.uint8)
+
+
+def logo_sprites():
+    word = text_sprite(BRAND, 92, "Display", INK, tracking=10)
+    sub = text_sprite(BRAND_SUB, 26, "SemiBold", ACCENT, tracking=12)
+    mark = np.zeros((96, 120, 4), np.uint8)
+    cv2.ellipse(mark, (60, 62), (40, 40), 0, 180, 360, ACCENT_BGR + (255,), -1, cv2.LINE_AA)
+    cv2.line(mark, (4, 66), (116, 66), INK[::-1] + (255,), 5, cv2.LINE_AA)
+    return word, sub, mark
+
+
+def draw_logo(frame, u_in, u_out, y_center):
+    word, sub, mark = logo_sprites()
+    al = min(u_in, u_out)
+    if al <= 0:
+        return
+    total_w = mark.shape[1] + 34 + word.shape[1]
+    x0 = (W - total_w) // 2
+    dx = int(18 * (1 - u_in))
+    blit(frame, mark, x0 - dx, y_center - mark.shape[0] // 2 - 8, al)
+    blit(frame, word, x0 + mark.shape[1] + 34 + dx, y_center - word.shape[0] // 2 - 8, al)
+    blit(frame, sub, x0 + mark.shape[1] + 34 + dx + 4, y_center + word.shape[0] // 2 - 4, al * ease_out((u_in - 0.3) / 0.7))
+
+
+def letterbox(frame):
+    frame[:BAR] = 0
+    frame[H - BAR:] = 0
+    return frame
+
+
 def light_sweep(frame, u, strength=0.16):
     """A soft diagonal highlight travelling across a product still."""
     xs = np.arange(W, dtype=np.float32).reshape(1, -1)
@@ -937,10 +1052,13 @@ def stage_picture():
         if not ok:
             break
         t = i / FPS
-        for a, b_, lut in luts:
-            if a <= t < b_:
-                pass   # tone-mapped at decode; no further correction
+        real = True
+        for sid, _, _, dur, opt in SHOTS:
+            if shot_start(sid) <= t < shot_start(sid) + dur:
+                real = not (opt.get("black") or opt.get("sdr") or opt.get("still"))
                 break
+        if real:
+            f = filmic(f, i)
         for a, b_ in sweep_shots:
             if a + 0.3 <= t < a + 1.9:
                 f = light_sweep(f, (t - a - 0.3) / 1.6)
@@ -954,12 +1072,12 @@ def stage_picture():
         for a, b, sp in eyebrows:
             if a <= t < b:
                 al = min(ease_out((t - a) / 0.35), ease((b - t) / 0.3))
-                blit(f, sp, 120, H - 126, al)
+                blit(f, sp, 120, H - BAR - 52, al)
         for a, b, (words, hh) in cards:
             if a <= t < b:
                 u_out = ease((b - t) / 0.3)
                 scrim_lower_left(f, min(ease_out((t - a) / 0.38), u_out) * 0.38)
-                base_y = H - 150 - hh
+                base_y = H - BAR - 74 - hh
                 for k, (wx, wy, sp, sh) in enumerate(words):
                     u_in = ease_out((t - a - 0.045 * k) / 0.32)
                     if u_in <= 0:
@@ -976,28 +1094,27 @@ def stage_picture():
         for a, b, sp in tags:
             if a <= t < b:
                 al = min(ease_out((t - a) / 0.3), ease((b - t) / 0.25))
-                blit(f, sp, W - 96 - sp.shape[1], 72, al)
+                blit(f, sp, W - 96 - sp.shape[1], BAR + 34, al)
         # white flash into the product beat
         if prod_t - 0.06 <= t < prod_t + 0.22:
             k = 1 - abs((t - prod_t) / 0.16)
             k = max(0, min(1, k)) * 0.85
             f[:] = np.clip(f.astype(np.float32) * (1 - k) + 255 * k, 0, 255).astype(np.uint8)
+        if t < shot_start("pan"):
+            draw_logo(f, ease_out((t - 0.15) / 0.45), ease((shot_start("pan") - 0.05 - t) / 0.3), H // 2)
         if t >= END_CARD_START - 0.5:
             u = ease((t - (END_CARD_START - 0.5)) / 0.9)
-            f[:] = (f.astype(np.float32) * (1 - 0.62 * u)).astype(np.uint8)
-            brand, tag, rule = end
+            f[:] = (f.astype(np.float32) * (1 - 0.66 * u)).astype(np.uint8)
+            _, tag, rule = end
             ub = ease_out((t - END_CARD_START) / 0.7)
-            ut = ease_out((t - END_CARD_START - 0.35) / 0.6)
+            ut = ease_out((t - END_CARD_START - 0.45) / 0.6)
+            draw_logo(f, ub, 1.0, H // 2 - 58)
             if ub > 0:
-                # letters settle in from a wider tracking; the rule draws from the centre
-                sc = 1.0 + 0.06 * (1 - ub)
-                bw = int(brand.shape[1] * sc)
-                bs = cv2.resize(brand, (bw, brand.shape[0]), interpolation=cv2.INTER_AREA)
-                blit(f, bs, (W - bw) // 2, H // 2 - 70 - brand.shape[0] // 2 + int(10 * (1 - ub)), ub)
                 rw = max(2, int(rule.shape[1] * ease_out(min(1, (t - END_CARD_START) / 0.5))))
-                blit(f, rule[:, :rw], (W - rw) // 2, H // 2 + 8, 1.0)
+                blit(f, rule[:, :rw], (W - rw) // 2, H // 2 + 34, 1.0)
             if ut > 0:
-                blit(f, tag, (W - tag.shape[1]) // 2, H // 2 + 36 + int(10 * (1 - ut)), ut)
+                blit(f, tag, (W - tag.shape[1]) // 2, H // 2 + 60 + int(10 * (1 - ut)), ut)
+        letterbox(f)
         w.write(f)
     w.close()
 
@@ -1137,14 +1254,49 @@ def fade_edges(a, fi, fo):
     return a
 
 
+def shimmer(dur=1.4, f0=880, sr=48000):
+    """A soft materialise: a rising filtered-noise sweep under a quiet chord."""
+    n = int(dur * sr); t = np.arange(n) / sr
+    rng = np.random.default_rng(11)
+    noise = rng.standard_normal(n).astype(np.float32)
+    # simple one-pole sweep, cutoff rising
+    out = np.zeros(n, np.float32); y = 0.0
+    for k in range(n):
+        a = 0.002 + 0.06 * (k / n) ** 2
+        y = y + a * (noise[k] - y)
+        out[k] = y
+    out = out - np.convolve(out, np.ones(600) / 600, mode="same")     # high-pass
+    env = np.exp(-((t - dur * 0.45) / (dur * 0.28)) ** 2)
+    chord = sum(np.sin(2 * np.pi * f0 * r * t + p) for r, p in ((1.0, 0.0), (1.5, 1.3), (2.0, 2.1), (2.5, 0.7)))
+    chord = chord / 4 * np.exp(-t * 2.2) * np.clip(t / 0.05, 0, 1)
+    sig = out * env * 2.2 + chord * 0.35
+    sig = sig / (np.abs(sig).max() + 1e-6)
+    return np.stack([sig, sig], 1).astype(np.float32)
+
+
+def sub_hit(dur=0.9, sr=48000):
+    n = int(dur * sr); t = np.arange(n) / sr
+    f = 62 * np.exp(-t * 3.5) + 38
+    sig = np.sin(2 * np.pi * np.cumsum(f) / sr) * np.exp(-t * 4.2)
+    return np.stack([sig, sig], 1).astype(np.float32)
+
+
 def stage_audio():
     n = int(TOTAL * SR)
     bus = np.zeros((n, 2), np.float32)
-    # music: sneaks in under the cold open, lifts into the markers, hits at the wipe
+    S = shot_start
+    hit = S("markers")                         # the glasses come online: the drop
+    # music: sneaks in under the logo and the pan, lifts as he looks up, drops at the hit
     m = load_audio(MUSIC, MUSIC_OFFSET, TOTAL + 1)[:n]
-    m *= env_points([(0, -15), (4.4, -13), (9.5, -7), (11.3, -6), (12.45, -6), (12.5, 0), (21.9, 0),
-                     (22.0, -3), (27.9, -3), (28.0, 0), (33.5, 0), (34.6, -3), (36.5, -40)], n)
+    m *= env_points([(0, -18), (S("pan"), -15), (S("plaque"), -12), (S("glasscu"), -8), (hit - 0.05, -8), (hit, 0),
+                     (S("glasses") - 0.1, 0), (S("glasses"), -4), (S("sync") - 0.1, -4), (S("sync"), 0),
+                     (END_CARD_START, 0), (END_CARD_START + 1.2, -4), (TOTAL - 0.2, -40)], n)
     bus += m * 0.9
+    # ambience: the falls, low, under the whole park
+    amb = load_audio(AMBIENCE, 14.0, TOTAL + 1)[:n]
+    amb *= env_points([(0, -60), (S("pan"), -60), (S("pan") + 0.6, -27), (S("glasses") - 0.2, -27), (S("glasses"), -60),
+                       (S("sync") - 0.05, -60), (S("sync"), -27), (END_CARD_START, -27), (END_CARD_START + 1.0, -60)], n)
+    bus += amb
     # natural sound per shot, light, crossfaded at the cuts
     t = 0.0
     for sid, src, t_in, dur, opt in SHOTS:
@@ -1153,41 +1305,46 @@ def stage_audio():
         a = a[:k]
         if len(a) < k:
             a = np.vstack([a, np.zeros((k - len(a), 2), np.float32)])
-        lvl = {"open": -14, "falls": -8, "plaque": -22, "reading": -16, "markers": -14, "iceage": -20,
-               "mammoth": -12, "dakota": -12, "point": -16, "walk": -16, "glasses": -60, "close": -16}.get(sid, -16)
-        if opt.get("still"):
-            lvl = -60
+        lvl = {"pan": -16, "falls": -9, "plaque": -24, "reading": -18, "glasscu": -20, "markers": -16,
+               "mammoth": -13, "dakota": -13, "point": -16, "sync": -15, "bridge": -18, "away": -18, "close": -17}.get(sid, -60)
         a = fade_edges(a * db(lvl), 0.08, 0.12)
         i0 = int(t * SR)
         bus[i0:i0 + k] += a
         t += dur
-    # sfx
+
+    def place(sig, at, gain_db):
+        sig = sig * db(gain_db)
+        i0 = int(at * SR)
+        k = min(len(sig), n - i0)
+        if k > 0:
+            bus[i0:i0 + k] += sig[:k]
+
     def sfx(name, at, gain_db, trim=None):
         s = load_audio(f"{SFX}/{name}.wav")
         if trim:
             s = s[:int(trim * SR)]
             s = fade_edges(s, 0.005, min(0.25, trim / 2))
-        s = s * db(gain_db)
-        i0 = int(at * SR)
-        k = min(len(s), n - i0)
-        bus[i0:i0 + k] += s[:k]
+        place(s, at, gain_db)
+
     riser_len = ffprobe_dur(f"{SFX}/riser.wav")
-    sfx("riser", 12.5 - riser_len, -12)
-    sfx("boom", 12.5, -6)
-    sfx("whoosh", 12.45, -14)
-    sfx("pop", shot_start("markers") + 0.5, -18)
-    sfx("pop", shot_start("markers") + 1.3, -18)
-    sfx("whoosh", shot_start("mammoth") + 0.3, -18, trim=0.8)
-    sfx("whoosh", shot_start("dakota") + 0.25, -18, trim=0.8)
-    sfx("whoosh", shot_start("glasses") - 0.08, -16, trim=0.6)
-    sfx("pop", shot_start("sync") + 0.9, -20)
-    sfx("pop", shot_start("sync") + 1.5, -22)
-    sfx("boom", END_CARD_START, -12)
+    sfx("riser", hit - riser_len, -13)
+    sfx("boom", hit, -7)
+    sfx("whoosh", hit - 0.05, -15)
+    place(shimmer(), S("glasscu") + 0.35, -14)
+    sfx("pop", S("markers") + 0.9, -19)
+    sfx("pop", S("markers") + 1.5, -19)
+    place(shimmer(1.8, 660), S("mammoth") + 0.3, -12)
+    place(sub_hit(), S("mammoth") + 0.55, -9)
+    place(shimmer(1.4, 740), S("dakota") + 0.25, -13)
+    sfx("whoosh", S("glasses") - 0.08, -16, trim=0.6)
+    sfx("pop", S("sync") + 0.9, -20)
+    sfx("pop", S("sync") + 1.5, -22)
+    sfx("boom", END_CARD_START, -13)
     write_wav(f"{WORK}/mix.wav", bus)
     # narration variant
     vo = np.zeros((n, 2), np.float32)
     from piper import PiperVoice
-    v = PiperVoice.load("../vo/voices/en_US-lessac-high.onnx")
+    v = PiperVoice.load(VOICE)
     for at, text in VO:
         p = f"{WORK}/_vo_{int(at*10)}.wav"
         with wave.open(p, "wb") as wv:
@@ -1197,12 +1354,10 @@ def stage_audio():
         i0 = int(at * SR)
         k = min(len(a), n - i0)
         vo[i0:i0 + k] += a[:k]
-    # duck the bed under the voice
-    duck = np.ones((n, 1), np.float32)
     env = np.abs(vo[:, 0])
     kern = int(0.08 * SR)
     env = np.convolve(env, np.ones(kern) / kern, mode="same")
-    duck = 1 - 0.55 * np.clip(env / 0.02, 0, 1)[:, None]
+    duck = 1 - 0.5 * np.clip(env / 0.02, 0, 1)[:, None]
     duck = np.convolve(duck[:, 0], np.ones(int(0.15 * SR)) / int(0.15 * SR), mode="same")[:, None]
     write_wav(f"{WORK}/mix_vo.wav", bus * duck + vo)
 
