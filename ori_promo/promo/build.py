@@ -1293,7 +1293,11 @@ def stage_audio():
                      (END_CARD_START, 0), (END_CARD_START + 1.2, -4), (TOTAL - 0.2, -40)], n)
     bus += m * 0.9
     # ambience: the falls, low, under the whole park
-    amb = load_audio(AMBIENCE, 14.0, TOTAL + 1)[:n]
+    amb = load_audio(AMBIENCE, 2.0, TOTAL + 1)
+    if len(amb) < n:                      # the clip is shorter than the film: loop it
+        reps = int(np.ceil(n / max(1, len(amb)))) + 1
+        amb = np.vstack([amb] * reps)
+    amb = amb[:n]
     amb *= env_points([(0, -60), (S("pan"), -60), (S("pan") + 0.6, -27), (S("glasses") - 0.2, -27), (S("glasses"), -60),
                        (S("sync") - 0.05, -60), (S("sync"), -27), (END_CARD_START, -27), (END_CARD_START + 1.0, -60)], n)
     bus += amb
