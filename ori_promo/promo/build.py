@@ -661,35 +661,42 @@ def person_tracks(frames):
         obs.append(blobs)
     # two tracks: A = the one present from frame 0 (him), B = the one that enters from the right
     tracks = {"A": [], "B": []}
+
+    def pred(tr, i):
+        if len(tr) < 3:
+            return tr[-1][1] if tr else None
+        ts = np.array([o[0] for o in tr[-8:]], np.float64); xs = np.array([o[1] for o in tr[-8:]])
+        return float(np.polyval(np.polyfit(ts, xs, 1), i))
+
     for i, blobs in enumerate(obs):
         blobs = sorted(blobs, key=lambda b_: b_[0])
-        if len(blobs) == 1 and blobs[0][3] < 330:
-            x, y, yf, w = blobs[0]
-            # single, unmerged blob: assign by predicted position
-            def pred(tr):
-                if len(tr) < 4:
-                    return None
-                ts = np.array([o[0] for o in tr[-6:]]); xs = np.array([o[1] for o in tr[-6:]])
-                k = np.polyfit(ts, xs, 1)
-                return np.polyval(k, i)
-            pa, pb = pred(tracks["A"]), pred(tracks["B"])
-            if pa is not None and (pb is None or abs(pa - x) <= abs(pb - x)):
-                tracks["A"].append((i, x, y, yf))
-            elif pb is not None:
-                tracks["B"].append((i, x, y, yf))
+        blobs = [b_ for b_ in blobs if b_[3] < 330]          # a merged pair is wider than one walker
+        if not blobs:
+            continue
+        pa, pb = pred(tracks["A"], i), pred(tracks["B"], i)
+        if pa is None:
+            tracks["A"].append((i,) + blobs[0][:3]); continue
+        if pb is None:
+            # the second walker enters from the right edge
+            cand = [b_ for b_ in blobs if abs(b_[0] - pa) > 120 and b_[0] > 1400]
+            near = min(blobs, key=lambda b_: abs(b_[0] - pa))
+            if abs(near[0] - pa) < 160:
+                tracks["A"].append((i,) + near[:3])
+            if cand:
+                tracks["B"].append((i,) + cand[-1][:3])
+            continue
+        if len(blobs) == 1:
+            x = blobs[0][0]
+            key = "A" if abs(pa - x) <= abs(pb - x) else "B"
+            if abs((pa if key == "A" else pb) - x) < 160:
+                tracks[key].append((i,) + blobs[0][:3])
+        else:
+            b1, b2 = blobs[0], blobs[-1]
+            straight = abs(pa - b1[0]) + abs(pb - b2[0]); crossed = abs(pa - b2[0]) + abs(pb - b1[0])
+            if straight <= crossed:
+                tracks["A"].append((i,) + b1[:3]); tracks["B"].append((i,) + b2[:3])
             else:
-                tracks["A" if not tracks["A"] else "B"].append((i, x, y, yf))
-        elif len(blobs) >= 2:
-            (x1, y1, f1, w1), (x2, y2, f2, w2) = blobs[0], blobs[-1]
-            # he walks left -> A is the one further along (left) once both exist
-            if not tracks["B"]:
-                tracks["A"].append((i, x1, y1, f1)); tracks["B"].append((i, x2, y2, f2))
-            else:
-                la = tracks["A"][-1][1]; lb = tracks["B"][-1][1]
-                if abs(la - x1) + abs(lb - x2) <= abs(la - x2) + abs(lb - x1):
-                    tracks["A"].append((i, x1, y1, f1)); tracks["B"].append((i, x2, y2, f2))
-                else:
-                    tracks["A"].append((i, x2, y2, f2)); tracks["B"].append((i, x1, y1, f1))
+                tracks["A"].append((i,) + b2[:3]); tracks["B"].append((i,) + b1[:3])
     out = []
     n = len(frames)
     for key in ("A", "B"):
@@ -816,7 +823,7 @@ def stage_fx():
 GRADE = "unsharp=5:5:0.2"
 
 
-def levels_lut(sample_frames, lo_p=0.4, hi_p=99.6, lo_t=4, hi_t=252, contrast=1.16):
+def levels_lut(sample_frames, lo_p=0.4, hi_p=99.6, lo_t=4, hi_t=252, contrast=1.12):
     lum = np.concatenate([cv2.cvtColor(f, cv2.COLOR_BGR2GRAY).ravel()[::7] for f in sample_frames])
     lo, hi = np.percentile(lum, lo_p), np.percentile(lum, hi_p)
     x = np.arange(256, dtype=np.float32)
@@ -826,7 +833,7 @@ def levels_lut(sample_frames, lo_p=0.4, hi_p=99.6, lo_t=4, hi_t=252, contrast=1.
     return y.astype(np.uint8)
 
 
-def correct(frame, lut, sat=1.14):
+def correct(frame, lut, sat=1.05):
     g = cv2.LUT(frame, lut)
     hsv = cv2.cvtColor(g, cv2.COLOR_BGR2HSV).astype(np.float32)
     hsv[:, :, 1] = np.clip(hsv[:, :, 1] * sat, 0, 255)
