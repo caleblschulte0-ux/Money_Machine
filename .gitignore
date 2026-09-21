@@ -23,3 +23,11 @@ ori_promo/*/r*__*__contact.*
 ori_promo/raw/
 ori_promo/fonts/
 ori_promo/vo/voices/
+
+# ori_promo/promo (the 2026-09-21 rebuild): the extra raw clips pulled from
+# the same manifest, the CC-BY music candidates (incompetech, regenerable
+# with the URLs in promo/spec.py), and the build's intermediates are all
+# large and regenerable -- only spec.py/build.py are tracked.
+ori_promo/raw_more/
+ori_promo/music/
+ori_promo/promo/work/
