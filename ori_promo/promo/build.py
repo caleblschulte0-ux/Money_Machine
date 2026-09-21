@@ -886,16 +886,16 @@ def stage_fx():
         elif fx == "iceage":
             res = fx_iceage(frames, t0)
         elif fx == "mammoth":
-            res = fx_element(frames, f"{WORK}/mam_rembg.png", anchor=(590, 952), scale=0.85,
+            res = fx_element(frames, f"{WORK}/mam_rembg.png", anchor=(560, 930), scale=0.82,
                              exclude_rect=(1180, 0, 1920, 1080), appear=(0.35, 1.35),
                              reflection=dict(squash=0.45, alpha=0.28,
-                                             water_poly=[(0, 920), (904, 873), (1182, 929), (1182, 1080), (0, 1080)]))
+                                             water_poly=[(0, 900), (904, 860), (1182, 915), (1182, 1080), (0, 1080)]))
         elif fx == "sync":
             res = fx_sync(frames, t0)
         elif fx == "activate":
             res = fx_activate(frames, t0)
         elif fx == "dakota":
-            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1275, 723), scale=0.83,
+            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1275, 760), scale=0.78,
                              exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
         else:
             raise KeyError(fx)
