@@ -20,7 +20,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spec import (W, H, FPS, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO,
+from spec import (W, H, FPS, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, EYEBROWS,
                   MUSIC, MUSIC_OFFSET, SFX, BRAND, TAGLINE, shot_start)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -306,6 +306,26 @@ def draw_marker(frame, ax, ay, label, sub, u, side=1):
         blit(frame, sub_s, bx + pad, by + pad + lab.shape[0] + 4 + int(8 * (1 - tu)), tu)
 
 
+def draw_reticle(frame, cx, cy, u, done):
+    """Corner brackets closing in on the view, then a 'site recognized'
+    tag -- the glasses visibly locking on before the labels pop."""
+    if u <= 0:
+        return
+    k = ease_out(u)
+    half = int(420 - 160 * k)
+    L = 34
+    ov = frame.copy()
+    col = ACCENT_BGR if done else (250, 250, 250)
+    for sx, sy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+        x, y = int(cx + sx * half), int(cy + sy * half * 0.62)
+        cv2.line(ov, (x, y), (x - sx * L, y), col, 2, cv2.LINE_AA)
+        cv2.line(ov, (x, y), (x, y - sy * L), col, 2, cv2.LINE_AA)
+    cv2.addWeighted(ov, 0.9, frame, 0.1, 0, frame)
+    if done:
+        tag = text_sprite("SITE RECOGNIZED", 24, "SemiBold", ACCENT, tracking=4)
+        blit(frame, tag, int(cx - tag.shape[1] / 2), int(cy + half * 0.62 + 18), 1.0)
+
+
 def fx_markers(frames, t0):
     ex = np.zeros((H, W), np.uint8)
     ex[:, :1000] = 255                      # the wearer fills the left
@@ -314,10 +334,16 @@ def fx_markers(frames, t0):
     for i, f in enumerate(frames):
         t = i / FPS
         g = f.copy()
+        rx, ry = apply_pt(A[i], 1290, 500)
+        if t < 0.95:
+            fade = 1.0 if t < 0.7 else ease((0.95 - t) / 0.25)
+            tmp = g.copy()
+            draw_reticle(tmp, rx, ry, (t - 0.05) / 0.35, done=(t >= 0.42))
+            cv2.addWeighted(tmp, fade, g, 1 - fade, 0, g)
         x1, y1 = apply_pt(A[i], 1150, 470)   # the mill tower
         x2, y2 = apply_pt(A[i], 1395, 520)   # the falls
-        draw_marker(g, x1, y1, "QUEEN BEE MILL", "BUILT 1881", (t - 0.45) / 0.9, side=-1)
-        draw_marker(g, x2, y2, "BIG SIOUX FALLS", "7,400 GAL / SEC", (t - 1.25) / 0.9, side=1)
+        draw_marker(g, x1, y1, "QUEEN BEE MILL", "BUILT 1881", (t - 0.85) / 0.9, side=-1)
+        draw_marker(g, x2, y2, "BIG SIOUX FALLS", "7,400 GAL / SEC", (t - 1.45) / 0.9, side=1)
         out.append(g)
     return out
 
@@ -892,7 +918,12 @@ def stage_picture():
     frames_n = int(round(TOTAL * FPS))
     cap = cv2.VideoCapture(graded)
     w = Writer(f"{WORK}/picture.mp4")
-    cards = [(a, b, card_sprite(lines)) for a, b, lines in CARDS]
+    cards = [(a, b, card_words(lines)) for a, b, lines in CARDS]
+    eyebrows = [(a, b, tag_sprite(txt)) for a, b, txt in EYEBROWS]
+    moves = []
+    for sid, _, _, dur, opt in SHOTS:
+        if opt.get("move"):
+            moves.append((shot_start(sid), shot_start(sid) + dur) + opt["move"])
     tags = [(a, b, tag_sprite(txt)) for a, b, txt in TAGS]
     end = end_card_sprites()
     prod_t = shot_start("glasses")
@@ -910,13 +941,35 @@ def stage_picture():
         for a, b_ in sweep_shots:
             if a + 0.3 <= t < a + 1.9:
                 f = light_sweep(f, (t - a - 0.3) / 1.6)
-        for a, b, sp in cards:
+        for a, b_, kind, amt in moves:
+            if a <= t < b_:
+                u = ease((t - a) / (b_ - a))
+                s = 1.0 + amt * (u if kind == "in" else 1 - u)
+                M = cv2.getRotationMatrix2D((W * 0.5, H * 0.5), 0, s)
+                f = cv2.warpAffine(f, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+                break
+        for a, b, sp in eyebrows:
             if a <= t < b:
-                u_in = ease_out((t - a) / 0.38)
+                al = min(ease_out((t - a) / 0.35), ease((b - t) / 0.3))
+                blit(f, sp, 120, H - 126, al)
+        for a, b, (words, hh) in cards:
+            if a <= t < b:
                 u_out = ease((b - t) / 0.3)
-                al = min(u_in, u_out)
-                scrim_lower_left(f, al * 0.38)
-                blit(f, sp, 120, H - 150 - sp.shape[0] + int(16 * (1 - u_in)), al)
+                scrim_lower_left(f, min(ease_out((t - a) / 0.38), u_out) * 0.38)
+                base_y = H - 150 - hh
+                for k, (wx, wy, sp, sh) in enumerate(words):
+                    u_in = ease_out((t - a - 0.045 * k) / 0.32)
+                    if u_in <= 0:
+                        continue
+                    al = min(u_in, u_out)
+                    dy = int(18 * (1 - u_in))
+                    blit(f, sh, 120 + wx + 6, base_y + wy + 8 + dy, al * 0.6)
+                    blit(f, sp, 120 + wx, base_y + wy + dy, al)
+                ur = ease_out((t - a - 0.1) / 0.45)
+                if ur > 0:
+                    rule = np.zeros((4, int(96 * ur) + 1, 4), np.uint8)
+                    rule[:, :, :3] = ACCENT_BGR; rule[:, :, 3] = int(255 * min(1, u_out))
+                    blit(f, rule, 120, base_y - 22, 1.0)
         for a, b, sp in tags:
             if a <= t < b:
                 al = min(ease_out((t - a) / 0.3), ease((b - t) / 0.25))
@@ -930,11 +983,16 @@ def stage_picture():
             u = ease((t - (END_CARD_START - 0.5)) / 0.9)
             f[:] = (f.astype(np.float32) * (1 - 0.62 * u)).astype(np.uint8)
             brand, tag, rule = end
-            ub = ease_out((t - END_CARD_START) / 0.6)
-            ut = ease_out((t - END_CARD_START - 0.25) / 0.6)
+            ub = ease_out((t - END_CARD_START) / 0.7)
+            ut = ease_out((t - END_CARD_START - 0.35) / 0.6)
             if ub > 0:
-                blit(f, brand, (W - brand.shape[1]) // 2, H // 2 - 70 - brand.shape[0] // 2 + int(14 * (1 - ub)), ub)
-                blit(f, rule, (W - rule.shape[1]) // 2, H // 2 + 8, ub)
+                # letters settle in from a wider tracking; the rule draws from the centre
+                sc = 1.0 + 0.06 * (1 - ub)
+                bw = int(brand.shape[1] * sc)
+                bs = cv2.resize(brand, (bw, brand.shape[0]), interpolation=cv2.INTER_AREA)
+                blit(f, bs, (W - bw) // 2, H // 2 - 70 - brand.shape[0] // 2 + int(10 * (1 - ub)), ub)
+                rw = max(2, int(rule.shape[1] * ease_out(min(1, (t - END_CARD_START) / 0.5))))
+                blit(f, rule[:, :rw], (W - rw) // 2, H // 2 + 8, 1.0)
             if ut > 0:
                 blit(f, tag, (W - tag.shape[1]) // 2, H // 2 + 36 + int(10 * (1 - ut)), ut)
         w.write(f)
@@ -959,6 +1017,24 @@ def text_sprite(text, size, weight, color, tracking=0):
         x += wch + tracking
     arr = np.array(im)
     return cv2.cvtColor(arr, cv2.COLOR_RGBA2BGRA)
+
+
+def card_words(lines):
+    """Per-word sprites with layout offsets, so a card can build word by word."""
+    words = []
+    y = 0
+    line_h = None
+    for ln in lines:
+        x = 0
+        for wd in ln.split(" "):
+            sp = text_sprite(wd, 84, "Display", INK, tracking=-2)
+            sh = np.zeros_like(sp); sh[:, :, 3] = sp[:, :, 3]
+            sh = cv2.GaussianBlur(sh, (0, 0), 6)
+            words.append((x, y, sp, sh))
+            x += sp.shape[1] + 22
+            line_h = sp.shape[0]
+        y += line_h - 14
+    return words, y + 14
 
 
 def card_sprite(lines):

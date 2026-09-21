@@ -20,21 +20,21 @@ RAW_MORE = "../raw_more"
 # id, source, in-point (s), duration on the timeline (s), options
 # speed: source seconds consumed per timeline second (0.7 = slow-mo)
 SHOTS = [
-    ("open",    f"{RAW_MORE}/IMG_6676.MOV", 11.0, 2.5, dict(stab=True)),
-    ("falls",   f"{RAW_MORE}/IMG_6682.MOV", 16.0, 2.0, dict(stab=True)),
-    ("plaque",  f"{RAW_MORE}/IMG_6709.MOV", 23.0, 2.5, dict(stab=True)),
-    ("reading", f"{RAW}/IMG_6796.MOV",      31.0, 2.5, dict(stab=True)),
-    ("markers", f"{RAW}/IMG_6799.MOV",       2.0, 3.0, dict(stab=True, fx="markers")),
-    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV", 43.0, 5.0, dict(stab=True, fx="mammoth")),
-    ("dakota",  f"{RAW_MORE}/IMG_6804.MOV", 12.0, 2.5, dict(stab=True, fx="dakota")),
+    ("open",    f"{RAW_MORE}/IMG_6676.MOV", 11.0, 2.5, dict(stab=True, move=("in", 0.05))),
+    ("falls",   f"{RAW_MORE}/IMG_6682.MOV", 16.0, 2.0, dict(stab=True, speed=0.7, move=("in", 0.04))),
+    ("plaque",  f"{RAW_MORE}/IMG_6709.MOV", 23.0, 2.5, dict(stab=True, move=("in", 0.06))),
+    ("reading", f"{RAW}/IMG_6796.MOV",      31.0, 2.5, dict(stab=True, move=("out", 0.04))),
+    ("markers", f"{RAW}/IMG_6799.MOV",       2.0, 3.0, dict(stab=True, fx="markers", move=("in", 0.03))),
+    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV", 43.0, 5.0, dict(stab=True, fx="mammoth", speed=0.85, move=("in", 0.05))),
+    ("dakota",  f"{RAW_MORE}/IMG_6804.MOV", 12.0, 2.5, dict(stab=True, fx="dakota", move=("in", 0.04))),
     ("point",   f"{RAW}/IMG_6794.MOV",      45.9, 2.0, dict(stab=True, speed=0.7)),
-    ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.5, dict(stab=True)),
+    ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.5, dict(stab=True, move=("in", 0.05))),
     # product: hero plate with a slow push and a light sweep, dissolving to a 3/4 angle
     ("glasses", "../ai/table/active_hardware_hero_plate_chatgpt.jpg", 0.0, 3.5,
                 dict(still=True, xfade=("../ai/table/glasses_turn_120_chatgpt.jpg", 2.0, 0.45), sweep=True)),
     # walking past another group: each pair of glasses keeps its own audio bubble
-    ("sync",    f"{RAW_MORE}/IMG_6808.MOV", 16.0, 4.5, dict(stab=True, fx="sync")),
-    ("close",   f"{RAW_MORE}/IMG_6803.MOV",  3.0, 4.0, dict(stab=True)),
+    ("sync",    f"{RAW_MORE}/IMG_6808.MOV", 16.0, 4.5, dict(stab=True, fx="sync", speed=0.9)),
+    ("close",   f"{RAW_MORE}/IMG_6803.MOV",  3.0, 4.0, dict(stab=True, move=("in", 0.05))),
 ]
 
 assert abs(sum(s[3] for s in SHOTS) - TOTAL) < 1e-6, sum(s[3] for s in SHOTS)
@@ -59,6 +59,11 @@ CARDS = [
     (20.3, 21.9, ["Right in front of you."]),
     (22.4, 23.9, ["Borrow a pair at the park."]),
     (28.6, 31.9, ["Walk past another group.", "You only hear yours."]),
+]
+
+# Small documentary eyebrows, lower-left. (t_in, t_out, text)
+EYEBROWS = [
+    (0.8, 4.2, "FALLS PARK  ·  SIOUX FALLS, SD"),
 ]
 
 # Small honesty tags, top-right, during generated imagery.
