@@ -20,19 +20,19 @@ RAW_MORE = "../raw_more"
 # id, source, in-point (s), duration on the timeline (s), options
 # speed: source seconds consumed per timeline second (0.7 = slow-mo)
 SHOTS = [
-    ("open",    f"{RAW_MORE}/IMG_6676.MOV",  1.0, 2.5, dict(stab=True)),
+    ("open",    f"{RAW_MORE}/IMG_6676.MOV", 11.0, 2.5, dict(stab=True)),
     ("falls",   f"{RAW_MORE}/IMG_6682.MOV", 16.0, 2.0, dict(stab=True)),
-    ("plaque",  f"{RAW_MORE}/IMG_6709.MOV",  4.0, 2.5, dict(stab=True)),
-    ("reading", f"{RAW}/IMG_6796.MOV",      36.0, 2.5, dict(stab=True, zoom=9)),
+    ("plaque",  f"{RAW_MORE}/IMG_6709.MOV", 23.0, 2.5, dict(stab=True)),
+    ("reading", f"{RAW}/IMG_6796.MOV",      31.0, 2.5, dict(stab=True)),
     ("markers", f"{RAW}/IMG_6799.MOV",       2.0, 3.0, dict(stab=True, fx="markers")),
     ("iceage",  f"{RAW}/IMG_6790.MOV",      22.5, 5.5, dict(stab=False, fx="iceage")),
     ("mammoth", f"{RAW_MORE}/IMG_6806.MOV", 43.0, 3.5, dict(stab=True, fx="mammoth")),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV", 12.0, 2.5, dict(stab=True, fx="dakota")),
     ("point",   f"{RAW}/IMG_6794.MOV",      45.9, 2.0, dict(stab=True, speed=0.7)),
-    ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.0, dict(stab=True)),
+    ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.4, dict(stab=True)),
     ("product", "../ai/table/active_hardware_hero_plate_chatgpt.jpg", 0.0, 1.5, dict(still=True)),
-    ("turn",    f"{RAW_MORE}/IMG_6802.MOV",  2.5, 2.5, dict(stab=True)),
-    ("close",   f"{RAW}/IMG_6799.MOV",       7.8, 4.5, dict(stab=True)),
+    ("visitors", f"{RAW_MORE}/IMG_6808.MOV", 15.0, 2.5, dict(stab=True)),
+    ("close",   f"{RAW_MORE}/IMG_6803.MOV",  3.0, 4.1, dict(stab=True)),
 ]
 
 assert abs(sum(s[3] for s in SHOTS) - TOTAL) < 1e-6, sum(s[3] for s in SHOTS)

@@ -237,6 +237,15 @@ def contact_shadow(frame, cx, feet_y, width, alpha=0.24):
     frame[:] = (frame * (1 - sh[:, :, None] * alpha)).astype(np.uint8)
 
 
+def warp_sprite(sprite, M):
+    """Affine-warp a BGRA sprite into a frame-sized transparent canvas.
+    BORDER_TRANSPARENT leaves untouched pixels as whatever was in memory,
+    so the destination must be zeroed first."""
+    dst = np.zeros((H, W, 4), np.uint8)
+    cv2.warpAffine(sprite, M, (W, H), dst=dst, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_TRANSPARENT)
+    return dst
+
+
 def place_sprite(frame, sprite, A, x0, y0, s0, alpha=1.0):
     """Sprite anchored at frame-0 point (x0,y0) = its bottom-centre, scale s0,
     carried by the tracking transform A."""
@@ -244,7 +253,7 @@ def place_sprite(frame, sprite, A, x0, y0, s0, alpha=1.0):
     # sprite local -> frame0: scale s0, bottom-centre at (x0,y0)
     T = np.array([[s0, 0, x0 - s0 * w / 2], [0, s0, y0 - s0 * h], [0, 0, 1]])
     M = (A @ T)[:2]
-    warped = cv2.warpAffine(sprite, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_TRANSPARENT)
+    warped = warp_sprite(sprite, M)
     blit(frame, warped, 0, 0, alpha)
 
 
@@ -341,9 +350,32 @@ def keep_real_mask(median):
     return keep
 
 
+def cold_grade(img, amount, frost):
+    """Push a float BGR image toward winter light by `amount` (HxW, 0..1):
+    desaturate, cool the balance, lift and flatten; optional frost brightening."""
+    img = img.astype(np.float32)
+    gray = img.mean(axis=2, keepdims=True)
+    cooled = img * 0.42 + gray * 0.58
+    cooled = cooled * np.array([1.10, 1.02, 0.94], np.float32)       # BGR: more blue, less red
+    cooled = cooled * 0.94 + 18
+    if frost is not None:
+        cooled = cooled + frost[:, :, None] * 22
+    a = amount[:, :, None]
+    return img * (1 - a) + cooled * a
+
+
 def person_matte(frame, median):
+    """Returns (matte, shadow_ratio). The matte is the wearer only -- his
+    cast shadow is separated out (same hue as the deck, just darker) and
+    returned as a per-pixel darkening ratio so it can be re-applied on top
+    of whatever the deck has become."""
+    lf = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB).astype(np.float32)
+    lm = cv2.cvtColor(median, cv2.COLOR_BGR2LAB).astype(np.float32)
+    ratio = np.clip((lf[:, :, 0] + 2) / (lm[:, :, 0] + 2), 0.35, 1.0)
+    chroma = np.abs(lf[:, :, 1] - lm[:, :, 1]) + np.abs(lf[:, :, 2] - lm[:, :, 2])
+    shadow = (ratio < 0.9) & (chroma < 9)
     d = cv2.absdiff(frame, median).max(axis=2)
-    m = (d > 24).astype(np.uint8) * 255
+    m = ((d > 24) & ~shadow).astype(np.uint8) * 255
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
     n, lab, st, _ = cv2.connectedComponentsWithStats(m)
@@ -351,8 +383,11 @@ def person_matte(frame, median):
     for i in range(1, n):
         if st[i, cv2.CC_STAT_AREA] > 2500:
             keep[lab == i] = 255
-    keep = cv2.dilate(keep, np.ones((5, 5), np.uint8))
-    return cv2.GaussianBlur(keep, (7, 7), 0)
+    keep = cv2.erode(keep, np.ones((3, 3), np.uint8))
+    keep = cv2.GaussianBlur(keep, (5, 5), 0)
+    sr = np.where(ratio > 0.92, 1.0, ratio).astype(np.float32)
+    sr = cv2.GaussianBlur(sr, (0, 0), 2)
+    return keep, sr
 
 
 def fx_iceage(frames, t0):
@@ -383,6 +418,39 @@ def fx_iceage(frames, t0):
     world = cv2.bitwise_not(keep).astype(np.float32) / 255.0
     world = cv2.GaussianBlur(world, (3, 3), 0)
     xs = np.arange(W, dtype=np.float32).reshape(1, -1)
+    # a frost texture for the deck: soft noise clumps, brighter and cooler
+    rng = np.random.default_rng(7)
+    frost = cv2.GaussianBlur(rng.random((H // 2, W // 2)).astype(np.float32), (0, 0), 0.9)
+    frost = cv2.resize(frost, (W, H), interpolation=cv2.INTER_LINEAR)
+    frost = np.clip((frost - frost.mean()) / (frost.std() + 1e-6) * 0.18 + 0.55, 0, 1)
+    deck_only = np.zeros((H, W), np.uint8)
+    cv2.fillPoly(deck_only, [np.array([[0, 800], [300, 752], [600, 728], [1000, 706], [1920, 696], [1920, 1080], [0, 1080]], np.int32)], 255)
+    frost = frost * (cv2.GaussianBlur(deck_only, (0, 0), 8) / 255.0)
+    # sharpen + grain the upscaled plate so it reads as photographed, not soft
+    plate = cv2.addWeighted(plate, 1.35, cv2.GaussianBlur(plate, (0, 0), 2.0), -0.35, 0)
+    plate = np.clip(plate.astype(np.float32) + rng.normal(0, 3.0, plate.shape), 0, 255).astype(np.uint8)
+    snow_cache = {}
+
+    def snow_layer(i):
+        if i in snow_cache:
+            return snow_cache[i]
+        layer = np.zeros((H, W), np.float32)
+        r2 = np.random.default_rng(0)
+        N = 320
+        sx0 = r2.random(N) * W
+        sy0 = r2.random(N) * H
+        spd = 40 + r2.random(N) * 70
+        drift = 10 + r2.random(N) * 25
+        size = 1.2 + r2.random(N) * 2.2
+        bright = 0.35 + r2.random(N) * 0.5
+        tt = i / FPS
+        for k in range(N):
+            x = (sx0[k] + drift[k] * tt + 6 * math.sin(tt * 1.3 + k)) % W
+            y = (sy0[k] + spd[k] * tt) % H
+            cv2.circle(layer, (int(x), int(y)), int(size[k]), float(bright[k]), -1, cv2.LINE_AA)
+        layer = cv2.GaussianBlur(layer, (0, 0), 1.2) * 120
+        snow_cache[i] = layer[:, :, None]
+        return snow_cache[i]
     wipe_t0, wipe_t1 = 0.35, 2.05         # local seconds
     out = []
     n = len(frames)
@@ -397,21 +465,25 @@ def fx_iceage(frames, t0):
         if 0 < p < 1:
             bloom = np.clip(1 - np.abs(xs - seam + 40) / 90.0, 0, 1) * world * 28
             comp = np.clip(comp + bloom[:, :, None], 0, 255)
-        comp = comp.astype(np.uint8)
-        # the wearer, live, in front of everything
-        pm = person_matte(f, median).astype(np.float32)[:, :, None] / 255.0
-        comp = (comp * (1 - pm) + f * pm).astype(np.uint8)
+        # the real foreground (deck, rails, boards) goes COLD as the seam
+        # passes -- keeping it in July light was the loudest mismatch
+        cold_a = np.clip((seam - xs) / 160.0 + 0.5, 0, 1) * (1 - world)
+        comp = cold_grade(comp, cold_a * 0.85, frost)
+        # falling snow over the transformed side
+        if p > 0:
+            comp = comp + snow_layer(i) * a[:, :, None]
+        comp = np.clip(comp, 0, 255).astype(np.uint8)
+        # the wearer, live, in front of everything (lightly cooled too);
+        # his real shadow re-applied onto the transformed deck
+        pm8, sr = person_matte(f, median)
+        pm = pm8.astype(np.float32)[:, :, None] / 255.0
+        comp = (comp.astype(np.float32) * sr[:, :, None]).astype(np.uint8)
+        fcool = np.clip(cold_grade(f.astype(np.float32), np.full((H, W), 0.35, np.float32) * (p > 0), None), 0, 255)
+        comp = np.clip(comp * (1 - pm) + fcool * pm, 0, 255).astype(np.uint8)
         if 0 < p < 1:
-            ov = comp.copy()
-            sx = int(seam)
-            cv2.line(ov, (sx, 0), (sx, H), (235, 240, 255), 2, cv2.LINE_AA)
-            glow = np.zeros((H, W, 3), np.uint8)
-            cv2.line(glow, (sx, 0), (sx, H), ACCENT_BGR, 12, cv2.LINE_AA)
-            glow = cv2.GaussianBlur(glow, (0, 0), 8)
-            ov = np.clip(ov.astype(np.int32) + glow.astype(np.int32) * 0.35, 0, 255).astype(np.uint8)
-            cv2.addWeighted(ov, 0.7, comp, 0.3, 0, comp)
-            pm8 = (pm[:, :, 0] * 255).astype(np.uint8)
-            comp = np.where(pm8[:, :, None] > 128, f, comp)
+            # soft frost edge, no line
+            band = np.clip(1 - np.abs(xs - seam) / 55.0, 0, 1) ** 2 * 40
+            comp = np.clip(comp.astype(np.float32) + band[:, :, None] * (1 - pm), 0, 255).astype(np.uint8)
         # slow push-in so the frame breathes
         s = 1.0 + 0.05 * (i / max(1, n - 1))
         M = cv2.getRotationMatrix2D((W * 0.62, H * 0.55), 0, s)
@@ -422,33 +494,112 @@ def fx_iceage(frames, t0):
 
 # --------------------------------------------------------------------------- fx: elements
 
-def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.3), shadow_w=None):
+def sharpness(bgr):
+    return cv2.Laplacian(cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY), cv2.CV_64F).var()
+
+
+def match_focus(sprite, bg_region):
+    """Blur the sprite until its Laplacian variance sits just under the
+    footage it stands in. A cutout that is sharper than its background is
+    the single loudest 'pasted' tell."""
+    target = sharpness(bg_region) * 0.85
+    a = sprite[:, :, 3] > 128
+    if a.sum() < 500:
+        return sprite, 0.0
+    cur = cv2.Laplacian(cv2.cvtColor(sprite[:, :, :3], cv2.COLOR_BGR2GRAY), cv2.CV_64F)[a].var()
+    sigma = 0.0
+    while cur > target and sigma < 6.0:
+        sigma += 0.25
+        b = cv2.GaussianBlur(sprite[:, :, :3], (0, 0), sigma)
+        cur = cv2.Laplacian(cv2.cvtColor(b, cv2.COLOR_BGR2GRAY), cv2.CV_64F)[a].var()
+    if sigma > 0:
+        sprite = sprite.copy()
+        sprite[:, :, :3] = cv2.GaussianBlur(sprite[:, :, :3], (0, 0), sigma)
+        sprite[:, :, 3] = cv2.GaussianBlur(sprite[:, :, 3], (0, 0), max(0.6, sigma * 0.5))
+    return sprite, sigma
+
+
+def light_wrap(comp, sprite_alpha_full, bg, width=9, amount=0.55):
+    """Let the background bleed into the sprite's edge band."""
+    a = sprite_alpha_full.astype(np.float32) / 255.0
+    inner = cv2.erode((a > 0.5).astype(np.uint8), np.ones((width, width), np.uint8)).astype(np.float32)
+    band = np.clip(a - inner, 0, 1)
+    band = cv2.GaussianBlur(band, (0, 0), width / 2) * amount
+    bgb = cv2.GaussianBlur(bg, (0, 0), width)
+    return (comp * (1 - band[:, :, None]) + bgb * band[:, :, None]).astype(np.uint8)
+
+
+def reveal_frame(sprite, u):
+    """Materialise: the sprite dissolves in with a soft warm bloom that
+    resolves into the object. No scan line."""
+    if u >= 1:
+        return sprite, None
+    sp = sprite.copy()
+    sp[:, :, 3] = (sp[:, :, 3].astype(np.float32) * ease(u)).astype(np.uint8)
+    glow = np.zeros_like(sprite)
+    k = (1 - u) * 0.7
+    glow[:, :, :3] = ACCENT_BGR
+    glow[:, :, 3] = (cv2.GaussianBlur(sprite[:, :, 3], (0, 0), 25 + 40 * (1 - u)) * k).astype(np.uint8)
+    return sp, glow
+
+
+def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.3),
+               reflection=None, breathe=True, color_strength=0.55):
+    """Track the background, then stand a cutout on the real ground:
+    colour-matched, defocus-matched, light-wrapped, with a contact shadow
+    (and a water reflection when asked), dissolving in under a bloom."""
     x0, y0 = anchor
     ex = np.zeros((H, W), np.uint8)
     ex[exclude_rect[1]:exclude_rect[3], exclude_rect[0]:exclude_rect[2]] = 255
     A = track(frames, ex)
     sprite = crop_alpha(cv2.imread(sprite_path, cv2.IMREAD_UNCHANGED))
-    # match colour to the ground the element stands on
+    a = sprite[:, :, 3].astype(np.float32)
+    sprite[:, :, 3] = np.clip((a - 40) * (255.0 / 215.0), 0, 255).astype(np.uint8)
     sw, sh = int(sprite.shape[1] * scale), int(sprite.shape[0] * scale)
     ry0, ry1 = max(0, int(y0 - sh * 1.1)), min(H, int(y0 + 30))
     rx0, rx1 = max(0, int(x0 - sw * 0.7)), min(W, int(x0 + sw * 0.7))
     region = frames[0][ry0:ry1, rx0:rx1]
-    sprite = color_transfer(sprite, region, strength=0.65)
+    sprite = color_transfer(sprite, region, strength=color_strength)
     sprite = cv2.resize(sprite, (sw, sh), interpolation=cv2.INTER_AREA)
-    # sit the edges into the shot: shave the halo, soften a touch
-    a = cv2.erode(sprite[:, :, 3], np.ones((3, 3), np.uint8))
-    sprite[:, :, 3] = cv2.GaussianBlur(a, (0, 0), 1.0)
-    sprite[:, :, :3] = cv2.GaussianBlur(sprite[:, :, :3], (0, 0), 0.6)
+    sprite, sigma = match_focus(sprite, region)
+    print(f"    focus-matched with sigma={sigma:.2f}; bg sharp={sharpness(region):.0f}")
     out = []
+    n = len(frames)
     for i, f in enumerate(frames):
         t = i / FPS
         u = ease_out((t - appear[0]) / (appear[1] - appear[0]))
         g = f.copy()
-        if u > 0:
-            fx_, fy_ = apply_pt(A[i], x0, y0)
-            contact_shadow(g, fx_, fy_ - 4, (shadow_w or sw) * 0.9, alpha=0.30 * u)
-            sp = scan_reveal(sprite, u) if u < 1 else sprite
-            place_sprite(g, sp, A[i], x0, y0, 1.0)
+        if u <= 0:
+            out.append(g)
+            continue
+        s = 1.0 + (0.006 * math.sin(2 * math.pi * 0.22 * t) if breathe else 0.0)
+        fx_, fy_ = apply_pt(A[i], x0, y0)
+        contact_shadow(g, fx_, fy_ - 3, sw * 0.9, alpha=0.26 * u)
+        sp, glow = reveal_frame(sprite, u)
+        if reflection:
+            # mirror into the water below the feet, squashed and faded
+            rf = cv2.flip(sp, 0)
+            rf = cv2.resize(rf, (sw, int(sh * reflection["squash"])), interpolation=cv2.INTER_AREA)
+            rf[:, :, 3] = (rf[:, :, 3].astype(np.float32) * reflection["alpha"]
+                           * np.linspace(1, 0, rf.shape[0]).reshape(-1, 1)).astype(np.uint8)
+            rf[:, :, :3] = cv2.GaussianBlur(rf[:, :, :3], (0, 0), 3)
+            Tm = np.array([[s, 0, x0 - s * sw / 2], [0, s, y0 + 2], [0, 0, 1]])
+            Mr = (A[i] @ Tm)[:2]
+            wr = warp_sprite(rf, Mr)
+            wm = np.zeros((H, W), np.uint8)
+            cv2.fillPoly(wm, [np.array(reflection["water_poly"], np.int32)], 255)
+            wr[:, :, 3] = (wr[:, :, 3].astype(np.float32) * (cv2.GaussianBlur(wm, (0, 0), 12) / 255.0)).astype(np.uint8)
+            blit(g, wr, 0, 0, 1.0)
+        Ts = np.array([[s, 0, x0 - s * sw / 2], [0, s, y0 - s * sh], [0, 0, 1]])
+        M = (A[i] @ Ts)[:2]
+        warped = warp_sprite(sp, M)
+        if glow is not None:
+            wg = warp_sprite(glow, M)
+            ga = wg[:, :, 3:4].astype(np.float32) / 255.0
+            g[:] = np.clip(g.astype(np.float32) + np.array(ACCENT_BGR, np.float32) * ga * 0.6, 0, 255).astype(np.uint8)
+        bg = g.copy()
+        blit(g, warped, 0, 0, 1.0)
+        g = light_wrap(g, warped[:, :, 3], bg)
         out.append(g)
     return out
 
@@ -470,11 +621,13 @@ def stage_fx():
         elif fx == "iceage":
             res = fx_iceage(frames, t0)
         elif fx == "mammoth":
-            res = fx_element(frames, f"{WORK}/mam_cut.png", anchor=(560, 985), scale=0.95,
-                             exclude_rect=(1180, 0, 1920, 1080), appear=(0.35, 1.25))
+            res = fx_element(frames, f"{WORK}/mam_rembg.png", anchor=(560, 985), scale=0.92,
+                             exclude_rect=(1180, 0, 1920, 1080), appear=(0.35, 1.35),
+                             reflection=dict(squash=0.45, alpha=0.28,
+                                             water_poly=[(0, 950), (900, 900), (1200, 960), (1200, 1080), (0, 1080)]))
         elif fx == "dakota":
-            res = fx_element(frames, f"{WORK}/dak_cut.png", anchor=(1300, 735), scale=0.78,
-                             exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.1))
+            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1300, 735), scale=0.78,
+                             exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
         else:
             raise KeyError(fx)
         w = Writer(out)
@@ -678,7 +831,7 @@ def stage_audio():
         if len(a) < k:
             a = np.vstack([a, np.zeros((k - len(a), 2), np.float32)])
         lvl = {"open": -14, "falls": -8, "plaque": -22, "reading": -16, "markers": -14, "iceage": -20,
-               "mammoth": -12, "dakota": -12, "point": -16, "walk": -16, "product": -60, "turn": -14, "close": -16}.get(sid, -16)
+               "mammoth": -12, "dakota": -12, "point": -16, "walk": -16, "product": -60, "visitors": -14, "close": -16}.get(sid, -16)
         a = fade_edges(a * db(lvl), 0.08, 0.12)
         i0 = int(t * SR)
         bus[i0:i0 + k] += a
