@@ -20,7 +20,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, EYEBROWS,
+from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, EYEBROWS, AUDIO,
                   MUSIC, MUSIC_OFFSET, SFX, AMBIENCE, BRAND, BRAND_SUB, TAGLINE, shot_start)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -100,7 +100,7 @@ def prep_shot(sid, src, t_in, dur, opt):
     # once, and never "correct" it afterwards.
     pre = "" if opt.get("sdr") else f"{TONEMAP},"
     run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
-         "-vf", f"{pre}scale={W}:{H}:flags=lanczos,fps={FPS}", "-an", *ENC, seg])
+         "-vf", f"{pre}scale={W}:{H}:flags=lanczos", "-an", *ENC, seg])
     vf = []
     if opt.get("stab"):
         trf = f"{WORK}/_{sid}.trf"
@@ -110,8 +110,14 @@ def prep_shot(sid, src, t_in, dur, opt):
         mode = "tripod=1" if opt.get("tripod") else f"smoothing={opt.get('smooth', 24)}"
         vf.append(f"vidstabtransform=input={trf}:{mode}:zoom={opt.get('zoom', 3)}:optzoom=0:crop=black:interpol=bicubic")
     vf.append(f"trim=start={lead:.4f}:duration={src_dur:.4f},setpts=PTS-STARTPTS")
-    if speed != 1.0:
+    # 30 -> 24 by dropping frames judders anything that MOVES: a pan steps
+    # double every fifth frame, and it measured as three times the shake of
+    # the source. Camera moves and slow-mo are motion-compensated instead;
+    # a locked-off shot just drops frames (nothing in it moves enough to see).
+    if speed != 1.0 or opt.get("mc") or opt.get("stab"):
         vf.append(f"minterpolate=fps={FPS/speed:.4f}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,setpts=PTS/{speed}")
+    else:
+        vf.append(f"fps={FPS}")
     if opt.get("crop"):
         cx, cy, sc = opt["crop"]
         cw, ch = int(W / sc), int(H / sc)
@@ -880,16 +886,16 @@ def stage_fx():
         elif fx == "iceage":
             res = fx_iceage(frames, t0)
         elif fx == "mammoth":
-            res = fx_element(frames, f"{WORK}/mam_rembg.png", anchor=(560, 985), scale=0.92,
+            res = fx_element(frames, f"{WORK}/mam_rembg.png", anchor=(590, 952), scale=0.85,
                              exclude_rect=(1180, 0, 1920, 1080), appear=(0.35, 1.35),
                              reflection=dict(squash=0.45, alpha=0.28,
-                                             water_poly=[(0, 950), (900, 900), (1200, 960), (1200, 1080), (0, 1080)]))
+                                             water_poly=[(0, 920), (904, 873), (1182, 929), (1182, 1080), (0, 1080)]))
         elif fx == "sync":
             res = fx_sync(frames, t0)
         elif fx == "activate":
             res = fx_activate(frames, t0)
         elif fx == "dakota":
-            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1300, 738), scale=0.9,
+            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1275, 723), scale=0.83,
                              exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
         else:
             raise KeyError(fx)
@@ -1055,7 +1061,7 @@ def stage_picture():
         real = True
         for sid, _, _, dur, opt in SHOTS:
             if shot_start(sid) <= t < shot_start(sid) + dur:
-                real = not (opt.get("black") or opt.get("sdr") or opt.get("still"))
+                real = not (opt.get("black") or opt.get("sdr"))   # a still cut from footage takes the look too
                 break
         if real:
             f = filmic(f, i)
@@ -1285,6 +1291,18 @@ def stage_audio():
     n = int(TOTAL * SR)
     bus = np.zeros((n, 2), np.float32)
     S = shot_start
+    if AUDIO == "ambience":
+        # Operator, 2026-09-21: no narration yet, no score -- "generic falls
+        # sounds over the background". One bed, the falls, under everything,
+        # a touch louder under the falls shot, out with the end card.
+        amb = load_audio(AMBIENCE, 2.0, TOTAL + 1)
+        if len(amb) < n:
+            amb = np.vstack([amb] * (int(np.ceil(n / max(1, len(amb)))) + 1))
+        amb = amb[:n]
+        amb *= env_points([(0, -60), (S("pan"), -30), (S("falls"), -20), (S("falls") + 2.0, -24),
+                           (END_CARD_START, -24), (TOTAL - 0.3, -60)], n)
+        write_wav(f"{WORK}/mix.wav", amb)
+        return
     hit = S("markers")                         # the glasses come online: the drop
     # music: sneaks in under the logo and the pan, lifts as he looks up, drops at the hit
     m = load_audio(MUSIC, MUSIC_OFFSET, TOTAL + 1)[:n]
@@ -1383,9 +1401,11 @@ FINISH = "null"
 
 def stage_final():
     os.makedirs("../out", exist_ok=True)
-    for mix, name in [("mix.wav", "ORI_promo.mp4"), ("mix_vo.wav", "ORI_promo_vo.mp4")]:
+    outs = [("mix.wav", "ORI_promo.mp4")] if AUDIO == "ambience" else [("mix.wav", "ORI_promo.mp4"), ("mix_vo.wav", "ORI_promo_vo.mp4")]
+    lufs = -20 if AUDIO == "ambience" else -14
+    for mix, name in outs:
         run(["ffmpeg", "-v", "error", "-y", "-i", f"{WORK}/picture.mp4", "-i", f"{WORK}/{mix}",
-             "-vf", FINISH, "-af", "loudnorm=I=-14:TP=-1.5:LRA=9",
+             "-vf", FINISH, "-af", f"loudnorm=I={lufs}:TP=-1.5:LRA=9",
              "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p", "-profile:v", "high",
              "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest", f"../out/{name}"])
         print("  ->", f"../out/{name}", ffprobe_dur(f"../out/{name}"))
