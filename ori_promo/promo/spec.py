@@ -29,9 +29,8 @@ SHOTS = [
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV", 12.0, 2.5, dict(stab=True, fx="dakota", move=("in", 0.04))),
     ("point",   f"{RAW}/IMG_6794.MOV",      45.9, 2.0, dict(stab=True, speed=0.7)),
     ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.5, dict(stab=True, move=("in", 0.05))),
-    # product: hero plate with a slow push and a light sweep, dissolving to a 3/4 angle
-    ("glasses", "../ai/table/active_hardware_hero_plate_chatgpt.jpg", 0.0, 3.5,
-                dict(still=True, xfade=("../ai/table/glasses_turn_120_chatgpt.jpg", 2.0, 0.45), sweep=True)),
+    # product: the supplied studio turntable (SDR, 720p -> upscaled), front to 3/4
+    ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True)),
     # walking past another group: each pair of glasses keeps its own audio bubble
     ("sync",    f"{RAW_MORE}/IMG_6808.MOV", 16.0, 4.5, dict(stab=True, fx="sync", speed=0.9)),
     ("close",   f"{RAW_MORE}/IMG_6803.MOV",  3.0, 4.0, dict(stab=True, move=("in", 0.05))),

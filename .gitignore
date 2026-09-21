@@ -31,3 +31,6 @@ ori_promo/vo/voices/
 ori_promo/raw_more/
 ori_promo/music/
 ori_promo/promo/work/
+
+# operator-supplied media (large, not ours to version)
+ori_promo/supplied/

@@ -93,8 +93,9 @@ def prep_shot(sid, src, t_in, dur, opt):
     # The phone shoots 10-bit HLG BT.2020 (Dolby Vision profile 8). Decoding
     # that as SDR is what made every cut look grey and flat; tone-map here,
     # once, and never "correct" it afterwards.
+    pre = "" if opt.get("sdr") else f"{TONEMAP},"
     run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
-         "-vf", f"{TONEMAP},scale={W}:{H}:flags=lanczos,fps={FPS}", "-an", *ENC, seg])
+         "-vf", f"{pre}scale={W}:{H}:flags=lanczos,fps={FPS}", "-an", *ENC, seg])
     vf = []
     if opt.get("stab"):
         trf = f"{WORK}/_{sid}.trf"
@@ -1151,7 +1152,7 @@ def stage_audio():
         if len(a) < k:
             a = np.vstack([a, np.zeros((k - len(a), 2), np.float32)])
         lvl = {"open": -14, "falls": -8, "plaque": -22, "reading": -16, "markers": -14, "iceage": -20,
-               "mammoth": -12, "dakota": -12, "point": -16, "walk": -16, "visitors": -14, "close": -16}.get(sid, -16)
+               "mammoth": -12, "dakota": -12, "point": -16, "walk": -16, "glasses": -60, "close": -16}.get(sid, -16)
         if opt.get("still"):
             lvl = -60
         a = fade_edges(a * db(lvl), 0.08, 0.12)
