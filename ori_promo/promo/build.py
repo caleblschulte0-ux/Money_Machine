@@ -823,20 +823,22 @@ def stage_fx():
 GRADE = "unsharp=5:5:0.2"
 
 
-def levels_lut(sample_frames, lo_p=0.4, hi_p=99.6, lo_t=4, hi_t=252, contrast=1.12):
+def levels_lut(sample_frames, lo_p=1.5, hi_p=99.8, lo_t=0, hi_t=255, contrast=1.42, gamma=1.12):
     lum = np.concatenate([cv2.cvtColor(f, cv2.COLOR_BGR2GRAY).ravel()[::7] for f in sample_frames])
     lo, hi = np.percentile(lum, lo_p), np.percentile(lum, hi_p)
     x = np.arange(256, dtype=np.float32)
     y = np.clip((x - lo) / max(1.0, hi - lo), 0, 1)
+    y = y ** gamma
     y = y + (contrast - 1) * (y - 0.5) * (1 - np.abs(y - 0.5) * 2) * 0.9
     y = np.clip(y, 0, 1) * (hi_t - lo_t) + lo_t
     return y.astype(np.uint8)
 
 
-def correct(frame, lut, sat=1.05):
+def correct(frame, lut, sat=1.22, vib=0.22):
     g = cv2.LUT(frame, lut)
     hsv = cv2.cvtColor(g, cv2.COLOR_BGR2HSV).astype(np.float32)
-    hsv[:, :, 1] = np.clip(hsv[:, :, 1] * sat, 0, 255)
+    s = hsv[:, :, 1]
+    hsv[:, :, 1] = np.clip(s * sat + vib * (255 - s) * (s / 255.0), 0, 255)   # vibrance lifts the muted, spares the loud
     return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
 
