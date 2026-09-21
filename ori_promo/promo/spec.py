@@ -11,8 +11,8 @@ product -> tagline -> end card.
 """
 
 W, H, FPS = 1920, 1080, 30
-TOTAL = 40.0
-END_CARD_START = 37.0
+TOTAL = 36.5
+END_CARD_START = 33.5
 
 RAW = "../raw"
 RAW_MORE = "../raw_more"
@@ -25,19 +25,15 @@ SHOTS = [
     ("plaque",  f"{RAW_MORE}/IMG_6709.MOV", 23.0, 2.5, dict(stab=True)),
     ("reading", f"{RAW}/IMG_6796.MOV",      31.0, 2.5, dict(stab=True)),
     ("markers", f"{RAW}/IMG_6799.MOV",       2.0, 3.0, dict(stab=True, fx="markers")),
-    ("iceage",  f"{RAW}/IMG_6790.MOV",      22.5, 5.5, dict(stab=False, fx="iceage")),
-    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV", 43.0, 3.5, dict(stab=True, fx="mammoth")),
+    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV", 43.0, 5.0, dict(stab=True, fx="mammoth")),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV", 12.0, 2.5, dict(stab=True, fx="dakota")),
     ("point",   f"{RAW}/IMG_6794.MOV",      45.9, 2.0, dict(stab=True, speed=0.7)),
     ("walk",    f"{RAW_MORE}/IMG_6805.MOV", 35.3, 2.5, dict(stab=True)),
-    # product: four angles cut on the beat (1 beat = 0.5s), then the hero, then worn
-    ("turn30",  "../ai/table/glasses_turn_30_chatgpt.jpg",  0.0, 0.5, dict(still=True)),
-    ("turn120", "../ai/table/glasses_turn_120_chatgpt.jpg", 0.0, 0.5, dict(still=True)),
-    ("turn210", "../ai/table/glasses_turn_210_chatgpt.jpg", 0.0, 0.5, dict(still=True)),
-    ("turn300", "../ai/table/glasses_turn_300_chatgpt.jpg", 0.0, 0.5, dict(still=True)),
-    ("hero",    "../ai/table/active_hardware_hero_plate_chatgpt.jpg", 0.0, 1.5, dict(still=True)),
-    ("worn",    "../ai/worn/product_worn_falls_park_plate_chatgpt.jpg", 0.0, 1.5, dict(still=True)),
-    ("visitors", f"{RAW_MORE}/IMG_6808.MOV", 15.0, 2.5, dict(stab=True)),
+    # product: hero plate with a slow push and a light sweep, dissolving to a 3/4 angle
+    ("glasses", "../ai/table/active_hardware_hero_plate_chatgpt.jpg", 0.0, 3.5,
+                dict(still=True, xfade=("../ai/table/glasses_turn_120_chatgpt.jpg", 2.0, 0.45), sweep=True)),
+    # walking past another group: each pair of glasses keeps its own audio bubble
+    ("sync",    f"{RAW_MORE}/IMG_6808.MOV", 16.0, 4.5, dict(stab=True, fx="sync")),
     ("close",   f"{RAW_MORE}/IMG_6803.MOV",  3.0, 4.0, dict(stab=True)),
 ]
 
@@ -58,27 +54,27 @@ CARDS = [
     (4.6,  6.9,  ["Every place has a story."]),
     (7.3,  9.4,  ["Most of it lives on a plaque."]),
     (10.0, 12.4, ["Open Range glasses put the story", "back where it happened."]),
-    (14.8, 17.7, ["The ice that carved it."]),
-    (21.8, 23.9, ["The people who stood here."]),
-    (24.3, 25.9, ["Right in front of you."]),
-    (26.4, 27.9, ["Borrow a pair at the park."]),
-    (33.7, 35.7, ["See the story where you stand."]),
+    (14.1, 16.9, ["The ice that carved it."]),
+    (17.8, 19.9, ["The people who stood here."]),
+    (20.3, 21.9, ["Right in front of you."]),
+    (22.4, 23.9, ["Borrow a pair at the park."]),
+    (28.6, 31.9, ["Walk past another group.", "You only hear yours."]),
 ]
 
 # Small honesty tags, top-right, during generated imagery.
 TAGS = [
-    (13.0, 17.9, "ICE AGE  ·  VISUALIZATION"),
-    (18.4, 21.4, "VISUALIZATION"),
-    (21.9, 23.9, "VISUALIZATION"),
-    (28.5, 33.4, "PRODUCT VISUALIZATION"),
+    (12.9, 17.4, "VISUALIZATION"),
+    (17.9, 19.9, "VISUALIZATION"),
+    (24.5, 27.9, "PRODUCT VISUALIZATION"),
 ]
 
 # Optional narration variant (Piper, offline). Timeline placement.
 VO = [
     (4.6,  "Every place has a story. Most of it lives on a plaque."),
     (10.0, "Open Range glasses put the story back where it happened."),
-    (14.8, "The ice that carved it. The people who stood here. Right in front of you."),
-    (26.4, "Borrow a pair at the park. See the story where you stand."),
+    (14.1, "The ice that carved it. The people who stood here. Right in front of you."),
+    (22.4, "Borrow a pair at the park."),
+    (28.6, "Walk past another group. You only hear yours."),
 ]
 
 MUSIC = "../music/inspired.mp3"

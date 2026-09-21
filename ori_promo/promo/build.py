@@ -66,10 +66,20 @@ def prep_shot(sid, src, t_in, dur, opt):
         return
     n_frames = int(round(dur * FPS))
     if opt.get("still"):
-        # slow push on a still, 1.5s, no natural sound
-        run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", src, "-t", dur,
-             "-vf", f"scale=2400:-1,zoompan=z='1.0+0.06*on/{n_frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s={W}x{H}:fps={FPS},format=yuv420p",
-             "-frames:v", n_frames, *ENC, out])
+        zp = lambda n: (f"scale=2400:-1,zoompan=z='1.0+0.07*on/{n}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+                        f":d=1:s={W}x{H}:fps={FPS},format=yuv420p")
+        if opt.get("xfade"):
+            src2, t_at, xd = opt["xfade"]
+            n1 = int(round((t_at + xd) * FPS))
+            n2 = int(round((dur - t_at) * FPS))
+            run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", src, "-loop", "1", "-i", src2,
+                 "-filter_complex",
+                 f"[0:v]{zp(n1)},trim=duration={t_at + xd:.3f}[a];[1:v]{zp(n2)},trim=duration={dur - t_at:.3f}[b];"
+                 f"[a][b]xfade=transition=fade:duration={xd}:offset={t_at}",
+                 "-frames:v", n_frames, *ENC, out])
+        else:
+            run(["ffmpeg", "-v", "error", "-y", "-loop", "1", "-i", src, "-t", dur,
+                 "-vf", zp(n_frames), "-frames:v", n_frames, *ENC, out])
         run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", dur, wav])
         return
     speed = opt.get("speed", 1.0)
@@ -629,6 +639,140 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
     return out
 
 
+def person_tracks(frames):
+    """Head-top and feet positions for the two walkers, from background
+    difference blobs, fitted to smooth quadratics in time so the overlay
+    never jitters. Returns [(t0, t1, fx_head, fy_head, fy_feet, height)]."""
+    small = [cv2.resize(f, (960, 540)) for f in frames]
+    med = np.median(np.stack(small[::3]), axis=0).astype(np.uint8)
+    obs = []
+    for i, s in enumerate(small):
+        d = cv2.absdiff(s, med).max(axis=2)
+        m = (d > 32).astype(np.uint8) * 255
+        m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+        n, lab, st, cen = cv2.connectedComponentsWithStats(m)
+        blobs = []
+        for k in range(1, n):
+            a, x, y, w, h = st[k, cv2.CC_STAT_AREA], st[k, cv2.CC_STAT_LEFT], st[k, cv2.CC_STAT_TOP], st[k, cv2.CC_STAT_WIDTH], st[k, cv2.CC_STAT_HEIGHT]
+            if a > 4000 and h > 150 and y < 120:
+                ys, xs = np.where(lab[y:y + 30, x:x + w] == k)
+                blobs.append((float(x + xs.mean()) * 2, float(y) * 2, float(y + h) * 2, float(w) * 2))
+        obs.append(blobs)
+    # two tracks: A = the one present from frame 0 (him), B = the one that enters from the right
+    tracks = {"A": [], "B": []}
+    for i, blobs in enumerate(obs):
+        blobs = sorted(blobs, key=lambda b_: b_[0])
+        if len(blobs) == 1 and blobs[0][3] < 330:
+            x, y, yf, w = blobs[0]
+            # single, unmerged blob: assign by predicted position
+            def pred(tr):
+                if len(tr) < 4:
+                    return None
+                ts = np.array([o[0] for o in tr[-6:]]); xs = np.array([o[1] for o in tr[-6:]])
+                k = np.polyfit(ts, xs, 1)
+                return np.polyval(k, i)
+            pa, pb = pred(tracks["A"]), pred(tracks["B"])
+            if pa is not None and (pb is None or abs(pa - x) <= abs(pb - x)):
+                tracks["A"].append((i, x, y, yf))
+            elif pb is not None:
+                tracks["B"].append((i, x, y, yf))
+            else:
+                tracks["A" if not tracks["A"] else "B"].append((i, x, y, yf))
+        elif len(blobs) >= 2:
+            (x1, y1, f1, w1), (x2, y2, f2, w2) = blobs[0], blobs[-1]
+            # he walks left -> A is the one further along (left) once both exist
+            if not tracks["B"]:
+                tracks["A"].append((i, x1, y1, f1)); tracks["B"].append((i, x2, y2, f2))
+            else:
+                la = tracks["A"][-1][1]; lb = tracks["B"][-1][1]
+                if abs(la - x1) + abs(lb - x2) <= abs(la - x2) + abs(lb - x1):
+                    tracks["A"].append((i, x1, y1, f1)); tracks["B"].append((i, x2, y2, f2))
+                else:
+                    tracks["A"].append((i, x2, y2, f2)); tracks["B"].append((i, x1, y1, f1))
+    out = []
+    n = len(frames)
+    for key in ("A", "B"):
+        tr = tracks[key]
+        if len(tr) < 8:
+            continue
+        ts = np.array([o[0] for o in tr], np.float64)
+        kx = np.polyfit(ts, [o[1] for o in tr], 2)
+        ky = np.polyfit(ts, [o[2] for o in tr], 1)
+        kf = np.polyfit(ts, [o[3] for o in tr], 1)
+        hgt = float(np.median([o[3] - o[2] for o in tr]))
+        t0, t1 = int(ts.min()), int(ts.max())
+        out.append((max(0, t0 - 4), min(n - 1, t1 + 4), lambda i, k=kx: float(np.polyval(k, i)),
+                    lambda i, k=ky: float(np.polyval(k, i)), lambda i, k=kf: float(np.polyval(k, i)), hgt))
+        print(f"    track {key}: frames {t0}-{t1}, height {hgt:.0f}px, {len(tr)} obs")
+    return out
+
+
+def draw_waves(frame, cx, cy, t, col, phase=0.0, r0=26, spacing=34, n=3, forward=-1):
+    """Sound arcs leaving the glasses, forward of the walker."""
+    ov = frame.copy()
+    for k in range(n):
+        u = ((t * 1.1 + phase + k / n) % 1.0)
+        r = int(r0 + u * spacing * n)
+        al = (1 - u) * 0.9
+        ang0 = 180 - 55 if forward < 0 else -55
+        cv2.ellipse(ov, (int(cx), int(cy)), (r, r), 0, ang0, ang0 + 110, col, 3, cv2.LINE_AA)
+        cv2.addWeighted(ov, al, frame, 1 - al, 0, frame)
+        ov = frame.copy()
+
+
+def draw_bubble(frame, cx, feet_y, rx, col, t, strength=1.0):
+    """A soft ring on the ground around the walker -- their private audio zone."""
+    ry = int(rx * 0.22)
+    glow = np.zeros_like(frame)
+    cv2.ellipse(glow, (int(cx), int(feet_y)), (int(rx), ry), 0, 0, 360, col, 4, cv2.LINE_AA)
+    glow = cv2.GaussianBlur(glow, (0, 0), 6)
+    pulse = 0.75 + 0.25 * math.sin(2 * math.pi * 0.9 * t)
+    frame[:] = np.clip(frame.astype(np.int32) + glow.astype(np.int32) * (0.9 * strength * pulse), 0, 255).astype(np.uint8)
+    ov = frame.copy()
+    cv2.ellipse(ov, (int(cx), int(feet_y)), (int(rx), ry), 0, 0, 360, col, 2, cv2.LINE_AA)
+    cv2.addWeighted(ov, 0.85 * strength, frame, 1 - 0.85 * strength, 0, frame)
+
+
+COOL = (255, 235, 200)          # BGR: cool white-blue for the other group
+
+
+def fx_sync(frames, t0):
+    tracks = person_tracks(frames)
+    if not tracks:
+        return frames
+    out = []
+    labels = [text_sprite("YOUR GROUP", 26, "SemiBold", ACCENT, tracking=3),
+              text_sprite("ANOTHER GROUP", 26, "SemiBold", (200, 235, 255), tracking=3)]
+    cols = [ACCENT_BGR, COOL]
+    for i, f in enumerate(frames):
+        t = i / FPS
+        g = f.copy()
+        for k, (a, b_, fx_, fy_, ff_, hgt) in enumerate(tracks):
+            if not (a <= i <= b_):
+                continue
+            fade = min(1.0, (i - a) / 8.0, (b_ - i) / 8.0)
+            fade *= ease_out(min(1.0, (t - 0.5) / 0.6))          # overlay arrives after the shot settles
+            if fade <= 0:
+                continue
+            hx, hy, feet = fx_(i), fy_(i), ff_(i)
+            eye_y = hy + hgt * 0.12
+            eye_x = hx - hgt * 0.04                                # walking left: glasses sit forward of centre
+            draw_bubble(g, hx, feet, hgt * 0.55, cols[k], t, fade)
+            draw_waves(g, eye_x, eye_y, t, cols[k], phase=0.3 * k, forward=-1)
+            ov = g.copy()
+            cv2.circle(ov, (int(eye_x), int(eye_y)), 5, cols[k], -1, cv2.LINE_AA)
+            cv2.addWeighted(ov, fade, g, 1 - fade, 0, g)
+            lab = labels[k]
+            lx = int(hx - lab.shape[1] / 2); ly = int(hy - 46)
+            box = np.zeros((lab.shape[0] + 14, lab.shape[1] + 24, 4), np.uint8)
+            box[:, :, :3] = 8; box[:, :, 3] = 150
+            blit(g, box, lx - 12, ly - 7, fade)
+            blit(g, lab, lx, ly, fade)
+        out.append(g)
+    return out
+
+
 def stage_fx():
     for sid, src, t_in, dur, opt in SHOTS:
         fx = opt.get("fx")
@@ -650,6 +794,8 @@ def stage_fx():
                              exclude_rect=(1180, 0, 1920, 1080), appear=(0.35, 1.35),
                              reflection=dict(squash=0.45, alpha=0.28,
                                              water_poly=[(0, 950), (900, 900), (1200, 960), (1200, 1080), (0, 1080)]))
+        elif fx == "sync":
+            res = fx_sync(frames, t0)
         elif fx == "dakota":
             res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1300, 738), scale=0.9,
                              exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
@@ -663,10 +809,60 @@ def stage_fx():
 
 # --------------------------------------------------------------------------- picture
 
-# Clean and neutral: the phone footage's own colour, a touch of contrast,
-# no cast. The teal/orange balance and heavy vignette+grain of the first
-# two cuts read as "off" -- because they were.
-GRADE = "eq=contrast=1.03:saturation=1.01,unsharp=5:5:0.2"
+# No stylistic grade. Each real shot gets a primary correction instead:
+# black and white points normalised to the same targets so shots match,
+# a gentle S for contrast, a little saturation. Stills and the end card
+# are left alone.
+GRADE = "unsharp=5:5:0.2"
+
+
+def levels_lut(sample_frames, lo_p=0.4, hi_p=99.6, lo_t=4, hi_t=252, contrast=1.16):
+    lum = np.concatenate([cv2.cvtColor(f, cv2.COLOR_BGR2GRAY).ravel()[::7] for f in sample_frames])
+    lo, hi = np.percentile(lum, lo_p), np.percentile(lum, hi_p)
+    x = np.arange(256, dtype=np.float32)
+    y = np.clip((x - lo) / max(1.0, hi - lo), 0, 1)
+    y = y + (contrast - 1) * (y - 0.5) * (1 - np.abs(y - 0.5) * 2) * 0.9
+    y = np.clip(y, 0, 1) * (hi_t - lo_t) + lo_t
+    return y.astype(np.uint8)
+
+
+def correct(frame, lut, sat=1.14):
+    g = cv2.LUT(frame, lut)
+    hsv = cv2.cvtColor(g, cv2.COLOR_BGR2HSV).astype(np.float32)
+    hsv[:, :, 1] = np.clip(hsv[:, :, 1] * sat, 0, 255)
+    return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+
+
+def shot_luts():
+    """Per-shot LUT from three sample frames of the prepped shot; None for stills."""
+    luts = []
+    t = 0.0
+    for sid, src, t_in, dur, opt in SHOTS:
+        if opt.get("still"):
+            luts.append((t, t + dur, None))
+        else:
+            p = f"{SHOTS_DIR}/{sid}_fx.mp4" if opt.get("fx") else f"{SHOTS_DIR}/{sid}.mp4"
+            cap = cv2.VideoCapture(p)
+            n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            fr = []
+            for k in (0.1, 0.5, 0.9):
+                cap.set(cv2.CAP_PROP_POS_FRAMES, int(n * k))
+                ok, f = cap.read()
+                if ok:
+                    fr.append(f)
+            luts.append((t, t + dur, levels_lut(fr)))
+        t += dur
+    return luts
+
+
+def light_sweep(frame, u, strength=0.16):
+    """A soft diagonal highlight travelling across a product still."""
+    xs = np.arange(W, dtype=np.float32).reshape(1, -1)
+    ys = np.arange(H, dtype=np.float32).reshape(-1, 1)
+    pos = (-0.35 + 1.7 * u) * W
+    d = (xs + 0.45 * ys) - pos
+    band = np.exp(-(d / 260.0) ** 2) * strength
+    return np.clip(frame.astype(np.float32) * (1 + band[:, :, None]) + 255 * band[:, :, None] * 0.35, 0, 255).astype(np.uint8)
 
 
 def stage_picture():
@@ -685,12 +881,22 @@ def stage_picture():
     cards = [(a, b, card_sprite(lines)) for a, b, lines in CARDS]
     tags = [(a, b, tag_sprite(txt)) for a, b, txt in TAGS]
     end = end_card_sprites()
-    prod_t = shot_start("turn30")
+    prod_t = shot_start("glasses")
+    luts = shot_luts()
+    sweep_shots = [(shot_start(sid), shot_start(sid) + dur) for sid, _, _, dur, opt in SHOTS if opt.get("sweep")]
     for i in range(frames_n):
         ok, f = cap.read()
         if not ok:
             break
         t = i / FPS
+        for a, b_, lut in luts:
+            if a <= t < b_:
+                if lut is not None:
+                    f = correct(f, lut)
+                break
+        for a, b_ in sweep_shots:
+            if a + 0.3 <= t < a + 1.9:
+                f = light_sweep(f, (t - a - 0.3) / 1.6)
         for a, b, sp in cards:
             if a <= t < b:
                 u_in = ease_out((t - a) / 0.38)
@@ -844,8 +1050,8 @@ def stage_audio():
     bus = np.zeros((n, 2), np.float32)
     # music: sneaks in under the cold open, lifts into the markers, hits at the wipe
     m = load_audio(MUSIC, MUSIC_OFFSET, TOTAL + 1)[:n]
-    m *= env_points([(0, -15), (4.4, -13), (9.5, -7), (11.3, -6), (12.55, -6), (12.6, 0), (25.9, 0),
-                     (26.0, -3), (33.4, -3), (33.5, 0), (37.0, 0), (38.1, -3), (40.0, -40)], n)
+    m *= env_points([(0, -15), (4.4, -13), (9.5, -7), (11.3, -6), (12.45, -6), (12.5, 0), (21.9, 0),
+                     (22.0, -3), (27.9, -3), (28.0, 0), (33.5, 0), (34.6, -3), (36.5, -40)], n)
     bus += m * 0.9
     # natural sound per shot, light, crossfaded at the cuts
     t = 0.0
@@ -874,17 +1080,16 @@ def stage_audio():
         k = min(len(s), n - i0)
         bus[i0:i0 + k] += s[:k]
     riser_len = ffprobe_dur(f"{SFX}/riser.wav")
-    sfx("riser", 12.6 - riser_len, -12)
-    sfx("boom", 12.6, -6)
-    sfx("whoosh", 12.55, -14)
+    sfx("riser", 12.5 - riser_len, -12)
+    sfx("boom", 12.5, -6)
+    sfx("whoosh", 12.45, -14)
     sfx("pop", shot_start("markers") + 0.5, -18)
     sfx("pop", shot_start("markers") + 1.3, -18)
     sfx("whoosh", shot_start("mammoth") + 0.3, -18, trim=0.8)
     sfx("whoosh", shot_start("dakota") + 0.25, -18, trim=0.8)
-    sfx("whoosh", shot_start("turn30") - 0.08, -16, trim=0.6)
-    for sid_ in ("turn120", "turn210", "turn300"):
-        sfx("pop", shot_start(sid_), -22)
-    sfx("whoosh", shot_start("hero") - 0.05, -20, trim=0.5)
+    sfx("whoosh", shot_start("glasses") - 0.08, -16, trim=0.6)
+    sfx("pop", shot_start("sync") + 0.9, -20)
+    sfx("pop", shot_start("sync") + 1.5, -22)
     sfx("boom", END_CARD_START, -12)
     write_wav(f"{WORK}/mix.wav", bus)
     # narration variant
