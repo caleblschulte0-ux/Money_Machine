@@ -1,19 +1,22 @@
 """ORI promo -- the cut.
 
-50.1s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
+53.6s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
 "Inspired" (Kevin MacLeod, CC BY 4.0) at 120 BPM: a bar is 2.0s.
 
-Story, second person: you've walked past this place; the story is on a
-sign nobody reads; so we put it where you're looking -> the map of the park's experience layer, pushing in on YOU ARE HERE ->
-him on that tower, the glasses lock on -> the place transforms (ice, then
-the people who lived here) -> right where you stand -> the product, then worn -> walk
-past another group, you only hear yours -> any place -> walk off -> end card.
+Story, second person -- a first-time viewer has to learn WHAT it is:
+you've walked past this place; the story is on a sign nobody reads; so we
+put it where you're looking -> it is a pair of glasses, the whole system,
+nothing built into the park -> the map: every story preloaded, GPS, no
+signal needed -> you're on the tower and it knows what you're looking at
+-> the place transforms (ice, then the people who lived here) -> safety
+at the water (audio only, then a warning, then off) -> your group hears
+yours, the group walking past hears theirs -> any place -> end card.
 """
 
 W, H, FPS = 1920, 1080, 24
 BAR = 138                    # 2.39:1 letterbox: 1920 x 804 picture
-TOTAL = 50.1
-END_CARD_START = 47.3
+TOTAL = 53.6
+END_CARD_START = 50.8
 
 RAW = "../raw"
 RAW_MORE = "../raw_more"
@@ -37,21 +40,22 @@ SHOTS = [
     ("plaque",  "work/plaque_still.png",         0.0, 2.5, dict(still=True)),
     ("reading", f"{RAW}/IMG_6796.MOV",          31.0, 2.0, dict(move=("out", 0.03))),
     ("glasscu", f"{RAW}/IMG_6796.MOV",          33.0, 2.5, dict(crop=(835, 299, 2.0), fx="activate")),
-    # the map (falls_map.py, real OSM geometry): the whole park, then a push
-    # in on YOU ARE HERE at the viewing tower -- and the cut lands on him
-    # standing on that tower (operator 2026-09-22: "little things like that")
-    ("map",     None,                            0.0, 5.0, dict(gen="map")),
+    # the product, EARLY (operator 2026-09-22: a first-time viewer has to
+    # learn what the thing is before the pictures make sense): the
+    # turntable pushes in on the sensor pod, and the next shot pulls out
+    # from the temple on his face -- a match cut, studio to worn
+    ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True, push=(0.71, 2.2, (1350, 470)))),
+    ("worn",    f"{RAW}/IMG_6799.MOV",          10.2, 2.4, dict(mc=True, speed=0.85, pull=(0.4, 2.0, (480, 600)))),
+    # the map (falls_map.py, real OSM geometry): the whole park -- every
+    # story preloaded, GPS, no signal -- then a push in on YOU ARE HERE at
+    # the viewing tower, and the cut lands on him standing on that tower
+    ("map",     None,                            0.0, 5.5, dict(gen="map")),
     ("markers", f"{RAW}/IMG_6799.MOV",           2.0, 3.0, dict(mc=True, fx="markers", move=("in", 0.03))),
     ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.05))),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
-    ("point",   f"{RAW}/IMG_6794.MOV",          45.9, 2.0, dict(speed=0.7)),
-    # the product: the turntable pushes in on the sensor pod over its last
-    # second, and the next shot pulls out from the temple on his face --
-    # a match cut on the glasses, studio to worn
-    ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True, push=(0.71, 2.2, (1350, 470)))),
-    # the glasses ON him: the tail of the tower clip, a close profile
-    # looking out over the park (steady, 0.14px/frame; sharp from 10s)
-    ("worn",    f"{RAW}/IMG_6799.MOV",          10.2, 2.4, dict(mc=True, speed=0.85, pull=(0.4, 2.0, (480, 600)))),
+    # safety, at the water: audio only near it, a warning too close, off
+    # closer than that (operator 2026-09-22) -- the lens readout says so
+    ("point",   f"{RAW}/IMG_6794.MOV",          44.0, 5.0, dict(fx="safety", move=("in", 0.03))),
     ("sync",    f"{RAW_MORE}/IMG_6808.MOV",     16.0, 4.5, dict(fx="sync", speed=0.9)),
     ("bridge",  f"{RAW}/IMG_6798.MOV",          12.5, 3.0, dict(move=("in", 0.04))),
     ("close",   f"{RAW_MORE}/IMG_6803.MOV",      3.0, 5.5, dict(stab=True, smooth=90, zoom=8, speed=0.72, move=("in", 0.05))),
@@ -82,25 +86,27 @@ EYEBROWS = [
 
 # Small honesty tags, top-right, during generated imagery.
 TAGS = [
-    (21.7, 26.0, "VISUALIZATION"),
-    (26.5, 29.0, "VISUALIZATION"),
-    (31.4, 34.6, "PRODUCT VISUALIZATION"),
+    (13.4, 16.6, "PRODUCT VISUALIZATION"),
+    (28.1, 32.4, "VISUALIZATION"),
+    (32.9, 35.4, "VISUALIZATION"),
 ]
 
 # Narration (Piper, offline, en_US-ryan-high). Timeline placement.
 VO = [
-    (4.4,  "You've walked past this a hundred times."),
-    (6.5,  "The story's right here. Nobody reads the sign."),
-    (11.0, "So we put it where you're looking."),
-    (13.6, "Every story in the park, placed exactly where it happened."),
-    (18.5, "And it knows where you're standing."),
-    (22.4, "Twelve thousand years ago, this was ice. Then it was home."),
-    (29.4, "Right where you're standing."),
-    (31.7, "A pair of glasses."),
-    (35.0, "No screen. No phone."),
-    (37.7, "Walk past another group. You only hear yours."),
-    (42.0, "Any place. Any story."),
-    (47.3, "Open Range. See the story where you stand."),
+    (1.6,  "You've walked past this a hundred times."),
+    (4.5,  "The story's right here. Nobody reads the sign."),
+    (8.9,  "So we put it where you're looking."),
+    (11.0, "A pair of glasses. That's the whole system."),
+    (13.5, "No screens. No signs. Nothing built into the park."),
+    (16.9, "Just the glasses."),
+    (19.5, "Every story is already loaded. GPS knows where you're standing. No signal needed."),
+    (24.8, "Look at something, and it knows what you're looking at."),
+    (28.0, "Twelve thousand years ago, this was ice."),
+    (32.8, "Then it was home."),
+    (35.9, "Near the water, it goes audio only. Too close, it warns you. Closer than that, it shuts off."),
+    (40.8, "Your group hears your story. The group walking past hears theirs."),
+    (45.3, "Any place. Any story."),
+    (50.8, "Open Range. See the story where you stand."),
 ]
 # "kokoro:<voice>" = Kokoro (vo/kokoro/, 54 voices: af_heart, af_bella,
 # am_michael, bm_george ...); a path = a Piper model. Placeholder until the
@@ -121,7 +127,7 @@ AMBIENCE = f"{RAW_MORE}/IMG_6682.MOV"     # the falls, under everything
 AUDIO = "score"
 # falls bed level per shot, dB: loud where the water is in frame or close
 AMBIENCE_LEVELS = {"pan": -24, "falls": -14, "plaque": -30, "reading": -30, "glasscu": -30, "markers": -24,
-                   "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "worn": -24, "map": -34, "sync": -27,
+                   "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "worn": -24, "map": -34, "point": -16, "sync": -27,
                    "bridge": -27, "close": -25, "logo": -60}
 
 BRAND = "OPEN RANGE"

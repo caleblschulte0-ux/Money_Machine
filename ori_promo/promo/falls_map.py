@@ -380,7 +380,7 @@ def cluster(points, radius_m=42.0):
     return out
 
 
-def render(out_mp4, dur=5.0, preview_frames=None):
+def render(out_mp4, dur=5.5, preview_frames=None):
     """Write the beat. Camera: the whole park while the four kinds of
     place bloom on in turn, then a push IN on the viewing tower -- YOU ARE
     HERE -- so the cut lands on the wearer standing on that tower."""
@@ -416,7 +416,7 @@ def render(out_mp4, dur=5.0, preview_frames=None):
             mk["x"] = (nx - cw / 2) / (ppm_wide * SS) + cx; mk["y"] = (ny - ch / 2) / (ppm_wide * SS) + cy
     tower = next(l for l in F["labels"] if l["name"] == "VIEWING TOWER")
     txm, tym = V.px(tower["ll"])
-    T_PUSH0, T_PUSH1 = 3.3, 4.85        # the push-in on the tower (the wide map holds ~3.3s)
+    T_PUSH0, T_PUSH1 = 3.8, 5.35        # the push-in on the tower (the wide map holds ~3.8s)
     frames = []
     which = range(n) if preview_frames is None else preview_frames
     for i in which:
@@ -488,7 +488,7 @@ def render(out_mp4, dur=5.0, preview_frames=None):
         if u_t > 0:
             d.rectangle((72, BAR + 44, 72 + int(52 * u_t), BAR + 48), fill=(*AMBER, int(255 * u_t)))
             _text(d, (72, BAR + 64), "FALLS PARK", f_title, (*INK, int(255 * u_t)), "la", 1.5)
-            _text(d, (72, BAR + 112), "EVERY STORY, PLACED", f_sub, (*SUBTLE, int(255 * u_t)), "la", 2.6)
+            _text(d, (72, BAR + 112), "EVERY STORY PRELOADED  ·  GPS  ·  NO SIGNAL NEEDED", f_sub, (*SUBTLE, int(255 * u_t)), "la", 2.6)
         lx, ly = W - 72, H - BAR - 56
         for j, k in enumerate(reversed(order)):
             uu = ease((t - t_zone[k] - 0.05) / 0.4) * fade_wide

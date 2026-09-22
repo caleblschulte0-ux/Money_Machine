@@ -390,6 +390,32 @@ def fx_activate(frames, t0):
     return out
 
 
+def fx_safety(frames, t0):
+    """The water rule, as the lens would show it: near the water the layer
+    is AUDIO ONLY; too close it warns you; closer than that it is OFF.
+    Three readouts on one anchor at the water's edge, in turn."""
+    out = []
+    phases = [(0.3, 2.3, "NEAR WATER", "AUDIO ONLY"), (2.3, 3.9, "TOO CLOSE", "STEP BACK"), (3.9, 9.0, "LAYER OFF", "SAFETY LIMIT")]
+    for i, f in enumerate(frames):
+        t = i / FPS
+        g = f.copy()
+        for a, b_, lab, sub in phases:
+            if a <= t < b_:
+                draw_marker(g, 880, 610, lab, sub, (t - a) / 0.6, side=-1)
+                if lab == "TOO CLOSE":
+                    # the warning pulses
+                    p = 0.5 + 0.5 * math.sin(2 * math.pi * 2.2 * t)
+                    ov = g.copy()
+                    cv2.circle(ov, (880, 610), int(22 + 16 * p), ACCENT_BGR, 2, cv2.LINE_AA)
+                    cv2.addWeighted(ov, 0.6, g, 0.4, 0, g)
+                if lab == "LAYER OFF":
+                    # the layer goes: the frame cools a touch, as if the overlay left
+                    k = ease_out((t - a) / 0.5) * 0.12
+                    g = np.clip(g.astype(np.float32) * (1 - k) + np.array([40, 30, 20], np.float32) * k, 0, 255).astype(np.uint8)
+        out.append(g)
+    return out
+
+
 def fx_markers(frames, t0):
     ex = np.zeros((H, W), np.uint8)
     ex[:, :1000] = 255                      # the wearer fills the left
@@ -900,6 +926,8 @@ def stage_fx():
             res = fx_sync(frames, t0)
         elif fx == "activate":
             res = fx_activate(frames, t0)
+        elif fx == "safety":
+            res = fx_safety(frames, t0)
         elif fx == "dakota":
             res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1275, 760), scale=0.78,
                              exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
