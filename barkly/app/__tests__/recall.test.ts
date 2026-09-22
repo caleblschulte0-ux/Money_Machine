@@ -86,3 +86,65 @@ describe('it still refuses to invent', () => {
     expect(ask('tell me about the park')).not.toBeNull();
   });
 });
+
+
+describe('what did we do yesterday -- recall from TIME, not from a noun', () => {
+  // Every other branch needs a subject. The question a stranger types in the
+  // first two minutes has none, and it fell through to the offline composer,
+  // which answered the product's central claim with "I did not understand
+  // that" on the Fresh and Duke Nemesis playtest slots (2026-09-22).
+  const DAY = 86_400_000;
+  const dated = (id: string, what: string, daysAgo: number, importance = 5) =>
+    ({ id, what, at: NOW - daysAgo * DAY, importance, lastReferencedAt: NOW, referenceCount: 0 }) as never;
+  const timeline = [
+    dated('t1', 'Duke called the good stick a twig in front of everyone.', 30),
+    dated('t2', 'Won the fetch duel at the park. Duke has not mentioned it since.', 9, 8),
+    dated('t3', 'Dug up half a tennis ball. Kept it.', 1),
+  ];
+  const askAt = (text: string, over: Record<string, unknown> = {}) =>
+    recall({ text, facts, experiences: timeline, character, seed: 3, now: NOW, ...over } as never);
+
+  it('answers "yesterday" with the thing from yesterday', () => {
+    const r = askAt('do you remember what we did yesterday?');
+    expect(r).not.toBeNull();
+    expect(r!.speech).toContain('tennis ball');
+  });
+
+  it('answers without the word "remember" at all', () => {
+    expect(askAt('what did we do yesterday?')!.speech).toContain('tennis ball');
+    expect(askAt('anything new?')!.speech).toContain('tennis ball');
+  });
+
+  it('is honest about an empty window and offers the newest thing WITH its age', () => {
+    const r = askAt('what did we do today?');
+    expect(r).not.toBeNull();
+    expect(r!.speech).toMatch(/nothing|not today/i);
+    expect(r!.speech).toContain('tennis ball');
+    expect(r!.speech).toMatch(/yesterday/);
+  });
+
+  it('phrases an older miss with a day count, so the record is checkable', () => {
+    const r = askAt('what did we do yesterday?', { experiences: timeline.slice(0, 2) });
+    expect(r!.speech).toMatch(/9 days ago/);
+    expect(r!.speech).toContain('fetch duel');
+  });
+
+  it('"tell me a story about us" picks the most important memory, not the newest', () => {
+    expect(askAt('tell me a story about us')!.speech).toContain('fetch duel');
+  });
+
+  it('a Fresh Barkly says nothing has happened yet, and how to change that', () => {
+    const r = askAt('what do you remember?', { experiences: [] });
+    expect(r).not.toBeNull();
+    expect(r!.speech).toMatch(/nothing yet|haven't done anything|nothing's happened/i);
+    expect(r!.speech).not.toMatch(/understand/);
+  });
+
+  it('never outranks a question with a precise subject', () => {
+    expect(askAt('what happened with Duke yesterday')!.speech).toMatch(/Duke/);
+  });
+
+  it('stays out of a plain statement about the past', () => {
+    expect(askAt('we went to the park and it was fun')).toBeNull();
+  });
+});

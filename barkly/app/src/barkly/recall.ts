@@ -30,6 +30,12 @@ export interface RecallInput {
   experiences: Experience[];
   character?: CharacterState;
   seed?: number;
+  /**
+   * The clock. Without it "yesterday" is just a stop-word: the timeline
+   * branch has to know how old a memory IS to say "that was yesterday" or
+   * "nothing yesterday, but nine days ago...". Defaults to Date.now().
+   */
+  now?: number;
 }
 
 export interface Recalled {
@@ -294,9 +300,136 @@ function factReply(input: RecallInput, utterTokens: string[]): Recalled | null {
   };
 }
 
+/**
+ * "WHAT DID WE DO YESTERDAY?"
+ *
+ * Every branch above needs a NOUN -- a dog, a treasure, a thing they told
+ * him, a word from a memory. The question a stranger actually types inside
+ * the first two minutes has none: "what did we do yesterday", "anything
+ * new?", "what do you remember?", "tell me a story about us". The tokenizer
+ * strips "did", "yesterday" and "remember" as stop-words, every branch
+ * returned null, and the offline composer -- which does not read the record
+ * -- answered the product's central question with "I did not understand
+ * that." On the Fresh AND Duke Nemesis playtest slots. Measured 2026-09-22.
+ *
+ * So this answers from TIME instead of from a subject. If they name a window
+ * (yesterday, today, this week, lately) it picks the best memory inside it;
+ * if nothing is inside it but the record is not empty, it says so and offers
+ * the newest thing WITH its age, because "nothing yesterday, but nine days
+ * ago Duke cheated at fetch" is a dog with a diary and "I did not understand
+ * that" is a dog with a bug. If the record is genuinely empty -- a Fresh
+ * Barkly -- it says that plainly and tells them how to change it, the same
+ * honesty aboutYouReply already has for facts.
+ */
+const TIMELINE_CUE =
+  /\b(?:what (?:did|have|'?ve) (?:we|you and i|us)\b|what(?:'s| is| was) the (?:last|latest|newest)\b|what(?:'s| is) new\b|anything (?:new|happen)|what(?:'s| has| is) (?:been )?happen(?:ed|ing)\b|what(?:'s| is| was) (?:up|going on)\b|(?:what|anything) (?:do|can|did) (?:you|u) remember\b|remember anything\b|tell me (?:a story|something|about) (?:about )?(?:us|we did|that happened|from before)|(?:what|stuff|things) (?:we|we'?ve) (?:did|done|do)\b|last time\b|(?:yesterday|today|this week|last week|lately|recently)\b)/i;
+
+function timelineReply(input: RecallInput): Recalled | null {
+  const text = input.text;
+  if (!TIMELINE_CUE.test(text)) return null;
+  const now = input.now ?? Date.now();
+  const seed = input.seed ?? 0;
+  const DAY = 86_400_000;
+
+  const age = (e: Experience) => (now - e.at) / DAY;
+  const said = (days: number) =>
+    days < 1 ? 'today'
+      : days < 2 ? 'yesterday'
+      : days < 21 ? `${Math.floor(days)} days ago`
+      : days < 60 ? 'a few weeks ago'
+      : 'ages ago';
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Which window they reached for. A named window that is EMPTY gets an
+  // honest miss rather than a substitute passed off as the answer.
+  let window: [number, number] | null = null;
+  let label = '';
+  if (/\btoday\b/i.test(text)) { window = [0, 1]; label = 'today'; }
+  else if (/\byesterday\b/i.test(text)) { window = [0.5, 2]; label = 'yesterday'; }
+  else if (/\b(this week|lately|recently|last week)\b/i.test(text)) { window = [0, 8]; label = 'lately'; }
+
+  const record = [...input.experiences].sort((a, b) => a.at - b.at); // oldest -> newest
+  const newest = record[record.length - 1];
+
+  if (record.length === 0) {
+    const name = input.facts.find((f) => f.subject === 'person' && f.key === 'name')?.value;
+    return {
+      speech: at(
+        [
+          `Nothing yet. We just met${name ? `, ${name}` : ''}. Do something worth remembering and I'll hold it against you forever.`,
+          `We haven't done anything. Yet. That's a you problem. Throw something, dig something, take me somewhere.`,
+          `Blank. Not because I forget -- because nothing's happened. Fix that and I'll be insufferable about it.`,
+        ],
+        seed,
+      ),
+      reaction: 'annoyed',
+      actions: ['HEAD_TILT'],
+      factIds: [],
+    };
+  }
+
+  const pickBest = (list: Experience[]) =>
+    [...list].sort((a, b) => b.importance - a.importance || b.at - a.at)[0];
+
+  if (window) {
+    const inside = record.filter((e) => age(e) >= window![0] && age(e) < window![1]);
+    if (inside.length > 0) {
+      const hit = pickBest(inside);
+      return {
+        speech: at(
+          [
+            `${cap(label)}? ${hit.what} I was there. I'm always there.`,
+            `${hit.what} That was ${said(age(hit))}. I keep a diary. It's mostly this.`,
+            `Easy. ${hit.what} ${label === 'today' ? 'Still processing it.' : 'A big one.'}`,
+          ],
+          seed,
+        ),
+        reaction: 'happy',
+        actions: ['TAIL_WAG', 'EAR_PERK'],
+        factIds: [],
+      };
+    }
+    // Named window, nothing in it. Say so, then the newest thing with its
+    // age -- the age is the proof he is reading a record and not guessing.
+    return {
+      speech: at(
+        [
+          `${cap(label)}? Nothing. Tragic. Last thing worth writing down was ${said(age(newest))}: ${newest.what}`,
+          `Not ${label}. I checked. The most recent entry is from ${said(age(newest))}: ${newest.what}`,
+        ],
+        seed,
+      ),
+      reaction: 'annoyed',
+      actions: ['HEAD_TILT', 'EAR_PERK'],
+      factIds: [],
+    };
+  }
+
+  // No window: "anything new", "what do you remember", "tell me a story".
+  // "New"/"last" leans newest; a story leans most important.
+  const wantsNewest = /\b(new|last|latest|newest|up|going on|happen)/i.test(text);
+  const hit = wantsNewest ? newest : pickBest(record);
+  const others = record.length - 1;
+  return {
+    speech: at(
+      [
+        `${hit.what} That was ${said(age(hit))}.${others > 0 ? ` I've got ${others} more where that came from.` : ''}`,
+        `Most recent thing on file, ${said(age(hit))}: ${hit.what}${others > 0 ? ' There is a whole archive.' : ''}`,
+        `${hit.what} ${cap(said(age(hit)))}. I remember everything. It's a burden.`,
+      ],
+      seed,
+    ),
+    reaction: 'happy',
+    actions: ['EAR_PERK', 'TAIL_WAG'],
+    factIds: [],
+  };
+}
+
 export function recall(input: RecallInput): Recalled | null {
   const utterTokens = tokens(input.text);
-  if (utterTokens.length === 0 && !RECALL_CUE.test(input.text)) return null;
+  // "What did we do yesterday" is ALL stop-words -- the tokenizer hands back
+  // nothing -- so the timeline cue has to be a key to this first door too.
+  if (utterTokens.length === 0 && !RECALL_CUE.test(input.text) && !TIMELINE_CUE.test(input.text)) return null;
 
   // His sacred object needs no "remember" cue — any mention of it is about it.
   const treasure = treasureReply(input, utterTokens);
@@ -308,14 +441,17 @@ export function recall(input: RecallInput): Recalled | null {
 
   // Everything else only intercepts when they are reaching for the past;
   // a casual "is Duke around" stays a conversation, not a deposition.
-  if (!RECALL_CUE.test(input.text)) return null;
+  // "What did we do yesterday" reaches for it without any of RECALL_CUE's
+  // verbs, so the timeline cue is a second key to the same door.
+  if (!RECALL_CUE.test(input.text) && !TIMELINE_CUE.test(input.text)) return null;
 
   // A dog by name first (most specific), then a thing they told him, then a
-  // thing that happened, then the roll-call — which is the broadest and must
-  // not swallow a question that had a precise answer.
+  // thing that happened, then the TIMELINE — broadest of all, so it goes
+  // last and can never swallow a question that had a precise answer.
   return (
     dogReply(input, utterTokens) ??
     factReply(input, utterTokens) ??
-    experienceReply(input, utterTokens)
+    experienceReply(input, utterTokens) ??
+    timelineReply(input)
   );
 }

@@ -122,6 +122,7 @@ export class DialogueEngine {
         experiences: memState.experiences,
         character,
         seed: Date.now() % 9973,
+        now: Date.now(),
       });
       if (recalled) {
         const reply: BarklyReply = {
