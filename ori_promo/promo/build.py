@@ -908,8 +908,16 @@ def stage_fx():
             continue
         out = f"{SHOTS_DIR}/{sid}_fx.mp4"
         if os.path.exists(out):
-            print(f"fx {sid}: cached")
-            continue
+            # a cached fx render is only valid for the shot's CURRENT length
+            # (the point beat once shipped 0.5s short off a stale cache)
+            have = int(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
+                                       "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", out],
+                                      capture_output=True, text=True).stdout.strip() or 0)
+            if have == int(round(dur * FPS)):
+                print(f"fx {sid}: cached")
+                continue
+            print(f"fx {sid}: cache is {have} frames, need {int(round(dur * FPS))} -- re-rendering")
+            os.remove(out)
         print(f"fx {sid}")
         frames = read_frames(f"{SHOTS_DIR}/{sid}.mp4")
         t0 = shot_start(sid)
