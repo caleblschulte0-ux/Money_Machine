@@ -72,10 +72,17 @@ def ease_out(u):
 def prep_shot(sid, src, t_in, dur, opt):
     out = f"{SHOTS_DIR}/{sid}.mp4"
     wav = f"{SHOTS_DIR}/{sid}.wav"
-    if os.path.exists(out) and os.path.exists(wav):
-        print(f"  {sid}: cached")
-        return
     n_frames = int(round(dur * FPS))
+    if os.path.exists(out) and os.path.exists(wav):
+        # a cached shot is only valid at the shot's CURRENT length (the
+        # reading shot once shipped 0.5s short off a stale cache)
+        have = int(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
+                                   "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", out],
+                                  capture_output=True, text=True).stdout.strip() or 0)
+        if have == n_frames:
+            print(f"  {sid}: cached")
+            return
+        print(f"  {sid}: cache is {have} frames, need {n_frames} -- re-preparing")
     if opt.get("black"):
         run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c=black:s={W}x{H}:r={FPS}", "-t", dur,
              "-frames:v", n_frames, *ENC, out])
