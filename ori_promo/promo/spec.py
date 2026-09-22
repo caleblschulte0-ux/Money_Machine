@@ -98,20 +98,20 @@ VO = [
     (9.9,  "A pair of glasses. That's the whole system."),
     (12.5, "No screens. No signs. Nothing built into the park."),
     (17.0, "Every story is already loaded. GPS knows where you're standing. No signal needed."),
-    (22.6, "Look at something, and it knows what you're looking at."),
+    (22.9, "Look at something, and it knows what you're looking at."),
     (25.5, "Twelve thousand years ago, this was ice."),
     (30.3, "Then it was home."),
     (33.3, "Near the water, it goes audio only. Too close, it warns you. Closer than that, it shuts off."),
-    (39.3, "Your group hears your story. The group walking past hears theirs."),
+    (39.9, "Your group hears your story. The group walking past hears theirs."),
     (43.9, "Any place. Any story."),
-    (49.3, "Open Range. See the story where you stand."),
+    (48.7, "Open Range. See the story where you stand."),
 ]
 # "kokoro:<voice>" = Kokoro (vo/kokoro/, 54 voices: af_heart, af_bella,
 # am_michael, bm_george ...); "files:<dir>" = the real read, one vo_NN.wav
 # (or .mp3) per line of VO in order, e.g. "files:../vo/real"; a path = a
 # Piper model. Placeholder until the real read; swap here, nothing else
 # changes.
-VOICE = "kokoro:am_onyx"       # deep male; "chatterbox:../vo/kokoro/ref_onyx.wav" clones it with Chatterbox
+VOICE = "files:../vo/real"     # the ElevenLabs read (Amy), cut into lines from vo/eleven/take3.mp3
 VOICE_SPEED = 0.95
 
 MUSIC = "../music/inspired.mp3"
