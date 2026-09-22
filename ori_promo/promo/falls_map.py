@@ -166,6 +166,10 @@ def extract(xml_path=OSM_XML, out=DATA):
                 lat = sum(p[0] for p in nds) / len(nds); lon = sum(p[1] for p in nds) / len(nds)
                 F["labels"].append({"name": {"Falls Park Viewing Tower": "VIEWING TOWER", "Falls Overlook Cafe": "OVERLOOK CAFE",
                                              "Queen Bee Turbine": "QUEEN BEE MILL"}[tags["name"]], "ll": (lat, lon)})
+                if tags["name"] == "Queen Bee Turbine":
+                    F["points"].append({"kind": "visual", "ll": (lat, lon), "name": "Queen Bee Mill"})
+                if tags["name"] == "Falls Park Viewing Tower":
+                    F["points"].append({"kind": "lookout", "ll": (lat, lon), "name": "Viewing Tower"})
     for n in root.findall("node"):
         tags = {t.get("k"): t.get("v") for t in n.findall("tag")}
         if not tags:
@@ -176,13 +180,12 @@ def extract(xml_path=OSM_XML, out=DATA):
         elif tags.get("waterway") == "waterfall":
             F["points"].append({"kind": "ambient", "ll": ll, "name": tags.get("name")})
             F["points"].append({"kind": "visual", "ll": ll, "name": tags.get("name")})
-            F["labels"].append({"name": tags.get("name", "").upper().replace("SIOUX ", ""), "ll": ll})
+            if tags.get("name") == "Middle Sioux Falls":
+                F["labels"].append({"name": "BIG SIOUX FALLS", "ll": ll})
         elif tags.get("tourism") == "viewpoint":
             F["points"].append({"kind": "lookout", "ll": ll})
         elif tags.get("memorial") == "plaque" or tags.get("information") == "board":
             F["points"].append({"kind": "narration", "ll": ll})
-        elif tags.get("name") == "Monarch of the Plains":
-            F["points"].append({"kind": "visual", "ll": ll, "name": tags["name"]})
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
         json.dump(F, f, separators=(",", ":"))
@@ -275,9 +278,10 @@ def build_base(F, ppm, cw, ch, cx, cy):
     for pt in F["points"]:
         if pt["kind"] != "ambient":
             continue
+        main = pt.get("name") == "Middle Sioux Falls"     # the falls everyone means; the upper drop gets a whisper
         x, y = V.px(pt["ll"])
-        _glow(img, x, y, ppm * 9, (225, 236, 244), 0.35)
-        for _ in range(70):
+        _glow(img, x, y, ppm * (9 if main else 4), (225, 236, 244), 0.35 if main else 0.15)
+        for _ in range(70 if main else 14):
             r = abs(rr.normal(0, ppm * 9)); a = rr.uniform(0, 2 * math.pi)
             xx, yy = x + r * math.cos(a), y + r * math.sin(a)
             if not (0 <= xx < cw and 0 <= yy < ch) or water[int(yy), int(xx)] < 127:
@@ -293,8 +297,8 @@ def build_base(F, ppm, cw, ch, cx, cy):
         cv2.polylines(img, [q], False, RAIL[::-1], max(1, int(ppm * 0.9)), cv2.LINE_AA)
     _lines(img, [V.poly(p) for p in F["roads"]], ROAD, ppm * 3.2)
     _lines(img, [V.poly(p) for p in F["roads"]], (88, 92, 98), ppm * 0.6)
-    _lines(img, [V.poly(p) for p in F["paths"]], (0, 0, 0), ppm * 1.7)          # a dark keyline under the paths
-    _lines(img, [V.poly(p) for p in F["paths"]], PATH, ppm * 1.0)
+    _lines(img, [V.poly(p) for p in F["paths"]], (0, 0, 0), ppm * 1.4)          # a dark keyline under the paths
+    _lines(img, [V.poly(p) for p in F["paths"]], tuple(int(c * 0.8) for c in PATH), ppm * 0.8)
     for p in F["steps"]:
         q = V.poly(p)
         for i in range(len(q) - 1):
@@ -315,12 +319,17 @@ def build_base(F, ppm, cw, ch, cx, cy):
                 _fill(img, [q + np.array([0, dz], np.float32)], side)
             _fill(img, [q], roof)
             _lines(img, [q], tuple(min(255, int(c * 1.15)) for c in roof), max(1, ppm * 0.35), closed=True)
-    # trees: soft dark discs with a highlight
-    for ll in F["trees"]:
-        x, y = V.px(ll)
-        r = ppm * 2.4
-        cv2.circle(img, (int(x), int(y)), int(r), TREE[::-1], -1, cv2.LINE_AA)
-        cv2.circle(img, (int(x - r * 0.3), int(y - r * 0.3)), int(r * 0.45), TREE_HI[::-1], -1, cv2.LINE_AA)
+    # READABILITY (operator 2026-09-22: "hard to understand at a glance"):
+    # no tree dots, and everything that is not the park or the river --
+    # streets, rail, the neighbourhood -- sinks most of the way into the
+    # ground, so the eye has three things to read: water, park, places.
+    keep = np.zeros((ch, cw), np.uint8)
+    cv2.fillPoly(keep, [np.round(V.poly(p)).astype(np.int32) for p in F["park"]], 255, cv2.LINE_AA)
+    keep = cv2.dilate(keep, np.ones((int(ppm * 14) | 1,) * 2, np.uint8))
+    keep = np.maximum(keep, water)
+    keep = cv2.GaussianBlur(keep, (0, 0), ppm * 6).astype(np.float32) / 255
+    k = 0.18 + 0.82 * keep
+    img[:] = (img.astype(np.float32) * k[:, :, None] + np.array(GROUND[::-1], np.float32) * (1 - k)[:, :, None]).astype(np.uint8)
     return img, V
 
 
@@ -355,103 +364,125 @@ def _text(draw, xy, s, fnt, fill, anchor="la", tracking=0.0):
         x += w + tracking
 
 
+def cluster(points, radius_m=42.0):
+    """Merge markers of one kind closer than radius_m -- six plaques in a
+    row read as noise; one marker reads as a place."""
+    out = []
+    for pt in points:
+        x, y = to_xy(*pt["ll"])
+        for c in out:
+            if c["kind"] == pt["kind"] and math.hypot(c["x"] - x, c["y"] - y) < radius_m:
+                c["n"] += 1
+                c["x"] = (c["x"] * (c["n"] - 1) + x) / c["n"]; c["y"] = (c["y"] * (c["n"] - 1) + y) / c["n"]
+                break
+        else:
+            out.append({"kind": pt["kind"], "x": x, "y": y, "n": 1, "name": pt.get("name")})
+    return out
+
+
 def render(out_mp4, dur=4.0, preview_frames=None):
-    """Write the beat. Camera: tight on the falls, pulling out and settling
-    on the whole park while the four kinds of place bloom on in turn."""
+    """Write the beat. Camera: the whole park while the four kinds of
+    place bloom on in turn, then a push IN on the viewing tower -- YOU ARE
+    HERE -- so the cut lands on the wearer standing on that tower."""
     F = load()
-    # base canvas in map metres: the visible extent at the END of the pull-out
-    ppm_end = 3.25                      # px/m at the final frame (1920 px ~ 590 m)
-    cx, cy = 10.0, 12.0                 # metres, view centre: the falls cluster sits centre-left, the tower upper right
-    margin = 1.35                       # extra canvas so the zoomed-in start never hits an edge
+    ppm_wide = 3.25                     # px/m on the wide frame (1920 px ~ 590 m)
+    cx, cy = 10.0, 12.0                 # metres: falls cluster centre-left, tower upper right
+    margin = 1.35
     cw, ch = int(W * SS * margin), int(H * SS * margin)
-    base, V = build_base(F, ppm_end * SS, cw, ch, cx, cy)
+    base, V = build_base(F, ppm_wide * SS, cw, ch, cx, cy)
     n = int(round(dur * FPS))
-    zoom_from, zoom_to = 1.9, 1.0
-    f_title, f_sub = font("SemiBold", 34), font("Medium", 20)
-    f_label, f_leg = font("Medium", 19), font("Medium", 21)
-    f_you = font("SemiBold", 20)
+    f_title, f_sub = font("SemiBold", 40), font("Medium", 22)
+    f_label, f_leg = font("Medium", 21), font("Medium", 24)
+    f_you = font("SemiBold", 26)
     order = ["ambient", "visual", "narration", "lookout"]
-    t_zone = {k: 0.55 + i * 0.42 for i, k in enumerate(order)}
+    t_zone = {k: 0.45 + i * 0.32 for i, k in enumerate(order)}
+    marks = cluster(F["points"])
+    tower = next(l for l in F["labels"] if l["name"] == "VIEWING TOWER")
+    txm, tym = V.px(tower["ll"])
+    T_PUSH0, T_PUSH1 = 2.35, 3.85       # the push-in on the tower
     frames = []
     which = range(n) if preview_frames is None else preview_frames
     for i in which:
         t = i / FPS
-        z = zoom_from + (zoom_to - zoom_from) * ease(t / 3.1)
-        rot = -1.6 * (1 - ease(t / 3.1))
-        # camera looks at a point that drifts from the falls to the frame centre
-        fx, fy = V.px(F["points"][0]["ll"])
-        px = fx + (cw / 2 - fx) * ease(t / 3.1)
-        py = fy + (ch / 2 - fy) * ease(t / 3.1)
-        s = z / SS
-        M = cv2.getRotationMatrix2D((px, py), rot, s)
+        # camera: wide, a slow creep, then the push in on the tower
+        u = ease((t - T_PUSH0) / (T_PUSH1 - T_PUSH0))
+        z = (1.0 + 0.03 * ease(t / T_PUSH0)) * (1 - u) + 2.4 * u
+        px = cw / 2 + (txm - cw / 2) * u
+        py = ch / 2 + (tym - ch / 2) * u
+        s_ = z / SS
+        M = cv2.getRotationMatrix2D((px, py), 0.0, s_)
         M[0, 2] += W / 2 - px; M[1, 2] += H / 2 - py
-        img = cv2.warpAffine(base, M, (W, H), flags=cv2.INTER_AREA if s < 1 else cv2.INTER_LINEAR, borderValue=GROUND[::-1])
+        img = cv2.warpAffine(base, M, (W, H), flags=cv2.INTER_AREA if s_ < 1 else cv2.INTER_LINEAR, borderValue=GROUND[::-1])
 
-        def scr(ll):
-            x, y = V.px(ll)
+        def scr(x, y):
             return (M[0, 0] * x + M[0, 1] * y + M[0, 2], M[1, 0] * x + M[1, 1] * y + M[1, 2])
 
-        # zone glows on the map (additive, under the type)
-        for pt in F["points"]:
-            k = pt["kind"]
-            u = ease_out((t - t_zone[k]) / 0.7)
-            if u <= 0:
+        def scr_ll(ll):
+            return scr(*V.px(ll))
+
+        fade_wide = 1 - 0.92 * u         # the wide-frame overlays leave as the camera commits to the tower
+        # place markers: a clean pin -- soft glow, coloured ring, white core
+        for m in marks:
+            k = m["kind"]
+            uu = ease_out((t - t_zone[k]) / 0.6) * fade_wide
+            if uu <= 0:
                 continue
-            x, y = scr(pt["ll"])
+            x, y = scr(*V.px(None) if False else ((m["x"] - cx) * ppm_wide * SS + cw / 2, (m["y"] - cy) * ppm_wide * SS + ch / 2))
             col = ZONES[k][1]
-            pulse = 0.5 + 0.5 * math.sin(2 * math.pi * 0.6 * t + hash(k) % 7)
-            _glow(img, x, y, 22 * z * 0.7, col, 0.55 * u)
-            cv2.circle(img, (int(x), int(y)), int(4.5 * (0.8 + 0.2 * u)), col[::-1], -1, cv2.LINE_AA)
-            rr = int(9 + 16 * u * (0.6 + 0.4 * pulse))
+            pulse = 0.5 + 0.5 * math.sin(2 * math.pi * 0.7 * t + order.index(k) * 1.3)
+            _glow(img, x, y, 24, col, 0.5 * uu)
+            cv2.circle(img, (int(x), int(y)), int(11 * uu), col[::-1], -1, cv2.LINE_AA)
+            cv2.circle(img, (int(x), int(y)), int(5 * uu), INK[::-1], -1, cv2.LINE_AA)
             ov = img.copy()
-            cv2.circle(ov, (int(x), int(y)), rr, col[::-1], 1, cv2.LINE_AA)
-            cv2.addWeighted(ov, 0.5 * u, img, 1 - 0.5 * u, 0, img)
-        # the wearer: at the viewing tower
-        tower = next(l for l in F["labels"] if l["name"] == "VIEWING TOWER")
-        tx, ty = scr(tower["ll"])
-        u_you = ease_out((t - 0.25) / 0.6)
+            cv2.circle(ov, (int(x), int(y)), int(15 + 9 * pulse), col[::-1], 2, cv2.LINE_AA)
+            cv2.addWeighted(ov, 0.45 * uu, img, 1 - 0.45 * uu, 0, img)
+        # the wearer at the tower: a white beacon that GROWS as the camera arrives
+        tx, ty = scr(txm, tym)
+        u_you = ease_out((t - 0.2) / 0.6)
         if u_you > 0:
-            p2 = 0.5 + 0.5 * math.sin(2 * math.pi * 1.1 * t)
-            _glow(img, tx, ty, 26, INK, 0.35 * u_you)
-            cv2.circle(img, (int(tx), int(ty)), int(7 * u_you), INK[::-1], -1, cv2.LINE_AA)
-            cv2.circle(img, (int(tx), int(ty)), int((14 + 10 * p2) * u_you), INK[::-1], 1, cv2.LINE_AA)
-        # type: PIL on top
+            p2 = 0.5 + 0.5 * math.sin(2 * math.pi * 1.0 * t)
+            big = 1 + 0.9 * u
+            _glow(img, tx, ty, 30 * big, INK, 0.45 * u_you)
+            cv2.circle(img, (int(tx), int(ty)), int(9 * big * u_you), INK[::-1], -1, cv2.LINE_AA)
+            cv2.circle(img, (int(tx), int(ty)), int((18 + 12 * p2) * big * u_you), INK[::-1], 2, cv2.LINE_AA)
         pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         d = ImageDraw.Draw(pil, "RGBA")
-        # place labels (small caps, ink, with a dark halo)
+
+        def halo_text(xy, txt, fnt, alpha, anchor="lm", tracking=1.6):
+            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1)):
+                _text(d, (xy[0] + dx, xy[1] + dy), txt, fnt, (*GROUND, int(220 * alpha)), anchor, tracking)
+            _text(d, xy, txt, fnt, (*INK, int(240 * alpha)), anchor, tracking)
+
+        # place names -- the same names the lens overlay will use two shots later
         for l in F["labels"]:
-            x, y = scr(l["ll"])
-            if not (60 < x < W - 60 and BAR + 30 < y < H - BAR - 30):
-                continue
-            u = ease((t - 0.9) / 0.6)
-            if u <= 0:
-                continue
-            col = (*INK, int(235 * u))
             if l["name"] == "VIEWING TOWER":
-                y += 20
-            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                _text(d, (x + 14 + dx, y + dy), l["name"], f_label, (*GROUND, int(200 * u)), "lm", 1.6)
-            _text(d, (x + 14, y), l["name"], f_label, col, "lm", 1.6)
-        if u_you > 0:
-            _text(d, (tx + 16, ty - 14), "YOU", f_you, (*INK, int(255 * u_you)), "lm", 2.0)
-        # title, top-left, inside the letterbox
-        u_t = ease((t - 0.15) / 0.5)
-        if u_t > 0:
-            d.rectangle((72, BAR + 44, 72 + int(46 * u_t), BAR + 47), fill=(*AMBER, int(255 * u_t)))
-            _text(d, (72, BAR + 62), "FALLS PARK", f_title, (*INK, int(255 * u_t)), "la", 1.5)
-            _text(d, (72, BAR + 104), "THE EXPERIENCE LAYER  ·  ONE PARK, EVERY STORY PLACED", f_sub, (*SUBTLE, int(255 * u_t)), "la", 2.2)
-        # legend, bottom-right, one row per kind, in the order they bloom
-        lx, ly = W - 72, H - BAR - 52
-        for j, k in enumerate(reversed(order)):
-            u = ease((t - t_zone[k] - 0.1) / 0.45)
-            if u <= 0:
                 continue
-            y = ly - j * 34
+            x, y = scr_ll(l["ll"])
+            uu = ease((t - 0.8) / 0.5) * fade_wide
+            if uu <= 0 or not (60 < x < W - 60 and BAR + 30 < y < H - BAR - 30):
+                continue
+            halo_text((x + 16, y), l["name"], f_label, uu)
+        if u_you > 0:
+            a_you = u_you * (0.7 + 0.3 * u)
+            halo_text((tx + 22 + 18 * u, ty - 4), "YOU ARE HERE", f_you, a_you, "lm", 2.2)
+            halo_text((tx + 22 + 18 * u, ty + 24), "VIEWING TOWER", f_label, a_you * 0.85, "lm", 1.8)
+        # title (top-left) and legend (bottom-right), stepping back with the push
+        u_t = ease((t - 0.1) / 0.45) * fade_wide
+        if u_t > 0:
+            d.rectangle((72, BAR + 44, 72 + int(52 * u_t), BAR + 48), fill=(*AMBER, int(255 * u_t)))
+            _text(d, (72, BAR + 64), "FALLS PARK", f_title, (*INK, int(255 * u_t)), "la", 1.5)
+            _text(d, (72, BAR + 112), "EVERY STORY, PLACED", f_sub, (*SUBTLE, int(255 * u_t)), "la", 2.6)
+        lx, ly = W - 72, H - BAR - 56
+        for j, k in enumerate(reversed(order)):
+            uu = ease((t - t_zone[k] - 0.05) / 0.4) * fade_wide
+            if uu <= 0:
+                continue
+            y = ly - j * 40
             name, col = ZONES[k]
-            d.ellipse((lx - 14 - 6, y - 6, lx - 14 + 6, y + 6), fill=(*col, int(255 * u)))
-            _text(d, (lx - 30, y), name, f_leg, (*INK, int(235 * u)), "rm", 2.0)
-        # attribution, tiny, bottom-left
-        u_a = ease((t - 1.2) / 0.5)
+            d.ellipse((lx - 16 - 8, y - 8, lx - 16 + 8, y + 8), fill=(*col, int(255 * uu)))
+            d.ellipse((lx - 16 - 3, y - 3, lx - 16 + 3, y + 3), fill=(*INK, int(255 * uu)))
+            _text(d, (lx - 36, y), name, f_leg, (*INK, int(235 * uu)), "rm", 2.2)
+        u_a = ease((t - 1.0) / 0.5) * fade_wide
         if u_a > 0:
             _text(d, (72, H - BAR - 40), "MAP DATA © OPENSTREETMAP CONTRIBUTORS", font("Medium", 13), (*SUBTLE, int(160 * u_a)), "la", 1.6)
         fr = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
@@ -473,8 +504,8 @@ if __name__ == "__main__":
         fetch(); extract(); print("fetched + extracted", DATA)
     elif len(sys.argv) > 1 and sys.argv[1] == "preview":
         os.makedirs(f"{HERE}/work", exist_ok=True)
-        fr = render(None, preview_frames=[0, 30, 60, 95])
-        for i, f in zip((0, 30, 60, 95), fr):
+        fr = render(None, preview_frames=[12, 50, 75, 95])
+        for i, f in zip((12, 50, 75, 95), fr):
             cv2.imwrite(f"{HERE}/work/map_preview_{i:02d}.png", f)
         print("previews written")
     else:

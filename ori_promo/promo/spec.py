@@ -4,11 +4,10 @@
 "Inspired" (Kevin MacLeod, CC BY 4.0) at 120 BPM: a bar is 2.0s.
 
 Story, second person: you've walked past this place; the story is on a
-sign nobody reads; so we put it where you're looking -> the glasses lock
-on -> the place transforms (ice, then the people who lived here) ->
-right where you stand -> the product -> the map of the park's experience
-layer -> walk past another group, you only hear yours -> any place ->
-walk off -> end card.
+sign nobody reads; so we put it where you're looking -> the map of the park's experience layer, pushing in on YOU ARE HERE ->
+him on that tower, the glasses lock on -> the place transforms (ice, then
+the people who lived here) -> right where you stand -> the product -> walk
+past another group, you only hear yours -> any place -> walk off -> end card.
 """
 
 W, H, FPS = 1920, 1080, 24
@@ -38,14 +37,15 @@ SHOTS = [
     ("plaque",  "work/plaque_still.png",         0.0, 2.5, dict(still=True)),
     ("reading", f"{RAW}/IMG_6796.MOV",          31.0, 2.0, dict(move=("out", 0.03))),
     ("glasscu", f"{RAW}/IMG_6796.MOV",          33.0, 2.5, dict(crop=(835, 299, 2.0), fx="activate")),
+    # the map (falls_map.py, real OSM geometry): the whole park, then a push
+    # in on YOU ARE HERE at the viewing tower -- and the cut lands on him
+    # standing on that tower (operator 2026-09-22: "little things like that")
+    ("map",     None,                            0.0, 4.0, dict(gen="map")),
     ("markers", f"{RAW}/IMG_6799.MOV",           2.0, 3.0, dict(mc=True, fx="markers", move=("in", 0.03))),
     ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.05))),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     ("point",   f"{RAW}/IMG_6794.MOV",          45.9, 2.0, dict(speed=0.7)),
     ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True)),
-    # procedural map of the park from real OSM geometry (falls_map.py):
-    # the experience layer -- where every kind of story sits
-    ("map",     None,                            0.0, 4.0, dict(gen="map")),
     ("sync",    f"{RAW_MORE}/IMG_6808.MOV",     16.0, 4.5, dict(fx="sync", speed=0.9)),
     ("bridge",  f"{RAW}/IMG_6798.MOV",          12.5, 3.0, dict(move=("in", 0.04))),
     ("close",   f"{RAW_MORE}/IMG_6803.MOV",      3.0, 5.5, dict(stab=True, smooth=90, zoom=8, speed=0.72, move=("in", 0.05))),
@@ -69,9 +69,9 @@ CARDS = [
     (6.5,  8.6,  ["The story's right here."]),
     (8.9,  10.6, ["Nobody reads the sign."]),
     (11.0, 13.1, ["So we put it where", "you're looking."]),
-    (17.4, 20.9, ["Twelve thousand years ago,", "this was ice."]),
-    (21.6, 24.0, ["Then it was home."]),
-    (24.4, 26.0, ["Right where you're standing."]),
+    (21.4, 24.9, ["Twelve thousand years ago,", "this was ice."]),
+    (25.6, 28.0, ["Then it was home."]),
+    (28.4, 30.0, ["Right where you're standing."]),
     (34.3, 37.9, ["Walk past another group.", "You only hear yours."]),
     (38.6, 40.9, ["Any place. Any story."]),
 ]
@@ -83,9 +83,9 @@ EYEBROWS = [
 
 # Small honesty tags, top-right, during generated imagery.
 TAGS = [
-    (16.7, 21.0, "VISUALIZATION"),
-    (21.5, 24.0, "VISUALIZATION"),
-    (26.4, 29.6, "PRODUCT VISUALIZATION"),
+    (20.7, 25.0, "VISUALIZATION"),
+    (25.5, 28.0, "VISUALIZATION"),
+    (30.4, 33.6, "PRODUCT VISUALIZATION"),
 ]
 
 # Narration (Piper, offline, en_US-ryan-high). Timeline placement.
@@ -93,10 +93,11 @@ VO = [
     (4.4,  "You've walked past this a hundred times."),
     (6.5,  "The story's right here. Nobody reads the sign."),
     (11.0, "So we put it where you're looking."),
-    (17.4, "Twelve thousand years ago, this was ice. Then it was home."),
-    (24.4, "Right where you're standing."),
-    (26.7, "A pair of glasses. No screen. No phone."),
-    (30.1, "Every story in the park, placed exactly where it happened."),
+    (13.5, "Every story in the park, placed exactly where it happened."),
+    (17.5, "And it knows where you're standing."),
+    (21.4, "Twelve thousand years ago, this was ice. Then it was home."),
+    (28.4, "Right where you're standing."),
+    (30.7, "A pair of glasses. No screen. No phone."),
     (34.3, "Walk past another group. You only hear yours."),
     (38.6, "Any place. Any story."),
     (43.9, "Open Range. See the story where you stand."),
