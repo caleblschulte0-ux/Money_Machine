@@ -700,14 +700,21 @@ def reveal_frame(sprite, u):
 
 
 def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.3),
-               reflection=None, breathe=True, color_strength=0.55):
+               reflection=None, breathe=True, color_strength=0.55, lock=False):
     """Track the background, then stand a cutout on the real ground:
     colour-matched, defocus-matched, light-wrapped, with a contact shadow
-    (and a water reflection when asked), dissolving in under a bloom."""
+    (and a water reflection when asked), dissolving in under a bloom.
+
+    lock=True skips the tracker: on a TRIPOD shot the camera does not move
+    (0.06px/frame measured), but the tracker, fed a background that is
+    mostly falling water, walked the mammoth 23px left and 21px down over
+    five seconds and jittered it 0.8px/frame on top (operator 2026-09-22:
+    "it don't sit good like it used to and it moves"). A locked-off
+    camera gets a locked-off anchor."""
     x0, y0 = anchor
     ex = np.zeros((H, W), np.uint8)
     ex[exclude_rect[1]:exclude_rect[3], exclude_rect[0]:exclude_rect[2]] = 255
-    A = track(frames, ex)
+    A = [np.eye(3)] * len(frames) if lock else track(frames, ex)
     sprite = crop_alpha(cv2.imread(sprite_path, cv2.IMREAD_UNCHANGED))
     a = sprite[:, :, 3].astype(np.float32)
     sprite[:, :, 3] = np.clip((a - 40) * (255.0 / 215.0), 0, 255).astype(np.uint8)
@@ -927,7 +934,7 @@ def stage_fx():
             res = fx_iceage(frames, t0)
         elif fx == "mammoth":
             res = fx_element(frames, f"{WORK}/mam_rembg.png", anchor=(560, 930), scale=0.82,
-                             exclude_rect=(1180, 0, 1920, 1080), appear=(0.35, 1.35),
+                             exclude_rect=(1180, 0, 1920, 1080), appear=(0.35, 1.35), lock=True, breathe=False,
                              reflection=dict(squash=0.45, alpha=0.28,
                                              water_poly=[(0, 900), (904, 860), (1182, 915), (1182, 1080), (0, 1080)]))
         elif fx == "sync":
@@ -937,7 +944,7 @@ def stage_fx():
         elif fx == "safety":
             res = fx_safety(frames, t0)
         elif fx == "dakota":
-            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1275, 760), scale=0.78,
+            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1275, 760), scale=0.78, lock=True,
                              exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
         else:
             raise KeyError(fx)
