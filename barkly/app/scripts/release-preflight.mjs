@@ -86,6 +86,22 @@ if (!config.ios?.infoPlist?.NSSpeechRecognitionUsageDescription) {
   fail('Missing iOS speech-recognition purpose string.');
 }
 if (!config.icon) fail('Missing app icon.');
+else {
+  /*
+   * App Store Connect REJECTS a 1024 marketing icon with an alpha channel.
+   * Ours had one (alpha down to 191 across the whole dog) and nothing
+   * checked. A PNG's colour type is byte 25 of the file: 4 (grey+alpha) and
+   * 6 (RGBA) carry alpha. Dependency-free on purpose.
+   */
+  try {
+    const png = fs.readFileSync(path.resolve(appDir, config.icon));
+    const [w, h, colourType] = [png.readUInt32BE(16), png.readUInt32BE(20), png[25]];
+    if (colourType === 4 || colourType === 6) fail(`${config.icon} has an alpha channel; App Store Connect rejects a transparent icon. Flatten it onto its background.`);
+    if (w !== 1024 || h !== 1024) fail(`${config.icon} is ${w}x${h}; the App Store icon must be 1024x1024.`);
+  } catch (e) {
+    fail(`Could not read ${config.icon}: ${e.message}`);
+  }
+}
 
 // Dev tools ship OFF. They are opt-out in the app so the operator always has
 // them while building; a store archive has to say so explicitly, and this is

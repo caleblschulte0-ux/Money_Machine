@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import BarklyRoom from './src/ui/BarklyRoom';
+import { CrashBoundary } from './src/ui/CrashScreen';
 
 /**
  * Tiny WEB-ONLY rendering corrections.
@@ -69,7 +70,11 @@ export default function App() {
   useWebPolish();
   return (
     <SafeAreaProvider>
-      <BarklyRoom />
+      {/* A render error anywhere below becomes a recoverable screen, never a
+          white one -- see src/ui/CrashScreen.tsx. */}
+      <CrashBoundary>
+        <BarklyRoom />
+      </CrashBoundary>
       <StatusBar style="dark" />
     </SafeAreaProvider>
   );
