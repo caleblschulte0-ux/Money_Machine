@@ -37,8 +37,25 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 
 const said = [];
 let last = '';
-async function listen(label) {
-  const text = (await page.locator('[data-testid="conversation-dock"]').first().innerText().catch(() => '')).trim();
+/*
+ * ACCUMULATE PAGES. The bubble shows ~54 characters at a time and turns the
+ * page on a dwell timer, so a single read after the wait sees whichever page
+ * is up -- and a two-page reply to "do you remember?" was reported as its
+ * second page only. Sample the dock through the wait and keep every distinct
+ * page in the order it appeared.
+ */
+async function listen(label, windowMs = 0) {
+  const dock = page.locator('[data-testid="conversation-dock"]').first();
+  const read = async () => (await dock.innerText().catch(() => '')).trim();
+  const pages = [];
+  const seen = new Set();
+  const until = Date.now() + windowMs;
+  do {
+    const snap = await read();
+    if (snap && !seen.has(snap)) { seen.add(snap); pages.push(snap); }
+    if (Date.now() < until) await page.waitForTimeout(250);
+  } while (Date.now() < until);
+  const text = pages.join('\n');
   /*
    * The dock contains his speech AND its own chrome -- the "BARKLY" byline and
    * the "type" button. A first transcript recorded him saying "type" after a
@@ -136,8 +153,8 @@ for (const line of ['hello', 'good boy', 'sit', SECRET]) {
   if (await input.count()) {
     await input.fill(line);
     await input.press('Enter').catch(() => {});
-    await page.waitForTimeout(3600);
-    await listen(`saying "${line}"`);
+    await page.waitForTimeout(900);
+    await listen(`saying "${line}"`, 5200);
   }
 }
 
@@ -162,8 +179,8 @@ if (await park.count()) {
     if (await input.count()) {
       await input.fill(line);
       await input.press('Enter').catch(() => {});
-      await page.waitForTimeout(3600);
-      await listen(`asking "${line}"`);
+      await page.waitForTimeout(900);
+      await listen(`asking "${line}"`, 6500);
     }
   }
 }

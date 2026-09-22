@@ -384,9 +384,9 @@ function timelineReply(input: RecallInput): Recalled | null {
       return {
         speech: at(
           [
-            `${cap(label)}? ${hit.what} I was there. I'm always there.`,
-            `${hit.what} That was ${said(age(hit))}. I keep a diary. It's mostly this.`,
-            `Easy. ${hit.what} ${label === 'today' ? 'Still processing it.' : 'A big one.'}`,
+            `${cap(label)}? I was there for it. ${hit.what}`,
+            `That was ${said(age(hit))}. I keep a diary. ${hit.what}`,
+            `Easy. ${label === 'today' ? 'Still processing it.' : 'A big one.'} ${hit.what}`,
           ],
           seed,
         ),
@@ -413,15 +413,22 @@ function timelineReply(input: RecallInput): Recalled | null {
 
   // No window: "anything new", "what do you remember", "tell me a story".
   // "New"/"last" leans newest; a story leans most important.
+  //
+  // THE MEMORY GOES LAST in every template here and above. The speech bubble
+  // pages at ~54 characters, sentence by sentence, and the LAST page is the
+  // one that stays on screen -- so with the memory first, a stranger saw
+  // "That was today. I've got 1 more where that came from." and never the
+  // thing he remembered. Opener first, memory last: whatever page they land
+  // on, the payoff is the one that stays.
   const wantsNewest = /\b(new|last|latest|newest|up|going on|happen)/i.test(text);
   const hit = wantsNewest ? newest : pickBest(record);
   const others = record.length - 1;
   return {
     speech: at(
       [
-        `${hit.what} That was ${said(age(hit))}.${others > 0 ? ` I've got ${others} more where that came from.` : ''}`,
-        `Most recent thing on file, ${said(age(hit))}: ${hit.what}${others > 0 ? ' There is a whole archive.' : ''}`,
-        `${hit.what} ${cap(said(age(hit)))}. I remember everything. It's a burden.`,
+        `${cap(said(age(hit)))}.${others > 0 ? ` One of ${others + 1}.` : ''} ${hit.what}`,
+        `Most recent thing on file, ${said(age(hit))}: ${hit.what}`,
+        `I remember everything. It's a burden. ${cap(said(age(hit)))}: ${hit.what}`,
       ],
       seed,
     ),
