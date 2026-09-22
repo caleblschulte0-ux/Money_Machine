@@ -348,7 +348,13 @@ function timelineReply(input: RecallInput): Recalled | null {
   else if (/\byesterday\b/i.test(text)) { window = [0.5, 2]; label = 'yesterday'; }
   else if (/\b(this week|lately|recently|last week)\b/i.test(text)) { window = [0, 8]; label = 'lately'; }
 
-  const record = [...input.experiences].sort((a, b) => a.at - b.at); // oldest -> newest
+  // Blank rows are not memories. The store never writes one (makeExperience
+  // sanitizes and returns null), but `experiences` can arrive from a preset
+  // or an import, and a blank here would put a sentence with a hole in it in
+  // his mouth. Cheap to refuse at the last line of defence.
+  const record = [...input.experiences]
+    .filter((e) => typeof e.what === 'string' && e.what.trim().length > 0)
+    .sort((a, b) => a.at - b.at); // oldest -> newest
   const newest = record[record.length - 1];
 
   if (record.length === 0) {

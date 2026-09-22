@@ -148,3 +148,25 @@ describe('what did we do yesterday -- recall from TIME, not from a noun', () => 
     expect(askAt('we went to the park and it was fun')).toBeNull();
   });
 });
+
+
+describe('a blank experience is not a memory', () => {
+  // The store never writes a blank experience (makeExperience returns null
+  // for one), but presets and imports hand `experiences` in directly. A blank
+  // that reached the timeline would put " That was today. I keep a diary." in
+  // his mouth -- a sentence with a hole where the memory goes.
+  const DAY = 86_400_000;
+  const blank = { id: 'b', what: '   ', at: NOW - 1000, importance: 9, lastReferencedAt: NOW, referenceCount: 0 } as never;
+  const real = { id: 'r', what: 'Dug up a bottle cap collection at the park.', at: NOW - DAY, importance: 5, lastReferencedAt: NOW, referenceCount: 0 } as never;
+
+  it('is skipped in favour of a real one', () => {
+    const r = recall({ text: 'what did we do?', facts, experiences: [blank, real], character, seed: 3, now: NOW } as never);
+    expect(r!.speech).toContain('bottle cap');
+    expect(r!.speech).not.toMatch(/^\s|\.\s+That was today/);
+  });
+
+  it('counts as nothing when it is all there is', () => {
+    const r = recall({ text: 'what did we do today?', facts, experiences: [blank], character, seed: 3, now: NOW } as never);
+    expect(r!.speech).toMatch(/nothing yet|haven't done anything|nothing's happened/i);
+  });
+});

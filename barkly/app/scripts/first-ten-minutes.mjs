@@ -46,7 +46,17 @@ async function listen(label) {
    * would read, to anyone skimming, as the dog producing nonsense.
    */
   const CHROME = /^(type|barkly|barkly brain|•)$/i;
-  const line = text.split('\n').map((l) => l.trim()).filter((l) => l && !CHROME.test(l)).pop() || '';
+  /*
+   * The WHOLE utterance, not its last line. A long reply wraps -- and the
+   * bubble pages -- so `.pop()` reported "That was today. I keep a diary."
+   * for a line that actually began "Dug up a bottle cap collection...", and
+   * the transcript looked like a dog with a hole in his sentence. Take every
+   * line after the player's own ("YOU · ...") and join them; before any
+   * player line, take everything.
+   */
+  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l && !CHROME.test(l));
+  const you = lines.map((l, i) => (/^YOU\s*·/.test(l) ? i : -1)).filter((i) => i >= 0).pop();
+  const line = (you === undefined ? lines : lines.slice(you + 1)).join(' ').trim();
   if (line && line !== last) {
     said.push({ after: label, line });
     last = line;
