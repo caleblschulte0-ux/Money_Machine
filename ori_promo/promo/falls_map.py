@@ -471,6 +471,14 @@ def render(out_mp4, dur=5.5, preview_frames=None, size=(1920, 1080), bar=138):
             _glow(img, tx, ty, 30 * big, INK, 0.45 * u_you)
             cv2.circle(img, (int(tx), int(ty)), int(9 * big * u_you), INK[::-1], -1, cv2.LINE_AA)
             cv2.circle(img, (int(tx), int(ty)), int((18 + 12 * p2) * big * u_you), INK[::-1], 2, cv2.LINE_AA)
+        u_w = ease((t - 0.1) / 0.45) * fade_wide
+        if u_w > 0:
+            if not hasattr(render, "_wash") or render._wash.shape[:2] != (H, W):
+                yy = np.linspace(0, 1, H).reshape(-1, 1); xx = np.linspace(0, 1, W).reshape(1, -1)
+                wy = np.clip(1 - (yy - (BAR + 150) / H) / (140 / H), 0, 1)
+                wx = np.clip(1 - (xx - 780 / W) / (520 / W), 0, 1)
+                render._wash = (wy * wx).astype(np.float32)[:, :, None]
+            img = (img.astype(np.float32) * (1 - 0.62 * u_w * render._wash)).astype(np.uint8)
         pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
         d = ImageDraw.Draw(pil, "RGBA")
 
@@ -492,12 +500,14 @@ def render(out_mp4, dur=5.5, preview_frames=None, size=(1920, 1080), bar=138):
             a_you = u_you * (0.7 + 0.3 * u)
             halo_text((tx + 22 + 18 * u, ty - 4), "YOU ARE HERE", f_you, a_you, "lm", 2.2)
             halo_text((tx + 22 + 18 * u, ty + 24), "VIEWING TOWER", f_label, a_you * 0.85, "lm", 1.8)
-        # title (top-left) and legend (bottom-right), stepping back with the push
+        # title (top-left) and legend (bottom-right), stepping back with the push.
+        # A soft dark wash sits under the title so the subtitle does not
+        # fight the map lines (it was grey-on-lines, hard to read).
         u_t = ease((t - 0.1) / 0.45) * fade_wide
         if u_t > 0:
             d.rectangle((72, BAR + 44, 72 + int(52 * u_t), BAR + 48), fill=(*AMBER, int(255 * u_t)))
             _text(d, (72, BAR + 64), "FALLS PARK", f_title, (*INK, int(255 * u_t)), "la", 1.5)
-            _text(d, (72, BAR + 112), "EVERY STORY PRELOADED  ·  GPS  ·  NO SIGNAL NEEDED", f_sub, (*SUBTLE, int(255 * u_t)), "la", 2.6)
+            _text(d, (72, BAR + 118), "EVERY STORY PRELOADED  ·  GPS  ·  NO SIGNAL NEEDED", f_sub, (*INK, int(225 * u_t)), "la", 2.6)
         lx, ly = W - 72, H - BAR - 56
         for j, k in enumerate(reversed(order)):
             uu = ease((t - t_zone[k] - 0.05) / 0.4) * fade_wide

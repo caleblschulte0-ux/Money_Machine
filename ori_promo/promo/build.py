@@ -336,7 +336,7 @@ def place_sprite(frame, sprite, A, x0, y0, s0, alpha=1.0):
 
 # --------------------------------------------------------------------------- fx: markers
 
-def draw_marker(frame, ax, ay, label, sub, u, side=1):
+def draw_marker(frame, ax, ay, label, sub, u, side=1, rise=120):
     """Glasses-UI anchor: dot at (ax,ay), thin leader up to a compact label.
     u = animation progress 0..1."""
     if u <= 0:
@@ -346,7 +346,7 @@ def draw_marker(frame, ax, ay, label, sub, u, side=1):
     cv2.circle(ov, (int(ax), int(ay)), 7, ACCENT_BGR, -1, cv2.LINE_AA)
     cv2.circle(ov, (int(ax), int(ay)), r + 6, ACCENT_BGR, 2, cv2.LINE_AA)
     ln = ease_out(min(1, max(0, (u - 0.15) / 0.5)))
-    lx, ly = int(ax + side * 90 * ln), int(ay - 120 * ln)
+    lx, ly = int(ax + side * 90 * ln), int(ay - rise * ln)
     cv2.line(ov, (int(ax), int(ay)), (lx, ly), (250, 250, 250), 2, cv2.LINE_AA)
     cv2.addWeighted(ov, 0.92, frame, 0.08, 0, frame)
     tu = ease_out(min(1, max(0, (u - 0.5) / 0.5)))
@@ -471,8 +471,8 @@ def fx_markers(frames, t0):
             cv2.addWeighted(tmp, fade, g, 1 - fade, 0, g)
         x1, y1 = apply_pt(A[i], *P["mill"])   # the mill tower
         x2, y2 = apply_pt(A[i], *P["falls"])  # the falls
-        draw_marker(g, x1, y1, "QUEEN BEE MILL", "BUILT 1881", (t - 0.85) / 0.9, side=P["mill_side"])
-        draw_marker(g, x2, y2, "BIG SIOUX FALLS", "7,400 GAL / SEC", (t - 1.45) / 0.9, side=P["falls_side"])
+        draw_marker(g, x1, y1, "QUEEN BEE MILL", "BUILT 1881", (t - 0.85) / 0.9, side=P["mill_side"], rise=P.get("mill_rise", 120))
+        draw_marker(g, x2, y2, "BIG SIOUX FALLS", "7,400 GAL / SEC", (t - 1.45) / 0.9, side=P["falls_side"], rise=P.get("falls_rise", 120))
         out.append(g)
     return out
 
@@ -724,17 +724,29 @@ def light_wrap(comp, sprite_alpha_full, bg, width=9, amount=0.55):
     return (comp * (1 - band[:, :, None]) + bgb * band[:, :, None]).astype(np.uint8)
 
 
+GLOW_PAD = 90
+
+
 def reveal_frame(sprite, u):
     """Materialise: the sprite dissolves in with a soft warm bloom that
-    resolves into the object. No scan line."""
+    resolves into the object. No scan line.
+
+    The bloom is blurred on a canvas padded by GLOW_PAD so it can fall off
+    OUTSIDE the silhouette. Blurring on the tight sprite canvas at sigma
+    25-65 filled the whole bounding box evenly and it read as a lit
+    rectangle on the rocks before the figures arrived (found frame by frame
+    2026-09-22). The glow is returned padded: its (0,0) is the sprite's
+    (-GLOW_PAD, -GLOW_PAD)."""
     if u >= 1:
         return sprite, None
     sp = sprite.copy()
     sp[:, :, 3] = (sp[:, :, 3].astype(np.float32) * ease(u)).astype(np.uint8)
-    glow = np.zeros_like(sprite)
-    k = (1 - u) * 0.7
+    P = GLOW_PAD
+    a = cv2.copyMakeBorder(sprite[:, :, 3], P, P, P, P, cv2.BORDER_CONSTANT, value=0)
+    k = (1 - u) * 0.8
+    glow = np.zeros((a.shape[0], a.shape[1], 4), np.uint8)
     glow[:, :, :3] = ACCENT_BGR
-    glow[:, :, 3] = (cv2.GaussianBlur(sprite[:, :, 3], (0, 0), 25 + 40 * (1 - u)) * k).astype(np.uint8)
+    glow[:, :, 3] = np.clip(cv2.GaussianBlur(a, (0, 0), 8 + 16 * (1 - u)).astype(np.float32) * k, 0, 255).astype(np.uint8)
     return sp, glow
 
 
@@ -796,7 +808,8 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
         M = (A[i] @ Ts)[:2]
         warped = warp_sprite(sp, M)
         if glow is not None:
-            wg = warp_sprite(glow, M)
+            Mg = (np.vstack([M, [0, 0, 1]]) @ np.array([[1, 0, -GLOW_PAD], [0, 1, -GLOW_PAD], [0, 0, 1]], np.float64))[:2]
+            wg = warp_sprite(glow, Mg)
             ga = wg[:, :, 3:4].astype(np.float32) / 255.0
             g[:] = np.clip(g.astype(np.float32) + np.array(ACCENT_BGR, np.float32) * ga * 0.6, 0, 255).astype(np.uint8)
         bg = g.copy()
@@ -922,6 +935,11 @@ def fx_sync(frames, t0):
     for i, f in enumerate(frames):
         t = i / FPS
         g = f.copy()
+        xs = [tr[2](i) for tr in tracks if tr[0] <= i <= tr[1]]
+        apart = 1.0
+        if len(xs) == 2:
+            gap = abs(xs[0] - xs[1])
+            apart = min(1.0, max(0.0, (gap - 250) / 90))           # labels step aside only while they overlap
         for k, (a, b_, fx_, fy_, ff_, hgt) in enumerate(tracks):
             if not (a <= i <= b_):
                 continue
@@ -938,11 +956,16 @@ def fx_sync(frames, t0):
             cv2.circle(ov, (int(eye_x), int(eye_y)), 5, cols[k], -1, cv2.LINE_AA)
             cv2.addWeighted(ov, fade, g, 1 - fade, 0, g)
             lab = labels[k]
-            lx = int(hx - lab.shape[1] / 2); ly = int(hy - 46)
+            ry = int(hgt * 0.55 * 0.22)
+            lx = int(hx - lab.shape[1] / 2); ly = int(feet + ry + 18)           # on the ground, under the ring
+            lx = min(max(24, lx), W - lab.shape[1] - 24)
+            ly = min(ly, H - BAR - lab.shape[0] - 24)
             box = np.zeros((lab.shape[0] + 14, lab.shape[1] + 24, 4), np.uint8)
             box[:, :, :3] = 8; box[:, :, 3] = 150
-            blit(g, box, lx - 12, ly - 7, fade)
-            blit(g, lab, lx, ly, fade)
+            lf = fade * apart
+            if lf > 0:
+                blit(g, box, lx - 12, ly - 7, lf)
+                blit(g, lab, lx, ly, lf)
         out.append(g)
     return out
 

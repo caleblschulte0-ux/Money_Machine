@@ -34,7 +34,7 @@ def V_fit(x, y):
 
 
 # per-shot crop centre (fraction of the source width) and the moves re-aimed
-VX = {"pan": 0.50, "falls": 0.50, "reading": 0.42, "worn": 0.25, "markers": 0.62, "mammoth": 0.51,
+VX = {"pan": 0.50, "falls": 0.50, "reading": 0.42, "worn": 0.25, "markers": 0.62, "mammoth": 0.30,
       "dakota": 0.66, "point": 0.62, "sync": 0.50, "bridge": 0.50, "close": 0.50}
 
 SHOTS = []
@@ -58,8 +58,8 @@ FX = {
     "markers": dict(exclude_x=V(1200, 0, _kvx)[0], reticle=V(1290, 500, _kvx), mill=V(1150, 470, _kvx),
                     falls=V(1395, 520, _kvx), mill_side=-1, falls_side=-1),
     "safety": dict(anchor=V(1000, 640, _pvx), side=1),      # the water is left of him in this crop
-    # the mammoth stands in front of the falls here (the wearer is out of the crop)
-    "mammoth": dict(anchor=V(980, 930, _mvx), scale=0.62 * H / 1080, exclude=(0, 0, 1, 1),
-                    water_poly=[V(x, y, _mvx) for x, y in [(0, 900), (904, 860), (1182, 915), (1182, 1080), (0, 1080)]]),
+    # on the rock bank below the mill (the crop moves left to hold the bank and the falls)
+    "mammoth": dict(anchor=V(335, 752, _mvx), scale=0.58 * H / 1080, exclude=(0, 0, 1, 1),
+                    water_poly=[V(x, y, _mvx) for x, y in [(0, 775), (560, 770), (980, 800), (980, 1080), (0, 1080)]]),
     "dakota": dict(anchor=V(1275, 760, _dvx), scale=0.78 * H / 1080, exclude=(0, 0, 1, 1)),
 }

@@ -130,10 +130,15 @@ AMBIENCE_LEVELS = {"pan": -22, "falls": -13, "plaque": -30, "reading": -30, "gla
 
 # where the lens overlays sit, in this spec's frame coordinates
 FX = {
-    "markers": dict(exclude_x=1000, reticle=(1290, 500), mill=(1150, 470), falls=(1395, 520), mill_side=-1, falls_side=1),
+    # labels go up and right, clear of the wearer's head on the left
+    "markers": dict(exclude_x=1000, reticle=(1290, 500), mill=(1150, 470), falls=(1395, 520), mill_side=1, falls_side=1,
+                    mill_rise=215, falls_rise=80),
     "safety": dict(anchor=(880, 610), side=-1),
-    "mammoth": dict(anchor=(560, 930), scale=0.82, exclude=(1180, 0, 1920, 1080),
-                    water_poly=[(0, 900), (904, 860), (1182, 915), (1182, 1080), (0, 1080)]),
+    # on the rock bank below the mill, facing the falls -- NOT in the river:
+    # standing in the water with every foot and toenail showing, it read as
+    # floating on the surface (operator 2026-09-22: "looks weird")
+    "mammoth": dict(anchor=(335, 752), scale=0.58, exclude=(1180, 0, 1920, 1080),
+                    water_poly=[(0, 775), (560, 770), (980, 800), (980, 1080), (0, 1080)]),
     "dakota": dict(anchor=(1275, 760), scale=0.78, exclude=(0, 0, 780, 1080)),
 }
 
