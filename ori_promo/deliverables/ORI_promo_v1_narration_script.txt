@@ -1,0 +1,17 @@
+# ORI promo v1 -- narration script (for the real read / ElevenLabs)
+# One line per cue. Timeline start in seconds, then the line. Calm, unhurried; the placeholder was read at 0.95x.
+# Deliver each line as its own WAV or MP3, named vo_<NN>.wav in this order, and the build drops them in.
+
+01  [  1.6s]  You've walked past this a hundred times.
+02  [  4.5s]  The story's right here. Nobody reads the sign.
+03  [  7.9s]  So we put it where you're looking.
+04  [  9.9s]  A pair of glasses. That's the whole system.
+05  [ 12.5s]  No screens. No signs. Nothing built into the park.
+06  [ 17.0s]  Every story is already loaded. GPS knows where you're standing. No signal needed.
+07  [ 22.6s]  Look at something, and it knows what you're looking at.
+08  [ 25.5s]  Twelve thousand years ago, this was ice.
+09  [ 30.3s]  Then it was home.
+10  [ 33.3s]  Near the water, it goes audio only. Too close, it warns you. Closer than that, it shuts off.
+11  [ 39.3s]  Your group hears your story. The group walking past hears theirs.
+12  [ 43.9s]  Any place. Any story.
+13  [ 49.3s]  Open Range. See the story where you stand.
