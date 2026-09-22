@@ -26,6 +26,48 @@ The script fails closed if a release candidate still looks like a development/de
 
 The check intentionally remains RED until the final bundle/package identifiers and production environment are supplied. Do not weaken it just to get a green line.
 
+## Status, 2026-09-22
+
+`release:check` under a release environment fails on exactly **two** items,
+both decisions only the Apple/Google account holder can make, both permanent
+once the first build is uploaded:
+
+    expo.ios.bundleIdentifier     e.g. com.<you>.barkly
+    expo.android.package          usually the same string
+
+Everything software can supply is in the repo and checked:
+
+| Item | Where | Checked by |
+|---|---|---|
+| Build profiles, dev flags blanked in production | `app/eas.json` | release:check (HIDE_DEV) |
+| Splash screen | `expo-splash-screen` plugin in `app.json` | expo-doctor |
+| SDK deps aligned, missing `expo-asset` peer added | `app/package.json` | expo-doctor 21/21 |
+| Opaque 1024×1024 icon | `app/assets/icon.png` | release:check (PNG header) |
+| Privacy manifest (required-reason APIs, data types) | `app.json` `ios.privacyManifests` | release:check |
+| Export compliance (HTTPS only, exempt) | `app.json` `ios.config` | release:check |
+| No white screen on a render crash | `src/ui/CrashScreen.tsx` | `crash_boundary.test.tsx` |
+| Privacy policy URL | `/privacy/`, rendered from `docs/PRIVACY.md` | built by `build:pages` |
+| Support URL | `/support/` | built by `build:pages` |
+| Listing copy, review notes, draft privacy + age answers | `barkly/store/` | — |
+| Screenshots, 6.7" and 6.1" | `npm run store:screenshots` (gitignored) | — |
+| Proxy deploy (Docker, Fly, one machine) | `barkly/server/` | 54 server tests, prod boot verified |
+
+**The path to submission, in order, and whose it is:**
+
+1. *You:* pick the bundle id; set it and the Android package in `app.json`.
+2. *You:* deploy the proxy — `cd barkly/server && fly launch --copy-config
+   --no-deploy`, `fly secrets set` (the four in `fly.toml`), `fly deploy`.
+   Then put its URL and `BARKLY_APP_TOKEN` in EAS secrets as
+   `EXPO_PUBLIC_BARKLY_BACKEND_URL` / `EXPO_PUBLIC_BARKLY_APP_TOKEN`.
+3. *You:* create the App Store Connect record; paste its id into
+   `eas.json` → `submit.production.ios.ascAppId`.
+4. `npm run release:check` green under that environment.
+5. `eas build -p ios --profile production`, then `eas submit -p ios`.
+6. *You:* TestFlight on a real iPhone (the list under "Still human-gated").
+7. *You and counsel:* Kids Category decision, then the privacy
+   questionnaire from `store/privacy-labels.md` and the age rating from
+   `store/age-rating.md`.
+
 ## Release scope decision: iPhone first
 
 `ios.supportsTablet` is false for the initial release branch. The current product has not been through iPad layout/device QA, so advertising native iPad support would create an unnecessary review and quality surface. Turn it back on only after iPad screenshots, safe-area/layout checks, audio/STT and interaction testing are real.
