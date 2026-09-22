@@ -34,6 +34,84 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 WORLD = ROOT / "assets" / "world"
 MANIFEST = WORLD / "manifest.json"
+SCENES = WORLD / "scenes"
+
+
+def _briefs():
+    """prop-briefs.py, loaded as a module: ONE list of what art exists, shared
+    by the tool that writes the prompts and the tool that files the results,
+    so they cannot disagree about which props are real (they did: the brief
+    for home/bed existed and this script would have refused its image)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("prop_briefs", ROOT / "scripts" / "prop-briefs.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def key_magenta(im: Image.Image) -> Image.Image:
+    """Remove the #FF00FF key everywhere -- scene skies and window panes.
+
+    Nothing in this world's palette is magenta, so the key can be global
+    rather than border-connected. Soft at the edge (a model anti-aliases the
+    boundary into pinkish blends) and de-spilled: pixels near the key lose the
+    magenta cast they picked up instead of keeping a pink fringe.
+    """
+    a = np.asarray(im.convert("RGBA")).astype(np.float32)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    # distance from pure magenta: high R and B, low G
+    magentaness = np.clip(((r + b) / 2 - g) / 255.0, 0, 1) * np.clip(np.minimum(r, b) / 255.0 * 1.6, 0, 1)
+    alpha = a[..., 3] * (1 - np.clip((magentaness - 0.45) / 0.35, 0, 1))
+    spill = np.clip((magentaness - 0.15) / 0.3, 0, 1)
+    avg = (r + b) / 2
+    a[..., 0] = r - (r - np.minimum(r, g + 0.25 * (avg - g))) * spill
+    a[..., 2] = b - (b - np.minimum(b, g + 0.25 * (avg - g))) * spill
+    a[..., 3] = alpha
+    return Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), "RGBA")
+
+
+def ingest_plate(src: Path, name: str, dry: bool) -> bool:
+    """A scene plate: fit to the manifest's frame without moving its anchors.
+
+    The brief asks for 9:16. Scaled to 1792 tall and centre-cropped to 768
+    wide, every VERTICAL position is preserved exactly -- the horizon and the
+    spot the dog stands on are vertical measurements -- and only the edges
+    the brief warned about are trimmed.
+    """
+    m = json.loads((SCENES / "manifest.json").read_text())["scenes"].get(name)
+    if not m:
+        print(f"REFUSED scene__{name}.png -> no scene '{name}' in assets/world/scenes/manifest.json")
+        return False
+    W, H = m["width"], m["height"]
+    im = Image.open(src).convert("RGBA")
+    scale = H / im.height
+    if im.width * scale < W:
+        print(f"REFUSED scene__{name}.png -> {im.width}x{im.height} is narrower than {W}:{H}; ask for 9:16")
+        return False
+    im = im.resize((round(im.width * scale), H), Image.LANCZOS)
+    left = (im.width - W) // 2
+    im = key_magenta(im.crop((left, 0, left + W, H)))
+    al = np.asarray(im)[..., 3]
+    hz = int(m["anchors"]["horizon"]["y"] * H)
+    sx, sy = int(m["anchors"]["stand"]["x"] * W), int(m["anchors"]["stand"]["y"] * H)
+    sky_clear = float((al[: max(1, hz - 20)] < 20).mean())
+    ground_solid = float((al[hz + 20:] > 235).mean())
+    stand_ok = al[sy, sx] > 235
+    notes = []
+    if sky_clear < 0.80: notes.append(f"only {100*sky_clear:.0f}% of the sky keyed out -- was it flat magenta?")
+    if ground_solid < 0.90: notes.append(f"only {100*ground_solid:.0f}% of the ground is solid -- magenta in the scene?")
+    if not stand_ok: notes.append("the dog's standing spot is not solid ground")
+    # A bad PROP is a warning; a bad PLATE is a refusal. A plate whose sky did
+    # not key paints over the app's own sky -- the hour, the light, the haze --
+    # for the whole location, and that is not something to find by looking.
+    if notes and "--force" not in sys.argv:
+        print(f"REFUSED scene__{name}.png -> {'; '.join(notes)}  (regenerate it, or pass --force)")
+        return False
+    flag = ("   <-- FORCED: " + "; ".join(notes)) if notes else ""
+    print(f"{'would write' if dry else 'wrote'} scenes/{m['file']:24s} {W}x{H}  sky clear {100*sky_clear:.0f}%  ground solid {100*ground_solid:.0f}%{flag}")
+    if not dry:
+        im.save(SCENES / m["file"])
+    return True
 
 
 def cut_out(im: Image.Image) -> Image.Image:
@@ -77,7 +155,7 @@ def main() -> int:
         return 1
     raw = Path(sys.argv[1])
     dry = "--dry-run" in sys.argv
-    assets = json.loads(MANIFEST.read_text())["assets"]
+    assets = _briefs()._sources()
 
     files = sorted(raw.glob("*.png"))
     if not files:
@@ -86,17 +164,23 @@ def main() -> int:
     done, refused = 0, []
     for src in files:
         key = src.stem.replace("__", "/")
+        if key.startswith("scene/"):
+            if ingest_plate(src, key.split("/", 1)[1], dry):
+                done += 1
+            else:
+                refused.append(f"{src.name} -> see above")
+            continue
         if key not in assets:
             refused.append(f"{src.name} -> '{key}' is not a manifest key")
             continue
-        dest = WORLD / assets[key]["file"]
-        cut = cut_out(Image.open(src))
+        dest = ROOT / assets[key]["path"]
+        cut = key_magenta(cut_out(Image.open(src)))
         bbox = cut.getbbox()
         if bbox:
             cut = cut.crop(bbox)
         opaque = (np.asarray(cut)[..., 3] > 128).mean()
         note = "" if 0.08 < opaque < 0.97 else "   <-- CHECK: cut-out looks wrong"
-        print(f"{'would write' if dry else 'wrote'} {assets[key]['file']:34s} "
+        print(f"{'would write' if dry else 'wrote'} {assets[key]['path']:48s} "
               f"{cut.width}x{cut.height}  {100 * opaque:4.1f}% opaque{note}")
         if not dry:
             dest.parent.mkdir(parents=True, exist_ok=True)

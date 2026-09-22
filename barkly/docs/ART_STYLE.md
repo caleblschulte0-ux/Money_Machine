@@ -41,14 +41,19 @@ any of those. It had defaults.
 > and files generated art against that manifest, and refuses any name the app
 > has never heard of.
 >
-> **What this needs from a human:** the image model. There is no image API key
-> in the build environment, and the Gemini free tier has zero quota for image
-> models (noted in the same README). Run `python3 scripts/prop-briefs.py`,
-> paste each brief into ChatGPT with `assets/barkly/concept/barkly-concept.png`
-> attached, save the results as `raw/<place>__<prop>.png`, then
-> `python3 scripts/ingest-art.py raw/`. Twelve props have character lists;
-> `--list-missing` names the other thirty-seven, and they need lists written
-> before they are generated, not filler.
+> **What this needs from a human:** the image model. Open
+> **`barkly/art/BRIEFS.md`** and work top to bottom in ChatGPT with the
+> concept sheet attached. It is ordered by what is on screen: the three scene
+> plates first (with park, town and beach plated, they ARE the world -- the app
+> draws nothing else there but park's near grass), then Home's furniture, then
+> the overlays, clouds and store items, and the fallback-only props last.
+> Every one of the 54 pieces has a character list. `ingest-art.py` files the
+> results, fits scenes to their anchors (horizon 32%, the dog's spot 72%), and
+> REFUSES a scene whose sky did not key out.
+>
+> 2026-09-22: generating through an Apify image actor from here (~$0.04 an
+> image, reference-image capable) was offered and declined by the operator.
+> No paid generation runs without his say-so.
 >
 > The Blender pipeline stays for now and nothing is deleted — it is what the
 > game currently ships, and it should be retired prop by prop as replacements
