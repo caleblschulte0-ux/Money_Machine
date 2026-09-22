@@ -111,7 +111,7 @@ VO = [
 # (or .mp3) per line of VO in order, e.g. "files:../vo/real"; a path = a
 # Piper model. Placeholder until the real read; swap here, nothing else
 # changes.
-VOICE = "kokoro:af_heart"
+VOICE = "chatterbox"          # Chatterbox built-in voice; was "kokoro:af_heart"
 VOICE_SPEED = 0.95
 
 MUSIC = "../music/inspired.mp3"

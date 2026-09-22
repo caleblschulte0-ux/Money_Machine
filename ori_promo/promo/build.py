@@ -29,6 +29,8 @@ for _k in ("W", "H", "FPS", "BAR", "TOTAL", "END_CARD_START", "SHOTS", "CARDS", 
     globals()[_k] = getattr(_spec, _k)
 VERTICAL = H > W
 OUT_NAME = getattr(_spec, "OUT_NAME", "ORI_promo.mp4")
+CB_EXAGGERATION = getattr(_spec, "CB_EXAGGERATION", 0.45)   # Chatterbox: 0.5 neutral, lower = calmer
+CB_CFG = getattr(_spec, "CB_CFG", 0.5)                        # Chatterbox: lower = slower, more deliberate
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
@@ -1574,6 +1576,24 @@ def narrator():
         def say(text, path):
             src = os.path.join(d, next(it))
             run(["ffmpeg", "-v", "error", "-y", "-i", src, "-ar", "48000", "-ac", "1", path])
+        return say
+    if VOICE.startswith("chatterbox"):
+        # Chatterbox (Resemble AI, MIT; 0.5B, torch on CPU): the most natural
+        # open read available with no account. "chatterbox" = its built-in
+        # voice; "chatterbox:<ref.wav>" clones the voice in a 10s reference.
+        import torch, torchaudio as ta
+        from chatterbox.tts import ChatterboxTTS
+        model = ChatterboxTTS.from_pretrained(device="cpu")
+        ref = VOICE.split(":", 1)[1] if ":" in VOICE else None
+        ref = os.path.join(HERE, ref) if ref else None
+
+        def say(text, path):
+            kw = dict(exaggeration=CB_EXAGGERATION, cfg_weight=CB_CFG)
+            if ref:
+                kw["audio_prompt_path"] = ref
+            torch.manual_seed(7)
+            wav = model.generate(text, **kw)
+            ta.save(path, wav, model.sr)
         return say
     if VOICE.startswith("kokoro:"):
         import soundfile as sf
