@@ -1,19 +1,19 @@
 """ORI promo -- the cut.
 
-46.7s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
+49.1s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
 "Inspired" (Kevin MacLeod, CC BY 4.0) at 120 BPM: a bar is 2.0s.
 
 Story, second person: you've walked past this place; the story is on a
 sign nobody reads; so we put it where you're looking -> the map of the park's experience layer, pushing in on YOU ARE HERE ->
 him on that tower, the glasses lock on -> the place transforms (ice, then
-the people who lived here) -> right where you stand -> the product -> walk
+the people who lived here) -> right where you stand -> the product, then worn -> walk
 past another group, you only hear yours -> any place -> walk off -> end card.
 """
 
 W, H, FPS = 1920, 1080, 24
 BAR = 138                    # 2.39:1 letterbox: 1920 x 804 picture
-TOTAL = 46.7
-END_CARD_START = 43.9
+TOTAL = 49.1
+END_CARD_START = 46.3
 
 RAW = "../raw"
 RAW_MORE = "../raw_more"
@@ -46,6 +46,9 @@ SHOTS = [
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     ("point",   f"{RAW}/IMG_6794.MOV",          45.9, 2.0, dict(speed=0.7)),
     ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True)),
+    # the glasses ON him: the tail of the tower clip, a close profile
+    # looking out over the park (steady, 0.14px/frame; sharp from 10s)
+    ("worn",    f"{RAW}/IMG_6799.MOV",          10.2, 2.4, dict(mc=True, speed=0.85, move=("in", 0.03))),
     ("sync",    f"{RAW_MORE}/IMG_6808.MOV",     16.0, 4.5, dict(fx="sync", speed=0.9)),
     ("bridge",  f"{RAW}/IMG_6798.MOV",          12.5, 3.0, dict(move=("in", 0.04))),
     ("close",   f"{RAW_MORE}/IMG_6803.MOV",      3.0, 5.5, dict(stab=True, smooth=90, zoom=8, speed=0.72, move=("in", 0.05))),
@@ -72,8 +75,8 @@ CARDS = [
     (21.4, 24.9, ["Twelve thousand years ago,", "this was ice."]),
     (25.6, 28.0, ["Then it was home."]),
     (28.4, 30.0, ["Right where you're standing."]),
-    (34.3, 37.9, ["Walk past another group.", "You only hear yours."]),
-    (38.6, 40.9, ["Any place. Any story."]),
+    (36.7, 40.3, ["Walk past another group.", "You only hear yours."]),
+    (41.0, 43.3, ["Any place. Any story."]),
 ]
 
 # Small documentary eyebrows, lower-left. (t_in, t_out, text)
@@ -97,10 +100,11 @@ VO = [
     (17.5, "And it knows where you're standing."),
     (21.4, "Twelve thousand years ago, this was ice. Then it was home."),
     (28.4, "Right where you're standing."),
-    (30.7, "A pair of glasses. No screen. No phone."),
-    (34.3, "Walk past another group. You only hear yours."),
-    (38.6, "Any place. Any story."),
-    (43.9, "Open Range. See the story where you stand."),
+    (30.7, "A pair of glasses."),
+    (34.0, "No screen. No phone."),
+    (36.7, "Walk past another group. You only hear yours."),
+    (41.0, "Any place. Any story."),
+    (46.3, "Open Range. See the story where you stand."),
 ]
 VOICE = "../vo/voices/en_US-ryan-high.onnx"
 
@@ -111,11 +115,13 @@ AMBIENCE = f"{RAW_MORE}/IMG_6682.MOV"     # the falls, under everything
 # "ambience": the falls bed only. "ambience+vo": the bed, louder near the
 # falls, with the narrator on top (operator 2026-09-22: "bring in the
 # narrator ... the falls should be louder if we're near the falls").
-# "full": the designed mix with score and SFX, plus a VO variant.
-AUDIO = "ambience+vo"
+# "score": ambience+vo with the score under it and a few placed effects
+# (operator 2026-09-22: "it's just missing a little something").
+# "full": the old designed mix, plus a separate VO variant.
+AUDIO = "score"
 # falls bed level per shot, dB: loud where the water is in frame or close
 AMBIENCE_LEVELS = {"pan": -24, "falls": -14, "plaque": -30, "reading": -30, "glasscu": -30, "markers": -24,
-                   "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "map": -34, "sync": -27,
+                   "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "worn": -24, "map": -34, "sync": -27,
                    "bridge": -27, "close": -25, "logo": -60}
 
 BRAND = "OPEN RANGE"

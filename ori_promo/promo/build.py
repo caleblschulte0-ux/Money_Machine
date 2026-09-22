@@ -1297,7 +1297,7 @@ def stage_audio():
     n = int(TOTAL * SR)
     bus = np.zeros((n, 2), np.float32)
     S = shot_start
-    if AUDIO in ("ambience", "ambience+vo"):
+    if AUDIO in ("ambience", "ambience+vo", "score"):
         # Operator, 2026-09-21: no score -- "generic falls sounds over the
         # background"; 2026-09-22: louder when the falls are in frame or
         # close, and the narrator on top. One bed, the falls, its level
@@ -1330,12 +1330,46 @@ def stage_audio():
             k = min(len(a), n - i0)
             vo[i0:i0 + k] += a[:k]
             print(f"  vo {at:5.1f}s {len(a)/SR:4.1f}s  {text}")
+        bed = amb
+        if AUDIO == "score":
+            # the score: under everything, restrained; lifts as the glasses
+            # come online (markers), sits back under the story beats, lifts
+            # again for the product and rides out under the end card.
+            hit = S("markers")
+            m = load_audio(MUSIC, MUSIC_OFFSET, TOTAL + 1)[:n]
+            m *= env_points([(0, -26), (S("pan"), -22), (S("map"), -20), (hit - 0.05, -20), (hit, -14),
+                             (S("mammoth"), -16), (S("glasses") - 0.1, -16), (S("glasses"), -13),
+                             (S("sync"), -15), (END_CARD_START, -13), (TOTAL - 1.2, -13), (TOTAL - 0.05, -50)], n)
+            bed = bed + m
+
+            def place(sig, at, gain_db):
+                sig = sig * db(gain_db); i0 = int(at * SR); k = min(len(sig), n - i0)
+                if k > 0:
+                    bed[i0:i0 + k] += sig[:k]
+
+            def sfx(name, at, gain_db, trim=None):
+                s_ = load_audio(f"{SFX}/{name}.wav")
+                if trim:
+                    s_ = fade_edges(s_[:int(trim * SR)], 0.005, min(0.25, trim / 2))
+                place(s_, at, gain_db)
+
+            # a few placed effects, all quiet: the activation, the lock-on,
+            # the transformation, the product, the end card
+            place(shimmer(), S("glasscu") + 0.35, -20)
+            sfx("whoosh", S("map") + 2.3, -24, trim=0.9)           # the push in on YOU ARE HERE
+            sfx("pop", S("markers") + 0.9, -24)
+            sfx("pop", S("markers") + 1.5, -24)
+            place(shimmer(1.8, 660), S("mammoth") + 0.3, -18)
+            place(sub_hit(), S("mammoth") + 0.55, -14)
+            place(shimmer(1.4, 740), S("dakota") + 0.25, -19)
+            sfx("whoosh", S("glasses") - 0.08, -22, trim=0.6)
+            sfx("boom", END_CARD_START, -18)
         env = np.abs(vo[:, 0])
         kern = int(0.08 * SR)
         env = np.convolve(env, np.ones(kern) / kern, mode="same")
         duck = 1 - 0.45 * np.clip(env / 0.02, 0, 1)
         duck = np.convolve(duck, np.ones(int(0.15 * SR)) / int(0.15 * SR), mode="same")[:, None]
-        write_wav(f"{WORK}/mix.wav", amb * duck + vo)
+        write_wav(f"{WORK}/mix.wav", bed * duck + vo)
         return
     hit = S("markers")                         # the glasses come online: the drop
     # music: sneaks in under the logo and the pan, lifts as he looks up, drops at the hit
@@ -1436,7 +1470,7 @@ FINISH = "null"
 def stage_final():
     os.makedirs("../out", exist_ok=True)
     outs = [("mix.wav", "ORI_promo.mp4")] if AUDIO != "full" else [("mix.wav", "ORI_promo.mp4"), ("mix_vo.wav", "ORI_promo_vo.mp4")]
-    lufs = {"ambience": -20, "ambience+vo": -16}.get(AUDIO, -14)
+    lufs = {"ambience": -20, "ambience+vo": -16, "score": -15}.get(AUDIO, -14)
     for mix, name in outs:
         run(["ffmpeg", "-v", "error", "-y", "-i", f"{WORK}/picture.mp4", "-i", f"{WORK}/{mix}",
              "-vf", FINISH, "-af", f"loudnorm=I={lufs}:TP=-1.5:LRA=9",
