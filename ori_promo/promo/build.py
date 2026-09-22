@@ -20,7 +20,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, VOICE_SPEED, EYEBROWS, AUDIO, AMBIENCE_LEVELS,
+from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, VOICE_SPEED, EYEBROWS, AUDIO, AMBIENCE_LEVELS, PAYOFF,
                   MUSIC, MUSIC_OFFSET, SFX, AMBIENCE, BRAND, BRAND_SUB, TAGLINE, shot_start)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -314,8 +314,8 @@ def draw_marker(frame, ax, ay, label, sub, u, side=1):
     cv2.addWeighted(ov, 0.92, frame, 0.08, 0, frame)
     tu = ease_out(min(1, max(0, (u - 0.5) / 0.5)))
     if tu > 0:
-        lab = text_sprite(label, 34, "SemiBold", (250, 250, 250), tracking=2)
-        sub_s = text_sprite(sub, 26, "Medium", ACCENT, tracking=3)
+        lab = text_sprite(label, 41, "SemiBold", (250, 250, 250), tracking=2)
+        sub_s = text_sprite(sub, 31, "Medium", ACCENT, tracking=3)
         tx = lx + (12 if side > 0 else -12 - lab.shape[1])
         ty = ly - lab.shape[0] - 26
         pad = 14
@@ -384,7 +384,7 @@ def fx_activate(frames, t0):
             cv2.circle(ov, (cx, cy), 6, ACCENT_BGR, -1, cv2.LINE_AA)
             cv2.circle(ov, (cx, cy), int(10 + 6 * pu), ACCENT_BGR, 2, cv2.LINE_AA)
             cv2.addWeighted(ov, 0.9, g, 0.1, 0, g)
-            tag = text_sprite("ACTIVE", 24, "SemiBold", ACCENT, tracking=5)
+            tag = text_sprite("ACTIVE", 29, "SemiBold", ACCENT, tracking=5)
             blit(g, tag, int(cx - tag.shape[1] / 2), int(cy + 150 * 0.7 + 14), min(1.0, (t - 1.0) / 0.3))
         out.append(g)
     return out
@@ -870,8 +870,8 @@ def fx_sync(frames, t0):
     if not tracks:
         return frames
     out = []
-    labels = [text_sprite("YOUR GROUP", 26, "SemiBold", ACCENT, tracking=3),
-              text_sprite("ANOTHER GROUP", 26, "SemiBold", (200, 235, 255), tracking=3)]
+    labels = [text_sprite("YOUR GROUP", 31, "SemiBold", ACCENT, tracking=3),
+              text_sprite("ANOTHER GROUP", 31, "SemiBold", (200, 235, 255), tracking=3)]
     cols = [ACCENT_BGR, COOL]
     for i, f in enumerate(frames):
         t = i / FPS
@@ -1177,15 +1177,18 @@ def stage_picture():
         if t >= END_CARD_START - 0.5:
             u = ease((t - (END_CARD_START - 0.5)) / 0.9)
             f[:] = (f.astype(np.float32) * (1 - 0.66 * u)).astype(np.uint8)
-            _, tag, rule = end
+            _, tag, rule, pay = end
             ub = ease_out((t - END_CARD_START) / 0.7)
             ut = ease_out((t - END_CARD_START - 0.45) / 0.6)
+            up = ease_out((t - END_CARD_START - 1.3) / 0.6)
             draw_logo(f, ub, 1.0, H // 2 - 58)
             if ub > 0:
                 rw = max(2, int(rule.shape[1] * ease_out(min(1, (t - END_CARD_START) / 0.5))))
                 blit(f, rule[:, :rw], (W - rw) // 2, H // 2 + 34, 1.0)
             if ut > 0:
                 blit(f, tag, (W - tag.shape[1]) // 2, H // 2 + 60 + int(10 * (1 - ut)), ut)
+            if up > 0:
+                blit(f, pay, (W - pay.shape[1]) // 2, H // 2 + 128 + int(8 * (1 - up)), up)
         letterbox(f)
         w.write(f)
     w.close()
@@ -1246,7 +1249,7 @@ def card_sprite(lines):
 
 
 def tag_sprite(text):
-    t = text_sprite(text, 22, "SemiBold", (240, 238, 232), tracking=3)
+    t = text_sprite(text, 26, "SemiBold", (240, 238, 232), tracking=3)
     pad = 12
     out = np.zeros((t.shape[0] + 2 * pad - 6, t.shape[1] + 2 * pad, 4), np.uint8)
     out[:, :, :3] = 10; out[:, :, 3] = 140
@@ -1260,7 +1263,8 @@ def end_card_sprites():
     tag = text_sprite(TAGLINE, 40, "Medium", (225, 222, 215), tracking=1)
     rule = np.zeros((3, 220, 4), np.uint8)
     rule[:, :, :3] = ACCENT_BGR; rule[:, :, 3] = 255
-    return brand, tag, rule
+    pay = text_sprite(PAYOFF, 24, "SemiBold", ACCENT, tracking=4)
+    return brand, tag, rule, pay
 
 
 def blit_rgba(dst, sp, x, y, alpha):

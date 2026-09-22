@@ -1,6 +1,6 @@
 """ORI promo -- the cut.
 
-54.6s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
+55.1s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
 "Inspired" (Kevin MacLeod, CC BY 4.0) at 120 BPM: a bar is 2.0s.
 
 Story, second person -- a first-time viewer has to learn WHAT it is:
@@ -15,8 +15,8 @@ yours, the group walking past hears theirs -> any place -> end card.
 
 W, H, FPS = 1920, 1080, 24
 BAR = 138                    # 2.39:1 letterbox: 1920 x 804 picture
-TOTAL = 54.6
-END_CARD_START = 51.8
+TOTAL = 55.1
+END_CARD_START = 52.3
 
 RAW = "../raw"
 RAW_MORE = "../raw_more"
@@ -31,13 +31,17 @@ RAW_MORE = "../raw_more"
 # 6803 (move), 6709 (macro, 3.5) -- those get smoothing, or a still.
 SHOTS = [
     ("logo",    None,                            0.0, 1.2, dict(black=True)),
+    # the product in the first five seconds (ChatGPT review, 2026-09-22:
+    # "they could initially think this is a tourism video"): a flash of the
+    # turntable with a fast push, then the park. The beauty shot stays later.
+    ("tease",   "../supplied/glasses_turntable.mp4", 2.6, 1.5, dict(stab=False, sdr=True, push=(0.35, 1.7, (960, 470)))),
     ("pan",     f"{RAW}/IMG_6791.MOV",           1.0, 3.0, dict(stab=True, smooth=90, zoom=6)),
     ("falls",   f"{RAW_MORE}/IMG_6682.MOV",     16.0, 2.0, dict(stab=True, smooth=90, zoom=6, speed=0.7, move=("in", 0.04))),
     # IMG_6709 is a PORTRAIT recording and handheld (p90 shake 3.5px/frame,
     # 30x the tripod shots); as video it was squashed to landscape and
     # shook. It is a text macro: one sharp frame with a slow push reads as
     # a locked-off macro and is steady by construction.
-    ("plaque",  "work/plaque_still.png",         0.0, 2.5, dict(still=True)),
+    ("plaque",  "work/plaque_still.png",         0.0, 1.5, dict(still=True)),
     ("reading", f"{RAW}/IMG_6796.MOV",          31.0, 2.0, dict(move=("out", 0.03))),
     ("glasscu", f"{RAW}/IMG_6796.MOV",          33.0, 2.5, dict(crop=(835, 299, 2.0), fx="activate")),
     # the product, EARLY (operator 2026-09-22: a first-time viewer has to
@@ -81,32 +85,34 @@ CARDS = []
 
 # Small documentary eyebrows, lower-left. (t_in, t_out, text)
 EYEBROWS = [
-    (1.6, 4.0, "FALLS PARK  ·  SIOUX FALLS, SD"),
+    (3.1, 5.6, "OPEN RANGE  ·  AR GLASSES  ·  FALLS PARK, SIOUX FALLS, SD"),
 ]
 
 # Small honesty tags, top-right, during generated imagery.
 TAGS = [
-    (13.4, 16.6, "PRODUCT VISUALIZATION"),
-    (28.1, 32.4, "VISUALIZATION"),
-    (32.9, 35.4, "VISUALIZATION"),
+    (1.4, 2.6, "PRODUCT VISUALIZATION"),
+    (13.9, 17.1, "PRODUCT VISUALIZATION"),
+    (28.6, 32.9, "VISUALIZATION"),
+    (33.4, 35.9, "VISUALIZATION"),
 ]
 
 # Narration (Piper, offline, en_US-ryan-high). Timeline placement.
 VO = [
-    (1.6,  "You've walked past this a hundred times."),
-    (4.5,  "The story's right here. Nobody reads the sign."),
-    (8.9,  "So we put it where you're looking."),
-    (11.0, "A pair of glasses. That's the whole system."),
-    (13.5, "No screens. No signs. Nothing built into the park."),
-    (16.9, "Just the glasses."),
-    (19.5, "Every story is already loaded. GPS knows where you're standing. No signal needed."),
-    (25.1, "Look at something, and it knows what you're looking at."),
-    (28.0, "Twelve thousand years ago, this was ice."),
-    (32.8, "Then it was home."),
-    (35.8, "Near the water, it goes audio only. Too close, it warns you. Closer than that, it shuts off."),
-    (41.8, "Your group hears your story. The group walking past hears theirs."),
-    (46.4, "Any place. Any story."),
-    (51.8, "Open Range. See the story where you stand."),
+    (1.25, "A pair of glasses."),
+    (3.1,  "You've walked past this a hundred times."),
+    (6.0,  "The story's right here. Nobody reads the sign."),
+    (9.4,  "So we put it where you're looking."),
+    (11.5, "The glasses are the whole system."),
+    (14.0, "No screens. No signs. Nothing built into the park."),
+    (17.4, "Just the glasses."),
+    (20.0, "Every story is already loaded. GPS knows where you're standing. No signal needed."),
+    (25.6, "Look at something, and it knows what you're looking at."),
+    (28.5, "Twelve thousand years ago, this was ice."),
+    (33.3, "Then it was home."),
+    (36.3, "Near the water, it goes audio only. Too close, it warns you. Closer than that, it shuts off."),
+    (42.3, "Your group hears your story. The group walking past hears theirs."),
+    (46.9, "Any place. Any story."),
+    (52.3, "Open Range. See the story where you stand."),
 ]
 # "kokoro:<voice>" = Kokoro (vo/kokoro/, 54 voices: af_heart, af_bella,
 # am_michael, bm_george ...); a path = a Piper model. Placeholder until the
@@ -127,9 +133,13 @@ AMBIENCE = f"{RAW_MORE}/IMG_6682.MOV"     # the falls, under everything
 AUDIO = "score"
 # falls bed level per shot, dB: loud where the water is in frame or close
 AMBIENCE_LEVELS = {"pan": -24, "falls": -14, "plaque": -30, "reading": -30, "glasscu": -30, "markers": -24,
-                   "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "worn": -24, "map": -34, "point": -16, "sync": -27,
+                   "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "tease": -40, "worn": -24, "map": -34, "point": -16, "sync": -27,
                    "bridge": -27, "close": -25, "logo": -60}
 
 BRAND = "OPEN RANGE"
 BRAND_SUB = "INTERACTIVE"
 TAGLINE = "See the story where you stand."
+# the payoff line under the tagline (ChatGPT review: "needs a stronger
+# payoff than just branding"). Beta at Falls Park is the r00 brief's fact;
+# swap for a URL or "coming soon" when there is one.
+PAYOFF = "NOW IN BETA  ·  FALLS PARK, SIOUX FALLS"

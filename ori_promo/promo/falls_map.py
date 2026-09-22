@@ -400,9 +400,9 @@ def render(out_mp4, dur=5.5, preview_frames=None):
     for yy, xx in zip(ys, xs):
         label_xy.setdefault(int(lbl[yy, xx]), (int(xx), int(yy)))
     n = int(round(dur * FPS))
-    f_title, f_sub = font("SemiBold", 40), font("Medium", 22)
-    f_label, f_leg = font("Medium", 21), font("Medium", 24)
-    f_you = font("SemiBold", 26)
+    f_title, f_sub = font("SemiBold", 46), font("Medium", 25)
+    f_label, f_leg = font("Medium", 25), font("Medium", 28)
+    f_you = font("SemiBold", 31)
     order = ["ambient", "visual", "narration", "lookout"]
     t_zone = {k: 0.5 + i * 0.38 for i, k in enumerate(order)}
     marks = cluster(F["points"])
@@ -494,7 +494,7 @@ def render(out_mp4, dur=5.5, preview_frames=None):
             uu = ease((t - t_zone[k] - 0.05) / 0.4) * fade_wide
             if uu <= 0:
                 continue
-            y = ly - j * 40
+            y = ly - j * 46
             name, col = ZONES[k]
             d.ellipse((lx - 16 - 8, y - 8, lx - 16 + 8, y + 8), fill=(*col, int(255 * uu)))
             d.ellipse((lx - 16 - 3, y - 3, lx - 16 + 3, y + 3), fill=(*INK, int(255 * uu)))
