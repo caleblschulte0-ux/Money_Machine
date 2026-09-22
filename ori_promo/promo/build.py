@@ -20,7 +20,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, EYEBROWS, AUDIO,
+from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, EYEBROWS, AUDIO, AMBIENCE_LEVELS,
                   MUSIC, MUSIC_OFFSET, SFX, AMBIENCE, BRAND, BRAND_SUB, TAGLINE, shot_start)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -70,6 +70,12 @@ def prep_shot(sid, src, t_in, dur, opt):
     if opt.get("black"):
         run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c=black:s={W}x{H}:r={FPS}", "-t", dur,
              "-frames:v", n_frames, *ENC, out])
+        run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", dur, wav])
+        return
+    if opt.get("gen"):
+        # a generated beat (falls_map.py): silent, already 1920x1080 @ FPS
+        import falls_map
+        falls_map.render(out, dur=dur)
         run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", dur, wav])
         return
     if opt.get("still"):
@@ -1061,7 +1067,7 @@ def stage_picture():
         real = True
         for sid, _, _, dur, opt in SHOTS:
             if shot_start(sid) <= t < shot_start(sid) + dur:
-                real = not (opt.get("black") or opt.get("sdr"))   # a still cut from footage takes the look too
+                real = not (opt.get("black") or opt.get("sdr") or opt.get("gen"))   # a still cut from footage takes the look too
                 break
         if real:
             f = filmic(f, i)
@@ -1291,17 +1297,45 @@ def stage_audio():
     n = int(TOTAL * SR)
     bus = np.zeros((n, 2), np.float32)
     S = shot_start
-    if AUDIO == "ambience":
-        # Operator, 2026-09-21: no narration yet, no score -- "generic falls
-        # sounds over the background". One bed, the falls, under everything,
-        # a touch louder under the falls shot, out with the end card.
+    if AUDIO in ("ambience", "ambience+vo"):
+        # Operator, 2026-09-21: no score -- "generic falls sounds over the
+        # background"; 2026-09-22: louder when the falls are in frame or
+        # close, and the narrator on top. One bed, the falls, its level
+        # following AMBIENCE_LEVELS shot by shot (0.35s glides at the cuts).
         amb = load_audio(AMBIENCE, 2.0, TOTAL + 1)
         if len(amb) < n:
             amb = np.vstack([amb] * (int(np.ceil(n / max(1, len(amb)))) + 1))
         amb = amb[:n]
-        amb *= env_points([(0, -60), (S("pan"), -30), (S("falls"), -20), (S("falls") + 2.0, -24),
-                           (END_CARD_START, -24), (TOTAL - 0.3, -60)], n)
-        write_wav(f"{WORK}/mix.wav", amb)
+        pts, t = [(0, -60)], 0.0
+        for sid, _, _, dur, _ in SHOTS:
+            lvl = AMBIENCE_LEVELS.get(sid, -30)
+            pts += [(t + 0.35, lvl), (t + dur, lvl)]
+            t += dur
+        pts += [(END_CARD_START + 1.0, -30), (TOTAL - 0.3, -60)]
+        pts = sorted(pts)
+        amb *= env_points(pts, n)
+        if AUDIO == "ambience":
+            write_wav(f"{WORK}/mix.wav", amb)
+            return
+        vo = np.zeros((n, 2), np.float32)
+        from piper import PiperVoice
+        v = PiperVoice.load(VOICE)
+        for at, text in VO:
+            p = f"{WORK}/_vo_{int(at*10)}.wav"
+            with wave.open(p, "wb") as wv:
+                v.synthesize_wav(text, wv)
+            a = load_audio(p)
+            a = fade_edges(a, 0.02, 0.05) * db(-1)
+            i0 = int(at * SR)
+            k = min(len(a), n - i0)
+            vo[i0:i0 + k] += a[:k]
+            print(f"  vo {at:5.1f}s {len(a)/SR:4.1f}s  {text}")
+        env = np.abs(vo[:, 0])
+        kern = int(0.08 * SR)
+        env = np.convolve(env, np.ones(kern) / kern, mode="same")
+        duck = 1 - 0.45 * np.clip(env / 0.02, 0, 1)
+        duck = np.convolve(duck, np.ones(int(0.15 * SR)) / int(0.15 * SR), mode="same")[:, None]
+        write_wav(f"{WORK}/mix.wav", amb * duck + vo)
         return
     hit = S("markers")                         # the glasses come online: the drop
     # music: sneaks in under the logo and the pan, lifts as he looks up, drops at the hit
@@ -1401,8 +1435,8 @@ FINISH = "null"
 
 def stage_final():
     os.makedirs("../out", exist_ok=True)
-    outs = [("mix.wav", "ORI_promo.mp4")] if AUDIO == "ambience" else [("mix.wav", "ORI_promo.mp4"), ("mix_vo.wav", "ORI_promo_vo.mp4")]
-    lufs = -20 if AUDIO == "ambience" else -14
+    outs = [("mix.wav", "ORI_promo.mp4")] if AUDIO != "full" else [("mix.wav", "ORI_promo.mp4"), ("mix_vo.wav", "ORI_promo_vo.mp4")]
+    lufs = {"ambience": -20, "ambience+vo": -16}.get(AUDIO, -14)
     for mix, name in outs:
         run(["ffmpeg", "-v", "error", "-y", "-i", f"{WORK}/picture.mp4", "-i", f"{WORK}/{mix}",
              "-vf", FINISH, "-af", f"loudnorm=I={lufs}:TP=-1.5:LRA=9",

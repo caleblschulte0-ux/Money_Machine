@@ -1,19 +1,20 @@
 """ORI promo -- the cut.
 
-42.7s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
+46.7s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
 "Inspired" (Kevin MacLeod, CC BY 4.0) at 120 BPM: a bar is 2.0s.
 
 Story, second person: you've walked past this place; the story is on a
 sign nobody reads; so we put it where you're looking -> the glasses lock
 on -> the place transforms (ice, then the people who lived here) ->
-right where you stand -> the product -> walk past another group, you
-only hear yours -> any place -> walk off -> end card.
+right where you stand -> the product -> the map of the park's experience
+layer -> walk past another group, you only hear yours -> any place ->
+walk off -> end card.
 """
 
 W, H, FPS = 1920, 1080, 24
 BAR = 138                    # 2.39:1 letterbox: 1920 x 804 picture
-TOTAL = 42.7
-END_CARD_START = 39.9
+TOTAL = 46.7
+END_CARD_START = 43.9
 
 RAW = "../raw"
 RAW_MORE = "../raw_more"
@@ -42,6 +43,9 @@ SHOTS = [
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     ("point",   f"{RAW}/IMG_6794.MOV",          45.9, 2.0, dict(speed=0.7)),
     ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True)),
+    # procedural map of the park from real OSM geometry (falls_map.py):
+    # the experience layer -- where every kind of story sits
+    ("map",     None,                            0.0, 4.0, dict(gen="map")),
     ("sync",    f"{RAW_MORE}/IMG_6808.MOV",     16.0, 4.5, dict(fx="sync", speed=0.9)),
     ("bridge",  f"{RAW}/IMG_6798.MOV",          12.5, 3.0, dict(move=("in", 0.04))),
     ("close",   f"{RAW_MORE}/IMG_6803.MOV",      3.0, 5.5, dict(stab=True, smooth=90, zoom=8, speed=0.72, move=("in", 0.05))),
@@ -68,8 +72,8 @@ CARDS = [
     (17.4, 20.9, ["Twelve thousand years ago,", "this was ice."]),
     (21.6, 24.0, ["Then it was home."]),
     (24.4, 26.0, ["Right where you're standing."]),
-    (30.3, 33.9, ["Walk past another group.", "You only hear yours."]),
-    (34.6, 36.9, ["Any place. Any story."]),
+    (34.3, 37.9, ["Walk past another group.", "You only hear yours."]),
+    (38.6, 40.9, ["Any place. Any story."]),
 ]
 
 # Small documentary eyebrows, lower-left. (t_in, t_out, text)
@@ -91,9 +95,11 @@ VO = [
     (11.0, "So we put it where you're looking."),
     (17.4, "Twelve thousand years ago, this was ice. Then it was home."),
     (24.4, "Right where you're standing."),
-    (30.3, "Walk past another group. You only hear yours."),
-    (34.6, "Any place. Any story."),
-    (39.9, "Open Range. See the story where you stand."),
+    (26.7, "A pair of glasses. No screen. No phone."),
+    (30.1, "Every story in the park, placed exactly where it happened."),
+    (34.3, "Walk past another group. You only hear yours."),
+    (38.6, "Any place. Any story."),
+    (43.9, "Open Range. See the story where you stand."),
 ]
 VOICE = "../vo/voices/en_US-ryan-high.onnx"
 
@@ -101,7 +107,15 @@ MUSIC = "../music/inspired.mp3"
 MUSIC_OFFSET = 0.93          # first downbeat in the file -> timeline 0.0
 SFX = "/home/user/Shorts-pipeline/assets/sfx"
 AMBIENCE = f"{RAW_MORE}/IMG_6682.MOV"     # the falls, under everything
-AUDIO = "ambience"           # "ambience": the falls bed only (no score, no VO -- not yet); "full": the designed mix + VO variant
+# "ambience": the falls bed only. "ambience+vo": the bed, louder near the
+# falls, with the narrator on top (operator 2026-09-22: "bring in the
+# narrator ... the falls should be louder if we're near the falls").
+# "full": the designed mix with score and SFX, plus a VO variant.
+AUDIO = "ambience+vo"
+# falls bed level per shot, dB: loud where the water is in frame or close
+AMBIENCE_LEVELS = {"pan": -24, "falls": -14, "plaque": -30, "reading": -30, "glasscu": -30, "markers": -24,
+                   "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "map": -34, "sync": -27,
+                   "bridge": -27, "close": -25, "logo": -60}
 
 BRAND = "OPEN RANGE"
 BRAND_SUB = "INTERACTIVE"
