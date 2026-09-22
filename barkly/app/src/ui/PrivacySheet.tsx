@@ -18,6 +18,15 @@ import React, { useState } from 'react';
 import { color, molded, radius } from './theme';
 import { TAP_MIN } from './layout';
 import { Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+/**
+ * Published from docs/PRIVACY.md by scripts/build-static-pages.mjs on every
+ * push, on the same GitHub Pages site as the playable build. One source: the
+ * markdown is the policy, the page is a rendering of it, and this is its
+ * address. Counsel edits the markdown.
+ */
+export const PRIVACY_POLICY_URL = 'https://caleblschulte0-ux.github.io/Money_Machine/privacy/';
+export const SUPPORT_URL = 'https://caleblschulte0-ux.github.io/Money_Machine/support/';
 import ParentalGate from './ParentalGate';
 import { SheetScrim, useSheetBounds } from './sheetStage';
 
@@ -57,7 +66,7 @@ export default function PrivacySheet({
     setGate(null);
     if (which === 'delete') onForgetEverything();
     if (which === 'policy') {
-      Linking.openURL('https://example.invalid/barkly-privacy').catch(() => {});
+      Linking.openURL(PRIVACY_POLICY_URL).catch(() => {});
     }
   };
 
@@ -139,7 +148,8 @@ export default function PrivacySheet({
               <Text style={styles.link}>Full privacy policy</Text>
             </Pressable>
             <Text style={styles.fine}>
-              (Placeholder URL — the published policy replaces it before release.)
+              Opens in your browser. The page is generated from the same document this
+              screen summarises.
             </Text>
           </ScrollView>
 

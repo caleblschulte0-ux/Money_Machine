@@ -1,0 +1,39 @@
+{
+  "cli": { "version": ">= 12.0.0", "appVersionSource": "local" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "EXPO_PUBLIC_BARKLY_DEV": "1" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_BARKLY_HIDE_DEV": "1",
+        "EXPO_PUBLIC_BARKLY_DEV": "",
+        "EXPO_PUBLIC_BARKLY_FORCE_KEYBOARD": "",
+        "EXPO_PUBLIC_BARKLY_PLAYTEST": "",
+        "EXPO_PUBLIC_ANTHROPIC_API_KEY": ""
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_BARKLY_HIDE_DEV": "1",
+        "EXPO_PUBLIC_BARKLY_DEV": "",
+        "EXPO_PUBLIC_BARKLY_FORCE_KEYBOARD": "",
+        "EXPO_PUBLIC_BARKLY_PLAYTEST": "",
+        "EXPO_PUBLIC_BARKLY_RENDERER": "",
+        "EXPO_PUBLIC_BARKLY_VOICE": "",
+        "EXPO_PUBLIC_ANTHROPIC_API_KEY": ""
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": { "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID" }
+    }
+  }
+}

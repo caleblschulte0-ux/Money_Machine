@@ -108,6 +108,10 @@ const a = await exportOnce(outDir, {});
 console.log('building the playtest experience…');
 const b = await exportOnce(join(outDir, 'playtest'), { EXPO_PUBLIC_BARKLY_PLAYTEST: 'always' });
 
+// The privacy policy and support pages App Store Connect needs URLs for.
+// Same site, same push -- see scripts/build-static-pages.mjs.
+execFileSync('node', [join(APP, 'scripts', 'build-static-pages.mjs'), '--out', outDir], { stdio: 'inherit' });
+
 // Pages would otherwise hand _expo/ to Jekyll, which eats underscore paths.
 await writeFile(join(outDir, '.nojekyll'), '');
 

@@ -1,0 +1,30 @@
+# fly.io: `fly launch --copy-config --no-deploy` then set the secrets below and
+# `fly deploy`. ONE machine on purpose: rate-limit and budget state is
+# in-memory and per-instance (README, "Honest limits").
+app = "barkly-proxy"
+primary_region = "iad"
+
+[build]
+
+[env]
+  BARKLY_ENV = "production"
+  PORT = "8787"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "3s"
+    method = "GET"
+    path = "/healthz"
+
+# Secrets, never in this file:
+#   fly secrets set ANTHROPIC_API_KEY=sk-ant-... \
+#     BARKLY_APP_TOKEN=$(openssl rand -hex 16) \
+#     BARKLY_ADMIN_TOKEN=$(openssl rand -hex 16) \
+#     BARKLY_ALLOWED_ORIGINS=https://caleblschulte0-ux.github.io

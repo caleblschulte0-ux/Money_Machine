@@ -35,7 +35,18 @@
           "microphonePermission": "Barkly listens only while you hold the TALK button.",
           "speechRecognitionPermission": "Turns your speech into text on this device so Barkly can understand you."
         }
-      ]
-    ]
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F6EDD9"
+        }
+      ],
+      "expo-asset"
+    ],
+    "scheme": "barkly"
   }
 }

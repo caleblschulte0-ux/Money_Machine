@@ -40,7 +40,10 @@ EXPO_PUBLIC_BARKLY_DEV=1
 
 `release:check` treats that flag as a hard failure. Production users should have no path to grant coins, jump levels or open the free-shop bypass.
 
-Note for Claude review: `useBarkly.goTo()` on the base Claude branch currently calls `areaUnlocked(loc, xp)` without the dev flag while the UI's `isUnlocked()` does pass dev mode. That can make a dev-only tab look open while navigation still rejects it. This does **not** affect production progression, but it should be fixed in the hook by passing `devRef.current` when Claude next edits that file.
+Note, resolved: `useBarkly.goTo()` once re-checked `areaUnlocked` without the
+dev flag while the UI's `isUnlocked()` passed it, so a dev-only tab could look
+open and then refuse to move him. Both now go through one `canGo()` that reads
+`devRef.current`, and a refusal is spoken rather than silent.
 
 ## Still human-gated before submission
 

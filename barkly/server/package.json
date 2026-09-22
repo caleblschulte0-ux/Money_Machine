@@ -1,0 +1,13 @@
+{
+  "name": "barkly-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Barkly's production proxy: holds the model key, enforces allowlist, rate and budget caps. Zero dependencies.",
+  "type": "module",
+  "main": "index.mjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
