@@ -52,6 +52,13 @@ it with the preset you happened to be on.
   which do not expire; the current beef is fresh.
 - **Onboarding is a bare string**, `'done'`, not JSON. A preset that wrote
   `{"step":"done"}` sent every loaded save back to the welcome screen.
+- **The plan is derived, never canned.** For weeks every slot wrote a fixture
+  ("Throw something / Find Biscuit / Dig something up") stamped with today's
+  date; the app accepts any stored plan whose day is today, so the
+  history-aware generator never ran on a loaded slot and no tester ever saw
+  "Go see Duke -- unfinished: keeps calling the good stick a twig". A preset
+  now says only how many goals are crossed out (`planDone`); the goals are
+  what the app would write for that dog on that day.
 - **Times are relative to load.** A save is the same age every time it is
   loaded, so "we did that yesterday" never becomes "we did that eight months
   ago".

@@ -134,6 +134,24 @@ if (await park.count()) {
   await page.waitForTimeout(3200);
   await listen('taking him to the park');
   await tap(/dig/i, 'digging', 4200);
+  /*
+   * THEN ASK HIM. Every beat above builds history; none of them asked him to
+   * produce it, so the gate proved memory in the Pack Book and never in his
+   * mouth -- which is where a stranger actually tests it, and where it was
+   * found failing ("I didn't understand that", 2026-09-22). The dig two
+   * seconds ago is on the record; "today" has to come back with it.
+   */
+  for (const line of ['what did we do today?', 'do you remember what we did?']) {
+    const floor = page.getByRole('button', { name: 'Type to Barkly' }).first();
+    if (await floor.count()) { await floor.click().catch(() => {}); await page.waitForTimeout(700); }
+    const input = page.locator('input:visible').first();
+    if (await input.count()) {
+      await input.fill(line);
+      await input.press('Enter').catch(() => {});
+      await page.waitForTimeout(3600);
+      await listen(`asking "${line}"`);
+    }
+  }
 }
 
 // --- What history does he have to show for it? ------------------------------
