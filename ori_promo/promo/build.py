@@ -1172,8 +1172,8 @@ def stage_picture():
             k = 1 - abs((t - prod_t) / 0.16)
             k = max(0, min(1, k)) * 0.85
             f[:] = np.clip(f.astype(np.float32) * (1 - k) + 255 * k, 0, 255).astype(np.uint8)
-        if t < shot_start("pan"):
-            draw_logo(f, ease_out((t - 0.15) / 0.45), ease((shot_start("pan") - 0.05 - t) / 0.3), H // 2)
+        if t < shot_start("tease"):
+            draw_logo(f, ease_out((t - 0.15) / 0.45), ease((shot_start("tease") - 0.05 - t) / 0.3), H // 2)
         if t >= END_CARD_START - 0.5:
             u = ease((t - (END_CARD_START - 0.5)) / 0.9)
             f[:] = (f.astype(np.float32) * (1 - 0.66 * u)).astype(np.uint8)
