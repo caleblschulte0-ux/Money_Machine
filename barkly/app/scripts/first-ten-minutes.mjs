@@ -47,15 +47,6 @@ let last = '';
 async function listen(label, windowMs = 0) {
   const dock = page.locator('[data-testid="conversation-dock"]').first();
   const read = async () => (await dock.innerText().catch(() => '')).trim();
-  const pages = [];
-  const seen = new Set();
-  const until = Date.now() + windowMs;
-  do {
-    const snap = await read();
-    if (snap && !seen.has(snap)) { seen.add(snap); pages.push(snap); }
-    if (Date.now() < until) await page.waitForTimeout(250);
-  } while (Date.now() < until);
-  const text = pages.join('\n');
   /*
    * The dock contains his speech AND its own chrome -- the "BARKLY" byline and
    * the "type" button. A first transcript recorded him saying "type" after a
@@ -64,16 +55,26 @@ async function listen(label, windowMs = 0) {
    */
   const CHROME = /^(type|barkly|barkly brain|•)$/i;
   /*
-   * The WHOLE utterance, not its last line. A long reply wraps -- and the
-   * bubble pages -- so `.pop()` reported "That was today. I keep a diary."
-   * for a line that actually began "Dug up a bottle cap collection...", and
-   * the transcript looked like a dog with a hole in his sentence. Take every
-   * line after the player's own ("YOU · ...") and join them; before any
-   * player line, take everything.
+   * Each snapshot is the WHOLE dock: chrome, the player's "YOU · ..." echo and
+   * the page currently showing. Strip a snapshot down to its page BEFORE
+   * remembering it -- the echo repeats in every snapshot, so slicing after the
+   * last echo of the joined text kept only the final page, and a two-page
+   * reply to "do you remember?" was reported as its tail alone.
    */
-  const lines = text.split('\n').map((l) => l.trim()).filter((l) => l && !CHROME.test(l));
-  const you = lines.map((l, i) => (/^YOU\s*·/.test(l) ? i : -1)).filter((i) => i >= 0).pop();
-  const line = (you === undefined ? lines : lines.slice(you + 1)).join(' ').trim();
+  const pageOf = (snap) => {
+    const ls = snap.split('\n').map((l) => l.trim()).filter((l) => l && !CHROME.test(l));
+    const you = ls.map((l, i) => (/^YOU\s*·/.test(l) ? i : -1)).filter((i) => i >= 0).pop();
+    return (you === undefined ? ls : ls.slice(you + 1)).join(' ').trim();
+  };
+  const pages = [];
+  const seen = new Set();
+  const until = Date.now() + windowMs;
+  do {
+    const pg = pageOf(await read());
+    if (pg && !seen.has(pg)) { seen.add(pg); pages.push(pg); }
+    if (Date.now() < until) await page.waitForTimeout(250);
+  } while (Date.now() < until);
+  const line = pages.join(' ').trim();
   if (line && line !== last) {
     said.push({ after: label, line });
     last = line;
