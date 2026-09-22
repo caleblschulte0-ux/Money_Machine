@@ -20,7 +20,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, EYEBROWS, AUDIO, AMBIENCE_LEVELS,
+from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, VOICE_SPEED, EYEBROWS, AUDIO, AMBIENCE_LEVELS,
                   MUSIC, MUSIC_OFFSET, SFX, AMBIENCE, BRAND, BRAND_SUB, TAGLINE, shot_start)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1048,7 +1048,7 @@ def stage_picture():
     frames_n = int(round(TOTAL * FPS))
     cap = cv2.VideoCapture(graded)
     w = Writer(f"{WORK}/picture.mp4")
-    cards = [(a, b, card_words(lines)) for a, b, lines in CARDS]
+    cards = [(c[0], c[1], card_words(c[2]), c[3] if len(c) > 3 else "bl") for c in CARDS]
     eyebrows = [(a, b, tag_sprite(txt)) for a, b, txt in EYEBROWS]
     moves = []
     # push=(from_frac, zoom, (x, y)): over the END of a shot, an eased zoom
@@ -1107,11 +1107,13 @@ def stage_picture():
             if a <= t < b:
                 al = min(ease_out((t - a) / 0.35), ease((b - t) / 0.3))
                 blit(f, sp, 120, H - BAR - 52, al)
-        for a, b, (words, hh) in cards:
+        for a, b, (words, hh), pos in cards:
             if a <= t < b:
                 u_out = ease((b - t) / 0.3)
-                scrim_lower_left(f, min(ease_out((t - a) / 0.38), u_out) * 0.38)
-                base_y = H - BAR - 74 - hh
+                scrim_corner(f, min(ease_out((t - a) / 0.38), u_out) * 0.38, pos)
+                # "tl" puts the card top-left, for a shot whose subject owns
+                # the lower left (the mammoth stands there)
+                base_y = BAR + 70 if pos == "tl" else H - BAR - 74 - hh
                 for k, (wx, wy, sp, sh) in enumerate(words):
                     u_in = ease_out((t - a - 0.045 * k) / 0.32)
                     if u_in <= 0:
@@ -1244,14 +1246,18 @@ def blit_rgba(dst, sp, x, y, alpha):
 _SCRIM = None
 
 
-def scrim_lower_left(frame, strength):
+def scrim_corner(frame, strength, pos="bl"):
     global _SCRIM
     if _SCRIM is None:
         yy = np.linspace(0, 1, H).reshape(-1, 1)
         xx = np.linspace(0, 1, W).reshape(1, -1)
         g = np.clip((yy - 0.62) / 0.38, 0, 1) ** 1.3 * np.clip(1.05 - xx * 1.25, 0, 1) ** 0.9
-        _SCRIM = g.astype(np.float32)[:, :, None]
-    frame[:] = (frame * (1 - _SCRIM * strength)).astype(np.uint8)
+        _SCRIM = {"bl": g.astype(np.float32)[:, :, None], "tl": g[::-1].astype(np.float32)[:, :, None]}
+    frame[:] = (frame * (1 - _SCRIM[pos] * strength)).astype(np.uint8)
+
+
+def scrim_lower_left(frame, strength):
+    scrim_corner(frame, strength, "bl")
 
 
 # --------------------------------------------------------------------------- audio
@@ -1340,12 +1346,10 @@ def stage_audio():
             write_wav(f"{WORK}/mix.wav", amb)
             return
         vo = np.zeros((n, 2), np.float32)
-        from piper import PiperVoice
-        v = PiperVoice.load(VOICE)
+        say = narrator()
         for at, text in VO:
             p = f"{WORK}/_vo_{int(at*10)}.wav"
-            with wave.open(p, "wb") as wv:
-                v.synthesize_wav(text, wv)
+            say(text, p)
             a = load_audio(p)
             a = fade_edges(a, 0.02, 0.05) * db(-1)
             i0 = int(at * SR)
@@ -1473,6 +1477,31 @@ def stage_audio():
     duck = 1 - 0.5 * np.clip(env / 0.02, 0, 1)[:, None]
     duck = np.convolve(duck[:, 0], np.ones(int(0.15 * SR)) / int(0.15 * SR), mode="same")[:, None]
     write_wav(f"{WORK}/mix_vo.wav", bus * duck + vo)
+
+
+def narrator():
+    """The narration engine, from spec.VOICE. "kokoro:<voice>" is Kokoro
+    (82M, ONNX, CPU; a different class of voice from Piper -- operator
+    2026-09-22: "this voice is not going to cut it"); anything else is a
+    Piper model path. Returns say(text, wav_path)."""
+    if VOICE.startswith("kokoro:"):
+        import soundfile as sf
+        from kokoro_onnx import Kokoro
+        voice = VOICE.split(":", 1)[1]
+        kd = os.path.join(HERE, "..", "vo", "kokoro")
+        k = Kokoro(f"{kd}/kokoro-v1.0.onnx", f"{kd}/voices-v1.0.bin")
+
+        def say(text, path):
+            a, sr = k.create(text, voice=voice, speed=VOICE_SPEED, lang="en-us")
+            sf.write(path, a, sr)
+        return say
+    from piper import PiperVoice
+    v = PiperVoice.load(VOICE)
+
+    def say(text, path):
+        with wave.open(path, "wb") as wv:
+            v.synthesize_wav(text, wv)
+    return say
 
 
 def write_wav(path, a):

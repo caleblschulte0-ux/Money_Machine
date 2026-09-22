@@ -1,6 +1,6 @@
 """ORI promo -- the cut.
 
-49.1s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
+50.1s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
 "Inspired" (Kevin MacLeod, CC BY 4.0) at 120 BPM: a bar is 2.0s.
 
 Story, second person: you've walked past this place; the story is on a
@@ -12,8 +12,8 @@ past another group, you only hear yours -> any place -> walk off -> end card.
 
 W, H, FPS = 1920, 1080, 24
 BAR = 138                    # 2.39:1 letterbox: 1920 x 804 picture
-TOTAL = 49.1
-END_CARD_START = 46.3
+TOTAL = 50.1
+END_CARD_START = 47.3
 
 RAW = "../raw"
 RAW_MORE = "../raw_more"
@@ -40,7 +40,7 @@ SHOTS = [
     # the map (falls_map.py, real OSM geometry): the whole park, then a push
     # in on YOU ARE HERE at the viewing tower -- and the cut lands on him
     # standing on that tower (operator 2026-09-22: "little things like that")
-    ("map",     None,                            0.0, 4.0, dict(gen="map")),
+    ("map",     None,                            0.0, 5.0, dict(gen="map")),
     ("markers", f"{RAW}/IMG_6799.MOV",           2.0, 3.0, dict(mc=True, fx="markers", move=("in", 0.03))),
     ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.05))),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
@@ -75,11 +75,11 @@ CARDS = [
     (6.5,  8.6,  ["The story's right here."]),
     (8.9,  10.6, ["Nobody reads the sign."]),
     (11.0, 13.1, ["So we put it where", "you're looking."]),
-    (21.4, 24.9, ["Twelve thousand years ago,", "this was ice."]),
-    (25.6, 28.0, ["Then it was home."]),
-    (28.4, 30.0, ["Right where you're standing."]),
-    (36.7, 40.3, ["Walk past another group.", "You only hear yours."]),
-    (41.0, 43.3, ["Any place. Any story."]),
+    (22.4, 25.9, ["Twelve thousand years ago,", "this was ice."], "tl"),   # the mammoth owns the lower left
+    (26.6, 29.0, ["Then it was home."]),
+    (29.4, 31.0, ["Right where you're standing."]),
+    (37.7, 41.3, ["Walk past another group.", "You only hear yours."]),
+    (42.0, 44.3, ["Any place. Any story."]),
 ]
 
 # Small documentary eyebrows, lower-left. (t_in, t_out, text)
@@ -89,9 +89,9 @@ EYEBROWS = [
 
 # Small honesty tags, top-right, during generated imagery.
 TAGS = [
-    (20.7, 25.0, "VISUALIZATION"),
-    (25.5, 28.0, "VISUALIZATION"),
-    (30.4, 33.6, "PRODUCT VISUALIZATION"),
+    (21.7, 26.0, "VISUALIZATION"),
+    (26.5, 29.0, "VISUALIZATION"),
+    (31.4, 34.6, "PRODUCT VISUALIZATION"),
 ]
 
 # Narration (Piper, offline, en_US-ryan-high). Timeline placement.
@@ -99,17 +99,21 @@ VO = [
     (4.4,  "You've walked past this a hundred times."),
     (6.5,  "The story's right here. Nobody reads the sign."),
     (11.0, "So we put it where you're looking."),
-    (13.5, "Every story in the park, placed exactly where it happened."),
-    (17.5, "And it knows where you're standing."),
-    (21.4, "Twelve thousand years ago, this was ice. Then it was home."),
-    (28.4, "Right where you're standing."),
-    (30.7, "A pair of glasses."),
-    (34.0, "No screen. No phone."),
-    (36.7, "Walk past another group. You only hear yours."),
-    (41.0, "Any place. Any story."),
-    (46.3, "Open Range. See the story where you stand."),
+    (13.6, "Every story in the park, placed exactly where it happened."),
+    (18.5, "And it knows where you're standing."),
+    (22.4, "Twelve thousand years ago, this was ice. Then it was home."),
+    (29.4, "Right where you're standing."),
+    (31.7, "A pair of glasses."),
+    (35.0, "No screen. No phone."),
+    (37.7, "Walk past another group. You only hear yours."),
+    (42.0, "Any place. Any story."),
+    (47.3, "Open Range. See the story where you stand."),
 ]
-VOICE = "../vo/voices/en_US-ryan-high.onnx"
+# "kokoro:<voice>" = Kokoro (vo/kokoro/, 54 voices: af_heart, af_bella,
+# am_michael, bm_george ...); a path = a Piper model. Placeholder until the
+# real read; swap the voice here, nothing else changes.
+VOICE = "kokoro:af_heart"
+VOICE_SPEED = 0.95
 
 MUSIC = "../music/inspired.mp3"
 MUSIC_OFFSET = 0.93          # first downbeat in the file -> timeline 0.0

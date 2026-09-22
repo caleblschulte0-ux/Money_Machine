@@ -330,7 +330,7 @@ def build_base(F, ppm, cw, ch, cx, cy):
     keep = cv2.GaussianBlur(keep, (0, 0), ppm * 6).astype(np.float32) / 255
     k = 0.18 + 0.82 * keep
     img[:] = (img.astype(np.float32) * k[:, :, None] + np.array(GROUND[::-1], np.float32) * (1 - k)[:, :, None]).astype(np.uint8)
-    return img, V
+    return img, V, water
 
 
 # --------------------------------------------------------------------------- overlay + camera
@@ -380,7 +380,7 @@ def cluster(points, radius_m=42.0):
     return out
 
 
-def render(out_mp4, dur=4.0, preview_frames=None):
+def render(out_mp4, dur=5.0, preview_frames=None):
     """Write the beat. Camera: the whole park while the four kinds of
     place bloom on in turn, then a push IN on the viewing tower -- YOU ARE
     HERE -- so the cut lands on the wearer standing on that tower."""
@@ -389,17 +389,34 @@ def render(out_mp4, dur=4.0, preview_frames=None):
     cx, cy = 10.0, 12.0                 # metres: falls cluster centre-left, tower upper right
     margin = 1.35
     cw, ch = int(W * SS * margin), int(H * SS * margin)
-    base, V = build_base(F, ppm_wide * SS, cw, ch, cx, cy)
+    base, V, water = build_base(F, ppm_wide * SS, cw, ch, cx, cy)
+    # every marker is a place to STAND (operator 2026-09-22: "you can't
+    # walk on water"): a marker inside the river moves to the nearest bank
+    land = (water < 127).astype(np.uint8)
+    dist, lbl = cv2.distanceTransformWithLabels(1 - land, cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_PIXEL)
+    land_idx = np.flatnonzero(land.ravel())
+    ys, xs = np.divmod(land_idx, cw)
+    label_xy = {}
+    for yy, xx in zip(ys, xs):
+        label_xy.setdefault(int(lbl[yy, xx]), (int(xx), int(yy)))
     n = int(round(dur * FPS))
     f_title, f_sub = font("SemiBold", 40), font("Medium", 22)
     f_label, f_leg = font("Medium", 21), font("Medium", 24)
     f_you = font("SemiBold", 26)
     order = ["ambient", "visual", "narration", "lookout"]
-    t_zone = {k: 0.45 + i * 0.32 for i, k in enumerate(order)}
+    t_zone = {k: 0.5 + i * 0.38 for i, k in enumerate(order)}
     marks = cluster(F["points"])
+    for mk in marks:
+        px_, py_ = int((mk["x"] - cx) * ppm_wide * SS + cw / 2), int((mk["y"] - cy) * ppm_wide * SS + ch / 2)
+        if 0 <= px_ < cw and 0 <= py_ < ch and water[py_, px_] >= 127:
+            nx, ny = label_xy[int(lbl[py_, px_])]
+            # step a few metres further onto the bank so the pin is clearly on land
+            vx, vy = nx - px_, ny - py_; L = math.hypot(vx, vy) or 1.0
+            nx += vx / L * ppm_wide * SS * 6; ny += vy / L * ppm_wide * SS * 6
+            mk["x"] = (nx - cw / 2) / (ppm_wide * SS) + cx; mk["y"] = (ny - ch / 2) / (ppm_wide * SS) + cy
     tower = next(l for l in F["labels"] if l["name"] == "VIEWING TOWER")
     txm, tym = V.px(tower["ll"])
-    T_PUSH0, T_PUSH1 = 2.35, 3.85       # the push-in on the tower
+    T_PUSH0, T_PUSH1 = 3.3, 4.85        # the push-in on the tower (the wide map holds ~3.3s)
     frames = []
     which = range(n) if preview_frames is None else preview_frames
     for i in which:
@@ -504,8 +521,8 @@ if __name__ == "__main__":
         fetch(); extract(); print("fetched + extracted", DATA)
     elif len(sys.argv) > 1 and sys.argv[1] == "preview":
         os.makedirs(f"{HERE}/work", exist_ok=True)
-        fr = render(None, preview_frames=[12, 50, 75, 95])
-        for i, f in zip((12, 50, 75, 95), fr):
+        fr = render(None, preview_frames=[12, 60, 95, 118])
+        for i, f in zip((12, 60, 95, 118), fr):
             cv2.imwrite(f"{HERE}/work/map_preview_{i:02d}.png", f)
         print("previews written")
     else:
