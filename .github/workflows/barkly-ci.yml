@@ -60,6 +60,14 @@ jobs:
       - name: Server tests
         run: npm run test:server
 
+      # ONE PALETTE. src/ui/scenes/worldPalette.ts is generated from
+      # tools/blender/palette.py, and this fails if it has fallen behind --
+      # which is the only thing that makes "the app and the renderer share a
+      # palette" true rather than aspirational. (scripts/art-hierarchy.py is
+      # deliberately NOT a gate yet; its header says why.)
+      - name: Palette is one palette
+        run: python3 scripts/export-palette.py --check
+
       # Do not auto-fix dependency trees in CI. Fail only on high/critical
       # production dependency findings; moderate transitive findings are still
       # visible in npm output and should be reviewed deliberately with Expo.

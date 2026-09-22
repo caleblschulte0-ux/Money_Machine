@@ -27,6 +27,18 @@ hierarchy claim, so these are hierarchy metrics.
 
     python3 scripts/art-hierarchy.py            # report
     python3 scripts/art-hierarchy.py --check    # non-zero if a floor is missed
+
+NOT A CI GATE YET, ON PURPOSE. Measured on the plates CI renders from the
+current palette (2026-09-22): park 61.9% of the frame in one saturation band,
+town 59.3%, beach 51.7%, against a 45% floor; Barkly's chroma gap +0.14 and
++0.12 on park and town against +0.18. The floors are the target the approved
+concept sheet implies and they are not being lowered to fit. The plates miss
+them because a Python script stacking Blender primitives cannot produce the
+quiet-field/loud-object picture a designed asset has -- the operator's own
+conclusion after fifteen style variants -- and the fix is the image-model
+pipeline in scripts/prop-briefs.py + scripts/ingest-art.py, which needs a
+human with the tool that made the sheet. Wiring this red would be noise;
+lowering it would be a lie. It becomes a gate the day those plates land.
 """
 import sys
 from pathlib import Path
@@ -100,7 +112,8 @@ def main() -> int:
         print(f"{plate.stem:10s} {m['peak_sat_band']:9.1f}% {m['chroma_gap']:+11.3f} "
               f"{m['dark_frac']:6.1f}% {m['shadow_warm']:11.1f}%{flags}")
     if bad and check:
-        print("\nBELOW THE FLOOR -- see docs/ART_DIRECTION.md (2026-09-13 amendment):")
+        print("\nBELOW THE FLOOR -- see docs/ART_DIRECTION.md (2026-09-13 amendment).")
+        print("This check is not wired into CI yet; the header of this script says why.")
         for b in bad:
             print(f"  {b}")
         return 1

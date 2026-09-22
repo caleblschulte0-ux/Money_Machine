@@ -175,6 +175,17 @@ followed here: **one prop, finished, judged — before any of it is rolled out.*
 The tree was chosen because eleven of them are in the park plate, so a style
 that does not hold on a tree does not hold.
 
+## What is blocked, with numbers
+
+`scripts/art-hierarchy.py` measures whether Barkly still reads against his
+world. On the plates CI renders today (2026-09-22) it fails: park 61.9% of the
+frame in one saturation band, town 59.3%, beach 51.7% against a 45% floor;
+his chroma gap against the ground +0.14 and +0.12 on park and town against
++0.18. The floors stay where the concept sheet puts them. The plates miss them
+because the Blender pipeline cannot make a quiet field under a loud object,
+and the fix is the image-model pipeline above. Until those plates land the
+script reports and is deliberately not a CI gate — `npm run art:hierarchy`.
+
 ## What is NOT decided yet
 
 - Whether the whole world converts. One prop is proof the style exists and
