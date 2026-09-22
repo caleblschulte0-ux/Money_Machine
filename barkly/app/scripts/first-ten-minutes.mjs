@@ -115,7 +115,11 @@ await tap(/Close food/i, 'closing the bowl', 1200);
 await tap(/^(ball|stick|rope|waves|play)/i, 'playing with him', 3200);
 
 // Talking is the whole point of him.
-for (const line of ['hello', 'good boy', 'sit']) {
+// ...and the word they taught him three minutes ago. "sit" above is a word he
+// was NOT taught, and answers as the funnel; SECRET is the one he was, and the
+// gate never said it back to him -- so LEARNS was proved in onboarding's own
+// copy and never in his behaviour.
+for (const line of ['hello', 'good boy', 'sit', SECRET]) {
   const floor = page.getByRole('button', { name: 'Type to Barkly' }).first();
   if (await floor.count()) { await floor.click().catch(() => {}); await page.waitForTimeout(700); }
   const input = page.locator('input:visible').first();
