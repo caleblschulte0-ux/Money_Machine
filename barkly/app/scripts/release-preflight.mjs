@@ -85,6 +85,20 @@ if (!config.ios?.infoPlist?.NSMicrophoneUsageDescription) {
 if (!config.ios?.infoPlist?.NSSpeechRecognitionUsageDescription) {
   fail('Missing iOS speech-recognition purpose string.');
 }
+/*
+ * Checked on UPLOAD, before any human reviewer: a build that uses required-
+ * reason APIs without a privacy manifest is rejected (ITMS-91053), and one
+ * that does not answer export compliance stops on it every time.
+ */
+const manifest = config.ios?.privacyManifests;
+if (!manifest || manifest.NSPrivacyTracking !== false || !Array.isArray(manifest.NSPrivacyAccessedAPITypes)) {
+  fail('app.json expo.ios.privacyManifests must declare NSPrivacyTracking=false and the required-reason APIs.');
+} else if (!manifest.NSPrivacyAccessedAPITypes.some((a) => a.NSPrivacyAccessedAPIType === 'NSPrivacyAccessedAPICategoryUserDefaults')) {
+  fail('Privacy manifest is missing UserDefaults -- AsyncStorage uses it on iOS.');
+}
+if (config.ios?.config?.usesNonExemptEncryption !== false) {
+  fail('Set expo.ios.config.usesNonExemptEncryption=false (HTTPS only) or every upload stops on export compliance.');
+}
 if (!config.icon) fail('Missing app icon.');
 else {
   /*

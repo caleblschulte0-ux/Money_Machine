@@ -14,6 +14,11 @@ Not collected: contacts, location, photos, purchases, financial info,
 health, browsing/search history, diagnostics, crash data, advertising data.
 There is no advertising SDK, analytics SDK or crash reporter (§1).
 
+The same two rows are declared in the app's privacy manifest
+(`app.json` → `expo.ios.privacyManifests` → `NSPrivacyCollectedDataTypes`),
+and `npm run release:check` fails if the manifest goes missing. Keep the
+questionnaire, the manifest and docs/PRIVACY.md saying the same thing.
+
 ## Answers to the questionnaire
 
 - Do you or your third-party partners collect data from this app? **Yes** (the rows above).
