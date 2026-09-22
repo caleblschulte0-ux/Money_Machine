@@ -23,6 +23,7 @@ import numpy as np
 
 from fishai.config import Config
 from fishai.log import get_logger
+from fishai.perception import lighting
 from fishai.perception.behavior.telemetry import TelemetryBuilder, ZoneModel, summarize_tracks
 from fishai.perception.classification.identity import link_tracks_to_fish
 from fishai.perception.detection import Detector
@@ -88,7 +89,14 @@ class SessionProcessor:
         self.progress_every = progress_every
         self.write_summary_file = write_summary_file
         self.t0 = time.time()
-        self.zones = ZoneModel.from_config(cfg.section("behavior"))
+        cam = cfg.section("camera")
+        self.camera_id = str(cam.get("id", "cam1"))
+        self.view = str(cam.get("view", "side"))
+        self.night_saturation_below = float((cam.get("lighting") or {}).get("night_saturation_below", 0.12))
+        self.lighting_every = max(1, int((cam.get("lighting") or {}).get("check_every_frames", 30)))
+        self.mode: str = lighting.DAY
+        self.modes_seen: set[str] = set()
+        self.zones = ZoneModel.from_config(cfg.section("behavior"), view=self.view)
         self.telemetry = TelemetryBuilder(video_id, self.zones)
         self.started_at = datetime.now(timezone.utc)
         self.record = VideoRecord(
@@ -103,13 +111,15 @@ class SessionProcessor:
             detector=getattr(detector, "name", type(detector).__name__),
             tracker=getattr(tracker, "name", type(tracker).__name__),
             config_hash=cfg.hash(),
+            camera_id=self.camera_id,
         )
         db.clear_video_results(video_id)
         db.upsert_video(self.record)
         self.processed = self.frames_with_dets = self.total_dets = 0
         self._obs_buffer: list[Observation] = []
         self.all_obs: list[Observation] = []
-        self.descriptors: dict[int, np.ndarray | None] = {}
+        # track_id -> {"<camera>/<mode>": descriptor}
+        self.descriptors: dict[int, dict[str, np.ndarray]] = {}
         self.obs_count: dict[int, int] = defaultdict(int)
         self.first_ts: float | None = None
         self.last_ts: float = 0.0
@@ -141,12 +151,17 @@ class SessionProcessor:
         if self.first_ts is None:
             self.first_ts = frame.timestamp_s
         self.last_ts = frame.timestamp_s
+        if self.processed % self.lighting_every == 1 or not self.modes_seen:
+            self.mode = lighting.detect_mode(frame.image, self.night_saturation_below)
+            self.modes_seen.add(self.mode)
+        key = f"{self.camera_id}/{self.mode}"
         for t in tracked:
             self.obs_count[t.track_id] += 1
             if self.obs_count[t.track_id] % 5 == 1:
-                self.descriptors[t.track_id] = appearance.blend(
-                    self.descriptors.get(t.track_id), appearance.describe(frame.image, t.bbox), alpha=0.25
-                )
+                d = appearance.describe(frame.image, t.bbox)
+                if d is not None:
+                    per_mode = self.descriptors.setdefault(t.track_id, {})
+                    per_mode[key] = appearance.blend(per_mode.get(key), d, alpha=0.25)
         if self.writer is not None and self.annotator is not None:
             header = f"t={frame.timestamp_s:6.2f}s  frame {frame.index}  fish {len(tracked)}  det {len(dets)}"
             self.writer.write(self.annotator.draw(frame, tracked, header))
@@ -178,17 +193,20 @@ class SessionProcessor:
             full_score_speed=float(bcfg.get("activity", {}).get("full_score_speed", 0.5)),
             hiding_gap_s=float(bcfg.get("hiding_gap_s", 5.0)),
         )
+        lighting_mode = "unknown" if not self.modes_seen else ("mixed" if len(self.modes_seen) > 1 else next(iter(self.modes_seen)))
+        fields = {**self.record.to_dict(), "lighting_mode": lighting_mode}
         if duration_s is not None or self.record.frame_count == 0:
             observed = duration_s if duration_s is not None else (self.last_ts - (self.first_ts or 0.0)) + self.frame_interval_s
-            self.record = VideoRecord(**{**self.record.to_dict(), "duration_s": float(observed), "frame_count": self.processed if self.record.frame_count == 0 else self.record.frame_count})
-            self.db.upsert_video(self.record)
+            fields.update(duration_s=float(observed), frame_count=self.processed if self.record.frame_count == 0 else self.record.frame_count)
+        self.record = VideoRecord(**fields)
+        self.db.upsert_video(self.record)
         self.db.add_track_summaries(summaries)
         identities: dict[int, dict[str, Any]] = {}
         if self.link_identity:
             identities = link_tracks_to_fish(
                 self.db,
                 self.video_id,
-                {k: v for k, v in self.descriptors.items() if v is not None},
+                {k: v for k, v in self.descriptors.items() if v},
                 min_observations=dict(self.obs_count),
                 spans={s.track_id: (s.first_ts, s.last_ts) for s in summaries},
             )
@@ -199,6 +217,12 @@ class SessionProcessor:
             notes.append("no detections on any frame; check the detector backend and thresholds")
         if getattr(self.detector, "name", "") == "motion":
             notes.append("motion detector: confidence is a blob-size heuristic, not a probability; touching fish merge")
+        if not self.zones.has_depth:
+            notes.append("top-down camera: zone fractions carry no depth information; every observation is 'middle'")
+        if lighting_mode == "night":
+            notes.append("infrared night session: colours are absent, identity is matched only against other night sessions")
+        elif lighting_mode == "mixed":
+            notes.append("session spans day and night; tracks that lived through the change link the two identities")
         summary = build_summary(
             self.record, summaries, identities, self.processed, self.frames_with_dets, self.total_dets,
             str(self.annotated_path) if self.annotated_path else None, notes,

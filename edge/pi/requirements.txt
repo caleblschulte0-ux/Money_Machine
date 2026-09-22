@@ -1,0 +1,3 @@
+# On the Pi: sudo apt install -y python3-picamera2 python3-opencv python3-numpy python3-gpiozero
+# then pip install the rest into the system python (picamera2 is apt-only):
+w1thermsensor>=2.3

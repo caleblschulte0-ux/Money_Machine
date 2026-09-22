@@ -41,9 +41,11 @@ def test_fish_registry_and_identities(db: Database):
     fid = db.add_fish([0.1, 0.9], name="Blue")
     db.set_identity("v1", 3, fid, 0.8, "test")
     assert db.fish_for_video("v1") == {3: fid}
-    db.update_fish(fid, descriptor=[0.5, 0.5], seen=True)
+    db.update_fish(fid, descriptors={"cam1/day": [0.5, 0.5], "cam1/night": [1.0, 0.0]}, seen=True)
     (f,) = db.list_fish()
-    assert f["descriptor"] == [0.5, 0.5] and f["n_sessions"] == 2 and f["name"] == "Blue"
+    assert f["descriptors"] == {"cam1/day": [0.5, 0.5], "cam1/night": [1.0, 0.0]} and f["n_sessions"] == 2 and f["name"] == "Blue"
+    db.update_fish(fid, descriptors={"cam1/day": [0.2, 0.8]})
+    assert db.list_fish()[0]["descriptors"]["cam1/night"] == [1.0, 0.0], "other keys are kept"
 
 
 def test_sensor_events_assessments_actions(db: Database):

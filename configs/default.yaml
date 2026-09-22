@@ -10,6 +10,18 @@ paths:
   # Where download_models.py puts weights (git-ignored).
   models_dir: models
 
+camera:
+  # Every session records which camera it came from; a second camera gets its
+  # own id so its baselines and appearance descriptors never mix with the first.
+  id: cam1
+  # side | top | oblique. Zones (surface / middle / bottom) exist only for a
+  # side view; a top view reports no depth rather than a wrong one.
+  view: side
+  lighting:
+    # Mean HSV saturation below this = infrared night footage.
+    night_saturation_below: 0.12
+    check_every_frames: 30
+
 video:
   # Process every Nth frame (1 = all). Higher values are faster and
   # coarser; speeds are still computed against real timestamps.
@@ -128,8 +140,12 @@ reasoning:
 
 sensors:
   # Each entry: name, kind (simulated_temperature | simulated_water_level |
-  # file), and kind-specific settings. Real drivers register under new kinds
-  # with the same interface.
+  # file | http | edge), and kind-specific settings. Real drivers register
+  # under new kinds with the same interface. With the rail's edge agent, replace
+  # the two simulators with one entry:
+  #   - name: rail
+  #     kind: edge
+  #     url: http://192.168.1.50:8000
   - name: water_temperature
     kind: simulated_temperature
     unit: F
@@ -147,7 +163,8 @@ sensor_limits:
   water_level: {low: 35.0, high: 45.0}
 
 control:
-  # Actuator backend: simulated | none
+  # Actuator backend: simulated | none | edge (feeder on the rail; edge_url below)
+  edge_url: null
   backend: simulated
   # Hard limits enforced by deterministic safety rules before any actuator moves.
   limits:
@@ -181,6 +198,12 @@ live:
   assess_each_session: false
   # Write an annotated video per session (large; off by default).
   store_annotated: false
+  # The edge agent on the rail (edge/pi/). When set, the watcher polls its
+  # events (FEED button, feeder confirmations) and reads the configured
+  # sensors every sensor_poll_s. The video source is still --source.
+  edge_url: null             # e.g. http://192.168.1.50:8000
+  edge_poll_s: 2
+  sensor_poll_s: 60
 
 # ------------------------------------------------------------------ feeding
 feeding:

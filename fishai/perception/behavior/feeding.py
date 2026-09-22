@@ -43,9 +43,19 @@ class FoodZone:
         return cls(float(z.get("x1", 0.0)), float(z.get("y1", 0.0)), float(z.get("x2", 1.0)), float(z.get("y2", 0.25)))
 
 
-def mark_feeding(db: Database, video_id: str | None, at_ts: float, source: str = "manual", portions: float = 1.0, note: str = "") -> int:
-    """Record a feeding event at ``at_ts`` seconds into ``video_id``. Returns the event id."""
-    return db.add_event("feeding", {"ts": float(at_ts), "source": source, "portions": portions, "note": note}, video_id=video_id)
+def mark_feeding(
+    db: Database, video_id: str | None, at_ts: float, source: str = "manual", portions: float = 1.0, note: str = "", confirmed: bool | None = None
+) -> int:
+    """Record a feeding event at ``at_ts`` seconds into ``video_id``. Returns the event id.
+
+    ``confirmed`` is the feeder's own word (its home sensor saw the drum
+    turn); ``None`` means nobody could check, which is what a manual
+    feeding is.
+    """
+    payload: dict[str, Any] = {"ts": float(at_ts), "source": source, "portions": portions, "note": note}
+    if confirmed is not None:
+        payload["confirmed"] = bool(confirmed)
+    return db.add_event("feeding", payload, video_id=video_id)
 
 
 def _mean(xs: list[float]) -> float:

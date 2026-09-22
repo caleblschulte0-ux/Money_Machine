@@ -47,7 +47,10 @@ ACTIONS: dict[str, ActionSpec] = {
         ActionSpec("set_pump_mode", Tier.AUTO, "Switch between predefined safe pump modes", {}, 60.0),
         # ---- need the owner's approval ----------------------------------
         ActionSpec("feed_now", Tier.APPROVAL, "Dispense an extra portion", {"portions": (1.0, 1.0)}, 3600.0),
-        ActionSpec("set_heater_setpoint", Tier.APPROVAL, "Change the heater target by a small step", {"delta_f": (-1.0, 1.0)}, 1800.0),
+        # Heater control is FORBIDDEN in hardware v1 (2026-09-22 ruling, docs/HARDWARE_V1.md): a software
+        # fault must not be able to cook or chill the tank until independent hardware limits exist. When it
+        # returns it is APPROVAL-tier with a 1 F step, and the safety rules below already know its bounds.
+        ActionSpec("set_heater_setpoint", Tier.FORBIDDEN, "Change the heater target (measure-only in v1)", {"delta_f": (-1.0, 1.0)}, 1800.0),
         ActionSpec("dose_chemical", Tier.APPROVAL, "Dose water conditioner or medication", {"ml": (0.0, 5.0)}, 3600.0),
         ActionSpec("water_change", Tier.APPROVAL, "Run an automatic water change", {"percent": (0.0, 25.0)}, 86400.0),
         # ---- never through this system ----------------------------------

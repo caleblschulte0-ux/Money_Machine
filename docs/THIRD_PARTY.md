@@ -18,6 +18,9 @@ table records what each publisher actually states; blanks are blanks.
 | [Ollama](https://ollama.com) | serves the local reasoner | MIT | n/a | Not a Python dependency; talks HTTP. |
 | Qwen2.5 (default `qwen2.5:7b`) | reasoning model | n/a | Apache-2.0 (7B; check the tag you pull: 3B and 72B differ) | Any Ollama chat model works; the adapter is model-agnostic. |
 | pytest, ruff, mypy | development only | MIT | n/a | |
+| [picamera2](https://github.com/raspberrypi/picamera2) | edge agent camera capture (Pi only) | BSD-2 | n/a | apt package on Raspberry Pi OS |
+| [gpiozero](https://github.com/gpiozero/gpiozero) | edge agent GPIO (button, float, feeder, home sensor) | BSD-3 | n/a | |
+| [w1thermsensor](https://github.com/timofurrer/w1thermsensor) | DS18B20 temperature probe | MIT | n/a | |
 
 ## Candidates evaluated and not adopted (yet)
 

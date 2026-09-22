@@ -21,13 +21,14 @@ The reasoning model never sees a video frame. It sees this:
 
 | Phase | What | State |
 |---|---|---|
-| 1 | Eyes: video -> detection -> tracking -> telemetry -> SQLite -> JSON -> annotated video | **Working.** 100 tests. Runs with no model at all (motion detector) or with the Fishial YOLO detector + ByteTrack. Verified on real aquarium footage. |
+| 1 | Eyes: video -> detection -> tracking -> telemetry -> SQLite -> JSON -> annotated video | **Working.** 112 tests. Runs with no model at all (motion detector) or with the Fishial YOLO detector + ByteTrack. Verified on real aquarium footage. |
 | 2 | Identity: keep Fish #3 as Fish #3 | **First rung.** Appearance re-id inside a clip and across clips (colour histograms), confidence exposed, fragments merged only when they never coexist. Deep re-id: not built. |
 | 3 | Behaviour: activity, zones, surface time, hiding, feeding response | **Measured.** Feeding events with per-fish approach latency, zone shift and activity change, judged against that fish's prior feedings. Aggression, erratic swimming: not built (see docs/ROADMAP.md). |
 | 4 | Baselines per fish per tank, deviations | **Working.** Rolling window, prior-sessions-only comparison, z-score and percent thresholds. |
 | 5 | Local Qwen reasoning | **Working with a fallback.** Ollama client with schema-validated JSON; deterministic rules when no model is reachable, and the result says which one answered. |
 | 6 | Sensors | **Simulators + file bridge.** Temperature, water level, pH, dissolved oxygen simulators; a JSON-file sensor for any logger. No hardware driver yet. |
 | 7 | Control | **Permission system + simulated actuators.** AUTO / APPROVAL / FORBIDDEN tiers, deterministic limits, rate limits, journaled. No hardware driver yet. |
+| HW | Rail edge agent (Raspberry Pi): locked-exposure camera stream, temperature and float switch, feeder with drum confirmation and FEED button | **Working in fake mode, untested on a Pi.** `edge/pi/`; the PC polls its events and sensors. Camera id and day/night mode on every session; identity kept per camera and per mode; heater control locked out for v1. Decisions in `docs/HARDWARE_V1.md`. |
 | Data | Live loop, event clips, retention, owner confirmations, dataset export | **Working.** `fishai watch` runs unattended in sessions with a rolling buffer and clips on feeding / deviation / tracking loss / request; `fishai ingest` drains a folder; `fishai daily` reviews; `fishai confirm` records outcomes; `fishai export` writes YOLO frames + labels with a manifest. Windows scheduled tasks via `scripts/install_tasks.ps1`. |
 
 See `docs/ROADMAP.md` for what is deliberately not built.
@@ -54,7 +55,21 @@ with `ollama pull qwen2.5:7b` for the reasoner; an NVIDIA GPU
 
 Pick one of two paths; both accumulate the same database.
 
-**A camera on the tank, unattended:**
+**The rail (Raspberry Pi edge agent, see `edge/pi/README.md`):**
+
+```powershell
+# on the Pi:  bash edge/pi/install.sh          (camera, probe, float switch, feeder, FEED button)
+# on the PC, in configs/local.yaml:
+#   live:    {edge_url: http://<pi>:8000}
+#   sensors: [{name: rail, kind: edge, url: http://<pi>:8000}]
+#   control: {backend: edge, edge_url: http://<pi>:8000}
+.\scripts\install_tasks.ps1 -Source "http://<pi>:8000/stream.mjpg"
+```
+
+The FEED button on the rail and every feeder run reach the same feeding
+log as `fishai feed`, with the drum sensor's confirmation recorded.
+
+**Any camera the PC can open, unattended:**
 
 ```powershell
 .\scripts\install_tasks.ps1 -Source 0        # or an RTSP URL; registers "FishAI Watch" at logon + "FishAI Daily" at 07:00
@@ -131,6 +146,7 @@ tunables are in `configs/default.yaml`.
 ```
 fishai/                 the package (importable; `python -m fishai`)
   video/                reader, writer, synthetic aquarium generator
+  perception/lighting   day / infrared-night detection from the frame
   perception/detection  motion (no model), yolo (Fishial / any ultralytics), synthetic
   perception/tracking   built-in IoU + appearance re-id tracker; ByteTrack adapter
   perception/behavior   telemetry, track summaries, baselines and deviations
@@ -146,6 +162,7 @@ fishai/                 the package (importable; `python -m fishai`)
 configs/default.yaml    every tunable
 models/registry.json    downloadable weights, URLs, checksums, licences (weights git-ignored)
 scripts/                setup.ps1, run.ps1, install_tasks.ps1, setup.sh, download_models.py
+edge/pi/                the Raspberry Pi agent for the rail (camera stream, sensors, feeder, button)
 tests/                  pytest suite (runs without torch; ML tests skip when absent)
 docs/                   ARCHITECTURE, DATA, THIRD_PARTY, ROADMAP, SETUP
 ```
@@ -159,7 +176,8 @@ docs/                   ARCHITECTURE, DATA, THIRD_PARTY, ROADMAP, SETUP
   you trained is a registry entry and a config line.
 - **Honest confidence.** Identity after an occlusion carries the re-link's
   similarity; the motion detector says its confidence is a heuristic; an
-  assessment says whether Qwen or the rules produced it.
+  assessment says whether Qwen or the rules produced it; a night session
+  says its colours are absent and its fish are matched only to other nights.
 - **Nothing reaches hardware without deterministic rules.** The model may
   propose seven named actions; the permission table and the safety limits
   decide, and every request is journaled, including refusals.

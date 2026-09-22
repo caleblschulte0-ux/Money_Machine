@@ -28,6 +28,16 @@ class Database:
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """Add columns introduced after a database was created. Additive only."""
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(videos)")}
+        with self._conn:
+            if "camera_id" not in cols:
+                self._conn.execute("ALTER TABLE videos ADD COLUMN camera_id TEXT NOT NULL DEFAULT 'cam1'")
+            if "lighting_mode" not in cols:
+                self._conn.execute("ALTER TABLE videos ADD COLUMN lighting_mode TEXT NOT NULL DEFAULT 'unknown'")
 
     # ------------------------------------------------------------ lifecycle
     def close(self) -> None:
@@ -48,13 +58,14 @@ class Database:
         with self._conn:
             self._conn.execute(
                 """INSERT INTO videos (video_id, path, width, height, fps, frame_count, duration_s,
-                       processed_at, detector, tracker, config_hash)
+                       processed_at, detector, tracker, config_hash, camera_id, lighting_mode)
                    VALUES (:video_id, :path, :width, :height, :fps, :frame_count, :duration_s,
-                       :processed_at, :detector, :tracker, :config_hash)
+                       :processed_at, :detector, :tracker, :config_hash, :camera_id, :lighting_mode)
                    ON CONFLICT(video_id) DO UPDATE SET path=excluded.path, width=excluded.width,
                        height=excluded.height, fps=excluded.fps, frame_count=excluded.frame_count,
                        duration_s=excluded.duration_s, processed_at=excluded.processed_at,
-                       detector=excluded.detector, tracker=excluded.tracker, config_hash=excluded.config_hash""",
+                       detector=excluded.detector, tracker=excluded.tracker, config_hash=excluded.config_hash,
+                       camera_id=excluded.camera_id, lighting_mode=excluded.lighting_mode""",
                 rec.to_dict(),
             )
 
@@ -277,27 +288,40 @@ class Database:
         return out
 
     # ----------------------------------------------------------------- fish
+    @staticmethod
+    def _descriptors(raw: str) -> dict[str, list[float]]:
+        data = json.loads(raw or "{}")
+        # Databases from before per-mode descriptors stored one bare list: it was a day view.
+        return {"cam1/day": data} if isinstance(data, list) else dict(data)
+
     def list_fish(self) -> list[dict[str, Any]]:
+        """Each fish with ``descriptors``: {"<camera_id>/<lighting_mode>": histogram}."""
         out = []
         for r in self._conn.execute("SELECT * FROM fish ORDER BY fish_id"):
             d = dict(r)
-            d["descriptor"] = json.loads(d.pop("descriptor_json"))
+            d["descriptors"] = self._descriptors(d.pop("descriptor_json"))
             out.append(d)
         return out
 
-    def add_fish(self, descriptor: list[float], name: str | None = None) -> int:
+    def add_fish(self, descriptors: dict[str, list[float]] | list[float], name: str | None = None) -> int:
+        if isinstance(descriptors, list):
+            descriptors = {"cam1/day": descriptors}
         now = utc_now()
         with self._conn:
             cur = self._conn.execute(
                 "INSERT INTO fish (name, descriptor_json, first_seen, last_seen, n_sessions) VALUES (?,?,?,?,1)",
-                (name, json.dumps(descriptor), now, now),
+                (name, json.dumps(descriptors), now, now),
             )
             return int(cur.lastrowid)
 
-    def update_fish(self, fish_id: int, descriptor: list[float] | None = None, name: str | None = None, seen: bool = False) -> None:
+    def update_fish(self, fish_id: int, descriptors: dict[str, list[float]] | None = None, name: str | None = None, seen: bool = False) -> None:
+        """``descriptors`` replaces the keys given and keeps the others."""
         with self._conn:
-            if descriptor is not None:
-                self._conn.execute("UPDATE fish SET descriptor_json = ? WHERE fish_id = ?", (json.dumps(descriptor), fish_id))
+            if descriptors is not None:
+                row = self._conn.execute("SELECT descriptor_json FROM fish WHERE fish_id = ?", (fish_id,)).fetchone()
+                merged = self._descriptors(row["descriptor_json"]) if row else {}
+                merged.update(descriptors)
+                self._conn.execute("UPDATE fish SET descriptor_json = ? WHERE fish_id = ?", (json.dumps(merged), fish_id))
             if name is not None:
                 self._conn.execute("UPDATE fish SET name = ? WHERE fish_id = ?", (name, fish_id))
             if seen:

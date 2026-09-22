@@ -25,6 +25,13 @@ in the repo pretends otherwise.
   (`fishai confirm`); folder ingestion; the daily review with a report;
   retention; YOLO dataset export with manifests; Windows scheduled tasks.
 
+- Hardware v1 decided (2026-09-22, `docs/HARDWARE_V1.md`): smart rail with a
+  mid-height side camera, Pi 5 edge agent streaming to the PC with locked
+  exposure, drum feeder with home sensor and button, temperature and float
+  switch, heater measure-only. Software: `edge/pi/` agent, camera id and
+  day/night lighting mode on every session, per-camera per-mode identity,
+  edge sensors and feeder behind the existing interfaces.
+
 ## Next
 
 1. **Behaviour classifiers.** Chasing (two tracks with sustained pursuit

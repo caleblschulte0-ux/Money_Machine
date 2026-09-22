@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS videos (
     processed_at  TEXT NOT NULL,
     detector      TEXT NOT NULL,
     tracker       TEXT NOT NULL,
-    config_hash   TEXT NOT NULL
+    config_hash   TEXT NOT NULL,
+    camera_id     TEXT NOT NULL DEFAULT 'cam1',
+    lighting_mode TEXT NOT NULL DEFAULT 'unknown'
 );
 
 -- RAW: one row per tracked fish per processed frame.
@@ -151,8 +153,10 @@ CREATE TABLE IF NOT EXISTS actions (
 );
 
 -- Long-term fish registry (Phase 2). One row per fish the system believes it
--- has seen across sessions; descriptor_json is the appearance signature used
--- to link new tracks to it. Names are the owner's, ids are ours.
+-- has seen across sessions; descriptor_json maps "<camera_id>/<lighting_mode>"
+-- to the appearance signature seen under that camera and light, because a
+-- day histogram and an infrared one must never be compared. Names are the
+-- owner's, ids are ours.
 CREATE TABLE IF NOT EXISTS fish (
     fish_id         INTEGER PRIMARY KEY,
     name            TEXT,

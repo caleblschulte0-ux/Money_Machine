@@ -68,6 +68,40 @@ class SimulatedActuator:
         return dict(self._state)
 
 
+class EdgeActuator(SimulatedActuator):
+    """The rail's feeder over HTTP; everything else is kept as local state.
+
+    ``feed_now`` POSTs to the edge agent and reports whether the drum's home
+    sensor confirmed the revolution. Notifications and feeding adjustments
+    stay local state exactly as in the simulator, so the permission and
+    safety layers see one actuator.
+    """
+
+    name = "edge"
+
+    def __init__(self, base_url: str, initial: dict[str, Any] | None = None, timeout_s: float = 15.0) -> None:
+        super().__init__(initial)
+        self.base_url = base_url.rstrip("/")
+        self.timeout_s = timeout_s
+        self._state["feeder"] = "edge"
+
+    def apply(self, action: str, params: dict[str, Any]) -> dict[str, Any]:
+        if action != "feed_now":
+            return super().apply(action, params)
+        import json
+        import urllib.request
+
+        body = json.dumps({"portions": float(params.get("portions", 1.0)), "source": "pc"}).encode()
+        req = urllib.request.Request(f"{self.base_url}/feed", data=body, headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=self.timeout_s) as resp:  # noqa: S310 - configured URL
+            result = json.loads(resp.read().decode())
+        if result.get("confirmed"):
+            self._state["portions_fed_today"] = int(self._state["portions_fed_today"]) + int(result.get("revolutions", 1))
+        self._state["last_feed"] = result
+        log.info("edge feeder: %s", result)
+        return {"ok": bool(result.get("confirmed")), "confirmed": bool(result.get("confirmed")), "edge": result, "state": dict(self._state)}
+
+
 class NullActuator:
     """Refuses everything; the honest choice when no hardware is configured."""
 
@@ -82,6 +116,7 @@ class NullActuator:
 
 _REGISTRY: dict[str, Callable[[dict[str, Any]], Actuator]] = {
     "simulated": lambda cfg: SimulatedActuator(cfg.get("initial")),
+    "edge": lambda cfg: EdgeActuator(cfg["edge_url"], cfg.get("initial")),
     "none": lambda cfg: NullActuator(),
 }
 

@@ -69,6 +69,8 @@ def build_summary(
             "frame_count": video.frame_count,
             "duration_s": _round(video.duration_s, 2),
             "processed_at": video.processed_at,
+            "camera_id": video.camera_id,
+            "lighting_mode": video.lighting_mode,
         },
         "pipeline": {
             "detector": video.detector,

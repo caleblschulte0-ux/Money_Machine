@@ -9,11 +9,15 @@ def _vid(db, vid):
     db.upsert_video(VideoRecord(vid, vid, 1, 1, 1.0, 1, 1.0, "t", "d", "t", "h"))
 
 
-def _desc(*peaks):
+def _hist(*peaks):
     d = np.zeros(128, dtype=np.float32)
     for p in peaks:
         d[p] = 1.0
     return d / d.sum()
+
+
+def _desc(*peaks, key="cam1/day"):
+    return {key: _hist(*peaks)}
 
 
 def test_new_fish_are_registered_then_matched_across_videos(db: Database):
@@ -48,3 +52,34 @@ def test_fragments_join_only_when_they_do_not_coexist(db: Database):
     assert r[1]["fish_id"] == r[2]["fish_id"], "track 2 starts after track 1 ends: same fish"
     assert r[3]["fish_id"] != r[1]["fish_id"], "track 3 overlaps track 1 in time: cannot be the same fish"
     assert r[2]["confidence"] > 0.99
+
+
+def test_day_and_night_descriptors_never_compare(db: Database):
+    """The same histogram under a different key is a different fish until a track bridges them."""
+    _vid(db, "day")
+    link_tracks_to_fish(db, "day", {1: _desc(3)}, min_observations={1: 10})
+    _vid(db, "night")
+    r = link_tracks_to_fish(db, "night", {1: _desc(3, key="cam1/night")}, min_observations={1: 10})
+    assert r[1]["new"] is True and len(db.list_fish()) == 2
+    # A dusk track carrying BOTH keys links to the day fish and teaches it the night key.
+    _vid(db, "dusk")
+    r = link_tracks_to_fish(db, "dusk", {5: {"cam1/day": _hist(3), "cam1/night": _hist(40)}}, min_observations={5: 10})
+    assert r[5]["fish_id"] == 1 and r[5]["new"] is False
+    assert set(db.list_fish()[0]["descriptors"]) == {"cam1/day", "cam1/night"}
+    _vid(db, "night2")
+    r = link_tracks_to_fish(db, "night2", {1: _desc(40, key="cam1/night")}, min_observations={1: 10})
+    assert r[1]["fish_id"] == 1, "now recognised at night through the descriptor the dusk track taught"
+
+
+def test_second_camera_gets_its_own_descriptors(db: Database):
+    _vid(db, "a")
+    link_tracks_to_fish(db, "a", {1: _desc(3)}, min_observations={1: 10})
+    _vid(db, "b")
+    r = link_tracks_to_fish(db, "b", {1: _desc(3, key="cam2/day")}, min_observations={1: 10})
+    assert r[1]["new"] is True, "another camera's view is never matched against the first camera's histogram"
+
+
+def test_legacy_single_descriptor_rows_still_load(db: Database):
+    db.connection.execute("INSERT INTO fish (name, descriptor_json, first_seen, last_seen, n_sessions) VALUES (NULL, ?, 't', 't', 1)", ("[0.5, 0.5]",))
+    db.connection.commit()
+    assert db.list_fish()[0]["descriptors"] == {"cam1/day": [0.5, 0.5]}

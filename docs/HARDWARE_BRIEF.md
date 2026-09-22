@@ -1,5 +1,8 @@
 # FishAI hardware brief (handoff for physical feasibility and design)
 
+> Reviewed 2026-09-22; the decisions are in `HARDWARE_V1.md`. This page is
+> kept as the original ask.
+
 Working name only; no branding work yet. Written 2026-09-21 for whoever is
 helping with the physical product (ChatGPT, a contractor, a friend with a
 3D printer). The software side is in this repository and is ahead of the

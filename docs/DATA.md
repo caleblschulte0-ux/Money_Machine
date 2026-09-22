@@ -9,10 +9,10 @@ every derived number can be recomputed when the arithmetic improves.
 
 | Table | Kind | One row per | Notes |
 |---|---|---|---|
-| `videos` | provenance | processed video | detector, tracker and config hash used |
+| `videos` | provenance | processed video | detector, tracker and config hash used; `camera_id`; `lighting_mode` (day / night / mixed) |
 | `observations` | RAW | tracked fish x processed frame | box, confidence, centre, normalised position, zone, displacement, speed (px/s and tank-heights/s), identity confidence |
 | `track_summaries` | derived | track x video | duration, distance, speeds, activity score, zone fractions and times, gaps, mean box area, `extra_json` (hiding candidate, gap count) |
-| `fish` | derived (registry) | long-term fish | appearance descriptor, first/last seen, session count, optional owner-given name |
+| `fish` | derived (registry) | long-term fish | appearance descriptors keyed by `<camera_id>/<lighting_mode>`, first/last seen, session count, optional owner-given name |
 | `fish_identities` | derived | track x video | which fish a track was linked to, confidence, method |
 | `baselines` | derived | fish x metric | mean, std, min, max, window values |
 | `anomalies` | derived | deviation found | value, baseline, z, percent, direction, severity |

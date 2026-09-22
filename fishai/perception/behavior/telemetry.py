@@ -17,22 +17,36 @@ from fishai.types import Frame, Observation, TrackedObject, TrackSummary, Zone
 
 @dataclass(frozen=True)
 class ZoneModel:
-    """Vertical zones as fractions of frame height."""
+    """Vertical zones as fractions of frame height (side view).
+
+    A top-down camera cannot see depth, so with ``view="top"`` every
+    observation is MIDDLE and the summary says so; nothing downstream can
+    mistake "near the back wall" for "near the surface".
+    """
 
     surface_below: float = 0.2
     bottom_above: float = 0.8
+    view: str = "side"
 
     def zone_for(self, ny: float) -> Zone:
+        if self.view == "top":
+            return Zone.MIDDLE
         if ny < self.surface_below:
             return Zone.SURFACE
         if ny > self.bottom_above:
             return Zone.BOTTOM
         return Zone.MIDDLE
 
+    @property
+    def has_depth(self) -> bool:
+        return self.view != "top"
+
     @classmethod
-    def from_config(cls, cfg: dict[str, Any]) -> ZoneModel:
+    def from_config(cls, cfg: dict[str, Any], view: str = "side") -> ZoneModel:
         z = cfg.get("zones", {}) if cfg else {}
-        return cls(float(z.get("surface_below", 0.2)), float(z.get("bottom_above", 0.8)))
+        if view not in ("side", "top", "oblique"):
+            raise ValueError(f"camera.view must be side, top or oblique, got {view!r}")
+        return cls(float(z.get("surface_below", 0.2)), float(z.get("bottom_above", 0.8)), view)
 
 
 class TelemetryBuilder:

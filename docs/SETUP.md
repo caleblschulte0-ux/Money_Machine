@@ -36,8 +36,33 @@ python -m fishai demo
 ```
 fishai doctor            # each line is a real check, not an import
 fishai demo              # writes runs/demo_tank.summary.json and .annotated.mp4
-python -m pytest         # 100 tests; ML tests skip when torch/weights are absent
+python -m pytest         # 112 tests; ML tests skip when torch/weights are absent
 ```
+
+## The rail (Raspberry Pi edge agent)
+
+On the Pi: `bash edge/pi/install.sh`, then edit the pins and camera
+settings in `/etc/systemd/system/fishai-edge.service` (see
+`edge/pi/README.md`) and `sudo systemctl restart fishai-edge`. Check
+`http://<pi>:8000/status` and `/snapshot.jpg`.
+
+On the PC, `configs/local.yaml`:
+
+```yaml
+camera: {id: cam1, view: side}
+live:
+  edge_url: http://<pi>:8000
+sensors:
+  - {name: rail, kind: edge, url: http://<pi>:8000}
+control:
+  backend: edge
+  edge_url: http://<pi>:8000
+```
+
+Then `fishai watch --source http://<pi>:8000/stream.mjpg --config
+configs/local.yaml`, or register it with `install_tasks.ps1 -Source
+"http://<pi>:8000/stream.mjpg"`. A second camera is a second edge agent (or
+any URL) run under a second config with `camera.id: cam2`.
 
 ## Running unattended (Windows)
 

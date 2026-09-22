@@ -82,6 +82,30 @@ checksum and licence; `scripts/download_models.py` fetches it;
 `fishai.models_registry.resolve_model_path` turns the key into a path or
 raises with the exact command to run. Weights are git-ignored.
 
+## Cameras and light
+
+Every session carries ``camera_id`` (config ``camera.id``) and a
+``lighting_mode`` decided from the frames (``perception/lighting.py``:
+mean HSV saturation below a threshold means infrared night footage).
+Appearance descriptors are kept per ``"<camera_id>/<lighting_mode>"`` and
+only compared under the same key, so a day histogram never meets a night
+one and camera 2 never meets camera 1. A track that lives through dusk
+carries both keys, and that is what links a fish's day and night
+identities. ``camera.view: top`` disables depth zones rather than
+reporting wrong ones.
+
+## The rail (edge agent)
+
+``edge/pi/fishai_edge.py`` runs on the Raspberry Pi: an MJPEG stream with
+auto exposure and auto white balance off, ``/sensors``, ``/events`` and
+``POST /feed``. On the PC the stream is just a ``--source`` URL; the
+watcher polls ``/events`` so the FEED button and the drum's confirmation
+become feeding events, reads the configured sensors on a timer, and the
+``edge`` actuator backend dispenses through ``/feed`` while every other
+action keeps the simulator's local state. ``--fake`` runs the same agent
+with a synthetic tank, which is how ``tests/test_edge.py`` exercises the
+whole path over real HTTP.
+
 ## Identity, honestly
 
 Within a clip, the built-in tracker re-links a lost track to a new

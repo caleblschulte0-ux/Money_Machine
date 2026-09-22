@@ -301,11 +301,20 @@ def cmd_feed(args: argparse.Namespace) -> int:
     cfg = _cfg(args)
     if args.video is None:
         st = read_status(cfg)
-        if not st or not st.get("running"):
-            raise SystemExit("no watcher is running; to mark a feeding in a processed video use --video ID --at SECONDS")
-        p = send_request(cfg, "feed", source=args.source, portions=args.portions, note=args.note or "")
-        _emit(args, {"request": str(p)}, f"feeding request sent to the watcher (session {st.get('session_id')})")
-        return 0
+        if st and st.get("running"):
+            p = send_request(cfg, "feed", source=args.source, portions=args.portions, note=args.note or "")
+            _emit(args, {"request": str(p)}, f"feeding request sent to the watcher (session {st.get('session_id')})")
+            return 0
+        edge = cfg.get_path("live.edge_url") or cfg.get_path("control.edge_url")
+        if edge:
+            from fishai.control.actuators import EdgeActuator
+
+            r = EdgeActuator(str(edge)).apply("feed_now", {"portions": args.portions})
+            with Database(cfg.resolve_path("paths.database")) as db:
+                eid = mark_feeding(db, None, 0.0, "feeder", args.portions, args.note or "", confirmed=r["confirmed"])
+            _emit(args, {"event_id": eid, "edge": r["edge"]}, f"rail fed {args.portions} portion(s): {'confirmed by the drum sensor' if r['confirmed'] else 'NOT confirmed'} (event {eid}; no watcher running, so no response was measured)")
+            return 0
+        raise SystemExit("no watcher is running and no rail is configured; to mark a feeding in a processed video use --video ID --at SECONDS")
     if args.at is None:
         raise SystemExit("--at SECONDS is required with --video")
     with Database(cfg.resolve_path("paths.database")) as db:

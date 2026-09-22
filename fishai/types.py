@@ -197,6 +197,9 @@ class VideoRecord:
     detector: str
     tracker: str
     config_hash: str
+    camera_id: str = "cam1"
+    # day | night | mixed | unknown, decided from the frames (fishai.perception.lighting)
+    lighting_mode: str = "unknown"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

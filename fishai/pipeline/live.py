@@ -24,6 +24,8 @@ from __future__ import annotations
 import json
 import signal
 import time
+import urllib.error
+import urllib.request
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -130,6 +132,7 @@ class LiveStatus:
     last_error: str | None = None
     reconnects: int = 0
     last_deviations: list[str] = field(default_factory=list)
+    sensors: dict[str, Any] = field(default_factory=dict)
     updated_at: str = field(default_factory=_now_iso)
     running: bool = True
 
@@ -161,6 +164,13 @@ class LiveWatcher:
         self.no_detection_alert_s = float(self.live_cfg.get("no_detection_alert_s", 120))
         self.clip_on = set(self.live_cfg.get("clip_on", ["feeding", "deviation", "tracking_loss", "request"]))
         self.assess_each_session = bool(self.live_cfg.get("assess_each_session", False))
+        self.edge_url = (str(self.live_cfg["edge_url"]).rstrip("/") if self.live_cfg.get("edge_url") else None)
+        self.edge_poll_s = float(self.live_cfg.get("edge_poll_s", 2))
+        self.sensor_poll_s = float(self.live_cfg.get("sensor_poll_s", 60))
+        self._edge_last_event = 0
+        self._edge_next_poll = 0.0
+        self._sensor_next_poll = 0.0
+        self._hub: Any = None
         self.clip_dir = self._path(self.live_cfg.get("clip_dir", "runs/clips"))
         self.requests_dir = self._path(self.live_cfg.get("requests_dir", "runs/live/requests"))
         self.status_path = self._path(self.live_cfg.get("status_file", "runs/live/status.json"))
@@ -349,6 +359,8 @@ class LiveWatcher:
             if ts >= self.clip.until_ts:
                 self._finish_clip(ts)
         self._process_requests(frame, ts)
+        self._poll_edge(frame)
+        self._poll_sensors()
         self._check_pending_feedings(frame, ts)
         if len(self._frame_times) >= 2:
             span = self._frame_times[-1] - self._frame_times[0]
@@ -404,13 +416,15 @@ class LiveWatcher:
             log.info("stop requested")
             self._stop = True
         elif kind == "feed":
-            eid = mark_feeding(self.db, self.session.video_id, frame.timestamp_s, str(req.get("source", "manual")), float(req.get("portions", 1.0)), str(req.get("note", "")))
-            self.pending_feedings.append({"event_id": eid, "ts": frame.timestamp_s, "wall_ts": ts, "video_id": self.session.video_id})
-            self._feedings_this_session.append(eid)
-            self.status.pending_feedings = len(self.pending_feedings)
-            log.info("feeding marked at %.1fs (event %d)", frame.timestamp_s, eid)
-            if "feeding" in self.clip_on:
-                self._start_clip("feeding", ts, "feeding", eid)
+            source = str(req.get("source", "manual"))
+            portions = float(req.get("portions", 1.0))
+            confirmed = req.get("confirmed")
+            if self.edge_url and source in ("manual", "pc") and not req.get("already_dispensed"):
+                # A request from the PC while a rail exists means: actually dispense.
+                result = self._edge_feed(portions)
+                confirmed = bool(result.get("confirmed")) if result else False
+                source = "feeder"
+            self._record_feeding(frame, ts, source, portions, str(req.get("note", "")), confirmed)
         elif kind == "clip":
             if "request" in self.clip_on:
                 eid = self.db.add_event("clip_requested", {"note": req.get("note", ""), "ts": frame.timestamp_s}, video_id=self.session.video_id)
@@ -419,6 +433,81 @@ class LiveWatcher:
             self.db.add_event("owner_note", {"note": req.get("note", ""), "ts": frame.timestamp_s}, video_id=self.session.video_id)
         else:
             log.warning("unknown request kind %r", kind)
+
+    def _record_feeding(self, frame: Frame, ts: float, source: str, portions: float, note: str, confirmed: bool | None) -> int:
+        assert self.session is not None
+        eid = mark_feeding(self.db, self.session.video_id, frame.timestamp_s, source, portions, note, confirmed)
+        self.pending_feedings.append({"event_id": eid, "ts": frame.timestamp_s, "wall_ts": ts, "video_id": self.session.video_id})
+        self._feedings_this_session.append(eid)
+        self.status.pending_feedings = len(self.pending_feedings)
+        log.info("feeding marked at %.1fs (event %d, %s%s)", frame.timestamp_s, eid, source, "" if confirmed is None else (", confirmed" if confirmed else ", NOT confirmed"))
+        if "feeding" in self.clip_on:
+            self._start_clip("feeding", ts, f"feeding ({source})", eid)
+        return eid
+
+    # ---------------------------------------------------------------- edge
+    def _edge_feed(self, portions: float) -> dict[str, Any] | None:
+        if not self.edge_url:
+            return None
+        try:
+            body = json.dumps({"portions": portions, "source": "pc"}).encode()
+            req = urllib.request.Request(f"{self.edge_url}/feed", data=body, headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310 - configured URL
+                result = json.loads(resp.read().decode())
+            # Our own feed shows up in the edge event log too; skip it there.
+            self._edge_last_event = max(self._edge_last_event, int(result.get("event_id", 0)) + 1)
+            return result
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            log.error("edge feeder failed: %s", exc)
+            self.status.last_error = f"edge feeder: {exc}"
+            return None
+
+    def _poll_edge(self, frame: Frame) -> None:
+        """Turn the rail's FEED button and feeder confirmations into feeding events."""
+        if not self.edge_url or self.session is None:
+            return
+        now = time.time()
+        if now < self._edge_next_poll:
+            return
+        self._edge_next_poll = now + self.edge_poll_s
+        try:
+            from fishai.sensors.http_sensor import fetch_json
+
+            doc = fetch_json(f"{self.edge_url}/events?since={self._edge_last_event}", timeout_s=3)
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            if self.status.last_error != f"edge: {exc}":
+                log.warning("edge agent unreachable: %s", exc)
+            self.status.last_error = f"edge: {exc}"
+            return
+        for ev in doc.get("events", []) if isinstance(doc, dict) else []:
+            eid = int(ev.get("id", 0))
+            self._edge_last_event = max(self._edge_last_event, eid)
+            if ev.get("kind") == "feed_done" and ev.get("source") != "pc":
+                self._record_feeding(frame, now, str(ev.get("source", "feeder")), float(ev.get("portions", 1.0)), "", bool(ev.get("confirmed", False)))
+            elif ev.get("kind") == "mode":
+                self.db.add_event("camera_mode", {"mode": ev.get("mode")}, video_id=self.session.video_id)
+
+    def _poll_sensors(self) -> None:
+        if self.sensor_poll_s <= 0:
+            return
+        now = time.time()
+        if now < self._sensor_next_poll:
+            return
+        self._sensor_next_poll = now + self.sensor_poll_s
+        if self._hub is None:
+            from fishai.sensors import SensorHub, build_sensors
+
+            try:
+                self._hub = SensorHub(build_sensors(self.cfg.get("sensors", [])), limits=self.cfg.get("sensor_limits", {}))
+            except Exception as exc:
+                log.error("sensors not built: %s", exc)
+                self.sensor_poll_s = 0
+                return
+        try:
+            readings = self._hub.read_all(self.db)
+            self.status.sensors = {k: {"value": (round(r.value, 2) if r.value == r.value else None), "unit": r.unit, "status": r.status} for k, r in readings.items()}
+        except Exception as exc:
+            log.error("sensor poll failed: %s", exc)
 
     def _check_pending_feedings(self, frame: Frame, ts: float, force: bool = False) -> None:
         if not self.pending_feedings or self.session is None:

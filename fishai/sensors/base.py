@@ -48,7 +48,7 @@ def register_sensor(kind: str) -> Callable[[SensorFactory], SensorFactory]:
 
 
 def _ensure_builtins() -> None:
-    from fishai.sensors import file_sensor, simulated  # noqa: F401
+    from fishai.sensors import file_sensor, http_sensor, simulated  # noqa: F401
 
 
 def available_sensor_kinds() -> list[str]:
@@ -63,7 +63,8 @@ def build_sensors(entries: list[dict[str, Any]]) -> list[Sensor]:
         kind = e.get("kind")
         if kind not in _REGISTRY:
             raise ValueError(f"unknown sensor kind {kind!r}; available: {', '.join(sorted(_REGISTRY))}")
-        out.append(_REGISTRY[kind](dict(e)))
+        built = _REGISTRY[kind](dict(e))
+        out.extend(built if isinstance(built, list) else [built])
     return out
 
 

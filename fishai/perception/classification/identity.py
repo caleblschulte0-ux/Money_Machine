@@ -1,8 +1,12 @@
 """Link per-video track ids to long-term fish ids (Phase 2, first rung).
 
-Method: each track's appearance descriptor (mean HSV histogram over its
-observations) is matched to the registry of known fish by histogram
-intersection. Hungarian assignment when scipy is present, greedy
+Method: each track's appearance descriptors (mean HSV histogram over its
+observations, kept separately per "<camera_id>/<lighting_mode>") are
+matched to the registry of known fish by histogram intersection under the
+SAME key only: a day histogram is never compared with an infrared one, and
+one camera's view is never compared with another's. A track that lives
+through dusk carries both a day and a night descriptor, and that is what
+links a fish's two identities. Hungarian assignment when scipy is present, greedy
 otherwise; one fish per track and one track per fish within a video.
 A match below ``min_similarity`` registers a NEW fish. The similarity is
 stored as the link's confidence, so a report can say "Fish 3 (0.71)".
@@ -43,10 +47,27 @@ def _assign(sim: np.ndarray, threshold: float) -> list[tuple[int, int]]:
         return pairs
 
 
+Descriptors = dict[str, np.ndarray]
+
+
+def descriptor_similarity(a: Descriptors, b: Descriptors) -> float:
+    """Best similarity over the keys both sides have; 0 when they share none."""
+    shared = set(a) & set(b)
+    return max((appearance.similarity(a[k], b[k]) for k in shared), default=0.0)
+
+
+def _as_lists(d: Descriptors) -> dict[str, list[float]]:
+    return {k: [float(x) for x in v] for k, v in d.items() if v is not None}
+
+
+def _fish_descriptors(f: dict[str, Any]) -> Descriptors:
+    return {k: np.asarray(v, dtype=np.float32) for k, v in f["descriptors"].items()}
+
+
 def link_tracks_to_fish(
     db: Database,
     video_id: str,
-    descriptors: dict[int, np.ndarray],
+    descriptors: dict[int, Descriptors],
     min_similarity: float = 0.55,
     min_observations: dict[int, int] | None = None,
     min_track_observations: int = 5,
@@ -59,14 +80,18 @@ def link_tracks_to_fish(
     when the tracker loses a fish would otherwise register a new fish each
     time. Tracks that overlap in time are never merged.
     """
-    tracks = [t for t, d in sorted(descriptors.items()) if d is not None and (min_observations or {}).get(t, min_track_observations) >= min_track_observations]
+    tracks = [
+        t for t, d in sorted(descriptors.items())
+        if d and any(v is not None for v in d.values()) and (min_observations or {}).get(t, min_track_observations) >= min_track_observations
+    ]
     known = db.list_fish()
+    known_desc = [_fish_descriptors(f) for f in known]
     result: dict[int, dict[str, Any]] = {}
     if tracks and known:
         sim = np.zeros((len(tracks), len(known)), dtype=np.float32)
         for i, t in enumerate(tracks):
-            for j, f in enumerate(known):
-                sim[i, j] = appearance.similarity(descriptors[t], np.asarray(f["descriptor"], dtype=np.float32))
+            for j, kd in enumerate(known_desc):
+                sim[i, j] = descriptor_similarity(descriptors[t], kd)
         pairs = _assign(sim, min_similarity)
     else:
         pairs = []
@@ -74,14 +99,16 @@ def link_tracks_to_fish(
     for i, j in pairs:
         t, f = tracks[i], known[j]
         conf = float(sim[i, j])
-        blended = appearance.blend(np.asarray(f["descriptor"], dtype=np.float32), descriptors[t], alpha=0.2)
-        db.update_fish(f["fish_id"], descriptor=[float(x) for x in blended], seen=True)
+        merged: Descriptors = dict(known_desc[j])
+        for key, d in descriptors[t].items():
+            merged[key] = appearance.blend(merged.get(key), d, alpha=0.2) if key in merged else d
+        db.update_fish(f["fish_id"], descriptors=_as_lists(merged), seen=True)
         db.set_identity(video_id, t, f["fish_id"], conf, "hsv_histogram")
         result[t] = {"fish_id": f["fish_id"], "confidence": conf, "new": False}
         matched[t] = True
     # Tracks this video already assigned (known or new) with their time spans,
     # so a later fragment can join an earlier one when they never coexist.
-    assigned: dict[int, list[tuple[int, np.ndarray]]] = {}  # fish_id -> [(track, descriptor)]
+    assigned: dict[int, list[tuple[int, Descriptors]]] = {}  # fish_id -> [(track, descriptors)]
     for t, r in result.items():
         assigned.setdefault(r["fish_id"], []).append((t, descriptors[t]))
     for t in tracks:
@@ -92,15 +119,16 @@ def link_tracks_to_fish(
             for fish_id, members in assigned.items():
                 if any(_overlaps(spans[t], spans.get(m, spans[t])) for m, _ in members):
                     continue
-                sim = max(appearance.similarity(descriptors[t], d) for _, d in members)
+                sim = max(descriptor_similarity(descriptors[t], d) for _, d in members)
                 if sim >= min_similarity and (best is None or sim > best[0]):
                     best = (sim, fish_id)
         if best is not None:
             sim, fish_id = best
             db.set_identity(video_id, t, fish_id, sim, "hsv_histogram:fragment")
+            db.update_fish(fish_id, descriptors=_as_lists(descriptors[t]))
             result[t] = {"fish_id": fish_id, "confidence": sim, "new": False}
         else:
-            fish_id = db.add_fish([float(x) for x in descriptors[t]])
+            fish_id = db.add_fish(_as_lists(descriptors[t]))
             db.set_identity(video_id, t, fish_id, 1.0, "hsv_histogram:new")
             result[t] = {"fish_id": fish_id, "confidence": 1.0, "new": True}
         assigned.setdefault(fish_id, []).append((t, descriptors[t]))
