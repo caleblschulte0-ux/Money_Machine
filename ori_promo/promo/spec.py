@@ -69,18 +69,11 @@ def shot_start(name):
     raise KeyError(name)
 
 
-# Big statements, lower-left, one idea each. (t_in, t_out, lines)
-CARDS = [
-    (4.4,  6.1,  ["You've walked past this", "a hundred times."]),
-    (6.5,  8.6,  ["The story's right here."]),
-    (8.9,  10.6, ["Nobody reads the sign."]),
-    (11.0, 13.1, ["So we put it where", "you're looking."]),
-    (22.4, 25.9, ["Twelve thousand years ago,", "this was ice."], "tl"),   # the mammoth owns the lower left
-    (26.6, 29.0, ["Then it was home."]),
-    (29.4, 31.0, ["Right where you're standing."]),
-    (37.7, 41.3, ["Walk past another group.", "You only hear yours."]),
-    (42.0, 44.3, ["Any place. Any story."]),
-]
+# Word cards are RETIRED (operator 2026-09-22: "do we really need those
+# anymore?"). With the narrator carrying the words they were subtitles of
+# the narration, and they read as an editing-app overlay. The build still
+# supports them ((t_in, t_out, lines[, corner])) -- the list is just empty.
+CARDS = []
 
 # Small documentary eyebrows, lower-left. (t_in, t_out, text)
 EYEBROWS = [
