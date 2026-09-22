@@ -1051,9 +1051,21 @@ def stage_picture():
     cards = [(a, b, card_words(lines)) for a, b, lines in CARDS]
     eyebrows = [(a, b, tag_sprite(txt)) for a, b, txt in EYEBROWS]
     moves = []
+    # push=(from_frac, zoom, (x, y)): over the END of a shot, an eased zoom
+    # that lands with (x, y) centred at `zoom`; pull=(to_frac, zoom, (x, y))
+    # is the mirror at the START of a shot. Two shots that push out on one
+    # thing and pull in from the same thing make a match cut (operator
+    # 2026-09-22: the turntable glasses -> the glasses on his face).
+    pushes = []
     for sid, _, _, dur, opt in SHOTS:
         if opt.get("move"):
             moves.append((shot_start(sid), shot_start(sid) + dur) + opt["move"])
+        if opt.get("push"):
+            f0, z, p = opt["push"]
+            pushes.append((shot_start(sid) + f0 * dur, shot_start(sid) + dur, "push", z, p))
+        if opt.get("pull"):
+            f1, z, p = opt["pull"]
+            pushes.append((shot_start(sid), shot_start(sid) + f1 * dur, "pull", z, p))
     tags = [(a, b, tag_sprite(txt)) for a, b, txt in TAGS]
     end = end_card_sprites()
     prod_t = shot_start("glasses")
@@ -1079,6 +1091,16 @@ def stage_picture():
                 u = ease((t - a) / (b_ - a))
                 s = 1.0 + amt * (u if kind == "in" else 1 - u)
                 M = cv2.getRotationMatrix2D((W * 0.5, H * 0.5), 0, s)
+                f = cv2.warpAffine(f, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+                break
+        for a, b_, kind, z, p in pushes:
+            if a <= t < b_:
+                u = min(1.0, max(0.0, (t - a) / (b_ - a)))
+                # push accelerates INTO the cut, pull decelerates OUT of it
+                s = 1.0 + (z - 1.0) * (u * u if kind == "push" else (1 - u) ** 2)
+                k = (s - 1.0) / (z - 1.0)
+                M = cv2.getRotationMatrix2D(p, 0, s)
+                M[0, 2] += k * (W / 2 - p[0]); M[1, 2] += k * (H / 2 - p[1])
                 f = cv2.warpAffine(f, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
                 break
         for a, b, sp in eyebrows:
@@ -1363,6 +1385,7 @@ def stage_audio():
             place(sub_hit(), S("mammoth") + 0.55, -14)
             place(shimmer(1.4, 740), S("dakota") + 0.25, -19)
             sfx("whoosh", S("glasses") - 0.08, -22, trim=0.6)
+            sfx("whoosh", S("worn") - 0.25, -23, trim=0.7)          # the match cut onto his face
             sfx("boom", END_CARD_START, -18)
         env = np.abs(vo[:, 0])
         kern = int(0.08 * SR)

@@ -45,10 +45,13 @@ SHOTS = [
     ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.05))),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     ("point",   f"{RAW}/IMG_6794.MOV",          45.9, 2.0, dict(speed=0.7)),
-    ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True)),
+    # the product: the turntable pushes in on the sensor pod over its last
+    # second, and the next shot pulls out from the temple on his face --
+    # a match cut on the glasses, studio to worn
+    ("glasses", "../supplied/glasses_turntable.mp4", 0.8, 3.5, dict(stab=False, sdr=True, push=(0.71, 2.2, (1350, 470)))),
     # the glasses ON him: the tail of the tower clip, a close profile
     # looking out over the park (steady, 0.14px/frame; sharp from 10s)
-    ("worn",    f"{RAW}/IMG_6799.MOV",          10.2, 2.4, dict(mc=True, speed=0.85, move=("in", 0.03))),
+    ("worn",    f"{RAW}/IMG_6799.MOV",          10.2, 2.4, dict(mc=True, speed=0.85, pull=(0.4, 2.0, (480, 600)))),
     ("sync",    f"{RAW_MORE}/IMG_6808.MOV",     16.0, 4.5, dict(fx="sync", speed=0.9)),
     ("bridge",  f"{RAW}/IMG_6798.MOV",          12.5, 3.0, dict(move=("in", 0.04))),
     ("close",   f"{RAW_MORE}/IMG_6803.MOV",      3.0, 5.5, dict(stab=True, smooth=90, zoom=8, speed=0.72, move=("in", 0.05))),
