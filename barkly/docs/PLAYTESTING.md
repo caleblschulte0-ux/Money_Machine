@@ -89,7 +89,7 @@ reach the beach" has to mean he earned it.
     npm run build:pages      # both builds into dist/
     npm run check:gate       # the player build cannot reach the playtester
     python3 -m http.server 8099 --directory dist &
-    npm run check:playtest   # play the build: 29 checks
+    npm run check:playtest   # play the build: 30 checks
 
 ## What does not work in the browser
 
