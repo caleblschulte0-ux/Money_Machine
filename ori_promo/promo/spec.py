@@ -1,6 +1,6 @@
 """ORI promo -- the cut.
 
-53.6s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
+54.6s, 1920x1080 composed for a 2.39:1 letterbox, 24fps. Music
 "Inspired" (Kevin MacLeod, CC BY 4.0) at 120 BPM: a bar is 2.0s.
 
 Story, second person -- a first-time viewer has to learn WHAT it is:
@@ -15,8 +15,8 @@ yours, the group walking past hears theirs -> any place -> end card.
 
 W, H, FPS = 1920, 1080, 24
 BAR = 138                    # 2.39:1 letterbox: 1920 x 804 picture
-TOTAL = 53.6
-END_CARD_START = 50.8
+TOTAL = 54.6
+END_CARD_START = 51.8
 
 RAW = "../raw"
 RAW_MORE = "../raw_more"
@@ -55,8 +55,8 @@ SHOTS = [
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     # safety, at the water: audio only near it, a warning too close, off
     # closer than that (operator 2026-09-22) -- the lens readout says so
-    ("point",   f"{RAW}/IMG_6794.MOV",          44.0, 5.0, dict(fx="safety", move=("in", 0.03))),
-    ("sync",    f"{RAW_MORE}/IMG_6808.MOV",     16.0, 4.5, dict(fx="sync", speed=0.9)),
+    ("point",   f"{RAW}/IMG_6794.MOV",          44.0, 5.5, dict(fx="safety", move=("in", 0.03))),
+    ("sync",    f"{RAW_MORE}/IMG_6808.MOV",     16.0, 5.0, dict(fx="sync", speed=0.9)),
     ("bridge",  f"{RAW}/IMG_6798.MOV",          12.5, 3.0, dict(move=("in", 0.04))),
     ("close",   f"{RAW_MORE}/IMG_6803.MOV",      3.0, 5.5, dict(stab=True, smooth=90, zoom=8, speed=0.72, move=("in", 0.05))),
 ]
@@ -100,13 +100,13 @@ VO = [
     (13.5, "No screens. No signs. Nothing built into the park."),
     (16.9, "Just the glasses."),
     (19.5, "Every story is already loaded. GPS knows where you're standing. No signal needed."),
-    (24.8, "Look at something, and it knows what you're looking at."),
+    (25.1, "Look at something, and it knows what you're looking at."),
     (28.0, "Twelve thousand years ago, this was ice."),
     (32.8, "Then it was home."),
-    (35.9, "Near the water, it goes audio only. Too close, it warns you. Closer than that, it shuts off."),
-    (40.8, "Your group hears your story. The group walking past hears theirs."),
-    (45.3, "Any place. Any story."),
-    (50.8, "Open Range. See the story where you stand."),
+    (35.8, "Near the water, it goes audio only. Too close, it warns you. Closer than that, it shuts off."),
+    (41.8, "Your group hears your story. The group walking past hears theirs."),
+    (46.4, "Any place. Any story."),
+    (51.8, "Open Range. See the story where you stand."),
 ]
 # "kokoro:<voice>" = Kokoro (vo/kokoro/, 54 voices: af_heart, af_bella,
 # am_michael, bm_george ...); a path = a Piper model. Placeholder until the
