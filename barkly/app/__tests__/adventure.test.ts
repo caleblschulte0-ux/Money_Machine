@@ -193,3 +193,32 @@ describe('the plan points at the thing that makes him yours', () => {
     }
   });
 });
+
+describe('a rival with an active grievance', () => {
+  // The rotation is spun by the calendar day, so without a pin a Barkly whose
+  // whole current drama is "Duke stole the good stick" could get a plan with
+  // no Duke in it, while the Pack Book said do-not-make-this-worse.
+  const { adjustSocialBond, freshCharacter } = require('../src/barkly/character');
+  const { emptyMemory } = require('../src/barkly/memory');
+  const NOW = 1_700_000_000_000;
+  let settled = freshCharacter();
+  for (let i = 0; i < 8; i += 1) settled = adjustSocialBond(settled, 'Duke', 'rival', 1, NOW + i * 60_000);
+  const beefed = { ...settled, grievance: { who: 'Duke', what: 'called the good stick a twig', at: NOW } };
+
+  it('is pinned into the day, every day', () => {
+    for (let d = 0; d < 14; d += 1) {
+      const plan = createAdventure({ character: beefed, memory: emptyMemory(), xp: 400, now: NOW + d * 86_400_000 });
+      expect(plan.goals.some((g) => g.target === 'duke')).toBe(true);
+    }
+  });
+
+  it('names the grievance on the goal, so the plan reads as this dog and not a template', () => {
+    const plan = createAdventure({ character: beefed, memory: emptyMemory(), xp: 400, now: NOW });
+    expect(plan.goals.find((g) => g.target === 'duke')!.detail).toContain('good stick');
+  });
+
+  it('is NOT pinned without a grievance -- a settled rival stays in the rotation', () => {
+    const plan = createAdventure({ character: settled, memory: emptyMemory(), xp: 400, now: NOW });
+    expect(plan.goals.find((g) => g.target === 'duke')?.pinned).toBeFalsy();
+  });
+});

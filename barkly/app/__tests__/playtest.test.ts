@@ -16,7 +16,7 @@
  */
 
 import { PRESETS, presetById } from '../src/dev/presets';
-import { ALL_SAVE_KEYS, DEVICE_KEYS, LOCATION_KEY, MEMORY_KEY, ONBOARDING_DONE, ONBOARDING_KEY, STASH_KEY, MUTE_KEY } from '../src/storage/keys';
+import { ADVENTURE_KEY, ALL_SAVE_KEYS, DEVICE_KEYS, LOCATION_KEY, MEMORY_KEY, ONBOARDING_DONE, ONBOARDING_KEY, STASH_KEY, MUTE_KEY } from '../src/storage/keys';
 import { LOCATIONS } from '../src/world/locations';
 import { activeSlot, hasBackup, loadPreset, readSave, restoreBackup, writeSave } from '../src/dev/saveSlots';
 import { KeyValueStore, DEFAULT_PROFILE } from '../src/storage/types';
@@ -152,6 +152,56 @@ describe('the presets are the Barklys they claim to be', () => {
   const memory = (id: string) => parse(id, MEMORY_KEY);
   const character = (id: string) => parse(id, ALL_SAVE_KEYS[2]);
   const stash = (id: string) => parse(id, STASH_KEY);
+
+  const adventure = (id: string) => parse(id, ADVENTURE_KEY);
+
+  /*
+   * THE PLAN IS THIS DOG'S PLAN. A canned fixture sat in front of the live
+   * generator for weeks: every slot opened to "Throw something / Find Biscuit
+   * / Dig something up", and the history-aware plan the app really writes
+   * was never seen by a tester. Same failure the onboarding note above
+   * describes -- everything green, the feature invisible.
+   */
+  it('no preset ships the canned beginner plan', () => {
+    for (const p of PRESETS) {
+      const a = adventure(p.id);
+      expect(a.title).toBe("Barkly's Extremely Serious Plan");
+      for (const g of a.goals) expect(['Throw something', 'Find Biscuit', 'Dig something up']).not.toContain(g.label);
+    }
+  });
+
+  it("Duke Nemesis' plan is about Duke", () => {
+    expect(adventure('duke').goals.some((g: { target?: string }) => g.target === 'duke')).toBe(true);
+    expect(adventure('duke').subtitle).toMatch(/Duke Situation/);
+  });
+
+  it("Trick Dog's plan asks for a cue he actually knows", () => {
+    // Day-independent on purpose. The routine goal is NOT pinned -- a
+    // permanent ritual pinned forever would put "Use showtime" on the plan
+    // every day for the rest of his life, which is the content treadmill the
+    // product identity warns against -- so on some calendar days it rotates
+    // out. The contract is: over two weeks it shows up, and whenever it does
+    // it is a cue this dog was actually taught.
+    const cues = memory('trickdog').trainingRules.map((r: { normalizedCue: string }) => r.normalizedCue);
+    const seen: string[] = [];
+    for (let d = 0; d < 14; d += 1) {
+      const a = JSON.parse(presetById('trickdog')!.build(now + d * 86_400_000)[ADVENTURE_KEY]);
+      const routine = a.goals.find((g: { kind: string }) => g.kind === 'routine');
+      if (routine) seen.push(routine.target);
+    }
+    expect(seen.length).toBeGreaterThan(0);
+    for (const target of seen) expect(cues).toContain(target);
+  });
+
+  it('the crossed-out counts the presets promise still hold', () => {
+    const done = (id: string) => adventure(id).goals.filter((g: { done: boolean }) => g.done).length;
+    expect(done('fresh')).toBe(0);
+    expect(done('day3')).toBe(1);
+    expect(done('established')).toBe(2);
+    expect(done('longterm')).toBe(3);
+    expect(adventure('longterm').completedAt).toBeTruthy();
+    expect(adventure('established').completedAt).toBeFalsy();
+  });
 
   it('every preset is onboarding-complete, in the format the app reads', () => {
     // Not JSON. The app writes a bare 'done' here, and a preset that wrote

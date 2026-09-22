@@ -28,7 +28,7 @@ import { describeFact } from '../barkly/facts';
 import { TrainingRule } from '../barkly/training';
 import { BarklySnapshot, ChatTurn } from '../barkly/types';
 import { freshWallet, Wallet } from '../game/progression';
-import { AdventureState } from '../game/adventure';
+import { AdventureState, createAdventure } from '../game/adventure';
 
 import { LocationId } from '../world/locations';
 import { CoauthorState, freshCoauthorState } from '../barkly/coauthor';
@@ -183,20 +183,28 @@ function wallet(over: Partial<Wallet> = {}): Wallet {
 
 
 
-function plan(now: number, done: number): AdventureState {
-  const goals = [
-    { id: 'pt_g1', kind: 'play' as const, label: 'Throw something', detail: 'He will bring it back. Probably.', done: done > 0 },
-    { id: 'pt_g2', kind: 'npc' as const, label: 'Find Biscuit', detail: 'He is around here somewhere.', done: done > 1 },
-    { id: 'pt_g3', kind: 'dig' as const, label: 'Dig something up', detail: 'The park owes him.', done: done > 2 },
-  ];
-  return {
-    day: new Date(now).toISOString().slice(0, 10),
-    title: "Barkly's very serious plan",
-    subtitle: 'He wrote it. He stands by it.',
-    goals,
-    rewarded: false,
-    ...(done >= 3 ? { completedAt: now - 3600_000 } : {}),
-  };
+/**
+ * THE PLAN IS DERIVED, NEVER CANNED.
+ *
+ * This used to be a fixture -- "Throw something / Find Biscuit / Dig
+ * something up" -- stamped with today's date. `useBarkly` accepts any stored
+ * plan whose day is today and never calls `createAdventure`, so every slot,
+ * from Fresh to a Long-Term Barkly with a generational feud and a treasure
+ * museum, opened to the same three beginner tasks. The live generator had
+ * been history-aware for weeks ("Go see Duke", "Use 'showtime'", "Current
+ * complication: The Duke Situation") and no tester ever saw it, because the
+ * fixture sat in front of it. That is exactly the lie the playtesting doc
+ * warns a preset can tell: everything green, the feature under test
+ * invisible.
+ *
+ * Now the plan is what the app itself would write for this dog on this day,
+ * and a preset only says how many of its goals are already crossed out.
+ */
+function plan(now: number, done: number, from: { character: CharacterState; memory: MemoryState; xp: number }): AdventureState {
+  const real = createAdventure({ character: from.character, memory: from.memory, xp: from.xp, now });
+  const goals = real.goals.map((g, i) => ({ ...g, done: i < done }));
+  const all = goals.length > 0 && goals.every((g) => g.done);
+  return { ...real, goals, ...(all ? { completedAt: now - 3600_000 } : {}) };
 }
 
 function save(now: number, p: {
@@ -209,7 +217,8 @@ function save(now: number, p: {
   incidents?: IncidentLedger;
   canon?: CoauthorState;
   story?: StoryState;
-  adventure?: AdventureState;
+  /** How many of today's DERIVED goals are already crossed out. */
+  planDone?: number;
   name?: string;
 }): Save {
   return {
@@ -232,7 +241,13 @@ function save(now: number, p: {
      */
     [ONBOARDING_KEY]: ONBOARDING_DONE,
     [WALLET_KEY]: JSON.stringify(p.wallet ?? freshWallet()),
-    [ADVENTURE_KEY]: JSON.stringify(p.adventure ?? plan(now, 0)),
+    [ADVENTURE_KEY]: JSON.stringify(
+      plan(now, p.planDone ?? 0, {
+        character: p.character ?? freshCharacter(),
+        memory: p.memory ?? emptyMemory(),
+        xp: (p.wallet ?? freshWallet()).xp,
+      }),
+    ),
     [MEMORY_KEY]: JSON.stringify(p.memory ?? emptyMemory()),
     // Always cleared: the v1 store is a migration path, and leaving one behind
     // would let a previous life leak into a fresh preset.
@@ -283,7 +298,7 @@ export const PRESETS: Preset[] = [
           experiences: [did(now, 'Caleb threw the ball at the park until his arm gave out.', 2, { where: 'Park' })],
           turns: [said(now, 'user', 'do you like the park', 40), said(now, 'barkly', 'Da park is da best place. Obviously.', 39)],
         }),
-        adventure: (() => plan(now, 1))(),
+        planDone: 1,
       }),
   },
 
@@ -331,7 +346,7 @@ export const PRESETS: Preset[] = [
           trainingRules: [trick(now, 'spin', "Yeah yeah. Watch dis.", 10)],
           turns: [said(now, 'user', 'is duke around', 25), said(now, 'barkly', "Duke's around. I'm not lookin' for him.", 24)],
         }),
-        adventure: plan(now, 2),
+        planDone: 2,
       }),
   },
 
@@ -459,7 +474,7 @@ export const PRESETS: Preset[] = [
             said(now, 'barkly', 'After da duck-rock incident, we have procedures.', 29),
           ],
         }),
-        adventure: plan(now, 3),
+        planDone: 3,
       }),
   },
 

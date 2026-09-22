@@ -128,6 +128,18 @@ function candidates(input: AdventureInput): AdventureGoal[] {
   }
 
   if (rival) {
+    /*
+     * PINNED when there is an active grievance against this dog. The plan
+     * is the one place the app asks the player to come back tomorrow, and
+     * the rotation is spun by the calendar day -- so on an unlucky day a
+     * Barkly whose entire current drama was "Duke stole the good stick" got
+     * a plan with no Duke in it, while the Pack Book two taps away said
+     * do-not-make-this-worse. Product identity, Pillar 5: initiative comes
+     * from HISTORY, and an open grievance is the history. Without one the
+     * rival stays in the rotation like everything else.
+     */
+    const beef = input.character.grievance;
+    const active = !!beef && beef.who.trim().toLowerCase() === rival[0].trim().toLowerCase();
     rows.push({
       id: `rival-${rival[0].toLowerCase()}`,
       kind: 'npc',
@@ -139,8 +151,11 @@ function candidates(input: AdventureInput): AdventureGoal[] {
        * player READS goes through displayName.
        */
       label: `Go see ${displayName(rival[0])}`,
-      detail: rival[1].encounters >= 6 ? 'The nemesis situation is not going to resolve itself.' : 'There is unfinished business here.',
+      detail: active
+        ? `Unfinished: ${beef!.what}`
+        : rival[1].encounters >= 6 ? 'The nemesis situation is not going to resolve itself.' : 'There is unfinished business here.',
       done: false,
+      ...(active ? { pinned: true } : {}),
     });
   }
 
