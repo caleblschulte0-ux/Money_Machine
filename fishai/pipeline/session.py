@@ -24,6 +24,7 @@ import numpy as np
 from fishai.config import Config
 from fishai.log import get_logger
 from fishai.perception import lighting
+from fishai.perception.behavior.classifiers import enrich_summaries
 from fishai.perception.behavior.telemetry import TelemetryBuilder, ZoneModel, summarize_tracks
 from fishai.perception.classification.identity import link_tracks_to_fish
 from fishai.perception.detection import Detector
@@ -193,6 +194,7 @@ class SessionProcessor:
             full_score_speed=float(bcfg.get("activity", {}).get("full_score_speed", 0.5)),
             hiding_gap_s=float(bcfg.get("hiding_gap_s", 5.0)),
         )
+        enrich_summaries(summaries, self.all_obs, self.frame_interval_s, bcfg.get("classifiers"), has_depth=self.zones.has_depth)
         lighting_mode = "unknown" if not self.modes_seen else ("mixed" if len(self.modes_seen) > 1 else next(iter(self.modes_seen)))
         fields = {**self.record.to_dict(), "lighting_mode": lighting_mode}
         if duration_s is not None or self.record.frame_count == 0:

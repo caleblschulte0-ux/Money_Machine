@@ -53,7 +53,15 @@ def run_daily(cfg: Config, db: Database | None = None, act: bool = False, rules_
         if act and result.safe_actions:
             from fishai.control import ControlExecutor
 
-            actions = ControlExecutor(db, cfg.section("control")).run_assessment_actions(result.safe_actions, "daily")
+            actions = ControlExecutor(db, cfg.section("control"), notify_cfg=cfg.section("notify")).run_assessment_actions(result.safe_actions, "daily", result.to_dict())
+        elif not act:
+            # Even without acting, the daily digest is the one message a person expects.
+            from fishai.notify import Notifier, assessment_notification
+
+            notifier = Notifier(cfg.section("notify"), db)
+            if cfg.section("notify").get("daily_digest", True):
+                n = assessment_notification(result.to_dict(), [d.to_dict() for d in devs], "daily")
+                notifier.send(n, force=result.severity in ("warning", "critical") or bool(cfg.section("notify").get("digest_always", False)))
         report = {
             "date": datetime.now(timezone.utc).date().isoformat(),
             "sessions_reviewed": [v["video_id"] for v in videos],

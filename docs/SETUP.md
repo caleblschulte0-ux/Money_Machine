@@ -36,7 +36,7 @@ python -m fishai demo
 ```
 fishai doctor            # each line is a real check, not an import
 fishai demo              # writes runs/demo_tank.summary.json and .annotated.mp4
-python -m pytest         # 112 tests; ML tests skip when torch/weights are absent
+python -m pytest         # 127 tests; ML tests skip when torch/weights are absent
 ```
 
 ## The rail (Raspberry Pi edge agent)
@@ -77,10 +77,30 @@ Registers "FishAI Watch" (at logon, restarts on exit) and "FishAI Daily"
 live line from `runs/live/status.json`; `fishai feed`, `fishai clip` and
 `fishai stop` talk to it through `runs/live/requests/`.
 
+## Alerts to your phone
+
+Install the ntfy app, subscribe to a topic name nobody would guess, and add
+to `configs/local.yaml`:
+
+```yaml
+notify:
+  backends:
+    - {kind: log}
+    - {kind: ntfy, topic: fishai-your-unguessable-topic}
+```
+
+Critical deviations at the end of a live session and a daily digest on a
+warning day then reach the phone. Webhook and email backends are
+documented in `configs/default.yaml`; email reads its password from the
+`FISHAI_SMTP_PASSWORD` environment variable.
+
 ## Configuration
 
 Copy `configs/default.yaml` to `configs/local.yaml` (git-ignored), change
-what you need, and pass `--config configs/local.yaml`. Or override inline:
+what you need, and pass `--config configs/local.yaml`. `fishai config
+--config configs/local.yaml` checks it; `watch`, `ingest` and `daily`
+refuse to start on an unknown key or an out-of-range value. Long-running
+commands log to `runs/logs/`. Or override inline:
 
 ```
 fishai process tank.mp4 -o detection.backend=yolo -o tracking.backend=bytetrack -o video.frame_stride=2

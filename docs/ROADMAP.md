@@ -32,28 +32,35 @@ in the repo pretends otherwise.
   day/night lighting mode on every session, per-camera per-mode identity,
   edge sensors and feeder behind the existing interfaces.
 
+- Software-complete pass (2026-09-22): behaviour classifiers (chasing,
+  erratic swimming, circling, vertical posture, lethargy streak) with
+  baselines; notifications (ntfy, webhook, email); `fishai bench` over
+  licensed public clips (`docs/BENCH.md`); training and comparison scripts;
+  rotating log files; config validation that blocks unattended runs on a
+  typo; doctor checks for the rail and the video source.
+
+## What still limits a launch
+
+Hardware (the rail, the seven-day test) and training (reviewed labels,
+then a fine-tuned detector). The items below improve the product; none
+blocks it.
+
 ## Next
 
-1. **Behaviour classifiers.** Chasing (two tracks with sustained pursuit
-   geometry), erratic swimming (acceleration variance), lethargy (activity
-   under baseline for N sessions), circular movement (turning-rate
-   histogram), loss of balance (box aspect-ratio anomalies). Each as a
-   measured metric with a baseline, never as a diagnosis.
-2. **Identity, second rung.** Deep re-id embeddings behind
+1. **Identity, second rung.** Deep re-id embeddings behind
    `appearance.describe`, species from Fishial classification as a hard
    constraint on matching, and a per-fish confidence history.
-3. **Real sensors.** First a serial/USB temperature probe and a water-level
+2. **Real sensors.** First a serial/USB temperature probe and a water-level
    float via the `file` bridge or a new `kind`; then pH and DO.
-4. **Real actuators.** Smart plug for aeration/light first (reversible), then
+3. **Real actuators.** Smart plug for aeration/light first (reversible), then
    a feeder. Heater control stays APPROVAL-tier with the 1 F step.
-5. **Training.** A `training/` script that takes a reviewed export
-   (`datasets/manifests/*.json`) and fine-tunes an Apache-licensed detector,
-   plus an evaluation run against the Fishial baseline with
-   `fishai.evaluation`.
-6. **A review tool for exports.** Something faster than editing label files:
+4. **Training on an Apache-licensed family.** The scripts exist and use
+   ultralytics; moving step 4 to RF-DETR / D-FINE / YOLOX removes the AGPL
+   question from shipped weights.
+5. **A review tool for exports.** Something faster than editing label files:
    accept / fix / reject per frame, writing back to the export.
-7. **Feeder integration.** `fishai feed --source feeder` from the feeder's own
-   trigger so feedings are never missed.
+6. **Speed.** About 5 fps per camera on a laptop CPU (docs/BENCH.md);
+   ONNX/OpenVINO export or a small GPU before the second camera.
 
 ## Deliberately not built
 

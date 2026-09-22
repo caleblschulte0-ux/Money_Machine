@@ -24,7 +24,20 @@ DEFAULT_METRICS: dict[str, str] = {
     "bottom_fraction": "high",
     "missing_time_s": "high",
     "mean_speed_norm_s": "both",
+    # Behaviour classifiers (classifiers.py) live in TrackSummary.extra.
+    "speed_cv": "high",
+    "circling_index": "high",
+    "vertical_posture_fraction": "high",
+    "chase_time_s": "high",
+    "chased_time_s": "high",
 }
+
+
+def metric_value(s: TrackSummary, metric: str) -> float:
+    """A metric is a TrackSummary attribute or a key of its ``extra``."""
+    if hasattr(s, metric):
+        return float(getattr(s, metric))
+    return float(s.extra.get(metric, 0.0) or 0.0)
 
 
 @dataclass
@@ -74,7 +87,7 @@ def per_fish_session_values(db: Database, metrics: list[str], min_observations: 
         slot = sessions.setdefault(fish_id, {}).setdefault(s.video_id, {"weight": 0.0, "sums": dict.fromkeys(metrics, 0.0)})
         w = float(s.n_observations)
         for m in metrics:
-            slot["sums"][m] += w * float(getattr(s, m))
+            slot["sums"][m] += w * metric_value(s, m)
         slot["weight"] += w
     out: dict[int, list[dict[str, Any]]] = {}
     for fish_id, per_video in sessions.items():
@@ -156,6 +169,26 @@ def deviations_for_video(db: Database, video_id: str, cfg: dict[str, Any] | None
             ]
         )
     return found
+
+
+def persistent_low_activity(db: Database, fish_id: int, cfg: dict[str, Any] | None = None) -> int:
+    """How many consecutive recent sessions this fish's activity sat below its prior baseline (lethargy signal)."""
+    cfg = cfg or {}
+    rows = per_fish_session_values(db, ["activity_score"]).get(fish_id, [])
+    window = int(cfg.get("window_sessions", 14))
+    min_sessions = int(cfg.get("min_sessions", 3))
+    pct = float(cfg.get("lethargy_percent", 25.0))
+    streak = 0
+    for idx in range(len(rows) - 1, -1, -1):
+        prior = rows[max(0, idx - window) : idx]
+        if len(prior) < min_sessions:
+            break
+        base = sum(float(r["activity_score"]) for r in prior) / len(prior)
+        if base > 0 and float(rows[idx]["activity_score"]) < base * (1 - pct / 100.0):
+            streak += 1
+        else:
+            break
+    return streak
 
 
 def baseline_report(db: Database) -> dict[int, dict[str, Any]]:

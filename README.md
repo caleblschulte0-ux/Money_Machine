@@ -21,7 +21,7 @@ The reasoning model never sees a video frame. It sees this:
 
 | Phase | What | State |
 |---|---|---|
-| 1 | Eyes: video -> detection -> tracking -> telemetry -> SQLite -> JSON -> annotated video | **Working.** 112 tests. Runs with no model at all (motion detector) or with the Fishial YOLO detector + ByteTrack. Verified on real aquarium footage. |
+| 1 | Eyes: video -> detection -> tracking -> telemetry -> SQLite -> JSON -> annotated video | **Working.** 127 tests. Runs with no model at all (motion detector) or with the Fishial YOLO detector + ByteTrack. Verified on real aquarium footage. |
 | 2 | Identity: keep Fish #3 as Fish #3 | **First rung.** Appearance re-id inside a clip and across clips (colour histograms), confidence exposed, fragments merged only when they never coexist. Deep re-id: not built. |
 | 3 | Behaviour: activity, zones, surface time, hiding, feeding response | **Measured.** Feeding events with per-fish approach latency, zone shift and activity change, judged against that fish's prior feedings. Aggression, erratic swimming: not built (see docs/ROADMAP.md). |
 | 4 | Baselines per fish per tank, deviations | **Working.** Rolling window, prior-sessions-only comparison, z-score and percent thresholds. |
@@ -29,6 +29,10 @@ The reasoning model never sees a video frame. It sees this:
 | 6 | Sensors | **Simulators + file bridge.** Temperature, water level, pH, dissolved oxygen simulators; a JSON-file sensor for any logger. No hardware driver yet. |
 | 7 | Control | **Permission system + simulated actuators.** AUTO / APPROVAL / FORBIDDEN tiers, deterministic limits, rate limits, journaled. No hardware driver yet. |
 | HW | Rail edge agent (Raspberry Pi): locked-exposure camera stream, temperature and float switch, feeder with drum confirmation and FEED button | **Working in fake mode, untested on a Pi.** `edge/pi/`; the PC polls its events and sensors. Camera id and day/night mode on every session; identity kept per camera and per mode; heater control locked out for v1. Decisions in `docs/HARDWARE_V1.md`. |
+| Bench | Detector and tracker across other people's tanks | **Working.** `fishai bench` over ten licensed public clips: fish found in 83 to 100% of frames on nine, zero false detections on the negative test. Results and weak spots in `docs/BENCH.md`. |
+| Behaviour | Chasing, erratic swimming, circling, vertical posture, lethargy | **Measured, with baselines.** Numbers on every track and plain-word flags in the summary; never diagnoses. |
+| Alerts | Phone push (ntfy), webhook, email, log | **Working.** Critical session deviations and the daily digest notify; the model's `send_notification` goes through the same path. |
+| Training | Split, fine-tune, compare | **Scripts ready** in `training/` and `evaluation/`; waiting on reviewed labels. |
 | Data | Live loop, event clips, retention, owner confirmations, dataset export | **Working.** `fishai watch` runs unattended in sessions with a rolling buffer and clips on feeding / deviation / tracking loss / request; `fishai ingest` drains a folder; `fishai daily` reviews; `fishai confirm` records outcomes; `fishai export` writes YOLO frames + labels with a manifest. Windows scheduled tasks via `scripts/install_tasks.ps1`. |
 
 See `docs/ROADMAP.md` for what is deliberately not built.
@@ -136,6 +140,8 @@ fishai daily [--act]              baselines + deviations for new sessions + one 
 fishai confirm [ID --outcome ...] what really happened for a flagged anomaly
 fishai export dataset|summaries   training frames + YOLO labels with a manifest, or a CSV of every track
 fishai maintain                   retention now
+fishai bench                      detector/tracker report over licensed public clips
+fishai config                     validate the effective configuration (unattended runs refuse to start on errors)
 ```
 
 Every command takes `--config FILE` and `-o key.path=value` overrides; all

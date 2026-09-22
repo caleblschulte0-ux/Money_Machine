@@ -19,11 +19,15 @@ log = get_logger(__name__)
 
 
 class ControlExecutor:
-    def __init__(self, db: Database, control_cfg: dict[str, Any], actuator: Actuator | None = None) -> None:
+    def __init__(self, db: Database, control_cfg: dict[str, Any], actuator: Actuator | None = None, notify_cfg: dict[str, Any] | None = None) -> None:
         self.db = db
         self.limits = dict(control_cfg.get("limits", {}))
         self.actuator = actuator or build_actuator(control_cfg)
         self.halted = False
+        if notify_cfg is not None and hasattr(self.actuator, "notifier"):
+            from fishai.notify import Notifier
+
+            self.actuator.notifier = Notifier(notify_cfg, db)
 
     def halt(self) -> None:
         self.halted = True
@@ -68,8 +72,17 @@ class ControlExecutor:
         self.db.add_action(action, d.normalised_params, approved_by, "approved", True, "owner approved")
         return {"action": action, "executed": True, "reason": "owner approved", "result": result}
 
-    def run_assessment_actions(self, safe_actions: list[str], requested_by: str = "reasoner") -> list[dict[str, Any]]:
-        return [self.request(a, None, requested_by) for a in safe_actions]
+    def run_assessment_actions(self, safe_actions: list[str], requested_by: str = "reasoner", assessment: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        out = []
+        for a in safe_actions:
+            params: dict[str, Any] | None = None
+            if a in ("send_notification", "request_owner_check") and assessment:
+                from fishai.notify import assessment_notification
+
+                n = assessment_notification(assessment)
+                params = {"title": n.title, "message": n.message, "severity": n.severity}
+            out.append(self.request(a, params, requested_by))
+        return out
 
     def pending(self) -> list[dict[str, Any]]:
         return [a for a in self.db.actions(limit=100) if a["permission"] == "pending"]

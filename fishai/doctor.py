@@ -19,8 +19,12 @@ def _check(name: str, status: str, detail: str) -> dict[str, str]:
     return {"name": name, "status": status, "detail": detail}
 
 
-def run_doctor(cfg: Config, check_ollama: bool = True) -> dict[str, Any]:
+def run_doctor(cfg: Config, check_ollama: bool = True, source: str | None = None) -> dict[str, Any]:
     checks: list[dict[str, str]] = []
+    from fishai.config_check import check_config
+
+    cc = check_config(cfg)
+    checks.append(_check("config", "fail" if cc["errors"] else "ok", "; ".join(cc["errors"]) or "every key known, every value in range"))
     import cv2
     import numpy
 
@@ -85,6 +89,26 @@ def run_doctor(cfg: Config, check_ollama: bool = True) -> dict[str, Any]:
             checks.append(_check("reasoner", "warn", f"ollama/{r.model} not reachable at {r.host}; assessments fall back to rules (install Ollama, then `ollama pull {r.model}`)"))
     else:
         checks.append(_check("reasoner", "ok", f"backend {backend}" + (" (network check skipped)" if backend == "ollama" else "")))
+
+    # The rail, if configured: a real request, not a config read.
+    edge = cfg.get_path("live.edge_url") or cfg.get_path("control.edge_url")
+    if edge and check_ollama:
+        try:
+            from fishai.sensors.http_sensor import fetch_json
+
+            st = fetch_json(f"{str(edge).rstrip('/')}/status", timeout_s=5)
+            checks.append(_check("rail", "ok", f"{edge}: {st.get('fps_measured')} fps, {st.get('lighting_mode')} mode, camera {st.get('camera', {}).get('backend')}"))
+        except Exception as exc:
+            checks.append(_check("rail", "fail", f"{edge} not answering: {exc}"))
+    if source is not None and check_ollama:
+        import cv2 as _cv2
+
+        from fishai.pipeline.live import parse_source
+
+        cap = _cv2.VideoCapture(parse_source(source))
+        ok, frame = cap.read() if cap.isOpened() else (False, None)
+        cap.release()
+        checks.append(_check("video source", "ok" if ok else "fail", f"{source}: {'frame ' + 'x'.join(str(v) for v in frame.shape[1::-1]) if ok else 'no frame'}"))
 
     detectors = ["motion", "synthetic"] + (["yolo"] if ml_ok else [])
     trackers = ["simple"] + (["bytetrack"] if sv_ok else [])

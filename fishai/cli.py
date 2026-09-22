@@ -20,6 +20,8 @@
     fishai confirm ID --outcome ...     record what really happened for a flagged anomaly
     fishai export dataset|summaries     training frames + YOLO labels, or a CSV of every track
     fishai maintain                     retention: prune old raw rows and clips
+    fishai bench                        detector/tracker report over licensed public clips
+    fishai config                       validate the effective configuration
 """
 
 from __future__ import annotations
@@ -163,14 +165,14 @@ def cmd_assess(args: argparse.Namespace) -> int:
         devs = deviations_for_video(db, vid, cfg.section("baselines"), persist=False) if vid else []
         hub = SensorHub(build_sensors(cfg.get("sensors", [])), limits=cfg.get("sensor_limits", {}))
         readings = hub.read_all(db)
-        executor = ControlExecutor(db, cfg.section("control"))
+        executor = ControlExecutor(db, cfg.section("control"), notify_cfg=cfg.section("notify"))
         state = build_state(db, vid, devs, SensorHub.state_for_reasoner(readings), executor.actuator.state(), db.events(limit=10))
         from fishai.perception.behavior.feeding import feeding_summary
 
         state["feeding"] = feeding_summary(db)
         rcfg = dict(cfg.section("reasoning"))
         result = assess(state, rcfg, db=db, reasoner=None if not args.rules else __import__("fishai.reasoning.rules", fromlist=["RulesReasoner"]).RulesReasoner(), video_id=vid)
-        actions = executor.run_assessment_actions(result.safe_actions) if args.act else []
+        actions = executor.run_assessment_actions(result.safe_actions, assessment=result.to_dict()) if args.act else []
     text = [f"severity: {result.severity}  (source: {result.source}, confidence {result.confidence:.2f})"]
     text += [f"  - {o}" for o in result.observations]
     if result.possible_causes:
@@ -256,11 +258,21 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_config(args: argparse.Namespace) -> int:
+    from fishai.config_check import check_config
+
+    cfg = _cfg(args)
+    result = check_config(cfg)
+    lines = [f"error: {e}" for e in result["errors"]] + [f"warning: {w}" for w in result["warnings"]]
+    _emit(args, result, "\n".join(lines) or "config OK: every key known, every value in range")
+    return 1 if result["errors"] else 0
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     from fishai.doctor import run_doctor
 
     cfg = _cfg(args)
-    report = run_doctor(cfg, check_ollama=not args.offline)
+    report = run_doctor(cfg, check_ollama=not args.offline, source=args.source)
     lines = [f"FishAI {__version__}"]
     for item in report["checks"]:
         mark = {"ok": "OK ", "warn": "!! ", "fail": "XX "}[item["status"]]
@@ -416,6 +428,23 @@ def cmd_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_bench(args: argparse.Namespace) -> int:
+    from fishai.jobs.bench import run_bench
+
+    cfg = _cfg(args)
+    if args.detector:
+        cfg.set_path("detection.backend", args.detector)
+    if args.tracker:
+        cfg.set_path("tracking.backend", args.tracker)
+    s = run_bench(
+        cfg, manifest=Path(args.manifest) if args.manifest else None, clips_dir=Path(args.clips_dir) if args.clips_dir else None,
+        out_dir=Path(args.out) if args.out else None, names=args.names or None, max_frames=args.max_frames, stride=args.stride,
+        max_side=args.max_side, extra_paths=[Path(p) for p in (args.extra or [])],
+    )
+    _emit(args, s, Path(s["report_path"]).read_text(encoding="utf-8") + f"\nreport: {s['report_path']}")
+    return 0
+
+
 def cmd_maintain(args: argparse.Namespace) -> int:
     from fishai.retention import run_retention
     from fishai.storage import Database
@@ -568,6 +597,20 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common(s)
     s.set_defaults(fn=cmd_export)
 
+    s = sub.add_parser("bench", help="run the detector/tracker over licensed public clips and report")
+    s.add_argument("--manifest", help="clip manifest (default datasets/manifests/public_clips.json)")
+    s.add_argument("--clips-dir", help="where clips are downloaded (default datasets/public_clips)")
+    s.add_argument("--out", help="report directory (default runs/bench/<timestamp>)")
+    s.add_argument("--names", nargs="*", help="only these clip names")
+    s.add_argument("--extra", nargs="*", help="extra local video files to include")
+    s.add_argument("--detector", choices=["motion", "yolo"])
+    s.add_argument("--tracker", choices=["simple", "bytetrack"])
+    s.add_argument("--max-frames", type=int, default=300)
+    s.add_argument("--stride", type=int, default=2)
+    s.add_argument("--max-side", type=int, default=640)
+    _add_common(s)
+    s.set_defaults(fn=cmd_bench)
+
     s = sub.add_parser("maintain", help="retention: prune raw rows and old clips")
     s.add_argument("--vacuum", action="store_true")
     _add_common(s)
@@ -577,16 +620,38 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common(s)
     s.set_defaults(fn=cmd_status)
 
+    s = sub.add_parser("config", help="validate the effective configuration")
+    _add_common(s)
+    s.set_defaults(fn=cmd_config)
+
     s = sub.add_parser("doctor", help="check the installation")
-    s.add_argument("--offline", action="store_true", help="skip network checks (Ollama)")
+    s.add_argument("--offline", action="store_true", help="skip network checks (Ollama, rail, video source)")
+    s.add_argument("--source", help="also try to read one frame from this camera/URL/file")
     _add_common(s)
     s.set_defaults(fn=cmd_doctor)
     return p
 
 
+LONG_RUNNING = {"watch", "ingest", "daily", "bench"}
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    setup_logging(getattr(args, "log_level", "INFO"))
+    log_file = None
+    if args.cmd in LONG_RUNNING:
+        try:
+            log_file = _cfg(args).resolve_path("paths.output_dir") / "logs" / f"fishai-{args.cmd}.log"
+        except Exception:  # a broken config is reported by the command itself
+            log_file = None
+    setup_logging(getattr(args, "log_level", "INFO"), log_file=log_file)
+    if args.cmd in LONG_RUNNING and args.cmd != "bench":
+        from fishai.config_check import check_config
+
+        problems = check_config(_cfg(args))["errors"]
+        if problems:
+            for p in problems:
+                log.error("config: %s", p)
+            return 3
     try:
         return int(args.fn(args))
     except FileNotFoundError as exc:

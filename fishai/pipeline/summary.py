@@ -42,6 +42,15 @@ def track_to_summary_dict(s: TrackSummary, identity: dict[str, Any] | None = Non
         "hiding_candidate": bool(s.extra.get("hiding_candidate", False)),
         "mean_detection_confidence": _round(s.mean_confidence),
         "min_track_identity_confidence": _round(s.min_identity_confidence),
+        "behaviour": {
+            "speed_cv": _round(s.extra.get("speed_cv", 0.0)),
+            "turn_rate_std": _round(s.extra.get("turn_rate_std", 0.0)),
+            "circling_index": _round(s.extra.get("circling_index", 0.0)),
+            "vertical_posture_fraction": _round(s.extra.get("vertical_posture_fraction", 0.0)),
+            "chase_time_s": _round(s.extra.get("chase_time_s", 0.0), 2),
+            "chased_time_s": _round(s.extra.get("chased_time_s", 0.0), 2),
+            "flags": list(s.extra.get("behaviour_flags", [])),
+        },
     }
     return d
 

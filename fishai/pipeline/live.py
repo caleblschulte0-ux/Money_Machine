@@ -552,6 +552,16 @@ class LiveWatcher:
         self.status.last_deviations = [d.sentence() for d in devs]
         for d in devs:
             log.warning("[%s] %s", d.severity, d.sentence())
+        critical = [d for d in devs if d.severity == "critical"]
+        if critical and bool(self.live_cfg.get("notify_on_critical", True)):
+            try:
+                from fishai.notify import Notification, Notifier
+
+                Notifier(self.cfg.section("notify"), self.db).send(
+                    Notification("Tank needs attention now", "\n".join(d.sentence() for d in critical[:5]), "critical", {"video_id": result.video_id}, ["fish", "warning"])
+                )
+            except Exception as exc:
+                log.error("notification failed: %s", exc)
         if self.assess_each_session:
             self._assess(result.video_id, devs)
         try:

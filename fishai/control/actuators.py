@@ -19,9 +19,14 @@ class Actuator(Protocol):
 
 
 class SimulatedActuator:
-    """Keeps an equipment dictionary and mutates it the way hardware would."""
+    """Keeps an equipment dictionary and mutates it the way hardware would.
+
+    ``send_notification`` and ``request_owner_check`` are real even here:
+    they go through ``fishai.notify`` when a notifier is attached.
+    """
 
     name = "simulated"
+    notifier: Any = None
 
     def __init__(self, initial: dict[str, Any] | None = None) -> None:
         self._state: dict[str, Any] = {
@@ -41,6 +46,13 @@ class SimulatedActuator:
         s = self._state
         if action == "send_notification" or action == "request_owner_check":
             s["notifications"].append({"action": action, **params})
+            if self.notifier is not None:
+                from fishai.notify import Notification
+
+                title = str(params.get("title") or ("Please look at the tank" if action == "request_owner_check" else "FishAI"))
+                message = str(params.get("message") or params.get("reason") or title)
+                outcome = self.notifier.send(Notification(title, message, str(params.get("severity", "warning")), dict(params)), force=True)
+                s["last_notification"] = {"title": title, "outcome": outcome}
         elif action == "skip_next_feeding":
             s["next_feeding_skipped"] = True
         elif action == "reduce_feeding":

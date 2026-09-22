@@ -105,6 +105,22 @@ behavior:
     full_score_speed: 0.5
   # A track absent longer than this counts as a hiding candidate.
   hiding_gap_s: 5.0
+  # Behaviour classifiers (perception/behavior/classifiers.py): measured
+  # numbers with baselines, never diagnoses.
+  classifiers:
+    min_speed_px_s: 5.0        # below this a heading is not trusted
+    chasing:
+      min_speed_px_s: 20.0
+      max_gap_body_lengths: 2.0
+      min_cosine: 0.7
+      min_episode_s: 1.0
+    # Absolute thresholds for the plain-word flags in the summary.
+    flags:
+      circling_index: 0.6
+      vertical_posture_fraction: 0.3
+      speed_cv: 1.5
+      chase_time_s: 5.0
+      chased_time_s: 5.0
 
 baselines:
   # Rolling window of prior sessions used to compute "normal" per fish.
@@ -121,6 +137,13 @@ baselines:
     bottom_fraction: high
     missing_time_s: high
     mean_speed_norm_s: both
+    speed_cv: high
+    circling_index: high
+    vertical_posture_fraction: high
+    chase_time_s: high
+    chased_time_s: high
+  # Lethargy: consecutive sessions with activity this far below baseline.
+  lethargy_percent: 25.0
 
 annotate:
   enabled: true
@@ -156,6 +179,26 @@ sensors:
     unit: cm
     baseline: 40.0
     noise: 0.1
+
+# ------------------------------------------------------------------- notify
+notify:
+  # Alerts at or above this severity leave the machine; the rest stay in the database.
+  min_severity: warning
+  # The daily job sends one digest when its assessment is warning or worse.
+  daily_digest: true
+  digest_always: false
+  backends:
+    - kind: log
+    # - kind: ntfy          # phone push with no account: install the ntfy app, subscribe to the topic
+    #   server: https://ntfy.sh
+    #   topic: fishai-<something-unguessable>
+    # - kind: webhook       # Home Assistant, Discord, Slack, anything that takes JSON
+    #   url: https://...
+    # - kind: email         # password from the FISHAI_SMTP_PASSWORD environment variable
+    #   host: smtp.gmail.com
+    #   port: 587
+    #   user: you@gmail.com
+    #   to: you@gmail.com
 
 # Limits that turn a reading into "low" / "high" for the reasoner. Keyed by sensor name.
 sensor_limits:
@@ -198,6 +241,8 @@ live:
   assess_each_session: false
   # Write an annotated video per session (large; off by default).
   store_annotated: false
+  # Send a notification when a session ends with a critical deviation.
+  notify_on_critical: true
   # The edge agent on the rail (edge/pi/). When set, the watcher polls its
   # events (FEED button, feeder confirmations) and reads the configured
   # sensors every sensor_poll_s. The video source is still --source.

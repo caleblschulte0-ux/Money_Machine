@@ -73,6 +73,10 @@ class ByteTrackTracker:
                 lost_track_buffer=int(c["lost_track_buffer"]),
                 frame_rate=float(c["frame_rate"]),
                 track_activation_threshold=float(c["track_activation_threshold"]),
+                # `trackers` starts new tracks only from detections in its HIGH set, gated by a separate
+                # threshold (default 0.6). Measured on a public clip whose detections sat near 0.35: zero
+                # tracks. Tie the two together so track_activation_threshold is the one knob it claims to be.
+                high_conf_det_threshold=float(c["track_activation_threshold"]),
                 minimum_consecutive_frames=int(c["minimum_consecutive_frames"]),
                 # supervision's "matching threshold" is a similarity; trackers wants a minimum IoU.
                 minimum_iou_threshold=max(0.05, 1.0 - float(c["minimum_matching_threshold"])),
