@@ -38,3 +38,4 @@ ori_promo/supplied/
 # Kokoro TTS model + voice bank (350MB, from github.com/thewh1teagle/kokoro-onnx releases model-files-v1.0) and voice samples
 ori_promo/vo/kokoro/
 ori_promo/vo/voice_sampler.m4a
+ori_promo/promo/work_v/

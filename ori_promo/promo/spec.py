@@ -107,8 +107,10 @@ VO = [
     (49.3, "Open Range. See the story where you stand."),
 ]
 # "kokoro:<voice>" = Kokoro (vo/kokoro/, 54 voices: af_heart, af_bella,
-# am_michael, bm_george ...); a path = a Piper model. Placeholder until the
-# real read; swap the voice here, nothing else changes.
+# am_michael, bm_george ...); "files:<dir>" = the real read, one vo_NN.wav
+# (or .mp3) per line of VO in order, e.g. "files:../vo/real"; a path = a
+# Piper model. Placeholder until the real read; swap here, nothing else
+# changes.
 VOICE = "kokoro:af_heart"
 VOICE_SPEED = 0.95
 
@@ -127,6 +129,15 @@ AUDIO = "score"
 AMBIENCE_LEVELS = {"pan": -24, "falls": -14, "plaque": -30, "reading": -30, "glasscu": -30, "markers": -24,
                    "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "tease": -40, "worn": -24, "map": -34, "point": -16, "sync": -27,
                    "bridge": -27, "close": -25, "logo": -60}
+
+# where the lens overlays sit, in this spec's frame coordinates
+FX = {
+    "markers": dict(exclude_x=1000, reticle=(1290, 500), mill=(1150, 470), falls=(1395, 520), mill_side=-1, falls_side=1),
+    "safety": dict(anchor=(880, 610), side=-1),
+    "mammoth": dict(anchor=(560, 930), scale=0.82, exclude=(1180, 0, 1920, 1080),
+                    water_poly=[(0, 900), (904, 860), (1182, 915), (1182, 1080), (0, 1080)]),
+    "dakota": dict(anchor=(1275, 760), scale=0.78, exclude=(0, 0, 780, 1080)),
+}
 
 BRAND = "OPEN RANGE"
 BRAND_SUB = "INTERACTIVE"

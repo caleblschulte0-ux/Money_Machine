@@ -380,13 +380,22 @@ def cluster(points, radius_m=42.0):
     return out
 
 
-def render(out_mp4, dur=5.5, preview_frames=None):
+def render(out_mp4, dur=5.5, preview_frames=None, size=(1920, 1080), bar=138):
     """Write the beat. Camera: the whole park while the four kinds of
     place bloom on in turn, then a push IN on the viewing tower -- YOU ARE
-    HERE -- so the cut lands on the wearer standing on that tower."""
+    HERE -- so the cut lands on the wearer standing on that tower.
+
+    size=(1080, 1920) renders the PORTRAIT version for the social cut: the
+    map turns a quarter so the river runs top to bottom, same scale."""
+    global W, H, BAR, THETA
+    W, H, BAR = size[0], size[1], bar
+    portrait = H > W
+    theta0 = THETA
+    if portrait:
+        THETA = theta0 + math.pi / 2
     F = load()
-    ppm_wide = 3.25                     # px/m on the wide frame (1920 px ~ 590 m)
-    cx, cy = 10.0, 12.0                 # metres: falls cluster centre-left, tower upper right
+    ppm_wide = 3.25                     # px/m on the long side (1920 px ~ 590 m)
+    cx, cy = (-12.0, 10.0) if portrait else (10.0, 12.0)   # metres: the falls cluster off-centre, the tower opposite
     margin = 1.35
     cw, ch = int(W * SS * margin), int(H * SS * margin)
     base, V, water = build_base(F, ppm_wide * SS, cw, ch, cx, cy)
@@ -504,6 +513,7 @@ def render(out_mp4, dur=5.5, preview_frames=None):
             _text(d, (72, H - BAR - 40), "MAP DATA © OPENSTREETMAP CONTRIBUTORS", font("Medium", 13), (*SUBTLE, int(160 * u_a)), "la", 1.6)
         fr = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
         frames.append(fr)
+    THETA = theta0
     if preview_frames is not None:
         return frames
     sys.path.insert(0, HERE)

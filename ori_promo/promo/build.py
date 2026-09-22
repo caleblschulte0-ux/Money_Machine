@@ -20,12 +20,19 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spec import (W, H, FPS, BAR, TOTAL, END_CARD_START, SHOTS, CARDS, TAGS, VO, VOICE, VOICE_SPEED, EYEBROWS, AUDIO, AMBIENCE_LEVELS, PAYOFF,
-                  MUSIC, MUSIC_OFFSET, SFX, AMBIENCE, BRAND, BRAND_SUB, TAGLINE, shot_start)
+# The spec is `spec` (16:9, the flagship) unless ORI_SPEC names another
+# module -- `spec_vertical` is the 9:16 social cut from the same timeline.
+import importlib
+_spec = importlib.import_module(os.environ.get("ORI_SPEC", "spec"))
+for _k in ("W", "H", "FPS", "BAR", "TOTAL", "END_CARD_START", "SHOTS", "CARDS", "TAGS", "VO", "VOICE", "VOICE_SPEED", "EYEBROWS",
+           "AUDIO", "AMBIENCE_LEVELS", "PAYOFF", "MUSIC", "MUSIC_OFFSET", "SFX", "AMBIENCE", "BRAND", "BRAND_SUB", "TAGLINE", "shot_start", "FX"):
+    globals()[_k] = getattr(_spec, _k)
+VERTICAL = H > W
+OUT_NAME = getattr(_spec, "OUT_NAME", "ORI_promo.mp4")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 os.chdir(HERE)
-WORK = "work"
+WORK = getattr(_spec, "WORK", "work")
 SHOTS_DIR = f"{WORK}/shots"
 FONTS = "/home/user/Shorts-pipeline/assets/fonts"
 os.makedirs(SHOTS_DIR, exist_ok=True)
@@ -75,7 +82,7 @@ def prep_shot(sid, src, t_in, dur, opt):
     if opt.get("gen"):
         # a generated beat (falls_map.py): silent, already 1920x1080 @ FPS
         import falls_map
-        falls_map.render(out, dur=dur)
+        falls_map.render(out, dur=dur, size=(W, H), bar=BAR)
         run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-t", dur, wav])
         return
     if opt.get("still"):
@@ -105,8 +112,29 @@ def prep_shot(sid, src, t_in, dur, opt):
     # that as SDR is what made every cut look grey and flat; tone-map here,
     # once, and never "correct" it afterwards.
     pre = "" if opt.get("sdr") else f"{TONEMAP},"
-    run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
-         "-vf", f"{pre}scale={W}:{H}:flags=lanczos", "-an", *ENC, seg])
+    if VERTICAL and opt.get("fit") == "width":
+        # the turntable: fit the width, on a blurred copy of itself (the same studio grey)
+        frame_vf = (f"{pre}split[a][b];[a]scale={W}:{H}:flags=bicubic,boxblur=40:2[bg];"
+                    f"[b]scale={W}:-2:flags=lanczos[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2")
+        run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
+             "-filter_complex", frame_vf, "-an", *ENC, seg])
+    elif VERTICAL:
+        # 9:16 from 16:9: scale to the full height, then crop a W-wide window
+        # centred on vx (fraction of the source width; the subject)
+        sw, sh = [int(v) for v in subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                                                  "stream=width,height", "-of", "csv=p=0", src],
+                                                 capture_output=True, text=True).stdout.strip().split(",")[:2]]
+        rot = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream_side_data=rotation",
+                              "-of", "csv=p=0", src], capture_output=True, text=True).stdout
+        if "90" in rot:
+            sw, sh = sh, sw
+        scaled_w = int(round(sw * H / sh))
+        x0 = int(min(max(0, opt.get("vx", 0.5) * scaled_w - W / 2), scaled_w - W))
+        run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
+             "-vf", f"{pre}scale=-2:{H}:flags=lanczos,crop={W}:{H}:{x0}:0", "-an", *ENC, seg])
+    else:
+        run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
+             "-vf", f"{pre}scale={W}:{H}:flags=lanczos", "-an", *ENC, seg])
     vf = []
     if opt.get("stab"):
         trf = f"{WORK}/_{sid}.trf"
@@ -401,12 +429,13 @@ def fx_safety(frames, t0):
         g = f.copy()
         for a, b_, lab, sub in phases:
             if a <= t < b_:
-                draw_marker(g, 880, 610, lab, sub, (t - a) / 0.6, side=-1)
+                sx, sy = FX["safety"]["anchor"]
+                draw_marker(g, sx, sy, lab, sub, (t - a) / 0.6, side=FX["safety"]["side"])
                 if lab == "TOO CLOSE":
                     # the warning pulses
                     p = 0.5 + 0.5 * math.sin(2 * math.pi * 2.2 * t)
                     ov = g.copy()
-                    cv2.circle(ov, (880, 610), int(22 + 16 * p), ACCENT_BGR, 2, cv2.LINE_AA)
+                    cv2.circle(ov, (sx, sy), int(22 + 16 * p), ACCENT_BGR, 2, cv2.LINE_AA)
                     cv2.addWeighted(ov, 0.6, g, 0.4, 0, g)
                 if lab == "LAYER OFF":
                     # the layer goes: the frame cools a touch, as if the overlay left
@@ -417,23 +446,24 @@ def fx_safety(frames, t0):
 
 
 def fx_markers(frames, t0):
+    P = FX["markers"]
     ex = np.zeros((H, W), np.uint8)
-    ex[:, :1000] = 255                      # the wearer fills the left
+    ex[:, :P["exclude_x"]] = 255            # the wearer fills the left
     A = track(frames, ex)
     out = []
     for i, f in enumerate(frames):
         t = i / FPS
         g = f.copy()
-        rx, ry = apply_pt(A[i], 1290, 500)
+        rx, ry = apply_pt(A[i], *P["reticle"])
         if t < 0.95:
             fade = 1.0 if t < 0.7 else ease((0.95 - t) / 0.25)
             tmp = g.copy()
             draw_reticle(tmp, rx, ry, (t - 0.05) / 0.35, done=(t >= 0.42))
             cv2.addWeighted(tmp, fade, g, 1 - fade, 0, g)
-        x1, y1 = apply_pt(A[i], 1150, 470)   # the mill tower
-        x2, y2 = apply_pt(A[i], 1395, 520)   # the falls
-        draw_marker(g, x1, y1, "QUEEN BEE MILL", "BUILT 1881", (t - 0.85) / 0.9, side=-1)
-        draw_marker(g, x2, y2, "BIG SIOUX FALLS", "7,400 GAL / SEC", (t - 1.45) / 0.9, side=1)
+        x1, y1 = apply_pt(A[i], *P["mill"])   # the mill tower
+        x2, y2 = apply_pt(A[i], *P["falls"])  # the falls
+        draw_marker(g, x1, y1, "QUEEN BEE MILL", "BUILT 1881", (t - 0.85) / 0.9, side=P["mill_side"])
+        draw_marker(g, x2, y2, "BIG SIOUX FALLS", "7,400 GAL / SEC", (t - 1.45) / 0.9, side=P["falls_side"])
         out.append(g)
     return out
 
@@ -933,10 +963,10 @@ def stage_fx():
         elif fx == "iceage":
             res = fx_iceage(frames, t0)
         elif fx == "mammoth":
-            res = fx_element(frames, f"{WORK}/mam_rembg.png", anchor=(560, 930), scale=0.82,
-                             exclude_rect=(1180, 0, 1920, 1080), appear=(0.35, 1.35), lock=True, breathe=False,
-                             reflection=dict(squash=0.45, alpha=0.28,
-                                             water_poly=[(0, 900), (904, 860), (1182, 915), (1182, 1080), (0, 1080)]))
+            M_ = FX["mammoth"]
+            res = fx_element(frames, f"{HERE}/work/mam_rembg.png", anchor=M_["anchor"], scale=M_["scale"],
+                             exclude_rect=M_["exclude"], appear=(0.35, 1.35), lock=True, breathe=False,
+                             reflection=dict(squash=0.45, alpha=0.28, water_poly=M_["water_poly"]))
         elif fx == "sync":
             res = fx_sync(frames, t0)
         elif fx == "activate":
@@ -944,8 +974,9 @@ def stage_fx():
         elif fx == "safety":
             res = fx_safety(frames, t0)
         elif fx == "dakota":
-            res = fx_element(frames, f"{WORK}/dak_rembg.png", anchor=(1275, 760), scale=0.78, lock=True,
-                             exclude_rect=(0, 0, 780, 1080), appear=(0.3, 1.2), breathe=False)
+            D_ = FX["dakota"]
+            res = fx_element(frames, f"{HERE}/work/dak_rembg.png", anchor=D_["anchor"], scale=D_["scale"], lock=True,
+                             exclude_rect=D_["exclude"], appear=(0.3, 1.2), breathe=False)
         else:
             raise KeyError(fx)
         w = Writer(out)
@@ -1531,6 +1562,19 @@ def narrator():
     (82M, ONNX, CPU; a different class of voice from Piper -- operator
     2026-09-22: "this voice is not going to cut it"); anything else is a
     Piper model path. Returns say(text, wav_path)."""
+    if VOICE.startswith("files:"):
+        # the REAL read: one file per VO line, in order, vo_01.wav .. vo_NN.wav
+        # (or .mp3) in the named folder -- ElevenLabs output or a recording
+        d = os.path.join(HERE, VOICE.split(":", 1)[1])
+        files = sorted(f for f in os.listdir(d) if f.startswith("vo_") and f.rsplit(".", 1)[-1] in ("wav", "mp3", "m4a"))
+        if len(files) != len(VO):
+            raise SystemExit(f"{d}: {len(files)} vo_* files for {len(VO)} narration lines")
+        it = iter(files)
+
+        def say(text, path):
+            src = os.path.join(d, next(it))
+            run(["ffmpeg", "-v", "error", "-y", "-i", src, "-ar", "48000", "-ac", "1", path])
+        return say
     if VOICE.startswith("kokoro:"):
         import soundfile as sf
         from kokoro_onnx import Kokoro
@@ -1568,7 +1612,7 @@ FINISH = "null"
 
 def stage_final():
     os.makedirs("../out", exist_ok=True)
-    outs = [("mix.wav", "ORI_promo.mp4")] if AUDIO != "full" else [("mix.wav", "ORI_promo.mp4"), ("mix_vo.wav", "ORI_promo_vo.mp4")]
+    outs = [("mix.wav", OUT_NAME)] if AUDIO != "full" else [("mix.wav", OUT_NAME), ("mix_vo.wav", OUT_NAME.replace(".mp4", "_vo.mp4"))]
     lufs = {"ambience": -20, "ambience+vo": -16, "score": -15}.get(AUDIO, -14)
     for mix, name in outs:
         run(["ffmpeg", "-v", "error", "-y", "-i", f"{WORK}/picture.mp4", "-i", f"{WORK}/{mix}",
