@@ -425,7 +425,7 @@ def fx_safety(frames, t0):
     is AUDIO ONLY; too close it warns you; closer than that it is OFF.
     Three readouts on one anchor at the water's edge, in turn."""
     out = []
-    phases = [(0.3, 2.3, "NEAR WATER", "AUDIO ONLY"), (2.3, 3.9, "TOO CLOSE", "STEP BACK"), (3.9, 9.0, "LAYER OFF", "SAFETY LIMIT")]
+    phases = [(0.3, 2.3, "NEAR WATER", "AUDIO ONLY"), (2.3, 3.9, "TOO CLOSE", "STEP BACK"), (3.9, 9.0, "LAYER OFF", "TOO CLOSE TO WATER")]
     for i, f in enumerate(frames):
         t = i / FPS
         g = f.copy()

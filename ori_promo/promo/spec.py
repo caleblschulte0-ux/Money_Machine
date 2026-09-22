@@ -31,14 +31,12 @@ RAW_MORE = "../raw_more"
 # 6803 (move), 6709 (macro, 3.5) -- those get smoothing, or a still.
 SHOTS = [
     ("logo",    None,                            0.0, 1.2, dict(black=True)),
+    # open on the hero image: the falls in slow motion, water loud, then
+    # the wide pan. The plaque still is gone -- "nobody reads the sign"
+    # lands on him standing at the sign (operator 2026-09-22: 9 -> 10).
+    ("falls",   f"{RAW_MORE}/IMG_6682.MOV",     16.0, 3.0, dict(stab=True, smooth=90, zoom=6, speed=0.7, move=("in", 0.04))),
     ("pan",     f"{RAW}/IMG_6791.MOV",           1.0, 3.0, dict(stab=True, smooth=90, zoom=6)),
-    ("falls",   f"{RAW_MORE}/IMG_6682.MOV",     16.0, 2.0, dict(stab=True, smooth=90, zoom=6, speed=0.7, move=("in", 0.04))),
-    # IMG_6709 is a PORTRAIT recording and handheld (p90 shake 3.5px/frame,
-    # 30x the tripod shots); as video it was squashed to landscape and
-    # shook. It is a text macro: one sharp frame with a slow push reads as
-    # a locked-off macro and is steady by construction.
-    ("plaque",  "work/plaque_still.png",         0.0, 1.5, dict(still=True)),
-    ("reading", f"{RAW}/IMG_6796.MOV",          31.0, 2.0, dict(move=("out", 0.03))),
+    ("reading", f"{RAW}/IMG_6796.MOV",          31.0, 2.5, dict(move=("out", 0.03))),
     # the product: ONE reveal (operator 2026-09-22 killed the opening flash
     # and the punch-in on his face). The turntable carries both product
     # lines, pushes in on the sensor pod, and the next shot pulls out from
@@ -126,7 +124,7 @@ AMBIENCE = f"{RAW_MORE}/IMG_6682.MOV"     # the falls, under everything
 # "full": the old designed mix, plus a separate VO variant.
 AUDIO = "score"
 # falls bed level per shot, dB: loud where the water is in frame or close
-AMBIENCE_LEVELS = {"pan": -24, "falls": -14, "plaque": -30, "reading": -30, "glasscu": -30, "markers": -24,
+AMBIENCE_LEVELS = {"pan": -22, "falls": -13, "plaque": -30, "reading": -30, "glasscu": -30, "markers": -24,
                    "mammoth": -17, "dakota": -19, "point": -19, "glasses": -36, "tease": -40, "worn": -24, "map": -34, "point": -16, "sync": -27,
                    "bridge": -27, "close": -25, "logo": -60}
 
