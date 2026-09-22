@@ -32,7 +32,7 @@ The reasoning model never sees a video frame. It sees this:
 | Bench | Detector and tracker across other people's tanks | **Working.** `fishai bench` over ten licensed public clips: fish found in 83 to 100% of frames on nine, zero false detections on the negative test. Results and weak spots in `docs/BENCH.md`. |
 | Behaviour | Chasing, erratic swimming, circling, vertical posture, lethargy | **Measured, with baselines.** Numbers on every track and plain-word flags in the summary; never diagnoses. |
 | Alerts | Phone push (ntfy), webhook, email, log | **Working.** Critical session deviations and the daily digest notify; the model's `send_notification` goes through the same path. |
-| Training | Split, fine-tune, compare | **Scripts ready** in `training/` and `evaluation/`; waiting on reviewed labels. |
+| Detector lab | OUR detector: camera model, synthetic footage from the rail's exact angle, training without Ultralytics, evaluation | **Working.** `fishai lab ...`; see `docs/DETECTOR_LAB.md`. First model trained on synthetic data and scored on real clips it never saw. |
 | Data | Live loop, event clips, retention, owner confirmations, dataset export | **Working.** `fishai watch` runs unattended in sessions with a rolling buffer and clips on feeding / deviation / tracking loss / request; `fishai ingest` drains a folder; `fishai daily` reviews; `fishai confirm` records outcomes; `fishai export` writes YOLO frames + labels with a manifest. Windows scheduled tasks via `scripts/install_tasks.ps1`. |
 
 See `docs/ROADMAP.md` for what is deliberately not built.
@@ -142,6 +142,8 @@ fishai export dataset|summaries   training frames + YOLO labels with a manifest,
 fishai maintain                   retention now
 fishai bench                      detector/tracker report over licensed public clips
 fishai config                     validate the effective configuration (unattended runs refuse to start on errors)
+fishai lab camera|assets|synth|silver|train|eval
+                                  the detector lab (docs/DETECTOR_LAB.md)
 ```
 
 Every command takes `--config FILE` and `-o key.path=value` overrides; all
@@ -165,6 +167,7 @@ fishai/                 the package (importable; `python -m fishai`)
   sensors/              sensor interface, simulators, file bridge
   control/              permission tiers, safety rules, actuators, executor
   evaluation/           detection/tracking scoring against ground truth
+  lab/                  the detector lab: camera model, sprites, plates, renderer, trainer, evaluation
 configs/default.yaml    every tunable
 models/registry.json    downloadable weights, URLs, checksums, licences (weights git-ignored)
 scripts/                setup.ps1, run.ps1, install_tasks.ps1, setup.sh, download_models.py

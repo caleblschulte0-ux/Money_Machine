@@ -22,6 +22,8 @@
     fishai maintain                     retention: prune old raw rows and clips
     fishai bench                        detector/tracker report over licensed public clips
     fishai config                       validate the effective configuration
+    fishai lab camera|assets|synth|silver|train|eval
+                                        the detector lab: build and score OUR fish detector
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from fishai import __version__
+from fishai.config import REPO_ROOT as REPO_ROOT_PATH
 from fishai.config import Config, load_config
 from fishai.log import get_logger, setup_logging
 
@@ -445,6 +448,106 @@ def cmd_bench(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_lab(args: argparse.Namespace) -> int:
+    """The detector lab: camera geometry, assets, synthetic data, silver set, training, evaluation."""
+    from fishai.lab import camera as cam_mod
+
+    cfg = _cfg(args)
+    what = args.what
+    if what == "camera":
+        # Default to the camera's own 1280x720 when the synth default (640x360) was not changed.
+        w, h = (1280, 720) if (args.width, args.height) == (640, 360) else (args.width, args.height)
+        c = cam_mod.RailCamera(w, h, args.hfov, args.vfov, camera_depth_cm=args.camera_depth, lateral_offset_cm=args.offset)
+        t = cam_mod.Tank(args.tank_length, args.tank_width, args.water_depth)
+        rep = cam_mod.coverage_report(c, t, args.fish_length)
+        lines = [f"{k}: {v}" for k, v in rep.items()]
+        _emit(args, rep, "\n".join(lines))
+        return 0
+    if what == "assets":
+        from fishai.lab.plates import clean_plate, plate_from_video, save_plate
+        from fishai.lab.sprites import harvest_from_video
+        from fishai.lab.synth import ASSETS_DIR
+        from fishai.perception.detection import build_detector
+
+        det = build_detector(dict(cfg.section("detection"), backend="yolo", models_dir=cfg.get_path("paths.models_dir", "models")))
+        clips = [Path(p) for p in args.inputs] or sorted((REPO_ROOT_PATH / "datasets" / "public_clips").glob("*.mp4"))
+        out = Path(args.out) if args.out else ASSETS_DIR
+        n_s = n_p = 0
+        for c in clips:
+            n_s += len(harvest_from_video(c, det, out / "sprites", max_sprites=args.per_clip))
+            plate = plate_from_video(c)
+            if plate is not None:
+                plate, removed = clean_plate(plate, det)
+                save_plate(plate, out / "plates" / f"{c.stem}.png")
+                n_p += 1
+        _emit(args, {"sprites": n_s, "plates": n_p, "out": str(out)}, f"{n_s} fish cut-outs and {n_p} plates -> {out}")
+        return 0
+    if what == "synth":
+        from fishai.lab.render import RenderConfig
+        from fishai.lab.synth import generate_dataset, generate_video
+
+        rc = RenderConfig(width=args.width, height=args.height, p_night=args.p_night)
+        out = Path(args.out) if args.out else REPO_ROOT_PATH / "datasets" / args.name
+        if args.video_frames:
+            meta = generate_video(out.with_suffix(".mp4"), args.video_frames, rc, seed=args.seed)
+            _emit(args, meta["scene"], f"video {out.with_suffix('.mp4')} with per-frame ids in {out.with_suffix('.labels.json')}")
+            return 0
+        from fishai.lab.synth import load_assets
+
+        assets = load_assets(size=(rc.width, rc.height), exclude_origins=set(args.holdout or []))
+        m = generate_dataset(out, args.n, args.name, rc, assets=assets, seed=args.seed, val_fraction=float(args.val_fraction))
+        m["held_out_clips"] = args.holdout or []
+        _emit(args, m, f"{m['frames']} frames, {m['boxes']} fish boxes ({m['night_frames']} night) -> {m['out_dir']}\nassets: {m['assets']}")
+        return 0
+    if what == "silver":
+        from fishai.lab.silver import build_silver
+        from fishai.perception.detection import build_detector
+
+        det = build_detector(dict(cfg.section("detection"), backend="yolo", models_dir=cfg.get_path("paths.models_dir", "models")))
+        clips = [Path(p) for p in args.inputs] or [p for p in sorted((REPO_ROOT_PATH / "datasets" / "public_clips").glob("*.mp4")) if "4020" not in p.name]
+        out = Path(args.out) if args.out else REPO_ROOT_PATH / "datasets" / "silver_public"
+        m = build_silver(clips, det, out, per_clip=args.per_clip)
+        _emit(args, m, f"{m['frames']} real frames, {m['boxes']} silver boxes -> {out}\n({m['labels_are']})")
+        return 0
+    if what == "train":
+        from fishai.lab.trainer import TrainConfig, train
+
+        tc = TrainConfig(arch=args.arch, pretrained=not args.no_pretrained, min_size=args.min_size, max_size=args.max_size, epochs=args.epochs,
+                         batch_size=args.batch, lr=args.lr, max_minutes=args.max_minutes, max_train_images=args.max_images, threads=args.threads)
+        out = Path(args.out) if args.out else REPO_ROOT_PATH / "models" / "ours" / "detector.pt"
+        extra = dict(e.split("=", 1) for e in (args.eval or []))
+        rec = train([Path(p) for p in args.inputs], Path(args.val) if args.val else Path(args.inputs[0]), out, tc, extra_eval_sets=extra)
+        _emit(args, rec, f"saved {out}\nselected: {json.dumps(rec['selected'].get('val', {}))}\nextra: {json.dumps(rec.get('eval', {}))}")
+        return 0
+    if what == "eval":
+        from fishai.lab.evaluate import evaluate_detector
+        from fishai.lab.yolo import list_images
+        from fishai.perception.detection import build_detector
+
+        results = {}
+        images = list_images(args.inputs[0]) if not Path(args.inputs[0]).is_dir() or not (Path(args.inputs[0]) / "val.txt").exists() else list_images(Path(args.inputs[0]) / "val.txt")
+        if args.max_images:
+            images = images[: args.max_images]
+        for spec in args.detectors:
+            backend, _, model = spec.partition(":")
+            dcfg = dict(cfg.section("detection"), backend=backend, models_dir=cfg.get_path("paths.models_dir", "models"), min_confidence=args.min_confidence)
+            if backend == "yolo" and model:
+                dcfg["yolo"] = dict(dcfg.get("yolo", {}), model=model)
+            if backend == "torchvision":
+                dcfg["torchvision"] = dict(dcfg.get("torchvision", {}), model=model or dcfg.get("torchvision", {}).get("model"))
+            det = build_detector(dcfg)
+            results[spec] = evaluate_detector(det, images)
+            det.close()
+        cols = ["precision", "recall", "f1", "recall_real_fish", "recall_procedural_fish", "recall_small", "recall_medium", "recall_large", "f1_day", "f1_night", "s_per_image"]
+        lines = [f"{len(images)} images, IoU 0.5"]
+        for spec, r in results.items():
+            lines.append(f"\n{spec}")
+            lines += [f"  {c:24} {r[c]:.3f}" for c in cols if isinstance(r.get(c), (int, float))]
+        _emit(args, results, "\n".join(lines))
+        return 0
+    raise SystemExit(f"unknown lab command {what}")
+
+
 def cmd_maintain(args: argparse.Namespace) -> int:
     from fishai.retention import run_retention
     from fishai.storage import Database
@@ -611,6 +714,45 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common(s)
     s.set_defaults(fn=cmd_bench)
 
+    s = sub.add_parser("lab", help="detector lab: camera | assets | synth | silver | train | eval")
+    s.add_argument("what", choices=["camera", "assets", "synth", "silver", "train", "eval"])
+    s.add_argument("inputs", nargs="*", help="clips (assets/silver), datasets (train), or one dataset (eval)")
+    s.add_argument("--out")
+    s.add_argument("--name", default="synth_v1")
+    s.add_argument("--n", type=int, default=2000, help="synthetic frames")
+    s.add_argument("--video-frames", type=int, default=0, help="synth: render one continuous clip of N frames instead")
+    s.add_argument("--seed", type=int, default=0)
+    s.add_argument("--val", help="train: dataset to select on (default: the first input's val split)")
+    s.add_argument("--val-fraction", type=float, default=0.1, help="synth: share of frames in the val split")
+    s.add_argument("--holdout", nargs="*", help="synth: clip names whose fish/backgrounds are NOT used (real-footage test set)")
+    s.add_argument("--p-night", type=float, default=0.2)
+    s.add_argument("--per-clip", type=int, default=40)
+    s.add_argument("--width", type=int, default=640)
+    s.add_argument("--height", type=int, default=360)
+    s.add_argument("--hfov", type=float, default=102.0, help="camera: horizontal FOV in air (deg)")
+    s.add_argument("--vfov", type=float, default=67.0, help="camera: vertical FOV in air (deg)")
+    s.add_argument("--camera-depth", type=float, default=17.5, help="camera: cm below the water surface")
+    s.add_argument("--offset", type=float, default=0.0, help="camera: cm from the centre of the pane")
+    s.add_argument("--tank-length", type=float, default=60.0)
+    s.add_argument("--tank-width", type=float, default=30.0)
+    s.add_argument("--water-depth", type=float, default=35.0)
+    s.add_argument("--fish-length", type=float, default=3.0)
+    s.add_argument("--arch", default="mobilenet_fpn", choices=["mobilenet_fpn", "mobilenet_320_fpn", "resnet50_fpn"])
+    s.add_argument("--no-pretrained", action="store_true", help="train from scratch (no ImageNet-derived weights)")
+    s.add_argument("--min-size", type=int, default=480)
+    s.add_argument("--max-size", type=int, default=864)
+    s.add_argument("--epochs", type=int, default=10)
+    s.add_argument("--batch", type=int, default=4)
+    s.add_argument("--lr", type=float, default=0.01)
+    s.add_argument("--max-minutes", type=float)
+    s.add_argument("--max-images", type=int)
+    s.add_argument("--threads", type=int)
+    s.add_argument("--eval", nargs="*", metavar="NAME=DATASET", help="train: also score the result on these sets")
+    s.add_argument("--detectors", nargs="*", default=["yolo:fishial_detector_v26"], help="eval: backend:model, e.g. torchvision:models/ours/detector.pt")
+    s.add_argument("--min-confidence", type=float, default=0.5)
+    _add_common(s)
+    s.set_defaults(fn=cmd_lab)
+
     s = sub.add_parser("maintain", help="retention: prune raw rows and old clips")
     s.add_argument("--vacuum", action="store_true")
     _add_common(s)
@@ -632,7 +774,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-LONG_RUNNING = {"watch", "ingest", "daily", "bench"}
+LONG_RUNNING = {"watch", "ingest", "daily", "bench", "lab"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -644,7 +786,7 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:  # a broken config is reported by the command itself
             log_file = None
     setup_logging(getattr(args, "log_level", "INFO"), log_file=log_file)
-    if args.cmd in LONG_RUNNING and args.cmd != "bench":
+    if args.cmd in LONG_RUNNING and args.cmd not in ("bench", "lab"):
         from fishai.config_check import check_config
 
         problems = check_config(_cfg(args))["errors"]

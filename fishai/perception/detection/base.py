@@ -41,7 +41,7 @@ def available_detectors() -> list[str]:
 
 def _ensure_builtins() -> None:
     # Import for side effects (registration). Each module guards its heavy imports.
-    from fishai.perception.detection import motion, synthetic, yolo  # noqa: F401
+    from fishai.perception.detection import motion, synthetic, torchvision_det, yolo  # noqa: F401
 
 
 def build_detector(detection_cfg: dict[str, Any], backend: str | None = None) -> Detector:

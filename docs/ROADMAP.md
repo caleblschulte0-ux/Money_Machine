@@ -39,6 +39,12 @@ in the repo pretends otherwise.
   rotating log files; config validation that blocks unattended runs on a
   typo; doctor checks for the rail and the video source.
 
+- Detector lab (2026-09-23): rail camera model with refraction, real fish
+  cut-outs and backgrounds from licensed clips, a 3D synthetic renderer with
+  exact visible-part labels and night footage, a torchvision trainer (no
+  Ultralytics), and evaluation on synthetic, silver and held-out real clips.
+  `docs/DETECTOR_LAB.md`.
+
 ## What still limits a launch
 
 Hardware (the rail, the seven-day test) and training (reviewed labels,
@@ -54,9 +60,10 @@ blocks it.
    float via the `file` bridge or a new `kind`; then pH and DO.
 3. **Real actuators.** Smart plug for aeration/light first (reversible), then
    a feeder. Heater control stays APPROVAL-tier with the 1 F step.
-4. **Training on an Apache-licensed family.** The scripts exist and use
-   ultralytics; moving step 4 to RF-DETR / D-FINE / YOLOX removes the AGPL
-   question from shipped weights.
+4. **Detector, next rungs.** Close the synthetic-to-real gap (the first
+   numbers in docs/DETECTOR_LAB.md say where), gold labels from a review
+   tool, an RF-DETR trainer once a GPU is available, and fish-store footage
+   for variety.
 5. **A review tool for exports.** Something faster than editing label files:
    accept / fix / reject per frame, writing back to the export.
 6. **Speed.** About 5 fps per camera on a laptop CPU (docs/BENCH.md);

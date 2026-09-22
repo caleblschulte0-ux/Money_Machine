@@ -32,10 +32,11 @@ video:
   max_side: null
 
 detection:
-  # motion | yolo | synthetic
-  #   motion    - background-subtraction blobs, needs no model (static camera).
-  #   yolo      - ultralytics model (Fishial fish detector by default).
-  #   synthetic - ground truth from a synthetic video; tests only.
+  # motion | yolo | torchvision | synthetic
+  #   motion      - background-subtraction blobs, needs no model (static camera).
+  #   yolo        - ultralytics model (Fishial fish detector by default).
+  #   torchvision - OUR detector, trained in the lab (fishai lab train).
+  #   synthetic   - ground truth from a synthetic video; tests only.
   backend: motion
   min_confidence: 0.25
   motion:
@@ -61,6 +62,10 @@ detection:
     device: auto            # auto | cpu | cuda | 0
     # Class names accepted as fish; empty = accept all classes.
     fish_classes: []
+  # Our own detector, trained with `fishai lab train` (no Ultralytics).
+  torchvision:
+    model: models/ours/detector.pt
+    device: auto
 
 tracking:
   # simple | bytetrack

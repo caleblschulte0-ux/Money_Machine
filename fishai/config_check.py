@@ -16,7 +16,7 @@ from fishai.config import DEFAULT_CONFIG_PATH, Config
 
 FREEFORM = {"sensors", "sensor_limits", "notify.backends", "detection.synthetic", "control.initial"}
 CHOICES = {
-    "detection.backend": {"motion", "yolo", "synthetic"},
+    "detection.backend": {"motion", "yolo", "synthetic", "torchvision"},
     "detection.motion.method": {"median", "mog2"},
     "tracking.backend": {"simple", "bytetrack"},
     "tracking.bytetrack.provider": {"auto", "trackers", "supervision"},
