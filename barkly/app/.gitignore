@@ -95,3 +95,5 @@ scripts/zz-*.mjs
 # Python bytecode (tools/ and scripts/ are run with python3 directly)
 __pycache__/
 *.pyc
+art-review/sculpt/
+tools/sculpt/__pycache__/

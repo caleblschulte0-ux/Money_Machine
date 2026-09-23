@@ -110,7 +110,7 @@ FLOCK_SCALE = 340.0
 FLOCK_DEPTH = 0.0044
 
 
-def flock(name, colour, sheen=0.62, roughness=0.94):
+def flock(name, colour, sheen=0.62, roughness=0.94, nap=1.0):
     """Matte flocked velvet. The canon's surface, and the world had none of it.
 
     Roughness near 1.0 with real SHEEN is what velvet is: almost no specular
@@ -142,7 +142,11 @@ def flock(name, colour, sheen=0.62, roughness=0.94):
     # opaque patch is 2.85/255 on Barkly's own render. The first cut of this
     # material measured 1.00 -- the nap was there in the node graph and
     # invisible in the picture, which is the same as not having it.
-    bump.inputs["Strength"].default_value = FLOCK_DEPTH * 100.0
+    # `nap` scales the depth for surfaces that are not low-poly primitives: a
+    # marching-cubes sculpt already carries micro-variation in its normals,
+    # and at the full depth it measured 4.40 against Barkly's 2.85 -- read as
+    # sandpaper rather than velvet.
+    bump.inputs["Strength"].default_value = FLOCK_DEPTH * 100.0 * nap
     nt.links.new(tex.outputs["Fac"], bump.inputs["Height"])
     nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
     return mat
