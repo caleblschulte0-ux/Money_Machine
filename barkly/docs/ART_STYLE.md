@@ -281,6 +281,26 @@ that, Barkly separates by hue and value (orange and cream on green), which
 this metric cannot see. If he ever stops reading at a glance, that is the
 signal — not this number.
 
+### Round two (2026-09-23): "closest it's ever been, but still needs a lot of work"
+
+Fixed, from a full-size read of each plate:
+
+- **Every scatter was a straight line.** Tufts, pebbles, shells and marram
+  were placed with the golden ratio for x and 0.382 for y; those sum to 1, so
+  every point fell on one diagonal. The park's grass marched across the lawn
+  in a row. `_scatter()` is the R2 sequence now.
+- **Town paving** was thin dark cubes over the ground, which read as cracks.
+  It is `tile_material()`: procedural square tiles, two terracotta tones, grout
+  one step lighter, tiles a little proud. The kerb and awning stripes stopped
+  glaring; the lamps are painted teal instead of black iron.
+- **Trees have species.** Oaks, tall poplars, pink blossom trees, and apple
+  trees whose apples are placed ON the canopy (rays marched out to the
+  surface) -- twelve variants the pickers mix.
+- **Park details:** bigger flower beds, round edging stones along the path,
+  daisy clumps across the lawn.
+- **Beach:** a deeper toy-blue sea; the far shore is rolling green-topped
+  hills, quieted because distance should not shout; pebbles smaller.
+
 ## What is blocked, with numbers
 
 `scripts/art-hierarchy.py` measures whether Barkly still reads against his
@@ -294,7 +314,12 @@ script reports and is deliberately not a CI gate — `npm run art:hierarchy`.
 
 ## What is NOT decided yet
 
-- Home is still primitive. Park, beach and town are sculpted (town: three
+- Home's furniture is sculpted too (armchair with a square pillow, floor lamp,
+  a two-tone stuffed dog bed, bookshelf) via the shared `kitbridge.py`, lit
+  with the toy light's shape but the full key -- the scaled sun left single
+  objects on that rig dim. The proportion gate measures each sculpt's real
+  silhouette (`kitbridge.measure`); it caught the lamp stem at 0.055 against
+  a 0.075 floor. Park, beach and town are sculpted (town: three
   storefront colourways with striped scalloped awnings, fountain, lamps,
   planters, and a skyline of pastel gabled houses -- the first skyline was
   domes, which read as a field of red mushrooms, then ridges across the view,

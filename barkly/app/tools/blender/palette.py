@@ -462,7 +462,7 @@ TOY_LIGHT = {
     # path white while the toys looked dim beside them. The ground is painted
     # this much darker, the toys this much brighter.
     "ground_value": 0.78,
-    "kit_exposure": 0.95,
+    "kit_exposure": 0.90,   # 0.95 clipped the pale paints (cream, stone, stripes)
 }
 
 

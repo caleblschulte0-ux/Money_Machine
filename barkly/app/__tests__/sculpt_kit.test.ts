@@ -17,6 +17,8 @@ const { join } = require('path') as { join: (...p: string[]) => string };
 const ROOT = join(__dirname, '..');
 const scene = readFileSync(join(ROOT, 'tools', 'blender', 'world_scene_pack.py')).toString();
 const kit = readFileSync(join(ROOT, 'tools', 'sculpt', 'kit.py')).toString();
+const bridge = readFileSync(join(ROOT, 'tools', 'blender', 'kitbridge.py')).toString();
+const home = readFileSync(join(ROOT, 'tools', 'blender', 'home_prop_pack.py')).toString();
 
 describe('sculpt kit', () => {
   it('makes a storefront for every colourway the town builds', () => {
@@ -80,8 +82,9 @@ describe('sculpt kit', () => {
   it('never falls back to primitives silently when the kit cannot be built', () => {
     // ensure_kit runs the kit with check=True: a missing numpy/skimage raises
     // and the render fails, instead of shipping the rejected look green.
-    expect(scene).toMatch(/def ensure_kit\(\):[\s\S]*?check=True/);
+    expect(bridge).toMatch(/def ensure_kit\(\):[\s\S]*?check=True/);
     expect(scene).toMatch(/if SCULPTED:\s*\n\s*ensure_kit\(\)/);
+    expect(home).toMatch(/if SCULPTED:\s*\n\s*kitbridge\.ensure_kit\(\)/);
   });
 
   it('keeps the tree paint ids in one place', () => {

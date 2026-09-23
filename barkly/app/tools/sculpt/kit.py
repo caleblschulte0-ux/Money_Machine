@@ -126,22 +126,35 @@ PAINT.update({
     AQUA: ramp("sea", ("base", "lit", "lit"), (1.05, 1.1, 1.05)),
     SEA: ramp("sea", ("shade", "base", "base"), (1.05, 1.1, 1.05)),
     GLASS: ramp("sea", ("lit", "pop", "pop"), (1.0, 1.0, 1.0)),
-    STRIPE: ramp("cream", ("base", "base", "lit"), (1.0, 1.0, 1.0)),
+    # base/base/lit clipped to glare under the toy light (awnings, umbrellas).
+    STRIPE: ramp("cream", ("shade", "shade", "base"), (1.0, 1.0, 1.0)),
     BLEACH: ramp("cream", ("deep", "shade", "base"), (1.0, 1.0, 1.0)),
     ROCK: ramp("stone", ("deep", "shade", "base"), (1.0, 1.0, 1.0)),
     MARRAM: warm_under(ramp("grass", ("shade", "base", "lit"), (0.9, 0.95, 0.9))),
     # Distant land is nearly one colour; the stone's shade step, lit.
-    HEADLAND: ramp("stone", ("deep", "shade", "shade"), (1.0, 1.0, 1.0)),
+    # Green-topped hills with sandy flanks: the airbrush puts the TOP colour
+    # on up-facing surfaces. A one-colour stone band read as a flat tan strip.
+    # Far away, so quieter: the grass tops rendered electric lime and pulled
+    # the eye to the horizon. Foliage shade, desaturated, reads as distant hills.
+    HEADLAND: [tree.hexrgb(tone("sand", "shade")), _loud(tone("foliage", "shade"), 0.7), _loud(tone("foliage", "base"), 0.6)],
 })
 
 # The town. Each storefront colourway is a family with three jobs: body,
 # edge (the darker trim), and awning (the loud stripe).
-BRICK, TERRACOTTA, GLOW, WATER = range(41, 45)
+BRICK, TERRACOTTA, GLOW, WATER, LAMP, DAISY, BLOSSOM, APPLE = range(41, 49)
+# Home's upholstery and plush.
+UPHOLSTERY, SEAT, PILLOW, PLUSH, CUSHION, SHADE, SHELFWOOD, RECESS, BOOK_RED, BOOK_BLUE, PLUSH_LIGHT, BED_CUSHION = range(60, 72)
 PAINT.update({
     BRICK: ramp("brick", ("deep", "shade", "base"), (1.0, 1.0, 1.0)),
     TERRACOTTA: ramp("brick", ("shade", "base", "base"), (1.05, 1.1, 1.05)),
     GLOW: ramp("sun", ("lit", "pop", "pop"), (1.0, 1.0, 1.0)),
     WATER: ramp("sea", ("base", "lit", "lit"), (1.1, 1.1, 1.05)),
+    # A painted toy lamp, not black iron: the black posts were the heaviest
+    # things in the square.
+    LAMP: ramp("sea", ("deep", "shade", "shade"), (1.1, 1.2, 1.15)),
+    DAISY: ramp("cream", ("base", "lit", "lit"), (1.0, 1.0, 1.0)),
+    BLOSSOM: warm_under(ramp("berry", ("base", "lit", "lit"), (0.75, 0.7, 0.6)), f=0.25),
+    APPLE: ramp("berry", ("shade", "base", "base"), (1.1, 1.15, 1.1)),
 })
 STORE_FAMILIES = {"coral": "roof", "aqua": "sea", "violet": "grape"}
 STORE = {}
@@ -151,6 +164,23 @@ for n, (key, fam) in enumerate(STORE_FAMILIES.items()):
     PAINT[body] = ramp(fam, ("shade", "base", "base"), (1.0, 1.05, 1.0))
     PAINT[edge] = ramp(fam, ("deep", "shade", "shade"), (1.0, 1.05, 1.05))
     PAINT[awning] = ramp(fam, ("base", "base", "lit"), (1.05, 1.1, 1.05))
+
+PAINT.update({
+    UPHOLSTERY: ramp("berry", ("base", "base", "lit"), (0.85, 0.9, 0.85)),
+    SEAT: ramp("sea", ("shade", "base", "base"), (1.0, 1.05, 1.0)),
+    PILLOW: ramp("sun", ("base", "lit", "lit"), (1.0, 1.0, 0.95)),
+    # Both plush tones a step deep: the icon has to hold 3:1 against every
+    # store pane, and with a pale lump in the pair it fell to 2.58:1.
+    PLUSH: ramp("sea", ("deep", "shade", "shade"), (1.0, 1.05, 1.0)),
+    BED_CUSHION: ramp("cream", ("shade", "shade", "base"), (1.0, 1.0, 1.0)),
+    CUSHION: ramp("cream", ("base", "lit", "lit"), (1.0, 1.0, 1.0)),
+    PLUSH_LIGHT: ramp("sea", ("shade", "base", "base"), (1.0, 1.05, 1.0)),
+    SHADE: ramp("cream", ("base", "lit", "lit"), (1.0, 1.0, 1.0)),
+    SHELFWOOD: ramp("wood", ("base", "base", "lit"), (1.0, 1.05, 1.0)),
+    RECESS: ramp("wood", ("shade", "shade", "base"), (1.0, 1.0, 1.0)),   # deep/deep read as a black hole
+    BOOK_RED: ramp("berry", ("shade", "base", "base"), (1.0, 1.0, 1.0)),
+    BOOK_BLUE: ramp("sea", ("shade", "base", "base"), (1.0, 1.0, 1.0)),
+})
 
 #: Flower heads take their colour from the bed, so they get ids above the rest.
 PETALS = {"berry": 20, "sun": 21, "cream": 22, "grape": 23}
@@ -172,6 +202,66 @@ def paint_mesh(verts, normals, paint):
 def park_tree(seed):
     """The tree from `tree.py`, sat on the lawn."""
     return sdf.sit(tree.grow(seed), k=0.05)
+
+
+def _surface_points(field, centre, n, rng, lift=0.0):
+    """n points ON a field's surface, found by marching rays out from
+    `centre` until they cross it -- so fruit sits on the leaves rather than
+    floating off them or sinking in. Rays aim outward and upward-ish, toward
+    the camera side, where fruit is seen."""
+    c = np.asarray(centre, float)
+    pts = []
+    while len(pts) < n:
+        d = rng.normal(size=3)
+        d[1] = -abs(d[1]) - 0.3          # camera side
+        d[2] = abs(d[2]) * 0.6 - 0.1     # mostly level or up
+        d /= np.linalg.norm(d)
+        lo, hi = 0.0, 4.0
+        if field(np.array([c + d * hi]))[0][0] < 0:
+            continue
+        for _ in range(24):              # bisect to the crossing
+            mid = (lo + hi) / 2
+            if field(np.array([c + d * mid]))[0][0] < 0:
+                lo = mid
+            else:
+                hi = mid
+        pts.append(c + d * (hi + lift))
+    return pts
+
+
+def poplar(seed):
+    """A tall, rounded poplar: a slim trunk and a column of soft lobes. The
+    park had one species of round tree; a toy park has shapes to tell apart."""
+    rng = np.random.default_rng(seed)
+    lean = rng.uniform(-0.08, 0.08)
+    trunk = sdf.capsule((0, 0, 0), (lean, 0, 2.0), 0.26, 0.16, paint=BARK)
+    foot = [sdf.place(sdf.ellipsoid((0.34, 0.20, 0.16), paint=BARK), at=(0.22 * math.cos(a), 0.22 * math.sin(a), 0.08))
+            for a in (0.5, 2.6, 4.5)]
+    lobes = []
+    for k, (z, r) in enumerate(((1.9, 0.78), (2.7, 0.84), (3.5, 0.74), (4.2, 0.56), (4.7, 0.34))):
+        lobes.append(sdf.place(sdf.ellipsoid((r, r * 0.9, r * 0.95), paint=LEAF),
+                               at=(lean + rng.uniform(-0.12, 0.12), rng.uniform(-0.05, 0.05), z)))
+        if k < 4:
+            for side in (-1, 1):
+                lobes.append(sdf.place(sdf.ellipsoid((r * 0.55, r * 0.5, r * 0.55), paint=LEAF),
+                                       at=(lean + side * r * 0.75, -0.1, z - 0.15 + rng.uniform(-0.1, 0.1))))
+    body = sdf.smooth_union(trunk, *foot, k=0.18)
+    return sdf.sit(sdf.warp(sdf.smooth_union(body, sdf.smooth_union(*lobes, k=0.14), k=0.15), amount=0.05, freq=1.3, seed=seed), k=0.05)
+
+
+def blossom_tree(seed):
+    """The park tree in spring: the same sculpt, its canopy painted pink."""
+    base = tree.grow(seed + 10)
+    return sdf.sit(sdf.repaint(base, lambda p, m: np.where(m == LEAF, BLOSSOM, m)), k=0.05)
+
+
+def apple_tree(seed):
+    """The park tree with red apples sitting on the canopy."""
+    rng = np.random.default_rng(seed)
+    base = tree.grow(seed + 20)
+    apples = [sdf.place(sdf.ellipsoid((0.15, 0.15, 0.14), paint=APPLE), at=tuple(pt))
+              for pt in _surface_points(base, (0.05, 0.0, 3.0), 9, rng, lift=0.04)]
+    return sdf.sit(sdf.union(base, *apples), k=0.05)
 
 
 def bush(seed):
@@ -278,6 +368,19 @@ def flowers(seed, petal="berry"):
         heads.append(sdf.place(sdf.ellipsoid((0.07, 0.07, 0.06), paint=GOLD), at=(cx, cy, cz + 0.03)))
     bed = sdf.smooth_union(*parts, k=0.1)
     return sdf.sit(sdf.union(bed, sdf.smooth_union(*heads, k=0.035)), k=0.02)
+
+
+def daisies(seed):
+    """A low clump of clover with a few round white flowers and gold eyes."""
+    rng = np.random.default_rng(seed)
+    clump = [sdf.place(sdf.ellipsoid((0.22, 0.20, 0.10), paint=GRASS), at=(rng.uniform(-0.2, 0.2), rng.uniform(-0.15, 0.15), 0.04))
+             for _ in range(4)]
+    flowers = []
+    for k in range(3 + seed % 2):
+        cx, cy, cz = rng.uniform(-0.22, 0.22), rng.uniform(-0.16, 0.16), 0.16 + rng.uniform(0, 0.08)
+        flowers.append(sdf.place(sdf.ellipsoid((0.09, 0.09, 0.03), paint=DAISY), at=(cx, cy, cz)))
+        flowers.append(sdf.place(sdf.ellipsoid((0.035, 0.035, 0.025), paint=GOLD), at=(cx, cy, cz + 0.02)))
+    return sdf.sit(sdf.union(sdf.smooth_union(*clump, k=0.06), *flowers), k=0.02)
 
 
 def tuft(seed):
@@ -540,7 +643,8 @@ def headland(seed=0):
     mounds = []
     for i in range(31):
         x = -34.0 + i * 2.2 + rng.uniform(-0.55, 0.55)
-        h = 0.55 + rng.uniform(0, 0.75)
+        # Heights spread wide, so the skyline rolls instead of running flat.
+        h = 0.7 + rng.uniform(0, 1.5)
         w = 1.9 + rng.uniform(0, 1.1)
         mounds.append(sdf.place(sdf.ellipsoid((w, w * 0.68, h * 0.85), paint=HEADLAND),
                                 at=(x, rng.uniform(0, 2.4), h * 0.16 - 0.3)))
@@ -636,13 +740,13 @@ def fountain(seed=0):
 def lamp(seed=0):
     """A street lamp: flared foot, tapering post, brass collar, a lantern
     with a glowing pane, a peaked cap and a brass finial."""
-    iron = [sdf.cone(0.34, 0.26, 0.34, paint=IRON),
-            sdf.capsule((0, 0, 0.30), (0, 0, 2.84), 0.20, 0.13, paint=IRON)]
+    iron = [sdf.cone(0.34, 0.26, 0.34, paint=LAMP),
+            sdf.capsule((0, 0, 0.30), (0, 0, 2.84), 0.20, 0.13, paint=LAMP)]
     collar = sdf.place(sdf.cone(0.28, 0.20, 0.22, paint=GOLD), at=(0, 0, 2.80))
     lz = 3.30
-    lantern = sdf.place(sdf.round_box((0.52, 0.42, 0.56), 0.12, paint=IRON), at=(0, 0, lz))
+    lantern = sdf.place(sdf.round_box((0.52, 0.42, 0.56), 0.12, paint=LAMP), at=(0, 0, lz))
     pane = sdf.place(sdf.round_box((0.40, 0.05, 0.42), 0.06, paint=GLOW), at=(0, -0.40, lz))
-    cap = sdf.place(sdf.cone(0.78, 0.14, 0.40, paint=IRON), at=(0, 0, lz + 0.50))
+    cap = sdf.place(sdf.cone(0.78, 0.14, 0.40, paint=LAMP), at=(0, 0, lz + 0.50))
     fin = sdf.place(sdf.ellipsoid((0.13, 0.12, 0.17), paint=GOLD), at=(0, 0, lz + 1.00))
     return sdf.sit(sdf.union(sdf.smooth_union(*iron, collar, lantern, cap, fin, k=0.05), pane), k=0.02)
 
@@ -660,10 +764,88 @@ def planter(seed=0):
                          for x, y, z in ((-0.34, -0.40, 0.46), (0.40, -0.42, 0.38))])
     return sdf.sit(sdf.union(pot, plant, blooms), k=0.03)
 
+
+# ------------------------------------------------------------------ Home
+
+def armchair(seed=0):
+    """An overstuffed armchair: a plump curved back, a seat cushion that
+    bulges, rolled arms, a butter-yellow pillow tossed in, stubby wooden feet.
+    Every part melts into the next the way stuffed upholstery does."""
+    back = sdf.place(sdf.round_box((1.18, 0.34, 0.92), 0.32, paint=UPHOLSTERY), at=(0.04, 0.42, 1.63), rot=[("x", math.radians(-6))])
+    base = sdf.place(sdf.round_box((1.20, 0.72, 0.36), 0.26, paint=UPHOLSTERY), at=(0, 0.0, 0.62))
+    seat = sdf.place(sdf.round_box((0.84, 0.66, 0.20), 0.18, paint=SEAT), at=(0, -0.14, 1.02))
+    arms = [sdf.capsule((x, -0.70, 1.10), (x, 0.50, 1.20), 0.30, 0.30, paint=UPHOLSTERY) for x in (-1.02, 1.02)]
+    body = sdf.smooth_union(back, base, *arms, k=0.14)
+    # A plump SQUARE pillow, tipped against the back -- an ellipsoid read as a
+    # ball balanced on the seat.
+    pillow = sdf.place(sdf.round_box((0.40, 0.14, 0.38), 0.13, paint=PILLOW), at=(0.30, 0.02, 1.48), rot=[("x", -0.20), ("y", 0.14), ("z", 0.16)])
+    feet = [sdf.capsule((x, y, 0.0), (x, y, 0.30), 0.12, 0.10, paint=WOOD) for x in (-0.86, 0.86) for y in (-0.50, 0.40)]
+    return sdf.sit(sdf.union(sdf.smooth_union(body, seat, k=0.08), pillow, sdf.union(*feet)), k=0.03)
+
+
+def floor_lamp(seed=0):
+    """A floor lamp: flared brass foot, wooden stem, a drum shade with rolled
+    rims and a warm glowing underside."""
+    foot = sdf.cone(0.52, 0.30, 0.26, paint=GOLD)
+    # A chunky toy stem: at 0.12 -> 0.09 the proportion gate measured it at
+    # 0.055 of the lamp's height against a 0.075 floor -- a wire, not a post.
+    stem = sdf.capsule((0, 0, 0.2), (-0.02, 0, 2.5), 0.19, 0.15, paint=WOOD)
+    shade = sdf.place(sdf.cone(0.92, 0.58, 1.06, paint=SHADE), at=(0, 0, 2.38))
+    shade = sdf.smooth_subtract(shade, sdf.place(sdf.cone(0.84, 0.50, 1.06), at=(0, 0, 2.30)), k=0.02)
+    rims = sdf.union(sdf.place(sdf.torus(0.90, 0.06, paint=GLOW), at=(0, 0, 2.40)),
+                     sdf.place(sdf.torus(0.58, 0.05, paint=GOLD), at=(0, 0, 3.44)))
+    return sdf.sit(sdf.union(sdf.smooth_union(foot, stem, k=0.08), shade, rims), k=0.02)
+
+
+def dog_bed(seed=0):
+    """His bed: a STUFFED bolster -- a ring of overlapping lumps melted into
+    one plush ring -- with a cushion that domes above the rim, and three
+    stitch dimples. The primitive version was a torus with spheres laid on
+    it; here the lumps are the ring."""
+    lumps = []
+    for i in range(14):
+        a = i / 14 * math.tau
+        # Alternating shades and a SMALL blend: at k 0.16 the lumps melted
+        # into a plain ring and the bed lost its stuffed look.
+        lumps.append(sdf.place(sdf.ellipsoid((0.44, 0.36, 0.36), paint=PLUSH_LIGHT if i % 2 else PLUSH),
+                               at=(1.32 * math.cos(a), 0.08 + 0.80 * math.sin(a), 0.46), rot=[("z", a + math.pi / 2)]))
+    ring = sdf.smooth_union(*lumps, k=0.06)
+    floor = sdf.place(sdf.ellipsoid((1.30, 0.80, 0.22), paint=PLUSH), at=(0, 0.06, 0.20))
+    cushion = sdf.place(sdf.ellipsoid((1.00, 0.60, 0.26), paint=BED_CUSHION), at=(0, -0.02, 0.54))
+    for x in (-0.44, 0.0, 0.44):
+        cushion = sdf.smooth_subtract(cushion, sdf.place(sdf.ellipsoid((0.05, 0.05, 0.05)), at=(x, -0.30, 0.76)), k=0.04)
+    return sdf.sit(sdf.union(sdf.smooth_union(ring, floor, k=0.14), cushion), k=0.03)
+
+
+def bookshelf(seed=0):
+    """A honey-wood shelf: rounded frame, a dark recess, two shelves, a cabinet
+    with brass knobs, two leaning books and a little gold trophy."""
+    frame = sdf.smooth_union(
+        sdf.place(sdf.round_box((1.18, 0.50, 0.18), 0.14, paint=SHELFWOOD), at=(0, 0, 3.39)),
+        sdf.place(sdf.round_box((1.18, 0.50, 0.18), 0.14, paint=SHELFWOOD), at=(0, 0, 0.17)),
+        *[sdf.place(sdf.round_box((0.18, 0.48, 1.72), 0.14, paint=SHELFWOOD), at=(x, 0, 1.72)) for x in (-1.02, 1.02)],
+        k=0.05)
+    back = sdf.place(sdf.round_box((1.00, 0.10, 1.66), 0.06, paint=RECESS), at=(0, 0.40, 1.72))
+    shelves = [sdf.place(sdf.round_box((0.98, 0.45, 0.10), 0.07, paint=SHELFWOOD), at=(0, 0.02, z)) for z in (1.18, 2.20)]
+    cabinet = sdf.place(sdf.round_box((0.90, 0.36, 0.32), 0.10, paint=CUSHION), at=(0, -0.02, 0.62))
+    knobs = [sdf.place(sdf.ellipsoid((0.08, 0.08, 0.08), paint=GOLD), at=(x, -0.40, 0.62)) for x in (-0.24, 0.24)]
+    books = [sdf.place(sdf.round_box((0.15, 0.10, 0.27), 0.04, paint=BOOK_RED), at=(-0.47, -0.20, 1.55), rot=[("y", -0.06)]),
+             sdf.place(sdf.round_box((0.13, 0.10, 0.30), 0.04, paint=BOOK_BLUE), at=(-0.15, -0.20, 1.58), rot=[("y", 0.08)])]
+    trophy = sdf.smooth_union(sdf.place(sdf.cone(0.24, 0.20, 0.10, paint=RECESS), at=(0.43, -0.20, 2.30)),
+                              sdf.capsule((0.43, -0.20, 2.36), (0.43, -0.20, 2.55), 0.06, 0.06, paint=GOLD),
+                              sdf.place(sdf.cone(0.12, 0.24, 0.32, paint=GOLD), at=(0.43, -0.20, 2.55)), k=0.04)
+    return sdf.sit(sdf.union(frame, back, *shelves, cabinet, *knobs, *books, trophy), k=0.02)
+
 #: name -> (builder, bounds lo, bounds hi, resolution)
 KIT = {}
 for s in range(6):
     KIT[f"tree_{s}"] = (lambda s=s: park_tree(s), (-2.8, -1.8, -0.1), (3.0, 1.8, 4.7), 0.036)
+# Species: two of each, so `_pick("tree")` mixes shapes and colours across
+# the park. Numbered on from the oaks so every picker sees them.
+for s in range(2):
+    KIT[f"tree_{6 + s}"] = (lambda s=s: poplar(s), (-1.8, -1.5, -0.1), (1.8, 1.5, 5.3), 0.034)
+    KIT[f"tree_{8 + s}"] = (lambda s=s: blossom_tree(s), (-2.8, -1.8, -0.1), (3.0, 1.8, 4.7), 0.036)
+    KIT[f"tree_{10 + s}"] = (lambda s=s: apple_tree(s), (-2.8, -2.0, -0.1), (3.0, 1.8, 4.8), 0.036)
 for s in range(3):
     KIT[f"bush_{s}"] = (lambda s=s: bush(s), (-1.9, -1.4, -0.1), (1.9, 1.4, 1.8), 0.03)
 for s in range(2):
@@ -672,6 +854,8 @@ KIT["bench"] = (bench, (-1.9, -0.8, -0.1), (1.9, 0.8, 2.0), 0.022)
 KIT["bandstand"] = (bandstand, (-3.6, -4.5, -0.1), (3.6, 3.6, 6.1), 0.042)
 for fam in PETALS:
     KIT[f"flowers_{fam}"] = (lambda fam=fam: flowers(len(fam), fam), (-1.2, -1.0, -0.1), (1.2, 1.0, 0.8), 0.02)
+for s in range(3):
+    KIT[f"daisies_{s}"] = (lambda s=s: daisies(s), (-0.5, -0.45, -0.05), (0.5, 0.45, 0.35), 0.01)
 for s in range(3):
     KIT[f"tuft_{s}"] = (lambda s=s: tuft(s), (-0.5, -0.5, -0.05), (0.5, 0.5, 0.8), 0.012)
 
@@ -693,7 +877,7 @@ for s in range(3):
 KIT["shell"] = (shell, (-0.6, -0.4, -0.05), (0.6, 0.4, 0.25), 0.01)
 KIT["windbreak"] = (windbreak, (-1.9, -0.4, -0.05), (1.9, 0.4, 1.6), 0.018)
 KIT["towel"] = (towel, (-1.1, -2.1, -0.05), (1.1, 2.1, 0.3), 0.02)
-KIT["headland"] = (headland, (-38.0, -2.8, -0.1), (38.0, 5.2, 1.6), 0.09)
+KIT["headland"] = (headland, (-38.0, -2.8, -0.1), (38.0, 5.2, 2.4), 0.09)
 for s in range(2):
     KIT[f"dune_{s}"] = (lambda s=s: dune(s), (-4.4, -2.4, -0.1), (4.0, 2.4, 1.2), 0.05)
 
@@ -705,6 +889,12 @@ KIT["rooftops"] = (rooftops, (-3.9, -0.6, -0.1), (3.6, 0.6, 1.8), 0.02)
 KIT["fountain"] = (fountain, (-1.8, -1.2, -0.1), (1.8, 1.2, 2.7), 0.022)
 KIT["lamp"] = (lamp, (-0.9, -0.7, -0.1), (0.9, 0.7, 4.6), 0.02)
 KIT["planter"] = (planter, (-1.1, -1.0, -0.1), (1.1, 1.0, 2.2), 0.02)
+
+# Home.
+KIT["home_chair"] = (armchair, (-1.6, -1.1, -0.1), (1.6, 1.0, 2.8), 0.02)
+KIT["home_lamp"] = (floor_lamp, (-1.1, -1.1, -0.1), (1.1, 1.1, 3.6), 0.018)
+KIT["home_bed"] = (dog_bed, (-2.0, -1.2, -0.1), (2.0, 1.3, 1.0), 0.018)
+KIT["home_shelf"] = (bookshelf, (-1.4, -0.7, -0.1), (1.4, 0.7, 3.7), 0.02)
 
 def build(name, out: Path):
     builder, lo, hi, res = KIT[name]

@@ -39,7 +39,10 @@ jobs:
   render-world-props:
     runs-on: ubuntu-latest
     # 25 -> 40: the three scene plates are a fourth pack now.
-    timeout-minutes: 40
+    # 40 -> 60: the scene plates sculpt their kit first (57 objects, ~10 min
+    # on a 4-core runner) before rendering, and a timeout mid-render would
+    # leave the branch on half-updated art.
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: barkly/app

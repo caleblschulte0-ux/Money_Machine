@@ -1,17 +1,17 @@
 {
   "camera": "Barkly Home 3/4 orthographic v1",
-  "light": "warm upper-left key + cool fill + warm rim",
+  "light": "toy light (palette.TOY_LIGHT): high soft key + strong sky fill",
   "assets": {
     "chair": {
       "file": "chair.png",
       "displayWidth": 168,
       "anchor": "bottom",
       "form": {
-        "height": 2.587,
-        "parts": 8,
-        "widest": 2.56,
-        "foot": 1.82,
-        "waist": 2.36,
+        "height": 2.549,
+        "parts": 1,
+        "widest": 2.643,
+        "foot": 2.2,
+        "waist": 2.387,
         "crown": 2.56
       }
     },
@@ -20,12 +20,12 @@
       "displayWidth": 100,
       "anchor": "bottom",
       "form": {
-        "height": 3.787,
-        "parts": 4,
-        "widest": 1.84,
-        "foot": 1.5,
-        "waist": 0.436,
-        "crown": 1.84
+        "height": 3.49,
+        "parts": 1,
+        "widest": 1.92,
+        "foot": 1.019,
+        "waist": 0.314,
+        "crown": 1.92
       }
     },
     "bed": {
@@ -33,12 +33,12 @@
       "displayWidth": 164,
       "anchor": "bottom",
       "form": {
-        "height": 0.66,
-        "parts": 20,
-        "widest": 3.498,
-        "foot": 2.24,
-        "waist": 3.498,
-        "crown": 3.498
+        "height": 0.819,
+        "parts": 1,
+        "widest": 3.36,
+        "foot": 2.78,
+        "waist": 3.175,
+        "crown": 3.36
       }
     },
     "shelf": {
@@ -46,12 +46,12 @@
       "displayWidth": 174,
       "anchor": "bottom",
       "form": {
-        "height": 3.58,
-        "parts": 15,
-        "widest": 2.4,
-        "foot": 2.4,
+        "height": 3.57,
+        "parts": 1,
+        "widest": 2.409,
+        "foot": 2.409,
         "waist": 2.4,
-        "crown": 2.4
+        "crown": 2.405
       }
     }
   }

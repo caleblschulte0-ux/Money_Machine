@@ -19,13 +19,20 @@ import bpy
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import packfile  # noqa: E402  -- what a render depends on, for the freshness marker
-from palette import light_rgb, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
+from palette import TOY_LIGHT, light_rgb, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 # The form recorder and the proportion dials, from the packs that own them.
 # Home furniture is drawn to the same rules as everything outdoors -- it is the
 # room the player starts in, so it is the LAST place that should be an
 # exception -- and `scripts/proportion.py` can only hold it to them if these
 # builders log their geometry the way the world pack's do.
 import world_prop_pack as wpack  # noqa: E402
+import kitbridge  # noqa: E402  -- the sculpt kit, shared with the scene plates
+
+#: Home's furniture is SCULPTED (tools/sculpt/kit.py: home_chair, home_lamp,
+#: home_bed, home_shelf) and lit by the toy light, like the three outdoor
+#: places since 2026-09-23. The primitive builders below are untouched; going
+#: back is HOME_STYLE=primitive.
+SCULPTED = (os.environ.get("HOME_STYLE", "").strip() or "sculpt") == "sculpt"
 from proportion import flare, shaft, stack  # noqa: E402
 from mathutils import Vector
 
@@ -178,7 +185,7 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     # picked near-black, so home's furniture had a third light model of its own
     # -- the world pack had one, the scene pack had another, and the room the
     # player starts in had a third.
-    scene.world.color = world_rgb()
+    scene.world.color = world_rgb(TOY_LIGHT["sky_fill"] if SCULPTED else None)
 
     # Keep contrast consistent across Blender 3.x/4.x.
     # STANDARD, NOT AgX -- see tools/blender/world_prop_pack.py for the
@@ -216,18 +223,23 @@ def add_camera_and_lights(ortho_scale=5.8, target=(0, 0, 1.25)):
     # is a small aperture and the light through it is already directional, so
     # an interior does not want the 26-degree rake an open field does.
     reach = math.hypot(5.0, 6.0)
-    bpy.ops.object.light_add(type="SUN", location=(-5.0, -6.0, sun_height(reach, "home")))
+    height = (reach * math.tan(math.radians(TOY_LIGHT["elevation"])) if SCULPTED
+              else sun_height(reach, "home"))
+    bpy.ops.object.light_add(type="SUN", location=(-5.0, -6.0, height))
     key = bpy.context.object
     key.name = "Barkly key"
+    # The full key, not the toy light's scaled sun: that scale balances a
+    # wide sunny scene against its sky, and on one object in this rig it left
+    # every piece of furniture dim and muddy.
     key.data.energy = 6.2
-    key.data.angle = math.radians(7.0)
+    key.data.angle = math.radians(TOY_LIGHT["softness"] if SCULPTED else 7.0)
     key.data.color = light_rgb("key")
     look_at(key, target)
 
     bpy.ops.object.light_add(type="AREA", location=(5.0, -2.2, 4.0))
     fill = bpy.context.object
     fill.name = "Barkly cool fill"
-    fill.data.energy = 70
+    fill.data.energy = 70 * (TOY_LIGHT["bounce_scale"] if SCULPTED else 1.0)
     fill.data.size = 5.5
     fill.data.color = light_rgb("fill")
     look_at(fill, target)
@@ -435,17 +447,28 @@ def main():
     # Same PROP_ONLY narrowing as the world pack: render one prop while you are
     # iterating on it. The manifest still describes every prop either way.
     only = os.environ.get("PROP_ONLY", "").strip()
+    if SCULPTED:
+        kitbridge.ensure_kit()
+        manifest["light"] = "toy light (palette.TOY_LIGHT): high soft key + strong sky fill"
     for name, (builder, scale, target, metadata) in BUILDERS.items():
         # Built either way, rendered only when wanted: measuring costs
         # milliseconds and it is what keeps the manifest's proportion block
         # complete under PROP_ONLY.
         clean_scene()
         add_camera_and_lights(ortho_scale=scale, target=target)
-        builder()
+        if SCULPTED:
+            # Nap 0.08: furniture is shot close, and at the scenes' 0.25 the
+            # flock grain showed as dark speckles on the arms and the pillow.
+            obj = bpy.data.objects.new(f"home_{name}", kitbridge.mesh(f"home_{name}", TOY_LIGHT["chroma"], nap=0.08))
+            bpy.context.scene.collection.objects.link(obj)
+            v = TOY_LIGHT["kit_exposure"]
+            obj.color = (v, v, v, 1.0)
+        else:
+            builder()
         if not only or name.startswith(only):
             render_prop(name)
         entry = {"file": f"{name}.png", **metadata}
-        form = wpack.measure_form()
+        form = kitbridge.measure(obj) if SCULPTED else wpack.measure_form()
         if form:
             entry["form"] = form
         manifest["assets"][name] = entry

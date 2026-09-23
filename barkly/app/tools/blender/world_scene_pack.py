@@ -57,7 +57,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # This is a new way to COMPOSE the same world, not a second world.
 import forms
 import world_prop_pack as pack  # noqa: E402
-import toybox  # noqa: E402  -- the canon's flocked material, for sculpted scenes
+import kitbridge  # noqa: E402  -- the sculpt kit, as Blender sees it
+import toybox  # noqa: E402  -- the canon's flocked material (the moulded path)
 
 OUT = ROOT / "art-review" / "world-scenes"
 OUT.mkdir(parents=True, exist_ok=True)
@@ -588,13 +589,26 @@ def park():
         (-6.0, 16.0, 0.8, tone("cream", "pop")), (6.4, 18.0, 0.8, tone("grape", "lit")),
     )
     for fx, fy, fs, petal_hex in beds:
-        _flowers(fx, fy, fs, petal_hex)
+        # Sculpted beds are bigger: at the primitive size they were specks.
+        _flowers(fx, fy, fs * (1.6 if SCULPTED else 1.0), petal_hex)
+    if SCULPTED:
+        _path_stones()
+        # Daisy clumps dotted across the lawn: the small repeated detail that
+        # makes a toy lawn a place rather than a green floor.
+        for i in range(34):
+            t, u = _scatter(i + 101)
+            x, y = -14.0 + t * 28.0, -20.0 + u * 52.0
+            if abs(x) < 3.2 and y < 2.0:
+                continue  # the dog stands here
+            if abs(x - (math.sin((y + 40.0) / 81.0 * 5.2) * 0.5)) < 2.6:
+                continue  # and nothing grows on the path
+            name, flip = _pick("daisies", x, y)
+            kit(name, x, y, 1.4 + u * 0.6, flip=flip)
 
     # Scatter. Placed by a repeatable sequence, never at random, so a re-render
     # is the same park.
     for i in range(70):
-        t = (i * 0.6180339887) % 1.0
-        u = (i * 0.3819660113) % 1.0
+        t, u = _scatter(i)
         x = -15.0 + t * 30.0
         y = -22.0 + u * 74.0
         if abs(x) < 3.0 and y < 0.0:
@@ -659,8 +673,17 @@ def town():
     #
     # Against town's composited 0.292 / 0.475 and park's 0.516 / 0.659.
     if SCULPTED:
+        # TOY TILES. The primitive square drew its paving as thin dark cubes
+        # laid over the ground; under the toy light they read as a broken grid
+        # of cracks. A playset's square is moulded tiles: two terracotta tones,
+        # soft cream grout, each tile a little proud of the grout.
         gv = TOY_LIGHT["ground_value"]
-        ground(_toy(tone("brick", "base"), 1.1, gv), _toy(tone("brick", "base"), 1.2, gv * 1.08), tooth=30.0, bump=0.02)
+        plane = ground(_toy(tone("brick", "base"), 1.1, gv), _toy(tone("brick", "base"), 1.2, gv * 1.08), tooth=30.0, bump=0.02)
+        # Grout only a step lighter than the tiles and the tiles bigger: with
+        # cream grout at 2.2 units the square was a buzzing grid of lines.
+        plane.data.materials[0] = tile_material("Toy tiles", _toy(tone("brick", "base"), 1.1, gv),
+                                                _toy(tone("brick", "base"), 1.12, gv * 1.07),
+                                                _toy(tone("brick", "lit"), 0.9, gv * 1.02), tile=3.2)
     else:
         ground(tone("brick", "base"), tone("brick", "lit"), tooth=30.0, bump=0.07)
     _anchor("stand", 0.0, -3.0)
@@ -675,8 +698,10 @@ def town():
     # frame was empty pavement; and `stone.shade` under an ink outline came out
     # as a black river across the picture.
     _band("road", 20.0, 27.0, 0.004,
-          depth_material("Road", tone("stone", "base"), tone("stone", "shade"), roughness=0.88))
-    kerb = pack.material("Kerb", tone("paving", "lit"), roughness=0.86)
+          depth_material("Road", _toy(tone("stone", "base"), 1.0, TOY_LIGHT["ground_value"]) if SCULPTED else tone("stone", "base"),
+                         tone("stone", "shade"), roughness=0.88))
+    # The kerb's `lit` step glared white under the toy light.
+    kerb = pack.material("Kerb", _toy(tone("paving", "base"), 1.0, 0.92) if SCULPTED else tone("paving", "lit"), roughness=0.86)
     # Its own tone. The kerb's face and the paving joints both landed on
     # `paving.shade`, and `tests/surface_grain` is right to refuse that: two
     # neighbouring things in one builder sharing a colour is how a scene
@@ -767,14 +792,14 @@ def town():
     # frame. `no_ink` plus one step of contrast is a joint; an outline is a
     # fence.
     joint = pack.material("Paving joint", tone("brick", "shade"), roughness=0.92)
-    for i in range(15):
+    for i in range(0 if SCULPTED else 15):   # sculpted: the ground IS tiles
         y = -26.0 + i * 3.4
         if y > 18.0:
             break
         wx, wy = TURN(0.0, y)
         no_ink(pack.cube(f"joint{i}", (wx, wy, 0.012), (34.0, 0.05, 0.012), joint, 0.01,
                          rotation=(0, 0, THETA)))
-    for i in range(19):
+    for i in range(0 if SCULPTED else 19):
         x = -30.0 + i * 3.4
         wx, wy = TURN(x, -4.0)
         no_ink(pack.cube(f"jointx{i}", (wx, wy, 0.012), (0.05, 22.0, 0.012), joint, 0.01,
@@ -783,8 +808,7 @@ def town():
     # Scatter: a few tufts pushing through the joints, which is what makes a
     # pavement look walked-on rather than laid this morning.
     for i in range(26):
-        t = (i * 0.6180339887) % 1.0
-        u = (i * 0.3819660113) % 1.0
+        t, u = _scatter(i)
         x = -14.0 + t * 28.0
         y = -22.0 + u * 44.0
         if abs(x) < 3.5 and y < 2.0:
@@ -792,6 +816,39 @@ def town():
         if y > 18.0:
             continue
         _tuft(x, y, 0.45 + u * 0.35)
+
+
+def tile_material(name: str, hex_a: str, hex_b: str, hex_grout: str, tile: float = 2.2):
+    """Moulded toy paving: square tiles in two tones with soft grout between,
+    each tile raised a little by a bump from the grout mask. Procedural --
+    Blender's brick texture, set square, over the ground's own coordinates."""
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes.get("Principled BSDF")
+    bsdf.inputs["Roughness"].default_value = 0.9
+    coord = nt.nodes.new("ShaderNodeTexCoord")
+    brick = nt.nodes.new("ShaderNodeTexBrick")
+    brick.offset = 0.5
+    brick.squash = 1.0
+    brick.inputs["Scale"].default_value = 1.0 / tile
+    brick.inputs["Brick Width"].default_value = 1.0
+    brick.inputs["Row Height"].default_value = 1.0
+    brick.inputs["Mortar Size"].default_value = 0.035
+    brick.inputs["Mortar Smooth"].default_value = 0.6
+    brick.inputs["Bias"].default_value = 0.0
+    brick.inputs["Color1"].default_value = (*pack.rgb(hex_a), 1.0)
+    brick.inputs["Color2"].default_value = (*pack.rgb(hex_b), 1.0)
+    brick.inputs["Mortar"].default_value = (*pack.rgb(hex_grout), 1.0)
+    nt.links.new(coord.outputs["Object"], brick.inputs["Vector"])
+    nt.links.new(brick.outputs["Color"], bsdf.inputs["Base Color"])
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.35
+    bump.inputs["Distance"].default_value = 0.05
+    bump.invert = True
+    nt.links.new(brick.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    return mat
 
 
 def noise_material(name: str, hex_a: str, hex_b: str, scale: float = 0.16,
@@ -1058,8 +1115,6 @@ def _poly(name: str, points, z: float, mat):
 # untouched underneath.
 SCENE_STYLE = {"park": "sculpt", "town": "sculpt", "beach": "sculpt"}
 SCULPTED = False  # set per scene by main(), read by every builder
-KIT_DIR = ROOT / "art-review" / "sculpt" / "kit"
-_KIT_MESHES: dict = {}
 
 #: The prop pack's builders that `place()` stands in scenes, and the kit object
 #: a sculpted scene uses instead. A trailing "_" means "pick a variant".
@@ -1086,66 +1141,14 @@ SUN_EXPOSURE = 0.80
 # is overhead and weaker, so the kit takes palette.TOY_LIGHT["kit_exposure"].
 
 
-def _kit_python() -> str:
-    import shutil
-    exe = shutil.which("python3")
-    if exe is None:
-        raise RuntimeError("the sculpt kit needs a system python3 (numpy + scikit-image) beside Blender")
-    return exe
-
-
-def ensure_kit():
-    """Sculpt the kit if it is missing or was made by different rules.
-
-    Fails LOUD rather than falling back to primitives: a park that quietly
-    rendered in the old style because a dependency was missing would ship the
-    look the operator rejected, with a green check on it.
-    """
-    import subprocess
-    kit = ROOT / "tools" / "sculpt" / "kit.py"
-    want = subprocess.run([_kit_python(), str(kit), "--hash"], capture_output=True, text=True,
-                          check=True).stdout.strip()
-    index = KIT_DIR / "kit.json"
-    have = json.loads(index.read_text()).get("source") if index.exists() else None
-    if have != want:
-        print(f"sculpt kit stale ({have} != {want}); sculpting")
-        subprocess.run([_kit_python(), str(kit), "--out", str(KIT_DIR)], check=True)
-
-
-def _toy_material():
-    """The canon's flocked vinyl, coloured by the sculpt's painted vertices and
-    multiplied by the object's own colour -- which is how one mesh serves as a
-    near tree and a darker far one without a second material."""
-    mat = bpy.data.materials.get("Toy flock")
-    if mat is not None:
-        return mat
-    # Nap 0.25, not the preview's 0.62: at plate scale the grain read as a
-    # fuzzy, buzzing surface -- "hurts my eyes". A toy's velvet is soft, and
-    # softness at this distance is smoothness.
-    return toybox.flock_painted("Toy flock", nap=0.25, chroma=TOY_LIGHT["chroma"])
-
-
-def _kit_mesh(name: str):
-    mesh = _KIT_MESHES.get(name)
-    if mesh is not None:
-        return mesh
-    bpy.ops.wm.ply_import(filepath=str(KIT_DIR / f"{name}.ply"))
-    obj = bpy.context.selected_objects[0]
-    mesh = obj.data
-    mesh.name = f"kit_{name}"
-    mesh.polygons.foreach_set("use_smooth", [True] * len(mesh.polygons))
-    mesh.materials.clear()
-    mesh.materials.append(_toy_material())
-    mesh.use_fake_user = True   # outlives clean() between scenes
-    bpy.data.objects.remove(obj, do_unlink=True)
-    _KIT_MESHES[name] = mesh
-    return mesh
+# Loading, material and staleness live in `kitbridge` -- shared with Home.
+ensure_kit = kitbridge.ensure_kit
 
 
 def kit(name: str, x: float, y: float, s: float = 1.0, tint: float = 1.0,
         flip: bool = False, stretch: float = 1.0):
     """Stand one kit object in the scene. Instances share one mesh."""
-    obj = bpy.data.objects.new(f"kit_{name}_{x:.1f}_{y:.1f}", _kit_mesh(name))
+    obj = bpy.data.objects.new(f"kit_{name}_{x:.1f}_{y:.1f}", kitbridge.mesh(name, TOY_LIGHT["chroma"]))
     bpy.context.scene.collection.objects.link(obj)
     wx, wy = TURN(x, y)
     obj.location = (wx, wy, 0.0)
@@ -1154,6 +1157,20 @@ def kit(name: str, x: float, y: float, s: float = 1.0, tint: float = 1.0,
     v = tint * (TOY_LIGHT["kit_exposure"] if SCULPTED else SUN_EXPOSURE)
     obj.color = (v, v, v, 1.0)
     return obj
+
+
+def _scatter(i: int):
+    """The i-th point of an even 2-D scatter, repeatable, in [0, 1)^2.
+
+    THE R2 SEQUENCE, not the golden ratio twice. Every scatter here used
+    0.618 for x and 0.382 for y -- and since those sum to exactly 1, every
+    point landed on ONE LINE: the park's grass tufts marched diagonally
+    across the lawn in a row, in every scene, since the scatter was written.
+    R2 steps by the two powers of the plastic constant's inverse, whose ratio
+    is irrational, so the points fill the square instead of a line.
+    """
+    g = 1.32471795724474602596
+    return (0.5 + i / g) % 1.0, (0.5 + i / (g * g)) % 1.0
 
 
 def _toy(hex_colour: str, chroma: float = None, value: float = 1.0) -> str:
@@ -1174,10 +1191,7 @@ def _pick(kind: str, x: float, y: float):
     here: the first cut said `% 6` in this file beside a `range(6)` in the kit,
     which is two copies of one number waiting to disagree.
     """
-    names = sorted(n for n in json.loads((KIT_DIR / "kit.json").read_text())["objects"]
-                   if n.startswith(kind + "_"))
-    if not names:
-        raise RuntimeError(f"the sculpt kit has no {kind}_* objects")
+    names = kitbridge.variants(kind)
     h = zlib.crc32(f"{kind}{x:.2f}{y:.2f}".encode())
     return names[h % len(names)], bool(h & 64)
 
@@ -1310,6 +1324,22 @@ def _path():
         obj = _poly(name, left + right[::-1], z, mat)
         if SCULPTED:
             _mould(obj, toybox.flock("Path toy", _toy(tone("paving", "base"), 1.3, TOY_LIGHT["ground_value"] * 0.95), nap=0.0))
+
+
+def _path_stones():
+    """Little round edging stones along both sides of the park path, the way a
+    playset edges its paths. Follows the same centre line as `_path`."""
+    for i in range(40):
+        t = i / 39.0
+        y = -40.0 + t * 81.0
+        if y > 30.0:
+            break
+        w = 2.2 - t * 1.95 + 0.25
+        centre = math.sin(t * 5.2) * 0.5
+        for side in (-1, 1):
+            x = centre + side * w
+            name, flip = _pick("pebble", x, y)
+            kit(name, x, y, 1.6 - t * 0.7, flip=flip)
 
 
 def _mould(obj, mat, thickness: float = 0.10, lip: float = 0.07):
@@ -1625,8 +1655,12 @@ def beach():
     _band("wet", 19.4, 25.4, 0.006, wet)
 
     # Shallows to deep water, as one continuous ramp.
+    # A sculpted sea is a toy's moulded water: a clear, deeper blue. Under
+    # the toy light the palette's own sea washed out to pale mint.
+    sea_near, sea_far = ((_toy(tone("sea", "base"), 1.45, 0.86), _toy(tone("sea", "shade"), 1.5, 1.05))
+                         if SCULPTED else (tone("sea", "base"), tone("sea", "shade")))
     _band("sea", 25.0, 43.0, 0.005,
-          depth_material("Sea", tone("sea", "base"), tone("sea", "shade"), self_lit=0.22))
+          depth_material("Sea", sea_near, sea_far, self_lit=0.22))
 
     _surf(25.0)
     _headland(40.0)
@@ -1703,8 +1737,7 @@ def beach():
     # not enough to be texture and too many to be objects; the park runs 70
     # tufts over a comparable field.
     for i in range(76):
-        t = (i * 0.6180339887) % 1.0
-        u = (i * 0.3819660113) % 1.0
+        t, u = _scatter(i)
         x = -13.5 + t * 27.0
         y = -25.0 + u * 50.0
         if abs(x) < 3.0 and y < 0.0:
@@ -1712,7 +1745,7 @@ def beach():
         if y > 19.0:
             continue  # past the tide line is water, and nothing grows in it
         if i % 4 == 0:
-            _pebble(x, y, 0.7 + u * 0.7)
+            _pebble(x, y, (0.7 + u * 0.7) * (0.6 if SCULPTED else 1.0))   # sculpted pebbles read as litter at full size
         elif i % 4 == 1:
             _shells(x, y, 0.8 + u * 0.5)
         else:
