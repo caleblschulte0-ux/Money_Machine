@@ -46,6 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from palette import light_hex, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import crown, shaft, stack  # noqa: E402  -- and the one place a SHAPE comes from
 from ink import INK, contour_on  # noqa: E402  -- and the one place an EDGE comes from
+import ink as ink_switch  # noqa: E402  -- the switch itself, flipped per scene style
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
 
@@ -56,6 +57,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # This is a new way to COMPOSE the same world, not a second world.
 import forms
 import world_prop_pack as pack  # noqa: E402
+import toybox  # noqa: E402  -- the canon's flocked material, for sculpted scenes
 
 OUT = ROOT / "art-review" / "world-scenes"
 OUT.mkdir(parents=True, exist_ok=True)
@@ -469,7 +471,18 @@ def park():
     the frame stays clear -- that is where the dog stands, and he is drawn by
     the app on top of this.
     """
-    ground(tone("grass", "base"))
+    if SCULPTED:
+        # A QUIET FIELD. art-hierarchy measures Barkly's saturation against the
+        # whole plate's, and the lawn is most of the plate: at full grass
+        # chroma the sculpted park measured a gap of +0.09 against a +0.18
+        # floor. The concept sheet's own words are "made to stand out on any
+        # shelf" -- the ground is the shelf.
+        # And SOFT: the primitive lawn's tooth (bump 0.10) is per-pixel grit,
+        # which is both wrong for a flocked playmat and incompressible -- the
+        # ground-only bottom strip of the plate cost 76 KB of a 425 KB file.
+        ground(_quiet(tone("grass", "base")), _quiet(tone("grass", "lit")), bump=0.03)
+    else:
+        ground(tone("grass", "base"))
     # Where the dog stands, how tall a world unit is there, and the horizon.
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
@@ -991,12 +1004,142 @@ def _poly(name: str, points, z: float, mat):
     return obj
 
 
+# ---------------------------------------------------------------------------
+# THE SCULPTED CONSTRUCTION.
+#
+# Operator, 2026-09-23, after every lighting, palette and proportion pass on
+# the primitive build: the problem was "the whole art style itself", and then
+# "this all needs to be procedurally generated". The builders below make each
+# object out of Blender primitives -- lathes, spheres, bevelled cubes -- and
+# however they are shaded, a pile of primitives reads as a pile of parts.
+#
+# `tools/sculpt/kit.py` is the other construction: every object is a seeded
+# signed-distance field, smooth-unioned so its parts melt into one body the
+# way a sculpted vinyl toy does, painted by which way each part faces. This
+# pack still decides WHERE everything goes -- the composition is unchanged --
+# and a sculpted scene asks the kit what each thing IS.
+#
+# A sculpted scene is also LIT like the canon rather than banded and inked:
+# Barkly is a flocked vinyl toy under soft light, and a toy tree with a cel
+# band and a black outline is two art styles in one frame.
+#
+# Which scenes are sculpted is this table, and going back is one word in it
+# (or SCENE_STYLE=primitive for a single run) -- the primitive builders are
+# untouched underneath.
+SCENE_STYLE = {"park": "sculpt", "town": "primitive", "beach": "primitive"}
+SCULPTED = False  # set per scene by main(), read by every builder
+KIT_DIR = ROOT / "art-review" / "sculpt" / "kit"
+_KIT_MESHES: dict = {}
+
+#: The kit is painted against the canon's STUDIO light (render_sculpt.py) and
+#: this scene is lit by a sun at 10x that energy. Unscaled, the first sculpted
+#: park rendered lime foliage, a coral roof and an orange bench -- the same
+#: paint, just overexposed. One exposure for the whole kit, not a per-object
+#: fudge; `tint` below is relative to it.
+SUN_EXPOSURE = 0.80
+
+
+def _kit_python() -> str:
+    import shutil
+    exe = shutil.which("python3")
+    if exe is None:
+        raise RuntimeError("the sculpt kit needs a system python3 (numpy + scikit-image) beside Blender")
+    return exe
+
+
+def ensure_kit():
+    """Sculpt the kit if it is missing or was made by different rules.
+
+    Fails LOUD rather than falling back to primitives: a park that quietly
+    rendered in the old style because a dependency was missing would ship the
+    look the operator rejected, with a green check on it.
+    """
+    import subprocess
+    kit = ROOT / "tools" / "sculpt" / "kit.py"
+    want = subprocess.run([_kit_python(), str(kit), "--hash"], capture_output=True, text=True,
+                          check=True).stdout.strip()
+    index = KIT_DIR / "kit.json"
+    have = json.loads(index.read_text()).get("source") if index.exists() else None
+    if have != want:
+        print(f"sculpt kit stale ({have} != {want}); sculpting")
+        subprocess.run([_kit_python(), str(kit), "--out", str(KIT_DIR)], check=True)
+
+
+def _toy_material():
+    """The canon's flocked vinyl, coloured by the sculpt's painted vertices and
+    multiplied by the object's own colour -- which is how one mesh serves as a
+    near tree and a darker far one without a second material."""
+    mat = bpy.data.materials.get("Toy flock")
+    if mat is not None:
+        return mat
+    return toybox.flock_painted("Toy flock", nap=0.62)
+
+
+def _kit_mesh(name: str):
+    mesh = _KIT_MESHES.get(name)
+    if mesh is not None:
+        return mesh
+    bpy.ops.wm.ply_import(filepath=str(KIT_DIR / f"{name}.ply"))
+    obj = bpy.context.selected_objects[0]
+    mesh = obj.data
+    mesh.name = f"kit_{name}"
+    mesh.polygons.foreach_set("use_smooth", [True] * len(mesh.polygons))
+    mesh.materials.clear()
+    mesh.materials.append(_toy_material())
+    mesh.use_fake_user = True   # outlives clean() between scenes
+    bpy.data.objects.remove(obj, do_unlink=True)
+    _KIT_MESHES[name] = mesh
+    return mesh
+
+
+def kit(name: str, x: float, y: float, s: float = 1.0, tint: float = 1.0,
+        flip: bool = False, stretch: float = 1.0):
+    """Stand one kit object in the scene. Instances share one mesh."""
+    obj = bpy.data.objects.new(f"kit_{name}_{x:.1f}_{y:.1f}", _kit_mesh(name))
+    bpy.context.scene.collection.objects.link(obj)
+    wx, wy = TURN(x, y)
+    obj.location = (wx, wy, 0.0)
+    obj.rotation_euler = (0.0, 0.0, THETA)   # the kit faces -y; the camera is yawed THETA
+    obj.scale = (s * stretch * (-1.0 if flip else 1.0), s, s)
+    v = tint * SUN_EXPOSURE
+    obj.color = (v, v, v, 1.0)
+    return obj
+
+
+def _quiet(hex_colour: str, f: float = 0.68) -> str:
+    """A palette tone with its saturation scaled down -- same family, same
+    value, less voice."""
+    import colorsys
+    r, g, b = (int(hex_colour[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    h, sat, v = colorsys.rgb_to_hsv(r, g, b)
+    r, g, b = colorsys.hsv_to_rgb(h, sat * f, v)
+    return "#%02X%02X%02X" % (round(r * 255), round(g * 255), round(b * 255))
+
+
+def _pick(kind: str, x: float, y: float):
+    """A repeatable variant and handedness per position -- never random.
+
+    The variants are whatever the kit made (`kit.json`), not a count written
+    here: the first cut said `% 6` in this file beside a `range(6)` in the kit,
+    which is two copies of one number waiting to disagree.
+    """
+    names = sorted(n for n in json.loads((KIT_DIR / "kit.json").read_text())["objects"]
+                   if n.startswith(kind + "_"))
+    if not names:
+        raise RuntimeError(f"the sculpt kit has no {kind}_* objects")
+    h = zlib.crc32(f"{kind}{x:.2f}{y:.2f}".encode())
+    return names[h % len(names)], bool(h & 64)
+
+
 def _hedge(x: float, y: float, length: float, s: float = 1.0):
     """A run of hedge, for the middle distance.
 
     Four trees and a bench on open grass gives a scene a back and a front and
     no middle. This is the middle.
     """
+    if SCULPTED:
+        name, _ = _pick("hedge", x, y)
+        return kit(name, x, y + math.sin(x) * 0.12, s, stretch=length / 9.0)
     body = pack.material(f"Hedge{x:.1f}", tone("foliage", "shade"), roughness=0.92)
     top = pack.material(f"HedgeTop{x:.1f}", tone("foliage", "base"), roughness=0.90)
     n = max(3, int(length / 0.9))
@@ -1010,6 +1153,9 @@ def _hedge(x: float, y: float, length: float, s: float = 1.0):
 
 def _bush(x: float, y: float, s: float = 1.0):
     """A shrub for the near corners. Foreground is mass, not detail."""
+    if SCULPTED:
+        name, flip = _pick("bush", x, y)
+        return kit(name, x, y, s, flip=flip)
     # ONE STEP UP THE RAMP, all three. Built against the smooth shading these
     # were shade / base with a deep skirt, and banding put the skirt's whole
     # face into the bottom tone at once -- so a shrub read as a near-black
@@ -1046,6 +1192,10 @@ def _bush(x: float, y: float, s: float = 1.0):
 
 def _flowers(x: float, y: float, s: float = 1.0, petal_hex: str | None = None):
     petal_hex = tone("sun", "lit") if petal_hex is None else petal_hex
+    if SCULPTED:
+        family = next((f for f in ("berry", "sun", "cream", "grape")
+                       if petal_hex in (tone(f, "lit"), tone(f, "pop"), tone(f, "base"))), "sun")
+        return kit(f"flowers_{family}", x, y, 1.0 * s, flip=bool(zlib.crc32(f"{x}{y}".encode()) & 64))
     petal = pack.material(f"Petal{x:.2f}{y:.2f}", petal_hex, roughness=0.80)
     stem = pack.material(f"Stem{x:.2f}{y:.2f}", tone("grass", "shade"), roughness=0.90)
     for i in range(7):
@@ -1101,7 +1251,35 @@ def _path():
             w += grow * (1.0 - t * 0.45)
             left.append((wobble - w, y))
             right.append((wobble + w, y))
-        _poly(name, left + right[::-1], z, mat)
+        if SCULPTED and name == "path_verge":
+            # The verge was a band of darker grass standing in for an edge
+            # line; a sculpted scene has no drawn edges, and the moulded lip
+            # below gives the path a real one.
+            continue
+        obj = _poly(name, left + right[::-1], z, mat)
+        if SCULPTED:
+            _mould(obj, toybox.flock("Path toy", tone("paving", "base"), nap=0.0))
+
+
+def _mould(obj, mat, thickness: float = 0.10, lip: float = 0.07):
+    """Turn a flat ground polygon into a moulded playmat piece: a little
+    thickness and a rolled edge, the way a toy's path is cast rather than
+    painted on. Same outline -- the shape still lives in the caller."""
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
+    solid = obj.modifiers.new("thickness", "SOLIDIFY")
+    solid.thickness = thickness
+    solid.offset = 1.0
+    bevel = obj.modifiers.new("lip", "BEVEL")
+    bevel.width = lip
+    bevel.segments = 4
+    bevel.limit_method = "ANGLE"
+    for poly in obj.data.polygons:
+        poly.use_smooth = True
+    if hasattr(obj.data, "use_auto_smooth"):   # Blender 4.0; 4.1+ smooths by angle itself
+        obj.data.use_auto_smooth = True
+        obj.data.auto_smooth_angle = math.radians(50)
+    return obj
 
 
 def _bandstand(x: float, y: float, s: float = 1.0):
@@ -1119,6 +1297,8 @@ def _bandstand(x: float, y: float, s: float = 1.0):
     size without needing detail. Centre-back, so the dog stands in front of it
     the way he stands in front of BARKLY'S.
     """
+    if SCULPTED:
+        return kit("bandstand", x, y, s)
     post = pack.material(f"Band post{x:.1f}", tone("cream", "pop"), roughness=0.72)
     roof = pack.material(f"Band roof{x:.1f}", tone("roof", "base"), roughness=0.70)
     trim = pack.material(f"Band trim{x:.1f}", tone("sea", "base"), roughness=0.68)
@@ -1267,6 +1447,12 @@ def _tree(x: float, y: float, s: float, canopy: str | None = None,
     The trunk is lathed with a root flare and a slight lean, so it grows out
     of the ground instead of being pushed into it.
     """
+    if SCULPTED:
+        # The far row and the left proscenium ask for `foliage shade`: the
+        # same sculpt, darkened by the object colour, reads further away.
+        name, flip = _pick("tree", x, y)
+        tint = 0.70 if canopy == tone("foliage", "shade") else 1.0
+        return [kit(name, x, y, s, tint=tint, flip=flip)]
     canopy = tone("foliage", "base") if canopy is None else canopy
     trunk = tone("bark", "base") if trunk is None else trunk
     bark = pack.material(f"Bark{x:.1f}{y:.1f}", trunk, roughness=0.92)
@@ -1299,6 +1485,8 @@ def _tree(x: float, y: float, s: float, canopy: str | None = None,
 
 
 def _bench(x: float, y: float):
+    if SCULPTED:
+        return kit("bench", x, y, 1.0)
     wood = pack.material("Bench wood", tone("wood", "base"), roughness=0.72)
     iron = pack.material("Bench iron", tone("metal", "shade"), roughness=0.60, metallic=0.4)
     # Same argument as _tree: this is park/bench.png at plate scale, so it gets
@@ -1318,6 +1506,9 @@ def _bench(x: float, y: float):
 
 
 def _tuft(x: float, y: float, s: float):
+    if SCULPTED:
+        name, flip = _pick("tuft", x, y)
+        return kit(name, x, y, s, flip=flip)
     mats = (
         pack.material(f"Blade{x:.2f}{y:.2f}a", tone("grass", "base"), roughness=0.90),
         pack.material(f"Blade{x:.2f}{y:.2f}b", tone("grass", "lit"), roughness=0.90),
@@ -1835,13 +2026,22 @@ def main():
             continue
         clean()
         ANCHORS.clear()
+        global SCULPTED
+        style = os.environ.get("SCENE_STYLE", "").strip() or SCENE_STYLE.get(name, "primitive")
+        SCULPTED = style == "sculpt"
+        saved = (ink_switch.CONTOUR, pack.BANDS)
+        if SCULPTED:
+            ensure_kit()
+            # Lit like the canon: no cel bands, no drawn edge.
+            ink_switch.CONTOUR, pack.BANDS = False, 0
         camera = setup(ortho, target, energy, sun_hex, ambient, name)
         builder()
         path = OUT / f"{name}.png"
         scene = bpy.context.scene
         scene.render.filepath = str(path)
         bpy.ops.render.render(write_still=True)
-        print(f"rendered {path}")
+        ink_switch.CONTOUR, pack.BANDS = saved
+        print(f"rendered {path} ({style})")
 
         w, h = RESOLUTION
         points = {}

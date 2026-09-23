@@ -152,6 +152,30 @@ def flock(name, colour, sheen=0.62, roughness=0.94, nap=1.0):
     return mat
 
 
+def flock_painted(name, nap=1.0):
+    """`flock`, coloured per VERTEX instead of by one constant -- for sculpted
+    meshes (tools/sculpt), whose paint is baked into a colour attribute.
+
+    The painted colour is multiplied by the object's own colour, so one mesh
+    can stand in a scene as a near tree and a darker far one without a second
+    material. The constant handed to `flock` is only a placeholder the links
+    below replace; it comes from the palette like every colour in a pack.
+    """
+    mat = flock(name, tone("cream", "base"), nap=nap)
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    paint = nt.nodes.new("ShaderNodeVertexColor")
+    paint.layer_name = "Col"
+    info = nt.nodes.new("ShaderNodeObjectInfo")
+    mul = nt.nodes.new("ShaderNodeMixRGB")
+    mul.blend_type = "MULTIPLY"
+    mul.inputs["Fac"].default_value = 1.0
+    nt.links.new(paint.outputs["Color"], mul.inputs["Color1"])
+    nt.links.new(info.outputs["Color"], mul.inputs["Color2"])
+    nt.links.new(mul.outputs["Color"], bsdf.inputs["Base Color"])
+    return mat
+
+
 # --- LIGHT --------------------------------------------------------------
 #: EVERY OBJECT CARRIES A CHARCOAL NOTE. This is the rule that took longest to
 #: see, because it does not look like a lighting rule and it is not one.

@@ -80,7 +80,57 @@ def capsule(a, b, ra, rb=None, paint=0):
     return f
 
 
+def cylinder(r, h, radius=0.0, paint=0):
+    """An upright rounded cylinder, radius r, height h, base on z=0."""
+    def f(p):
+        q = np.stack([np.hypot(p[:, 0], p[:, 1]) - (r - radius), np.abs(p[:, 2] - h / 2) - (h / 2 - radius)], 1)
+        d = np.linalg.norm(np.maximum(q, 0), axis=1) + np.minimum(q.max(1), 0) - radius
+        return d, np.full(len(p), paint)
+    return f
+
+
+def cone(r0, r1, h, paint=0):
+    """A frustum on z=0, radius r0 at the foot and r1 at height h (a bound,
+    exact enough for marching cubes)."""
+    slope = (r0 - r1) / h
+    norm = np.sqrt(1 + slope * slope)
+
+    def f(p):
+        z = p[:, 2]
+        side = (np.hypot(p[:, 0], p[:, 1]) - (r0 - slope * np.clip(z, 0, h))) / norm
+        return np.maximum(side, np.maximum(-z, z - h)), np.full(len(p), paint)
+    return f
+
+
+def torus(R, r, paint=0):
+    """A ring lying flat, major radius R, tube radius r, centred on z=0."""
+    def f(p):
+        q = np.stack([np.hypot(p[:, 0], p[:, 1]) - R, p[:, 2]], 1)
+        return np.linalg.norm(q, axis=1) - r, np.full(len(p), paint)
+    return f
+
+
 # ------------------------------------------------------------------ operators
+
+
+def union(*fields):
+    """Hard union: parts that TOUCH without melting (a post under a roof)."""
+    def f(p):
+        d, m = fields[0](p)
+        for g in fields[1:]:
+            d2, m2 = g(p)
+            m = np.where(d2 < d, m2, m)
+            d = np.minimum(d, d2)
+        return d, m
+    return f
+
+
+def sit(field, z=0.0, k=0.06):
+    """Flatten everything below the ground plane, so an object SITS on the lawn
+    instead of floating a sphere's curve above it."""
+    def below(p):   # the half-space under the ground, as a field
+        return p[:, 2] - z, np.zeros(len(p), int)
+    return smooth_subtract(field, below, k=k)
 
 
 def smooth_union(*fields, k=0.3):
@@ -135,7 +185,9 @@ def mesh(field, lo, hi, res=0.03):
     n = np.ceil((hi - lo) / res).astype(int) + 1
     axes = [np.linspace(lo[i], hi[i], n[i]) for i in range(3)]
     g = np.stack(np.meshgrid(*axes, indexing="ij"), -1).reshape(-1, 3)
-    d, _ = field(g)
+    # In chunks: a bandstand at kit resolution is several million samples and
+    # every operator allocates a copy per part.
+    d = np.concatenate([field(g[i:i + 400_000])[0] for i in range(0, len(g), 400_000)])
     vol = d.reshape(n)
     step = (hi - lo) / (n - 1)
     verts, faces, normals, _ = marching_cubes(vol, 0.0, spacing=tuple(step))
@@ -147,16 +199,22 @@ def mesh(field, lo, hi, res=0.03):
 
 
 def write_ply(path, verts, faces, colours):
-    """Binary-free ASCII PLY with per-vertex colour; Blender imports it."""
-    with open(path, "w") as fh:
-        fh.write("ply\nformat ascii 1.0\n")
-        fh.write(f"element vertex {len(verts)}\nproperty float x\nproperty float y\nproperty float z\n")
-        fh.write("property uchar red\nproperty uchar green\nproperty uchar blue\n")
-        fh.write(f"element face {len(faces)}\nproperty list uchar int vertex_indices\nend_header\n")
-        for (x, y, z), (r, g, b) in zip(verts, colours):
-            fh.write(f"{x:.5f} {y:.5f} {z:.5f} {r} {g} {b}\n")
-        for a, b, c in faces:
-            fh.write(f"3 {a} {c} {b}\n")   # marching-cubes winding -> outward normals
+    """Binary PLY with per-vertex colour; Blender imports it. Binary because a
+    park kit is a few hundred thousand faces and ASCII was the slow half."""
+    v = np.zeros(len(verts), dtype=[("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("r", "u1"), ("g", "u1"), ("b", "u1")])
+    v["x"], v["y"], v["z"] = verts[:, 0], verts[:, 1], verts[:, 2]
+    v["r"], v["g"], v["b"] = colours[:, 0], colours[:, 1], colours[:, 2]
+    f = np.zeros(len(faces), dtype=[("n", "u1"), ("a", "<i4"), ("b", "<i4"), ("c", "<i4")])
+    f["n"] = 3
+    # marching-cubes winding -> outward normals
+    f["a"], f["b"], f["c"] = faces[:, 0], faces[:, 2], faces[:, 1]
+    with open(path, "wb") as fh:
+        fh.write(b"ply\nformat binary_little_endian 1.0\n")
+        fh.write(f"element vertex {len(verts)}\nproperty float x\nproperty float y\nproperty float z\n".encode())
+        fh.write(b"property uchar red\nproperty uchar green\nproperty uchar blue\n")
+        fh.write(f"element face {len(faces)}\nproperty list uchar int vertex_indices\nend_header\n".encode())
+        fh.write(v.tobytes())
+        fh.write(f.tobytes())
 
 
 def airbrush(normals, verts, ramp, lift=0.0):

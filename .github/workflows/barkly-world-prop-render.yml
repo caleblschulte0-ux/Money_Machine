@@ -21,6 +21,9 @@ on:
       # is the copy nobody remembers to edit. Over-triggering a render costs
       # ten minutes of a runner; under-triggering ships a world lit two ways.
       - 'barkly/app/tools/blender/**'
+      # The sculpt kit decides what the sculpted scenes' objects ARE; a change
+      # there that did not re-render the plate would ship yesterday's park.
+      - 'barkly/app/tools/sculpt/**'
       - 'barkly/app/scripts/promote-props.py'
       - '.github/workflows/barkly-world-prop-render.yml'
   workflow_dispatch:
@@ -47,7 +50,11 @@ jobs:
       - name: Install free Blender renderer
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender libegl1 libgl1-mesa-dri xvfb imagemagick python3-pil
+          # numpy + scikit-image: the sculpt kit (tools/sculpt) meshes its
+          # distance fields with marching cubes in system python, beside
+          # Blender. world_scene_pack fails loud without them rather than
+          # quietly rendering the park in the primitive style.
+          sudo apt-get install -y blender libegl1 libgl1-mesa-dri xvfb imagemagick python3-pil python3-numpy python3-skimage
           blender --version
 
       - name: Render modular world prop pack

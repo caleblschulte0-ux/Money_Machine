@@ -180,6 +180,54 @@ followed here: **one prop, finished, judged — before any of it is rolled out.*
 The tree was chosen because eleven of them are in the park plate, so a style
 that does not hold on a tree does not hold.
 
+## The sculpted construction (2026-09-23) — the world is procedural
+
+Operator: *"This all needs to be procedurally generated."* Every procedural
+pass before this one SNAPPED primitives together — lathes, spheres, bevelled
+cubes — and however it was lit, a pile of primitives reads as a pile of parts.
+A vinyl toy is sculpted: one mass whose forms melt into each other.
+
+- `tools/sculpt/sdf.py` — signed-distance primitives (ellipsoid, capsule,
+  rounded box/cylinder, cone, torus), smooth union / subtract, a low-frequency
+  domain warp for the hand in the clay, marching cubes, coloured binary PLY.
+- `tools/sculpt/kit.py` — every park object as a seeded field: six trees,
+  three bushes, two hedges, the bench, the bandstand (its scalloped eave is a
+  blend, which primitives cannot make), four flower beds, three tufts. Painted
+  by which way each part faces, the way a factory airbrushes a toy, with warm
+  undersides. `python3 tools/sculpt/kit.py` sculpts it (~100 s, gitignored).
+- `tools/blender/world_scene_pack.py` — `SCENE_STYLE` says which scenes are
+  sculpted. A sculpted scene keeps the same composition, asks the kit what each
+  object IS, renders it in the canon's flocked material, and drops the cel
+  bands and the ink. It sculpts the kit itself when the kit's source hash is
+  stale, and fails loud without numpy + scikit-image rather than quietly
+  rendering the old style. **Going back is one word** in that table, or
+  `SCENE_STYLE=primitive` for a single run.
+
+Rules learned building the park, each one measured:
+
+- **Paint the object's colour, let the light make the highlight.** Painting
+  the palette's `lit` step on a lit sculpt counted the highlight twice: mint
+  canopy, sat 0.20 / val 0.80.
+- **Tune in the scene, not the studio.** The warm sun adds ~0.2 saturation the
+  studio preview never shows; with a studio-tuned boost the plate's foliage
+  measured sat 0.65 (lime). The kit ships in the scene. `SUN_EXPOSURE` is one
+  exposure for the whole kit, not a per-object fudge.
+- **The ground is the shelf.** A quieter lawn (`_quiet`, 0.68 of the palette's
+  chroma, soft grain) is what lets the character be the loud object.
+
+The park, primitive vs sculpted, on `art-hierarchy.py` (quantised as shipped):
+
+| | peak band (≤45%) | chroma gap (≥+0.18) | darks (≥1%) | warm shadow (≥40%) |
+|---|---|---|---|---|
+| primitive (shipped) | 61.9% | +0.138 | 4.6% | 73.1% |
+| sculpted | 45.0% | +0.136 | 6.4% | 27.9% |
+
+The warm-shadow drop is honest and explained: the primitive plate's warm darks
+were its INK LINES (hue 34, the ink colour), not its shadows. Without ink, the
+darkest 15% is lawn in cast shadow, green at hue ~85. Passing that floor means
+a warm-shadow treatment of the lawn, which is the next decision, not a number
+to chase by putting the line back.
+
 ## What is blocked, with numbers
 
 `scripts/art-hierarchy.py` measures whether Barkly still reads against his
@@ -193,9 +241,7 @@ script reports and is deliberately not a CI gate — `npm run art:hierarchy`.
 
 ## What is NOT decided yet
 
-- Whether the whole world converts. One prop is proof the style exists and
-  reproduces; it is not proof it survives a hundred props or a full scene.
-- The ground plane, the sky and the far treeline have no answer here at all.
-  A flocked toy sits ON something, and what that something is in this style is
-  an open question.
+- Town, beach and Home are still primitive. The park is the first sculpted
+  scene; the rest convert the same way, one at a time, each judged on its own.
+- The lawn's shadows (see the warm-shadow row above).
 - The UI. It is still drawn in its own language.

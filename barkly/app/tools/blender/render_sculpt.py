@@ -31,13 +31,7 @@ for poly in obj.data.polygons:
     poly.use_smooth = True
 
 # Flocked vinyl, but coloured by the sculpt's paint instead of one constant.
-mat = toybox.flock("Sculpt flock", "#808080", nap=0.62)
-nt = mat.node_tree
-bsdf = nt.nodes["Principled BSDF"]
-attr = nt.nodes.new("ShaderNodeVertexColor")
-colattr = obj.data.color_attributes[0].name if obj.data.color_attributes else "Col"
-attr.layer_name = colattr
-nt.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
+mat = toybox.flock_painted("Sculpt flock", nap=0.62)
 obj.data.materials.clear()
 obj.data.materials.append(mat)
 
