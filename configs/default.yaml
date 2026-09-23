@@ -64,7 +64,7 @@ detection:
     fish_classes: []
   # Our own detector, trained with `fishai lab train` (no Ultralytics).
   torchvision:
-    model: models/ours/detector.pt
+    model: models/ours_v1/detector.pt   # best so far; see docs/DETECTOR_LAB.md
     device: auto
 
 tracking:

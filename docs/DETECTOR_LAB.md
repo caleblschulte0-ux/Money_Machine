@@ -105,6 +105,8 @@ Denison barbs tank and the waiting-room tank; labels are Fishial's).
 | Fishial (bootstrap) | its own real photos | 0.48 | 0.32 | 0.04 | 0.34 | (is the label source) | | |
 | **ours v1** | 3,600 synthetic frames, 3 epochs, 70 min CPU | **0.83** | 0.79 | 0.30 | 0.80 | **0.72** | **0.71** | 0.73 |
 | ours v2 | v1 + decoy synthetic + real pseudo-labels x4 | 0.83 | 0.76 | 0.26 | 0.81 | 0.55 | 0.45 | 0.70 |
+| ours v2b | v1 + decoy synthetic only (ablation) | 0.82 | 0.76 | 0.28 | 0.79 | 0.54 | 0.51 | 0.58 |
+| ours v3 | v1 + fresh decoy-free synthetic, selected on real frames | 0.82 | 0.75 | n/a | n/a | 0.57 | 0.61 | 0.53 |
 
 The v1 held-out numbers include the post-processing added in round 2 (NMS
 0.4, no box over half the frame, no box wrapping two others); before it
@@ -120,11 +122,17 @@ What the numbers say:
   and the room seen through the glass behind the waiting-room tank, and
   wrapper boxes around several fish. Nothing in the synthetic tanks looked
   like a room behind glass.
-- **Round 2 made it worse on real footage** even though it improved on
-  synthetic. The leading suspect is the real pseudo-labels: Fishial's
-  boxes miss many fish, so every missed fish was taught as background, and
-  those frames were weighted four times. The ablation below separates that
-  from the decoys.
+- **More synthetic training did not help on real footage.** v2, the
+  decoy-only ablation v2b and the decoy-free v3 all improved or held on
+  synthetic and all scored below v1 on the held-out tanks. Neither the
+  pseudo-labels nor the decoys is the single cause: continued training on
+  rendered footage fits the renderer, not fish.
+- **The evaluation set is too small to rank close models.** On the 263 real
+  frames from the non-held-out clips (which v1, v2b and v3 never trained
+  on) the three score F1 0.49, 0.46 and 0.50: within noise of each other.
+  On the 60 held-out frames they spread from 0.54 to 0.72. Part of v1's
+  lead is a small test set. (v2 scores 0.88 there only because it trained
+  on those very frames.)
 - **Fishial's low synthetic recall mostly measures the renderer**: it finds
   54% of the cartoon fish but only 12% of pasted real fish, while handling
   real video well. Pasted fish do not yet look real enough to a detector
@@ -133,3 +141,26 @@ What the numbers say:
 - **Small, distant fish are the weak spot for everyone** (0.30 at best).
   Training at a higher input resolution is the obvious lever and costs CPU
   time; a GPU removes the trade-off.
+
+## What this means, and what to do next
+
+Synthetic footage from the rail's view is enough to get a working detector
+with no Ultralytics and no labelling: v1 finds the same fish as Fishial in
+a real tank it never saw. It is not enough, alone, to beat Fishial on real
+footage, and more of it stops helping quickly. Current default: **v1**
+(`models/ours_v1/detector.pt`, not committed; reproduce with the commands
+in this file).
+
+The next gains come from real footage, in this order:
+
+1. **A bigger, human-checked real test set.** A few hundred frames from
+   several tanks with reviewed (gold) boxes, so models that differ by 0.05
+   can be ranked honestly. Fish-store phone footage is the fastest source.
+2. **Real training frames with reviewed labels**, mixed with synthetic. The
+   pseudo-label shortcut taught missed fish as background; reviewed labels
+   remove that.
+3. **Select checkpoints on real frames**, never on synthetic (`--val` with a
+   real set; the trainer supports it).
+4. **Renderer realism** (edge blending, lighting match, motion blur) so
+   pasted fish look real to a detector trained on photographs.
+5. **Higher resolution and RF-DETR** once a GPU is available.

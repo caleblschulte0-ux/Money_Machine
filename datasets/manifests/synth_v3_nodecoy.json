@@ -1,0 +1,69 @@
+{
+  "name": "synth_v3_nodecoy",
+  "kind": "synthetic",
+  "created_at": "2026-09-23T02:31:11+00:00",
+  "out_dir": "/home/user/Money_Machine/datasets/synth_v3_nodecoy",
+  "frames": 3000,
+  "boxes": 14335,
+  "night_frames": 577,
+  "frames_without_fish": 67,
+  "labels_dropped_as_hidden_or_tiny": 1773,
+  "train": 2700,
+  "val": 300,
+  "seed": 2,
+  "render_config": {
+    "width": 640,
+    "height": 360,
+    "tank_length_cm": [
+      45.0,
+      120.0
+    ],
+    "tank_width_cm": [
+      25.0,
+      45.0
+    ],
+    "water_depth_cm": [
+      25.0,
+      50.0
+    ],
+    "camera_depth_fraction": [
+      0.35,
+      0.65
+    ],
+    "fish_count": [
+      1,
+      12
+    ],
+    "fish_length_cm": [
+      2.0,
+      12.0
+    ],
+    "p_real_sprite": 0.7,
+    "p_real_plate": 0.7,
+    "p_lookalike_school": 0.35,
+    "p_night": 0.2,
+    "p_foreground_plants": 0.35,
+    "p_bubbles": 0.4,
+    "p_reflection": 0.5,
+    "p_distortion": 0.7,
+    "p_distractors": 0.0,
+    "distractor_count": [
+      1,
+      6
+    ],
+    "min_visible_fraction": 0.35,
+    "min_in_frame_fraction": 0.25,
+    "min_box_px": 8,
+    "jpeg_quality": [
+      60,
+      95
+    ]
+  },
+  "assets": {
+    "real_sprites": 177,
+    "plates": 7
+  },
+  "labels_are": "exact (rendered); boxes cover the VISIBLE part of each fish",
+  "asset_licences": "real sprites and plates are derived from the clips in public_clips.json (Mixkit licence: use in projects, no redistribution of the clips); procedural assets are ours",
+  "checksum": "03ae1e7beb767227"
+}
