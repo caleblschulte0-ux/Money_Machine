@@ -34,7 +34,7 @@ def V_fit(x, y):
 
 
 # per-shot crop centre (fraction of the source width) and the moves re-aimed
-VX = {"pan": 0.50, "falls": 0.50, "reading": 0.42, "worn": 0.25, "markers": 0.62, "mammoth": 0.56,
+VX = {"pan": 0.50, "falls": 0.50, "reading": 0.42, "worn": 0.25, "markers": 0.62, "mammoth": 0.50,
       "dakota": 0.66, "point": 0.62, "sync": 0.50, "bridge": 0.50, "close": 0.50}
 
 SHOTS = []
@@ -48,7 +48,7 @@ for sid, src, t_in, dur, opt in _L.SHOTS:
         o["fit"] = "width"
         o["push"] = (0.78, 2.2, V_fit(1350, 470))
     if sid == "mammoth":
-        o["move"] = ("in", 0.10, V(1080, 860, VX["mammoth"]))
+        o["move"] = ("in", 0.10, V(1240, 880, VX["mammoth"]))   # the tusk tip holds; it grows away from the edge
     if sid == "worn":
         o["pull"] = (0.4, 2.0, V(480, 600, VX["worn"]))
     SHOTS.append((sid, src, t_in, dur, o))
