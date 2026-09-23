@@ -48,7 +48,7 @@ SHOTS = [
     # the viewing tower, and the cut lands on him standing on that tower
     ("map",     None,                            0.0, 5.5, dict(gen="map")),
     ("markers", f"{RAW}/IMG_6799.MOV",           2.0, 3.0, dict(mc=True, fx="markers", move=("in", 0.03))),
-    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", rise=100, move=("in", 0.12, (1080, 760)))),
+    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", rise=100, move=("in", 0.10, (1100, 700)))),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     # safety, at the water: audio only near it, a warning too close, off
     # closer than that (operator 2026-09-22) -- the lens readout says so
@@ -141,7 +141,10 @@ FX = {
     # back is against the white water at the foot of the falls, so it
     # separates from the rock. The shot is framed 100px lower (rise) to
     # bring that ground out from under the letterbox.
-    "mammoth": dict(anchor=(1085, 890), scale=0.56, exclude=(1180, 0, 1920, 1080)),
+    # Big: at 0.56 beside him it read as a dog. It stands BEHIND him now,
+    # its tusk and trunk passing behind his arm (occluder_x: his matte is
+    # pulled from x >= 1100 every frame and laid back over it).
+    "mammoth": dict(anchor=(1165, 890), scale=0.95, exclude=(1180, 0, 1920, 1080), occluder_x=1100),
     "dakota": dict(anchor=(1275, 760), scale=0.78, exclude=(0, 0, 780, 1080)),
 }
 

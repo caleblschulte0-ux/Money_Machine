@@ -69,6 +69,35 @@ def ease_out(u):
 
 # --------------------------------------------------------------------------- prep
 
+# Moves, pushes and overlays are applied AFTER prep and do not change the
+# prepared frames; everything else in a shot's options does.
+_POST_PREP = ("move", "push", "pull", "fx")
+
+
+def cache_key(*parts):
+    return json.dumps(parts, sort_keys=True, default=str)
+
+
+def cache_ok(path, key):
+    """A cache file is valid only for the inputs that made it. The frame
+    count alone let a vertical mammoth shot re-cropped from vx 0.50 to 0.60
+    reuse the 0.50 frames -- same length, wrong picture -- and the person
+    matte was pulled from a frame he was not in (2026-09-23). The key sits
+    beside the file; a cache that predates keys is adopted once."""
+    kp = path + ".key"
+    if not os.path.exists(kp):
+        with open(kp, "w") as fh:
+            fh.write(key)
+        return True
+    with open(kp) as fh:
+        return fh.read() == key
+
+
+def write_key(path, key):
+    with open(path + ".key", "w") as fh:
+        fh.write(key)
+
+
 def prep_shot(sid, src, t_in, dur, opt):
     out = f"{SHOTS_DIR}/{sid}.mp4"
     wav = f"{SHOTS_DIR}/{sid}.wav"
@@ -79,10 +108,12 @@ def prep_shot(sid, src, t_in, dur, opt):
         have = int(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
                                    "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", out],
                                   capture_output=True, text=True).stdout.strip() or 0)
-        if have == n_frames:
+        key = cache_key(src, t_in, dur, {k: v for k, v in opt.items() if k not in _POST_PREP}, W, H)
+        if have == n_frames and cache_ok(out, key):
             print(f"  {sid}: cached")
             return
-        print(f"  {sid}: cache is {have} frames, need {n_frames} -- re-preparing")
+        print(f"  {sid}: cache is stale ({have} frames, need {n_frames}, or its inputs changed) -- re-preparing")
+        os.remove(out + ".key") if os.path.exists(out + ".key") else None
     if opt.get("black"):
         run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c=black:s={W}x{H}:r={FPS}", "-t", dur,
              "-frames:v", n_frames, *ENC, out])
@@ -189,6 +220,8 @@ def stage_prep():
     for sid, src, t_in, dur, opt in SHOTS:
         print(f"prep {sid}")
         prep_shot(sid, src, t_in, dur, opt)
+        write_key(f"{SHOTS_DIR}/{sid}.mp4",
+                  cache_key(src, t_in, dur, {k: v for k, v in opt.items() if k not in _POST_PREP}, W, H))
 
 
 # --------------------------------------------------------------------------- io helpers
@@ -848,8 +881,27 @@ def life_warp(sp, L, t):
                      borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
 
 
+def person_mattes(frames, x0):
+    """A soft matte of the person in frames[:, :, x0:] for every frame
+    (rembg u2net), smoothed over three frames so the edge does not
+    shimmer. With it an element can stand BEHIND him: the overlap is what
+    tells the eye how far back -- and so how big -- it is. Beside him and
+    in front, the mammoth read as "the size of a fucking dog" (operator
+    2026-09-23)."""
+    from rembg import new_session, remove
+    sess = new_session("u2net")
+    ms = []
+    for f in frames:
+        a = remove(cv2.cvtColor(f[:, x0:], cv2.COLOR_BGR2RGB), session=sess, only_mask=True)
+        ms.append(cv2.GaussianBlur(a.astype(np.float32) / 255.0, (0, 0), 1.0))
+    ms = np.stack(ms)
+    sm = ms.copy()
+    sm[1:-1] = (ms[:-2] + ms[1:-1] * 2 + ms[2:]) / 4
+    return sm
+
+
 def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.3),
-               reflection=None, breathe=True, color_strength=0.55, lock=False, sun=None, sat=1.0, lift=0.0, life=False):
+               reflection=None, breathe=True, color_strength=0.55, lock=False, sun=None, sat=1.0, lift=0.0, life=False, occluder_x=None):
     """Track the background, then stand a cutout on the real ground:
     colour-matched, defocus-matched, light-wrapped, with a contact shadow
     (and a water reflection when asked), dissolving in under a bloom.
@@ -885,6 +937,7 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
         rgb = sprite[:, :, :3].astype(np.float32)
         sprite[:, :, :3] = np.clip(p2 * lift + rgb * (1 - p2 * lift / 255), 0, 255).astype(np.uint8)
     L = life_maps(sw, sh) if life else None
+    occ = person_mattes(frames, occluder_x) if occluder_x is not None else None
     grain = np.random.default_rng(1)
     print(f"    focus-matched with sigma={sigma:.2f}; bg sharp={sharpness(region):.0f}")
     out = []
@@ -932,6 +985,10 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
             warped[:, :, :3] = np.clip(warped[:, :, :3] + n_, 0, 255).astype(np.uint8)
         blit(g, warped, 0, 0, 1.0)
         g = light_wrap(g, warped[:, :, 3], bg, **(dict(width=5, amount=0.4) if sun is not None else {}))
+        if occ is not None:
+            # the person in the foreground stays IN FRONT of the element
+            a_ = occ[i][:, :, None]
+            g[:, occluder_x:] = (g[:, occluder_x:] * (1 - a_) + f[:, occluder_x:] * a_).astype(np.uint8)
         out.append(g)
     return out
 
@@ -1093,17 +1150,20 @@ def stage_fx():
         if not fx:
             continue
         out = f"{SHOTS_DIR}/{sid}_fx.mp4"
+        # the fx render depends on the prepared frames and on its FX entry
+        fx_key = cache_key(src, t_in, dur, {k: v for k, v in opt.items() if k not in _POST_PREP}, W, H, fx, FX.get(fx))
         if os.path.exists(out):
             # a cached fx render is only valid for the shot's CURRENT length
             # (the point beat once shipped 0.5s short off a stale cache)
             have = int(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
                                        "-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", out],
                                       capture_output=True, text=True).stdout.strip() or 0)
-            if have == int(round(dur * FPS)):
+            if have == int(round(dur * FPS)) and cache_ok(out, fx_key):
                 print(f"fx {sid}: cached")
                 continue
-            print(f"fx {sid}: cache is {have} frames, need {int(round(dur * FPS))} -- re-rendering")
+            print(f"fx {sid}: cache is stale ({have} frames, need {int(round(dur * FPS))}, or its inputs changed) -- re-rendering")
             os.remove(out)
+            os.remove(out + ".key") if os.path.exists(out + ".key") else None
         print(f"fx {sid}")
         frames = read_frames(f"{SHOTS_DIR}/{sid}.mp4")
         t0 = shot_start(sid)
@@ -1115,7 +1175,8 @@ def stage_fx():
             M_ = FX["mammoth"]
             res = fx_element(frames, f"{HERE}/work/mam_rembg.png", anchor=M_["anchor"], scale=M_["scale"],
                              exclude_rect=M_["exclude"], appear=(0.35, 1.35), lock=True, breathe=False,
-                             color_strength=0.2, sun=(-0.25, -1.0), sat=0.82, lift=0.2, life=True)
+                             color_strength=0.2, sun=(-0.25, -1.0), sat=0.82, lift=0.2, life=True,
+                             occluder_x=M_.get("occluder_x"))
         elif fx == "sync":
             res = fx_sync(frames, t0)
         elif fx == "activate":
@@ -1132,6 +1193,7 @@ def stage_fx():
         for fr in res:
             w.write(fr)
         w.close()
+        write_key(out, fx_key)
 
 
 # --------------------------------------------------------------------------- picture
