@@ -48,7 +48,7 @@ SHOTS = [
     # the viewing tower, and the cut lands on him standing on that tower
     ("map",     None,                            0.0, 5.5, dict(gen="map")),
     ("markers", f"{RAW}/IMG_6799.MOV",           2.0, 3.0, dict(mc=True, fx="markers", move=("in", 0.03))),
-    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.16, (420, 620)))),
+    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", rise=100, move=("in", 0.12, (1080, 760)))),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     # safety, at the water: audio only near it, a warning too close, off
     # closer than that (operator 2026-09-22) -- the lens readout says so
@@ -134,13 +134,14 @@ FX = {
     "markers": dict(exclude_x=1000, reticle=(1290, 500), mill=(1150, 470), falls=(1395, 520), mill_side=1, falls_side=1,
                     mill_rise=215, falls_rise=80),
     "safety": dict(anchor=(880, 610), side=-1),
-    # on the rock bank below the mill, facing the falls -- NOT in the river:
-    # standing in the water with every foot and toenail showing, it read as
-    # floating on the surface (operator 2026-09-22: "looks weird")
-    # on the flat TOP of the rock shelf below the mill, not at the foot of
-    # its face (that was standing in the river). Scaled to the people on the
-    # deck behind it: ~3.5 m at the shoulder, not a 6 m giant.
-    "mammoth": dict(anchor=(330, 700), scale=0.27, exclude=(1180, 0, 1920, 1080)),
+    # NOT in the river (operator 2026-09-22: "looks weird"), and not far
+    # off on the bank either (2026-09-23: "too small ... almost blends in"):
+    # on the dry rubble at the near shore, between the boulder and the
+    # slab he stands on -- close, so it is big at its real size, and its
+    # back is against the white water at the foot of the falls, so it
+    # separates from the rock. The shot is framed 100px lower (rise) to
+    # bring that ground out from under the letterbox.
+    "mammoth": dict(anchor=(1085, 890), scale=0.56, exclude=(1180, 0, 1920, 1080)),
     "dakota": dict(anchor=(1275, 760), scale=0.78, exclude=(0, 0, 780, 1080)),
 }
 

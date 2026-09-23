@@ -34,7 +34,7 @@ def V_fit(x, y):
 
 
 # per-shot crop centre (fraction of the source width) and the moves re-aimed
-VX = {"pan": 0.50, "falls": 0.50, "reading": 0.42, "worn": 0.25, "markers": 0.62, "mammoth": 0.21,
+VX = {"pan": 0.50, "falls": 0.50, "reading": 0.42, "worn": 0.25, "markers": 0.62, "mammoth": 0.56,
       "dakota": 0.66, "point": 0.62, "sync": 0.50, "bridge": 0.50, "close": 0.50}
 
 SHOTS = []
@@ -48,7 +48,7 @@ for sid, src, t_in, dur, opt in _L.SHOTS:
         o["fit"] = "width"
         o["push"] = (0.78, 2.2, V_fit(1350, 470))
     if sid == "mammoth":
-        o["move"] = ("in", 0.08, V(420, 620, VX["mammoth"]))
+        o["move"] = ("in", 0.10, V(1080, 860, VX["mammoth"]))
     if sid == "worn":
         o["pull"] = (0.4, 2.0, V(480, 600, VX["worn"]))
     SHOTS.append((sid, src, t_in, dur, o))
@@ -60,7 +60,9 @@ FX = {
     "markers": dict(exclude_x=V(1200, 0, _kvx)[0], reticle=V(1290, 500, _kvx), mill=V(1150, 470, _kvx),
                     falls=V(1395, 520, _kvx), mill_side=1, falls_side=-1, mill_rise=215, falls_rise=80),
     "safety": dict(anchor=V(1000, 640, _pvx), side=1),      # the water is left of him in this crop
-    # on the rock bank below the mill (the crop moves left to hold the bank and the falls)
-    "mammoth": dict(anchor=V(330, 700, _mvx), scale=0.27 * H / 1080, exclude=(0, 0, 1, 1)),
+    # on the near-shore rubble in front of the boulder; this cut shows the
+    # full source height, so it takes the SOURCE y (spec.py's anchor is in
+    # the 16:9 frame, which is framed 100px lower -- rise=100)
+    "mammoth": dict(anchor=V(1085, 990, _mvx), scale=0.56 * H / 1080, exclude=(0, 0, 1, 1)),
     "dakota": dict(anchor=V(1275, 760, _dvx), scale=0.78 * H / 1080, exclude=(0, 0, 1, 1)),
 }

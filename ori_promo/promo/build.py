@@ -142,8 +142,15 @@ def prep_shot(sid, src, t_in, dur, opt):
         run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
              "-vf", f"{pre}scale=-2:{H}:flags=lanczos,crop={W}:{H}:{x0}:0", "-an", *ENC, seg])
     else:
+        # rise=N frames the shot N px lower in the source without scaling:
+        # the ground at the foot of the frame comes out from under the
+        # letterbox and N px of sky go under the top bar. The N rows padded
+        # at the bottom stay under the bottom bar (N <= BAR).
+        rise = int(opt.get("rise", 0))
+        assert rise <= BAR, (sid, rise)
+        lift = f",crop={W}:{H - rise}:0:{rise},pad={W}:{H}:0:0:black" if rise else ""
         run(["ffmpeg", "-v", "error", "-y", "-ss", ss, "-i", src, "-t", src_dur + 2 * pad,
-             "-vf", f"{pre}scale={W}:{H}:flags=lanczos", "-an", *ENC, seg])
+             "-vf", f"{pre}scale={W}:{H}:flags=lanczos{lift}", "-an", *ENC, seg])
     vf = []
     if opt.get("stab"):
         trf = f"{WORK}/_{sid}.trf"
@@ -797,8 +804,52 @@ def reveal_frame(sprite, u):
     return sp, glow
 
 
+def life_maps(sw, sh, head_x=0.46, neck=(0.50, 0.30), trunk_x=0.62, legs_y=0.68):
+    """Per-pixel weights for an animal that is alive but has not moved its
+    feet: the head (and the tusks with it) turns about the neck, the trunk
+    swings below the tusks, the body breathes over planted legs. Built once
+    at sprite resolution; life_warp() applies them per frame. A still
+    cutout in moving footage is the tell that remains after lighting and
+    shadow are right (operator 2026-09-23: "still reads as a sticker").
+    The sprite faces RIGHT (head at high x)."""
+    ys, xs = np.mgrid[0:sh, 0:sw].astype(np.float32)
+    u, v = xs / sw, ys / sh
+
+    def sstep(a, b, x):
+        t = np.clip((x - a) / (b - a), 0, 1)
+        return t * t * (3 - 2 * t)
+    # the head region: right of the neck, but under the leg line only the
+    # trunk (right of the front legs) belongs to it
+    head = sstep(head_x, head_x + 0.14, u) * (1 - sstep(legs_y - 0.06, legs_y, v)) \
+        + sstep(trunk_x - 0.02, trunk_x + 0.04, u) * sstep(legs_y - 0.06, legs_y, v)
+    head = np.clip(head, 0, 1)
+    trunk = head * sstep(0.70, 0.98, v) ** 1.5
+    body = 1 - sstep(legs_y - 0.1, legs_y + 0.05, v)       # above the legs
+    return dict(xs=xs, ys=ys, head=head, trunk=trunk, body=body,
+                pivot=(neck[0] * sw, neck[1] * sh), sw=sw, sh=sh)
+
+
+def life_warp(sp, L, t):
+    """The sprite at time t (seconds): head turn +-1.3 deg on a 5.2 s cycle,
+    trunk swing +-(2.5% of width) on 3.1 s, breath 0.8% on 3.7 s. Feet
+    never move."""
+    th = math.radians(1.3) * math.sin(2 * math.pi * t / 5.2)
+    px, py = L["pivot"]
+    dx, dy = L["xs"] - px, L["ys"] - py
+    # inverse map: where each output pixel samples from
+    hx = (math.cos(th) - 1) * dx + math.sin(th) * dy
+    hy = -math.sin(th) * dx + (math.cos(th) - 1) * dy
+    sw_ = 0.025 * L["sw"] * math.sin(2 * math.pi * t / 3.1 + 0.8)
+    br = 0.008 * math.sin(2 * math.pi * t / 3.7 + 1.9)
+    feet = L["sh"] * 0.98
+    mx = L["xs"] + L["head"] * hx - L["trunk"] * sw_
+    my = L["ys"] + L["head"] * hy + L["body"] * br * (L["ys"] - feet)
+    return cv2.remap(sp, mx.astype(np.float32), my.astype(np.float32), cv2.INTER_LINEAR,
+                     borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
+
+
 def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.3),
-               reflection=None, breathe=True, color_strength=0.55, lock=False, sun=None, sat=1.0):
+               reflection=None, breathe=True, color_strength=0.55, lock=False, sun=None, sat=1.0, lift=0.0, life=False):
     """Track the background, then stand a cutout on the real ground:
     colour-matched, defocus-matched, light-wrapped, with a contact shadow
     (and a water reflection when asked), dissolving in under a bloom.
@@ -827,6 +878,13 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
     sprite, sigma = match_focus(sprite, region)
     if sat != 1.0:
         sprite = desaturate(sprite, sat)
+    if lift:
+        # aerial perspective: at this distance nothing is blacker than the
+        # shadows of the rock it stands on
+        p2 = float(np.percentile(cv2.cvtColor(region, cv2.COLOR_BGR2GRAY), 2))
+        rgb = sprite[:, :, :3].astype(np.float32)
+        sprite[:, :, :3] = np.clip(p2 * lift + rgb * (1 - p2 * lift / 255), 0, 255).astype(np.uint8)
+    L = life_maps(sw, sh) if life else None
     grain = np.random.default_rng(1)
     print(f"    focus-matched with sigma={sigma:.2f}; bg sharp={sharpness(region):.0f}")
     out = []
@@ -844,7 +902,7 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
             ground_shadow(g, fx_, fy_, sw, alpha=0.7 * u)
         else:
             contact_shadow(g, fx_, fy_ - 3, sw * 0.9, alpha=0.26 * u)
-        sp, glow = reveal_frame(sprite, u)
+        sp, glow = reveal_frame(life_warp(sprite, L, t) if L else sprite, u)
         if reflection:
             # mirror into the water below the feet, squashed and faded
             rf = cv2.flip(sp, 0)
@@ -1057,7 +1115,7 @@ def stage_fx():
             M_ = FX["mammoth"]
             res = fx_element(frames, f"{HERE}/work/mam_rembg.png", anchor=M_["anchor"], scale=M_["scale"],
                              exclude_rect=M_["exclude"], appear=(0.35, 1.35), lock=True, breathe=False,
-                             color_strength=0.35, sun=(-0.25, -1.0), sat=0.82)
+                             color_strength=0.2, sun=(-0.25, -1.0), sat=0.82, lift=0.2, life=True)
         elif fx == "sync":
             res = fx_sync(frames, t0)
         elif fx == "activate":
@@ -1437,10 +1495,12 @@ def scrim_lower_left(frame, strength):
 SR = 48000
 
 
-def load_audio(path, offset=0.0, dur=None):
+def load_audio(path, offset=0.0, dur=None, af=None):
     cmd = ["ffmpeg", "-v", "error", "-ss", str(offset), "-i", path]
     if dur:
         cmd += ["-t", str(dur)]
+    if af:
+        cmd += ["-af", af]
     cmd += ["-ac", "2", "-ar", str(SR), "-f", "f32le", "-"]
     raw = subprocess.run(cmd, capture_output=True).stdout
     return np.frombuffer(raw, np.float32).reshape(-1, 2).copy()
@@ -1448,6 +1508,54 @@ def load_audio(path, offset=0.0, dur=None):
 
 def db(x):
     return 10 ** (x / 20)
+
+
+# The narration is a dry ElevenLabs read cut into lines. This is the chain a
+# mix engineer would put on it for a spot: roll off the rumble, take the
+# boxiness out at 300 Hz, lift presence and air so it reads over the falls,
+# level it with a gentle compressor, and tame the esses the lift exposes.
+VOICE_CHAIN = ("highpass=f=85,equalizer=f=300:t=q:w=1.0:g=-2.5,equalizer=f=3800:t=q:w=1.2:g=2.5,"
+               "highshelf=f=10000:g=1.5,acompressor=threshold=0.1:ratio=3:attack=5:release=90:makeup=1.4,"
+               "deesser=i=0.35")
+# The falls bed is a phone recording: its low end is wind on the mic, not
+# water (the band under 120 Hz swings 15 dB second to second while the
+# falls do not). The water lives above that.
+AMBIENCE_CHAIN = "highpass=f=140,highpass=f=140,highshelf=f=8000:g=-2"
+
+
+def steady(a, win=2.0, amount=0.7):
+    """Ride the bed's level: divide out most of its slow RMS swing (gusts,
+    the phone moving) so the falls sit at one level under the cut."""
+    e = np.sqrt(np.convolve((a ** 2).mean(axis=1), np.ones(int(win * SR)) / int(win * SR), mode="same")) + 1e-6
+    g = (np.median(e) / e) ** amount
+    return a * g[:, None]
+
+
+def loop_to(a, n, xf=2.0):
+    """Repeat a clip to n samples with equal-power crossfades. The falls
+    recording is 29.5 s usable and the film is 52 s; butt-joined it made a
+    hard seam in the middle of the mammoth shot."""
+    k = int(xf * SR)
+    out = a.copy()
+    w = np.linspace(0, np.pi / 2, k)[:, None]
+    while len(out) < n:
+        out = np.vstack([out[:-k], out[-k:] * np.cos(w) + a[:k] * np.sin(w), a[k:]])
+    return out[:n]
+
+
+def widen(a, amount=1.3):
+    m, s_ = (a[:, 0] + a[:, 1]) / 2, (a[:, 0] - a[:, 1]) / 2 * amount
+    return np.stack([m + s_, m - s_], axis=1)
+
+
+def carve(bed, speech, lo=1200, hi=5000, depth_db=-4.0):
+    """Under the narration, take a few dB out of the bed where the voice's
+    intelligibility lives, on top of the broadband duck: the voice sits IN
+    the falls instead of just over them."""
+    from scipy.signal import butter, sosfiltfilt
+    sos = butter(2, [lo / (SR / 2), hi / (SR / 2)], btype="band", output="sos")
+    mid = sosfiltfilt(sos, bed, axis=0).astype(np.float32)
+    return bed - mid * (1 - db(depth_db)) * speech
 
 
 def env_points(points, n):
@@ -1502,10 +1610,7 @@ def stage_audio():
         # background"; 2026-09-22: louder when the falls are in frame or
         # close, and the narrator on top. One bed, the falls, its level
         # following AMBIENCE_LEVELS shot by shot (0.35s glides at the cuts).
-        amb = load_audio(AMBIENCE, 2.0, TOTAL + 1)
-        if len(amb) < n:
-            amb = np.vstack([amb] * (int(np.ceil(n / max(1, len(amb)))) + 1))
-        amb = amb[:n]
+        amb = widen(loop_to(steady(load_audio(AMBIENCE, 2.0, TOTAL + 1, af=AMBIENCE_CHAIN)), n))
         pts, t = [(0, -60)], 0.0
         for sid, _, _, dur, _ in SHOTS:
             lvl = AMBIENCE_LEVELS.get(sid, -30)
@@ -1522,7 +1627,7 @@ def stage_audio():
         for at, text in VO:
             p = f"{WORK}/_vo_{int(at*10)}.wav"
             say(text, p)
-            a = load_audio(p)
+            a = load_audio(p, af=VOICE_CHAIN)
             a = fade_edges(a, 0.02, 0.05) * db(-1)
             i0 = int(at * SR)
             k = min(len(a), n - i0)
@@ -1568,7 +1673,8 @@ def stage_audio():
         env = np.convolve(env, np.ones(kern) / kern, mode="same")
         duck = 1 - 0.45 * np.clip(env / 0.02, 0, 1)
         duck = np.convolve(duck, np.ones(int(0.15 * SR)) / int(0.15 * SR), mode="same")[:, None]
-        write_wav(f"{WORK}/mix.wav", bed * duck + vo)
+        speech = np.clip((1 - duck) / 0.45, 0, 1)
+        write_wav(f"{WORK}/mix.wav", carve(bed * duck, speech) + vo)
         return
     hit = S("markers")                         # the glasses come online: the drop
     # music: sneaks in under the logo and the pan, lifts as he looks up, drops at the hit
@@ -1725,10 +1831,21 @@ FINISH = "null"
 def stage_final():
     os.makedirs("../out", exist_ok=True)
     outs = [("mix.wav", OUT_NAME)] if AUDIO != "full" else [("mix.wav", OUT_NAME), ("mix_vo.wav", OUT_NAME.replace(".mp4", "_vo.mp4"))]
-    lufs = {"ambience": -20, "ambience+vo": -16, "score": -15}.get(AUDIO, -14)
+    # -14 LUFS is where YouTube, Instagram and TikTok all normalise to, so
+    # the spot plays at the level it was mixed at instead of being turned
+    # down (or up) by the platform.
+    lufs = {"ambience": -20, "ambience+vo": -16, "score": -14}.get(AUDIO, -14)
     for mix, name in outs:
+        # two passes: measure, then ONE fixed gain to the target and a
+        # peak limiter 1.5 dB under full scale for the few transients the
+        # gain pushes over. A single dynamic-mode loudnorm pass rides the
+        # gain through the film and pumps the bed.
+        meas = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", f"{WORK}/{mix}", "-af",
+                               "loudnorm=print_format=json", "-f", "null", "-"], capture_output=True, text=True).stderr
+        gain = lufs - float(json.loads(meas[meas.rindex("{"):meas.rindex("}") + 1])["input_i"])
+        ln = f"volume={gain:.2f}dB,alimiter=limit=0.84:attack=3:release=60:level=false"
         run(["ffmpeg", "-v", "error", "-y", "-i", f"{WORK}/picture.mp4", "-i", f"{WORK}/{mix}",
-             "-vf", FINISH, "-af", f"loudnorm=I={lufs}:TP=-1.5:LRA=9",
+             "-vf", FINISH, "-af", f"{ln},aresample=48000",
              "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-pix_fmt", "yuv420p", "-profile:v", "high",
              "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest", f"../out/{name}"])
         print("  ->", f"../out/{name}", ffprobe_dur(f"../out/{name}"))
