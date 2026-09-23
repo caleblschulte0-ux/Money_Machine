@@ -125,6 +125,27 @@ def union(*fields):
     return f
 
 
+def repaint(field, choose):
+    """Recolour a field by POSITION: `choose(p, paint) -> paint`. Stripes on
+    an umbrella or a beach ball are paint, not geometry -- the form stays one
+    smooth body and only the colour changes across it."""
+    def f(p):
+        d, m = field(p)
+        return d, choose(p, m)
+    return f
+
+
+def squash(field, scale, about=(0, 0, 0)):
+    """Scale a field non-uniformly about a point (a leaf flattened into a
+    blade). The result is a level set rather than an exact distance, which is
+    all marching cubes needs."""
+    scale, about = np.asarray(scale, float), np.asarray(about, float)
+
+    def f(p):
+        return field((p - about) / scale + about)
+    return f
+
+
 def sit(field, z=0.0, k=0.06):
     """Flatten everything below the ground plane, so an object SITS on the lawn
     instead of floating a sphere's curve above it."""
@@ -199,22 +220,28 @@ def mesh(field, lo, hi, res=0.03):
 
 
 def write_ply(path, verts, faces, colours):
-    """Binary PLY with per-vertex colour; Blender imports it. Binary because a
-    park kit is a few hundred thousand faces and ASCII was the slow half."""
-    v = np.zeros(len(verts), dtype=[("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("r", "u1"), ("g", "u1"), ("b", "u1")])
-    v["x"], v["y"], v["z"] = verts[:, 0], verts[:, 1], verts[:, 2]
-    v["r"], v["g"], v["b"] = colours[:, 0], colours[:, 1], colours[:, 2]
-    f = np.zeros(len(faces), dtype=[("n", "u1"), ("a", "<i4"), ("b", "<i4"), ("c", "<i4")])
-    f["n"] = 3
+    """ASCII PLY with per-vertex colour; Blender imports it.
+
+    ASCII ON PURPOSE. A binary writer was tried for speed and Blender 4.0's
+    PLY reader refused one valid file of the park/beach kit ("Invalid face
+    size") while taking the others -- every face record in it checked out as
+    count 3, and the same mesh as ASCII imported cleanly. A reader bug that
+    depends on where records fall is not something to gamble a CI render on;
+    the kit is a gitignored cache, so the bytes cost nothing.
+    """
+    import io
+    buf = io.StringIO()
+    buf.write("ply\nformat ascii 1.0\n")
+    buf.write(f"element vertex {len(verts)}\nproperty float x\nproperty float y\nproperty float z\n")
+    buf.write("property uchar red\nproperty uchar green\nproperty uchar blue\n")
+    buf.write(f"element face {len(faces)}\nproperty list uchar int vertex_indices\nend_header\n")
+    v = np.concatenate([np.asarray(verts, float), np.asarray(colours, float)], 1)
+    np.savetxt(buf, v, fmt=["%.5f"] * 3 + ["%d"] * 3)
     # marching-cubes winding -> outward normals
-    f["a"], f["b"], f["c"] = faces[:, 0], faces[:, 2], faces[:, 1]
-    with open(path, "wb") as fh:
-        fh.write(b"ply\nformat binary_little_endian 1.0\n")
-        fh.write(f"element vertex {len(verts)}\nproperty float x\nproperty float y\nproperty float z\n".encode())
-        fh.write(b"property uchar red\nproperty uchar green\nproperty uchar blue\n")
-        fh.write(f"element face {len(faces)}\nproperty list uchar int vertex_indices\nend_header\n".encode())
-        fh.write(v.tobytes())
-        fh.write(f.tobytes())
+    f = np.stack([np.full(len(faces), 3), faces[:, 0], faces[:, 2], faces[:, 1]], 1)
+    np.savetxt(buf, f, fmt="%d")
+    with open(path, "w") as fh:
+        fh.write(buf.getvalue())
 
 
 def airbrush(normals, verts, ramp, lift=0.0):
@@ -232,3 +259,4 @@ def airbrush(normals, verts, ramp, lift=0.0):
     hi = np.clip(up * 2 - 1, 0, 1)[:, None]
     under_mid = ramp[0] * (1 - lo) + ramp[1] * lo
     return np.where((up < 0.5)[:, None], under_mid, ramp[1] * (1 - hi) + ramp[2] * hi).astype(np.uint8)
+

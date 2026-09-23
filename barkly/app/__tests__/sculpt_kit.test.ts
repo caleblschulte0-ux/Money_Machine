@@ -29,9 +29,21 @@ describe('sculpt kit', () => {
 
   it('makes at least one variant of every kind the scene picks from', () => {
     const kinds = [...scene.matchAll(/_pick\("([a-z]+)"/g)].map((m) => m[1]);
-    expect(kinds.sort()).toEqual(['bush', 'hedge', 'tree', 'tuft']);
+    expect(kinds.length).toBeGreaterThanOrEqual(4);
     for (const kind of kinds) {
       expect({ kind, made: kit.includes(`KIT[f"${kind}_{`) }).toEqual({ kind, made: true });
+    }
+  });
+
+  it('makes a sculpted stand-in for every prop-pack builder a sculpted scene places', () => {
+    const table = scene.match(/^SCULPTED_BUILDERS = \{([\s\S]*?)^\}/m);
+    expect(table).not.toBeNull();
+    const pairs = [...(table as RegExpMatchArray)[1].matchAll(/"(\w+)": "(\w+)"/g)];
+    expect(pairs.length).toBeGreaterThan(0);
+    for (const [, builder, name] of pairs) {
+      const made = name.endsWith('_') ? kit.includes(`KIT["${name}0"]`) || kit.includes(`KIT[f"${name}{`)
+        : kit.includes(`KIT["${name}"]`);
+      expect({ builder, name, made }).toEqual({ builder, name, made: true });
     }
   });
 

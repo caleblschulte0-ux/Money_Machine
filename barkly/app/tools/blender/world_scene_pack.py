@@ -884,6 +884,11 @@ def place(builder, x: float, y: float, s: float = 1.0, flip: bool = False):
     because scaling each object about its own origin scales the pieces and not
     the assembly.
     """
+    if SCULPTED and builder.__name__ in SCULPTED_BUILDERS:
+        name = SCULPTED_BUILDERS[builder.__name__]
+        if name.endswith("_"):
+            name, _ = _pick(name[:-1], x, y)
+        return kit(name, x, y, s, flip=flip)
     before = set(bpy.data.objects)
     builder()
     made = [o for o in bpy.data.objects if o not in before]
@@ -1026,10 +1031,20 @@ def _poly(name: str, points, z: float, mat):
 # Which scenes are sculpted is this table, and going back is one word in it
 # (or SCENE_STYLE=primitive for a single run) -- the primitive builders are
 # untouched underneath.
-SCENE_STYLE = {"park": "sculpt", "town": "primitive", "beach": "primitive"}
+SCENE_STYLE = {"park": "sculpt", "town": "primitive", "beach": "sculpt"}
 SCULPTED = False  # set per scene by main(), read by every builder
 KIT_DIR = ROOT / "art-review" / "sculpt" / "kit"
 _KIT_MESHES: dict = {}
+
+#: The prop pack's builders that `place()` stands in scenes, and the kit object
+#: a sculpted scene uses instead. A trailing "_" means "pick a variant".
+SCULPTED_BUILDERS = {
+    "beach_lifeguard": "lifeguard",
+    "beach_umbrella": "umbrella",
+    "beach_castle": "castle",
+    "beach_palm": "palm_",
+    "beach_shells": "shell",
+}
 
 #: The kit is painted against the canon's STUDIO light (render_sculpt.py) and
 #: this scene is lit by a sun at 10x that energy. Unscaled, the first sculpted
@@ -1548,7 +1563,12 @@ def beach():
       ground it was drawn on. The tide line has been invisible since it was
       written.
     """
-    ground(tone("sand", "base"), tone("sand", "lit"), tooth=38.0, bump=0.09)
+    if SCULPTED:
+        # Soft, and a little quieter -- less than the lawn. Unquieted, Barkly's
+        # chroma gap on the beach measured +0.158 against the +0.18 floor.
+        ground(_quiet(tone("sand", "base"), 0.8), _quiet(tone("sand", "lit"), 0.8), tooth=38.0, bump=0.03)
+    else:
+        ground(tone("sand", "base"), tone("sand", "lit"), tooth=38.0, bump=0.09)
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
     _anchor("horizon", 0.0, 43.0)
@@ -1663,6 +1683,9 @@ def beach():
 
 def _rocks(x: float, y: float, s: float = 1.0):
     """A cluster of three, for the near ground. Sea-worn: rounded, no facets."""
+    if SCULPTED:
+        name, flip = _pick("rocks", x, y)
+        return kit(name, x, y, s, flip=flip)
     a = pack.material(f"Rock a{x:.1f}{y:.1f}", tone("stone", "base"), roughness=0.90)
     b = pack.material(f"Rock b{x:.1f}{y:.1f}", tone("stone", "shade"), roughness=0.92)
     c = pack.material(f"Rock c{x:.1f}{y:.1f}", tone("stone", "lit"), roughness=0.88)
@@ -1677,6 +1700,8 @@ def _rocks(x: float, y: float, s: float = 1.0):
 def _windbreak(x: float, y: float, s: float = 1.0):
     """Striped canvas between poles. The one piece of beach furniture that is
     tall, flat-on to the camera and unmistakable at any size."""
+    if SCULPTED:
+        return kit("windbreak", x, y, s)
     pole = pack.material(f"Wind pole{x:.1f}", tone("wood", "base"), roughness=0.80)
     stripes = (
         pack.material(f"Wind a{x:.1f}", tone("berry", "base"), roughness=0.86),
@@ -1729,6 +1754,8 @@ def _headland(y: float):
     with lumps in it, which means the lumps have to OVERLAP and they have to
     differ.
     """
+    if SCULPTED:
+        return kit("headland", 0.0, y)
     # ONE TONE, and this took a second pass to accept. Alternating three
     # steps of the stone ramp across neighbouring mounds rendered a cow-print
     # ridge: adjacent lumps in visibly different colours read as separate
@@ -1773,6 +1800,12 @@ def _dune(x: float, y: float, s: float = 1.0, flip: bool = False):
     and shallow, leeward short and steep, which is what makes a sand shape look
     like sand -- and its marram grows on the crest where marram grows.
     """
+    if SCULPTED:
+        name, _ = _pick("dune", x, y)
+        kit(name, x, y, s, flip=flip)
+        for i in range(4):
+            _marram(x + (i - 1.5) * 0.95 * s, y - 0.25 * s, 0.95 * s)
+        return None
     sand = pack.material(f"Dune{x:.1f}{y:.1f}", tone("sand", "base"), roughness=0.95)
     lit = pack.material(f"DuneLit{x:.1f}{y:.1f}", tone("sand", "lit"), roughness=0.94)
     shade = pack.material(f"DuneShade{x:.1f}{y:.1f}", tone("sand", "shade"), roughness=0.95)
@@ -1797,6 +1830,8 @@ def _dune(x: float, y: float, s: float = 1.0, flip: bool = False):
 
 def _beachball(x: float, y: float, s: float = 1.0):
     """The one saturated round thing on a beach of tan and blue."""
+    if SCULPTED:
+        return kit("beachball", x, y, s)
     a = pack.material(f"Ball a{x:.1f}", tone("berry", "base"), roughness=0.52, coat=0.10)
     b = pack.material(f"Ball b{x:.1f}", tone("cream", "pop"), roughness=0.54, coat=0.10)
     c = pack.material(f"Ball c{x:.1f}", tone("sea", "base"), roughness=0.52, coat=0.10)
@@ -1809,6 +1844,9 @@ def _beachball(x: float, y: float, s: float = 1.0):
 
 
 def _starfish(x: float, y: float, s: float = 1.0):
+    if SCULPTED:
+        name, flip = _pick("starfish", x, y)
+        return kit(name, x, y, s, flip=flip)
     star = pack.material(f"Star{x:.1f}{y:.1f}", tone("roof", "base"), roughness=0.86)
     sx, sy = TURN(x, y)
     pack.sphere(f"starmid{x:.1f}{y:.1f}", (sx, sy, 0.05 * s), (0.20 * s, 0.20 * s, 0.06 * s), star)
@@ -1821,6 +1859,9 @@ def _starfish(x: float, y: float, s: float = 1.0):
 
 
 def _driftwood(x: float, y: float, s: float = 1.0):
+    if SCULPTED:
+        name, flip = _pick("driftwood", x, y)
+        return kit(name, x, y, s, flip=flip)
     wood = pack.material(f"Drift{x:.1f}{y:.1f}", tone("cream", "base"), roughness=0.92)
     dark = pack.material(f"DriftDark{x:.1f}{y:.1f}", tone("bark", "shade"), roughness=0.94)
     wx, wy = TURN(x, y)
@@ -1922,6 +1963,8 @@ def _castle(x: float, y: float, s: float = 1.0):
 
 def _towel(x: float, y: float, s: float = 1.0):
     """A towel laid on the sand. The middle of the frame was bare."""
+    if SCULPTED:
+        return kit("towel", x, y, s)
     stripe_a = pack.material(f"Towel a{x:.1f}", tone("berry", "lit"), roughness=0.88)
     stripe_b = pack.material(f"Towel b{x:.1f}", tone("cream", "pop"), roughness=0.88)
     for i in range(4):
@@ -1931,6 +1974,8 @@ def _towel(x: float, y: float, s: float = 1.0):
 
 
 def _bucket(x: float, y: float, s: float = 1.0):
+    if SCULPTED:
+        return kit("bucket", x, y, s)
     body = pack.material(f"Bucket{x:.1f}", tone("sun", "lit"), roughness=0.70)
     handle = pack.material(f"Bucket handle{x:.1f}", tone("sea", "base"), roughness=0.66)
     bx, by = TURN(x, y)
@@ -1940,12 +1985,18 @@ def _bucket(x: float, y: float, s: float = 1.0):
 
 
 def _pebble(x: float, y: float, s: float = 1.0):
+    if SCULPTED:
+        name, flip = _pick("pebble", x, y)
+        return kit(name, x, y, s, flip=flip)
     pebble = pack.material(f"Pebble{x:.2f}{y:.2f}", tone("stone", "lit") if (int(x * 7) % 2) else tone("stone", "base"), roughness=0.86)
     px, py = TURN(x, y)
     pack.sphere(f"peb{x:.2f}{y:.2f}", (px, py, 0.08 * s), (0.3 * s, 0.22 * s, 0.1 * s), pebble)
 
 
 def _marram(x: float, y: float, s: float = 1.0):
+    if SCULPTED:
+        name, flip = _pick("marram", x, y)
+        return kit(name, x, y, s, flip=flip)
     blade = pack.material(f"Marram{x:.2f}{y:.2f}", tone("grass", "lit"), roughness=0.90)
     for i in range(4):
         a = i * 1.7 + x

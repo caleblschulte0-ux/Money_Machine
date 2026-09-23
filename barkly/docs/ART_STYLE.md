@@ -222,7 +222,29 @@ The park, primitive vs sculpted, on `art-hierarchy.py` (quantised as shipped):
 | primitive (shipped) | 61.9% | +0.138 | 4.6% | 73.1% |
 | sculpted | 45.0% | +0.136 | 6.4% | 27.9% |
 
-The warm-shadow drop is honest and explained: the primitive plate's warm darks
+The beach followed the same day (`SCENE_STYLE` beach = sculpt): palm with a
+ringed trunk and scalloped fronds, striped umbrella, lifeguard hut with a
+rescue cross, crenellated castle, gored beach ball, bucket, starfish,
+driftwood, rocks, shells, marram, windbreak, towel, dunes, and the headland
+as one melted band instead of thirty-one loaves.
+
+| beach | peak band (≤45%) | chroma gap (≥+0.18) | darks (≥1%) | warm shadow (≥40%) |
+|---|---|---|---|---|
+| primitive (shipped) | 51.7% | +0.184 | 5.1% | 99.0% |
+| sculpted | 62.1% | +0.175 | 0.1% | 77.6% |
+
+The beach is WORSE on three of four and that is recorded, not argued away.
+Most of the old darks were ink lines, but a pale scene in a raking sun has
+almost no dark of its own, and a quiet field of one sand colour is exactly
+what peak band counts against. Two rules came out of it: pale families stop
+at `base` like everything else (a low sun lights vertical faces far harder
+than the flat ground, so the castle and driftwood read white until sand,
+bleach and rock stepped a tone darker), and quieting the ground is per scene
+— the beach's gap needed only 0.8 of the sand's chroma where the lawn needed
+0.68. What the beach still lacks is a real dark and more than one sand
+colour; that is the next pass on it.
+
+The park's warm-shadow drop is honest and explained: the primitive plate's warm darks
 were its INK LINES (hue 34, the ink colour), not its shadows. Without ink, the
 darkest 15% is lawn in cast shadow, green at hue ~85. Passing that floor means
 a warm-shadow treatment of the lawn, which is the next decision, not a number
@@ -241,7 +263,7 @@ script reports and is deliberately not a CI gate — `npm run art:hierarchy`.
 
 ## What is NOT decided yet
 
-- Town, beach and Home are still primitive. The park is the first sculpted
-  scene; the rest convert the same way, one at a time, each judged on its own.
+- Town and Home are still primitive. Park and beach are sculpted; the rest
+  convert the same way, one at a time, each judged on its own.
 - The lawn's shadows (see the warm-shadow row above).
 - The UI. It is still drawn in its own language.
