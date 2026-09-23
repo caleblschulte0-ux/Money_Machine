@@ -486,7 +486,7 @@ def cmd_lab(args: argparse.Namespace) -> int:
         from fishai.lab.render import RenderConfig
         from fishai.lab.synth import generate_dataset, generate_video
 
-        rc = RenderConfig(width=args.width, height=args.height, p_night=args.p_night)
+        rc = RenderConfig(width=args.width, height=args.height, p_night=args.p_night, p_distractors=args.p_distractors)
         out = Path(args.out) if args.out else REPO_ROOT_PATH / "datasets" / args.name
         if args.video_frames:
             meta = generate_video(out.with_suffix(".mp4"), args.video_frames, rc, seed=args.seed)
@@ -727,6 +727,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--val-fraction", type=float, default=0.1, help="synth: share of frames in the val split")
     s.add_argument("--holdout", nargs="*", help="synth: clip names whose fish/backgrounds are NOT used (real-footage test set)")
     s.add_argument("--p-night", type=float, default=0.2)
+    s.add_argument("--p-distractors", type=float, default=0.6, help="synth: share of scenes with unlabelled decoy patches")
     s.add_argument("--per-clip", type=int, default=40)
     s.add_argument("--width", type=int, default=640)
     s.add_argument("--height", type=int, default=360)
