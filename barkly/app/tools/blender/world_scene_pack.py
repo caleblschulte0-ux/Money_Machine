@@ -43,7 +43,7 @@ import bpy
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from palette import light_hex, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
+from palette import TOY_LIGHT, light_hex, sun_height, tone, world_rgb  # noqa: E402  -- the one place a colour comes from
 from proportion import crown, shaft, stack  # noqa: E402  -- and the one place a SHAPE comes from
 from ink import INK, contour_on  # noqa: E402  -- and the one place an EDGE comes from
 import ink as ink_switch  # noqa: E402  -- the switch itself, flipped per scene style
@@ -304,6 +304,8 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
             except (TypeError, ValueError):
                 pass
 
+    if SCULPTED and hasattr(eevee, "gtao_distance"):
+        eevee.gtao_distance = TOY_LIGHT["ao_distance"]
     _ink_pass(scene)
 
     # Ambient light stands in for the sky the app will draw behind this.
@@ -313,7 +315,7 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     # blue, and it was quietly taking half the chroma off every warm surface
     # in the game. `ambient` still names WHICH sky; the palette decides how
     # much of it there is, once, for both packs.
-    scene.world.color = world_rgb()
+    scene.world.color = world_rgb(TOY_LIGHT["sky_fill"] if SCULPTED else None)
 
     bpy.ops.object.camera_add(location=(0.0, 0.0, 0.0))
     camera = bpy.context.object
@@ -368,17 +370,28 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     # own reach, so the prop pack -- whose lamp stands 7.2 units out where this
     # one stands 9.0 -- gets the SAME SUN rather than the same number.
     reach = math.hypot(7.5, 5.0)
-    bpy.ops.object.light_add(type="SUN", location=(-7.5, -5.0, sun_height(reach, scene_name)))
+    if SCULPTED:
+        # The toy light (palette.TOY_LIGHT), and its elevation is measured
+        # FROM THE AIM POINT. The primitive path below measures from the
+        # origin while aiming 20 units back into the scene, so its "34 degree"
+        # sun is really about 50 and shines from the camera side. (It keeps
+        # its numbers: its plates were judged as rendered, and only town still
+        # uses it.)
+        where = (aim[0] - 7.5, aim[1] - 5.0,
+                 aim[2] + reach * math.tan(math.radians(TOY_LIGHT["elevation"])))
+    else:
+        where = (-7.5, -5.0, sun_height(reach, scene_name))
+    bpy.ops.object.light_add(type="SUN", location=where)
     sun = bpy.context.object
     sun.name = "Sun"
-    sun.data.energy = sun_energy
+    sun.data.energy = sun_energy * (TOY_LIGHT["sun_scale"] if SCULPTED else 1.0)
     sun.data.color = pack.rgb(sun_color)
     # A disc, not a point: this is what makes a shadow soften with distance
     # from the thing casting it, which no ellipse under a prop can imitate.
     # 1.1 degrees, from the adopted style. At 3.2 the penumbra grew about 56mm
     # per metre of run, so at this sun's height the far end of every shadow
     # was a smudge rather than a shape.
-    sun.data.angle = math.radians(1.1)
+    sun.data.angle = math.radians(TOY_LIGHT["softness"] if SCULPTED else 1.1)
     # And the sun spends its shadow map on the part of the scene the camera
     # can see. Blender's default covers 200 units; this camera sees about 60,
     # so better than two thirds of every texel was being spent behind the
@@ -392,6 +405,8 @@ def setup(ortho_scale: float, target, sun_energy: float, sun_color, ambient: str
     fill = bpy.context.object
     fill.name = "Sky bounce"
     fill.data.energy = 33          # 60 * 0.55, from the adopted style
+    if SCULPTED:
+        fill.data.energy *= TOY_LIGHT["bounce_scale"]
     fill.data.size = 9.0
     fill.data.color = pack.rgb(light_hex("fill"))
     if hasattr(fill.data, "use_shadow"):
@@ -472,15 +487,18 @@ def park():
     the app on top of this.
     """
     if SCULPTED:
-        # A QUIET FIELD. art-hierarchy measures Barkly's saturation against the
-        # whole plate's, and the lawn is most of the plate: at full grass
-        # chroma the sculpted park measured a gap of +0.09 against a +0.18
-        # floor. The concept sheet's own words are "made to stand out on any
-        # shelf" -- the ground is the shelf.
-        # And SOFT: the primitive lawn's tooth (bump 0.10) is per-pixel grit,
-        # which is both wrong for a flocked playmat and incompressible -- the
-        # ground-only bottom strip of the plate cost 76 KB of a 425 KB file.
-        ground(_quiet(tone("grass", "base")), _quiet(tone("grass", "lit")), bump=0.03)
+        # The full grass colour. It was quieted to 0.68 of its chroma to lift
+        # Barkly's chroma-gap number, and the operator's read of the result
+        # was "scary, hurts my eyes, isn't fun" -- a drab olive field under a
+        # raking sun. A playful lawn is green. Soft grain stays.
+        # Two CLOSE greens: base against lit put big pale blotches across the
+        # field. A toy playmat is one clean colour with a gentle breath in it.
+        gv = TOY_LIGHT["ground_value"]
+        # 1.12 of the grass chroma, not more: at 1.40 the lawn measured as
+        # saturated as Barkly himself (chroma gap -0.01) -- an electric field
+        # competing with the character, the uniform loud frame the operator
+        # has called eye-hurting before. Green and sunny, one step calmer.
+        ground(_toy(tone("grass", "base"), 1.12, gv), _toy(tone("grass", "base"), 1.20, gv * 1.08), bump=0.02)
     else:
         ground(tone("grass", "base"))
     # Where the dog stands, how tall a world unit is there, and the horizon.
@@ -1052,6 +1070,8 @@ SCULPTED_BUILDERS = {
 #: paint, just overexposed. One exposure for the whole kit, not a per-object
 #: fudge; `tint` below is relative to it.
 SUN_EXPOSURE = 0.80
+# ...under the primitive light. Under the toy light (sculpted scenes) the sun
+# is overhead and weaker, so the kit takes palette.TOY_LIGHT["kit_exposure"].
 
 
 def _kit_python() -> str:
@@ -1087,7 +1107,10 @@ def _toy_material():
     mat = bpy.data.materials.get("Toy flock")
     if mat is not None:
         return mat
-    return toybox.flock_painted("Toy flock", nap=0.62)
+    # Nap 0.25, not the preview's 0.62: at plate scale the grain read as a
+    # fuzzy, buzzing surface -- "hurts my eyes". A toy's velvet is soft, and
+    # softness at this distance is smoothness.
+    return toybox.flock_painted("Toy flock", nap=0.25, chroma=TOY_LIGHT["chroma"])
 
 
 def _kit_mesh(name: str):
@@ -1116,18 +1139,19 @@ def kit(name: str, x: float, y: float, s: float = 1.0, tint: float = 1.0,
     obj.location = (wx, wy, 0.0)
     obj.rotation_euler = (0.0, 0.0, THETA)   # the kit faces -y; the camera is yawed THETA
     obj.scale = (s * stretch * (-1.0 if flip else 1.0), s, s)
-    v = tint * SUN_EXPOSURE
+    v = tint * (TOY_LIGHT["kit_exposure"] if SCULPTED else SUN_EXPOSURE)
     obj.color = (v, v, v, 1.0)
     return obj
 
 
-def _quiet(hex_colour: str, f: float = 0.68) -> str:
-    """A palette tone with its saturation scaled down -- same family, same
-    value, less voice."""
+def _toy(hex_colour: str, chroma: float = None, value: float = 1.0) -> str:
+    """A palette tone pushed toward toy colour: more saturated by the toy
+    light's chroma (or `chroma`), value scaled by `value`."""
     import colorsys
+    c = TOY_LIGHT["chroma"] if chroma is None else chroma
     r, g, b = (int(hex_colour[i:i + 2], 16) / 255 for i in (1, 3, 5))
     h, sat, v = colorsys.rgb_to_hsv(r, g, b)
-    r, g, b = colorsys.hsv_to_rgb(h, sat * f, v)
+    r, g, b = colorsys.hsv_to_rgb(h, min(1.0, sat * c), min(1.0, v * value))
     return "#%02X%02X%02X" % (round(r * 255), round(g * 255), round(b * 255))
 
 
@@ -1273,7 +1297,7 @@ def _path():
             continue
         obj = _poly(name, left + right[::-1], z, mat)
         if SCULPTED:
-            _mould(obj, toybox.flock("Path toy", tone("paving", "base"), nap=0.0))
+            _mould(obj, toybox.flock("Path toy", _toy(tone("paving", "base"), 1.3, TOY_LIGHT["ground_value"] * 0.95), nap=0.0))
 
 
 def _mould(obj, mat, thickness: float = 0.10, lip: float = 0.07):
@@ -1463,10 +1487,12 @@ def _tree(x: float, y: float, s: float, canopy: str | None = None,
     of the ground instead of being pushed into it.
     """
     if SCULPTED:
-        # The far row and the left proscenium ask for `foliage shade`: the
-        # same sculpt, darkened by the object colour, reads further away.
+        # The far row and the left proscenium ask for `foliage shade`. At 0.70
+        # the far treeline rendered as a near-black wall along the horizon --
+        # the single most ominous thing in the frame. Distance reads as
+        # LIGHTER, not darker; the far row takes only a whisper of difference.
         name, flip = _pick("tree", x, y)
-        tint = 0.70 if canopy == tone("foliage", "shade") else 1.0
+        tint = 0.94 if canopy == tone("foliage", "shade") else 1.0
         return [kit(name, x, y, s, tint=tint, flip=flip)]
     canopy = tone("foliage", "base") if canopy is None else canopy
     trunk = tone("bark", "base") if trunk is None else trunk
@@ -1564,9 +1590,9 @@ def beach():
       written.
     """
     if SCULPTED:
-        # Soft, and a little quieter -- less than the lawn. Unquieted, Barkly's
-        # chroma gap on the beach measured +0.158 against the +0.18 floor.
-        ground(_quiet(tone("sand", "base"), 0.8), _quiet(tone("sand", "lit"), 0.8), tooth=38.0, bump=0.03)
+        # Full sand colour, soft grain -- the same ruling as the lawn.
+        gv = TOY_LIGHT["ground_value"]
+        ground(_toy(tone("sand", "base"), 1.25, gv), _toy(tone("sand", "base"), 1.35, gv * 1.06), tooth=38.0, bump=0.02)
     else:
         ground(tone("sand", "base"), tone("sand", "lit"), tooth=38.0, bump=0.09)
     _anchor("stand", 0.0, -3.0)

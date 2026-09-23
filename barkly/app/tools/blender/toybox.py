@@ -152,7 +152,7 @@ def flock(name, colour, sheen=0.62, roughness=0.94, nap=1.0):
     return mat
 
 
-def flock_painted(name, nap=1.0):
+def flock_painted(name, nap=1.0, chroma=1.0):
     """`flock`, coloured per VERTEX instead of by one constant -- for sculpted
     meshes (tools/sculpt), whose paint is baked into a colour attribute.
 
@@ -172,7 +172,15 @@ def flock_painted(name, nap=1.0):
     mul.inputs["Fac"].default_value = 1.0
     nt.links.new(paint.outputs["Color"], mul.inputs["Color1"])
     nt.links.new(info.outputs["Color"], mul.inputs["Color2"])
-    nt.links.new(mul.outputs["Color"], bsdf.inputs["Base Color"])
+    if chroma == 1.0:
+        nt.links.new(mul.outputs["Color"], bsdf.inputs["Base Color"])
+    else:
+        # Saturation on the painted colour, for scenes lit to be playful
+        # (palette.TOY_LIGHT["chroma"]); the paint itself stays palette tones.
+        hsv = nt.nodes.new("ShaderNodeHueSaturation")
+        hsv.inputs["Saturation"].default_value = chroma
+        nt.links.new(mul.outputs["Color"], hsv.inputs["Color"])
+        nt.links.new(hsv.outputs["Color"], bsdf.inputs["Base Color"])
     return mat
 
 

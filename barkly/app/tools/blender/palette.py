@@ -429,9 +429,41 @@ def light_rgb(kind: str):
 SKY_FILL_STRENGTH = 0.13
 
 
-def world_rgb():
+def world_rgb(strength=None):
     """The render world's colour: the sky, at the strength a surface sees it."""
-    return tuple(c * SKY_FILL_STRENGTH for c in light_rgb("fill"))
+    k = SKY_FILL_STRENGTH if strength is None else strength
+    return tuple(c * k for c in light_rgb("fill"))
+
+
+#: THE TOY LIGHT: how the SCULPTED scenes are lit (world_scene_pack,
+#: SCENE_STYLE "sculpt"). Same lamps, same colours -- a different shape of
+#: light, and the operator's word for the one above on a sculpted park was
+#: "scary, hurts my eyes, isn't fun and playful" (2026-09-23).
+#:
+#: The primitive style's light was tuned to MAKE darks: a 34-degree sun with a
+#: hard 1.1-degree edge and a sky fill cut to 0.13, so long black shadows raked
+#: across every lawn. On cel bands and ink that read as drama. On soft toys it
+#: reads as dusk in a wood. A toy on a shelf is lit high, soft and full: short
+#: shadows tucked under each object, shadow edges that fade, and a sky bright
+#: enough that nothing in shade goes black.
+TOY_LIGHT = {
+    # First cut was 64 / 10 / 0.46: brighter, but the framing trees still
+    # threw shadow bands across the whole lawn. A toy shelf is lit from
+    # nearly overhead.
+    "elevation": 74.0,      # degrees; shadows pooled under each object
+    "softness": 16.0,       # sun disc, degrees; shadow edges that fade out
+    "sun_scale": 0.52,      # of the scene's sun energy: the sky carries more
+    "sky_fill": 0.70,       # world strength, against SKY_FILL_STRENGTH 0.13
+    "bounce_scale": 3.0,    # the sky-bounce area lamp
+    "ao_distance": 0.9,     # contact occlusion only, not a grey halo
+    "chroma": 1.22,         # toy colour: saturation on the sculpted paint
+    # An overhead sun lights flat ground far harder than the sides of the
+    # things standing on it: at full value the lawn went pale yellow and the
+    # path white while the toys looked dim beside them. The ground is painted
+    # this much darker, the toys this much brighter.
+    "ground_value": 0.78,
+    "kit_exposure": 0.95,
+}
 
 
 def light_hex(kind: str) -> str:

@@ -38,13 +38,18 @@ ROOT = HERE.parent.parent
 OUT = ROOT / "art-review" / "sculpt" / "kit"
 
 #: Everything whose change must re-sculpt the kit.
-SOURCES = [HERE / "sdf.py", HERE / "kit.py", HERE / "tree.py", HERE.parent / "blender" / "palette.py"]
+SOURCES = [HERE / "sdf.py", HERE / "kit.py", HERE / "tree.py"]
 
 
 def source_hash() -> str:
+    """The code that sculpts, plus the palette's COLOURS -- not palette.py's
+    bytes. The kit paints with tones; it does not care how the scene is lit,
+    and hashing the whole file made every light tweak a 7-minute re-sculpt."""
+    import palette
     h = hashlib.sha256()
     for p in SOURCES:
         h.update(p.read_bytes())
+    h.update(json.dumps({f: [tone(f, s) for s in palette.STEPS] for f in palette.FAMILIES}).encode())
     return h.hexdigest()[:16]
 
 

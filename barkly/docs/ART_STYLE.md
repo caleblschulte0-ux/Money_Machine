@@ -250,6 +250,37 @@ darkest 15% is lawn in cast shadow, green at hue ~85. Passing that floor means
 a warm-shadow treatment of the lawn, which is the next decision, not a number
 to chase by putting the line back.
 
+### The toy light (2026-09-23, same day) — the operator's ruling outranks the metrics
+
+The first sculpted park was lit by the primitive style's light: a 34° sun
+(really ~50°, see below) with a hard edge and a sky fill cut to 0.13, built
+to MAKE darks. On soft toys it read as dusk in a wood, and the operator's
+verdict was: *"that's scary and hurts my eyes and isn't fun and playful."*
+The lawn had also been quieted to olive to lift a chroma-gap number. Both
+were wrong for this game.
+
+`palette.TOY_LIGHT` is how sculpted scenes are lit now: sun nearly overhead
+(74°, measured from the aim point) with a 16° soft disc, sky fill 0.70, a
+stronger bounce, contact-only occlusion, and more colour on the toys
+(chroma 1.22). The ground is painted darker (`ground_value` 0.78) because an
+overhead sun lights flat ground much harder than the sides of the things on
+it, and the flock nap drops to 0.25 because at plate scale the grain buzzed.
+
+Found on the way: the scene's sun height was computed from the origin while
+aiming 20 units back into the scene, so every plate's sun was ~16° steeper
+than its table said and shone from the camera side. The toy light measures
+from the aim point; the primitive path keeps its old numbers because its
+plates were judged as rendered, and only town still uses it.
+
+Numbers after the relight (shipped plates): park peak band 53.6%, chroma
+gap +0.03, darks 1.4%; beach 56.9%, +0.14, 0.5%. **The chroma gap got worse,
+on purpose, and the record says so.** A lawn quiet enough to pass it was the
+olive the operator called scary. The lawn was pulled back from 1.40 to 1.12
+of its chroma because at 1.40 it matched Barkly's saturation outright; past
+that, Barkly separates by hue and value (orange and cream on green), which
+this metric cannot see. If he ever stops reading at a glance, that is the
+signal — not this number.
+
 ## What is blocked, with numbers
 
 `scripts/art-hierarchy.py` measures whether Barkly still reads against his
