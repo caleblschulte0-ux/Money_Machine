@@ -249,3 +249,61 @@ def test_trainer_runs_saves_and_loads_as_a_backend(tmp_path):
     dets = det.detect(Frame(0, 0.0, np.zeros((180, 320, 3), np.uint8)))
     assert all(0 <= d.confidence <= 1 for d in dets)
     assert math.isfinite(rec["history"][0]["loss"])
+
+
+# ------------------------------------------------------ second-pass fixes
+def test_distractors_are_drawn_but_never_labelled():
+    rng = random.Random(11)
+    cfg = RenderConfig(fish_count=(1, 1), p_distractors=1.0, distractor_count=(4, 4), p_night=0.0, p_real_plate=0.0, p_real_sprite=0.0,
+                       p_foreground_plants=0.0, p_bubbles=0.0)
+    scene = Scene(rng, cfg, Assets())
+    assert len(scene.distractors) == 4
+    _, labels = scene.frame()
+    assert {lab["id"] for lab in labels} <= {scene.fish[0].fid}
+
+
+def test_postprocess_drops_huge_and_wrapper_boxes():
+    from fishai.perception.detection.torchvision_det import postprocess
+
+    boxes = np.array([
+        [10, 10, 60, 40],     # fish A
+        [100, 20, 150, 50],   # fish B
+        [12, 11, 61, 41],     # duplicate of A (NMS)
+        [0, 0, 170, 60],      # wraps A and B: a wrapper, not a fish
+        [0, 0, 640, 360],     # the whole frame: never a fish
+        [300, 200, 340, 230], # fish C
+    ], np.float32)
+    scores = np.array([0.9, 0.9, 0.8, 0.95, 0.99, 0.7], np.float32)
+    kept = postprocess(boxes, scores, 640, 360)
+    got = sorted(tuple(int(v) for v in d.bbox.as_tuple()) for d in kept)
+    assert got == [(10, 10, 60, 40), (100, 20, 150, 50), (300, 200, 340, 230)]
+    assert len(postprocess(boxes, scores, 640, 360, min_confidence=0.95)) == 1
+
+
+def test_silver_train_split(tmp_path):
+    clip = tmp_path / "c.mp4"
+    SyntheticAquarium(n_fish=1, seed=6).write(clip, 40)
+
+    class One:
+        name = "one"
+
+        def detect(self, frame):
+            return [Detection(BBox(10, 10, 60, 40), 0.9)]
+
+    build_silver([clip], One(), tmp_path / "s", every_n=10, per_clip=3, split="train")
+    assert len((tmp_path / "s" / "train.txt").read_text().split()) == 3
+    assert (tmp_path / "s" / "val.txt").read_text().strip() == ""
+
+
+@pytest.mark.ml
+@pytest.mark.skipif(not HAS_ML, reason="torch not installed")
+def test_trainer_repeat_syntax_and_init(tmp_path):
+    from fishai.lab.trainer import TrainConfig, train
+
+    generate_dataset(tmp_path / "ds", 6, "u", RenderConfig(width=320, height=180, p_real_plate=0.0, p_real_sprite=0.0), Assets(), seed=7, val_fraction=0.34, write_manifest=False)
+    tc = TrainConfig(epochs=1, batch_size=2, pretrained=False, min_size=180, max_size=320)
+    rec = train([f"{tmp_path / 'ds'}*2"], tmp_path / "ds", tmp_path / "a.pt", tc)
+    assert rec["train_images"] == 8, "4 train images repeated twice"
+    tc.init_from = str(tmp_path / "a.pt")
+    rec2 = train([tmp_path / "ds"], tmp_path / "ds", tmp_path / "b.pt", tc)
+    assert "our checkpoint" in rec2["start_weights"]

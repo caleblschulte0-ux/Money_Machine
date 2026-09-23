@@ -52,6 +52,10 @@ class RenderConfig:
     p_bubbles: float = 0.4
     p_reflection: float = 0.5
     p_distortion: float = 0.7
+    # Fish-sized non-fish patches (leaves, rock, background texture) drawn among the fish
+    # and NOT labelled: the detector must learn that a blob is not a fish.
+    p_distractors: float = 0.6
+    distractor_count: tuple[int, int] = (1, 6)
     # A label is kept when at least this much of the in-frame fish is not hidden
     # behind something (occlusion) ...
     min_visible_fraction: float = 0.35
@@ -143,6 +147,7 @@ class Scene:
         self.jpeg = rng.randint(*cfg.jpeg_quality)
         self.t = 0
         self.fish = self._make_fish()
+        self.distractors = self._make_distractors() if rng.random() < cfg.p_distractors else []
 
     # ---------------------------------------------------------- construction
     def _make_plate(self) -> np.ndarray:
@@ -213,6 +218,34 @@ class Scene:
             fish.append(f)
         return fish
 
+    def _make_distractors(self) -> list[tuple[np.ndarray, float, float, float]]:
+        """(rgba patch, x, y, z): textures cut from backgrounds in fish-like shapes, placed in the tank."""
+        rng, cfg = self.rng, self.cfg
+        sources = list(self.assets.plates) or [procedural_plate(rng, (cfg.width, cfg.height))]
+        out = []
+        for _ in range(rng.randint(*cfg.distractor_count)):
+            src = rng.choice(sources)
+            h, w = src.shape[:2]
+            pw, ph = rng.randint(30, 160), rng.randint(15, 90)
+            x0, y0 = rng.randint(0, max(0, w - pw)), rng.randint(0, max(0, h - ph))
+            patch = src[y0 : y0 + ph, x0 : x0 + pw].copy()
+            if rng.random() < 0.3:
+                patch = cv2.cvtColor(cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)
+            mask = np.zeros(patch.shape[:2], np.uint8)
+            kind = rng.random()
+            if kind < 0.4:
+                cv2.ellipse(mask, (pw // 2, ph // 2), (pw // 2 - 1, ph // 2 - 1), rng.uniform(-30, 30), 0, 360, 255, -1)
+            elif kind < 0.7:
+                pts = np.array([[rng.randint(0, pw), rng.randint(0, ph)] for _ in range(rng.randint(3, 7))], np.int32)
+                cv2.fillPoly(mask, [cv2.convexHull(pts)], 255)
+            else:
+                mask[:] = 255
+            mask = cv2.GaussianBlur(mask, (5, 5), 0)
+            length = rng.uniform(*cfg.fish_length_cm)
+            x, y, z = self._random_position(length)
+            out.append((np.dstack([patch, mask]), x, y, z))
+        return out
+
     # --------------------------------------------------------------- motion
     def step(self, dt: float = 0.1) -> None:
         rng, t, c = self.rng, self.tank, self.cam
@@ -249,7 +282,22 @@ class Scene:
         owner = np.zeros((H, W), np.int16)
         full_area: dict[int, int] = {}
         in_frame_area: dict[int, int] = {}
-        for f in sorted(self.fish, key=lambda q: -q.z):
+        # Distractors first-by-depth together with fish: draw them in their own depth order but
+        # without an owner id, so they hide fish behind them and are never labelled.
+        drawables: list[tuple[float, Any]] = [(f.z, f) for f in self.fish] + [(d[3], d) for d in self.distractors]
+        for _, item in sorted(drawables, key=lambda q: -q[0]):
+            if not isinstance(item, Fish):
+                patch, dx, dy, dz = item
+                du, dv = cam.project(dx, dy, dz)
+                k = 1 - math.exp(-dz / self.attenuation_cm)
+                prgb = patch[..., :3].astype(np.float32) * (1 - k) + self.water * k
+                r = _alpha_blend(img, prgb, patch[..., 3], int(du - patch.shape[1] / 2), int(dv - patch.shape[0] / 2))
+                if r is not None:
+                    x1, y1, x2, y2 = r
+                    sub = patch[..., 3][y1 - int(dv - patch.shape[0] / 2) : y2 - int(dv - patch.shape[0] / 2), x1 - int(du - patch.shape[1] / 2) : x2 - int(du - patch.shape[1] / 2)] > 127
+                    owner[y1:y2, x1:x2][sub] = 0
+                continue
+            f = item
             u, v = cam.project(f.x, f.y, f.z)
             facing = math.cos(f.yaw)
             apparent = f.length_cm * (0.3 + 0.7 * abs(facing))
@@ -369,4 +417,5 @@ def scene_meta(scene: Scene) -> dict[str, Any]:
         "camera_depth_cm": round(scene.cam.camera_depth_cm, 1), "lateral_offset_cm": round(scene.cam.lateral_offset_cm, 1),
         "night": scene.night, "attenuation_cm": round(scene.attenuation_cm, 1), "fish": len(scene.fish),
         "foreground_plants": scene.fg is not None, "reflection": scene.reflection is not None, "bubbles": len(scene.bubbles),
+        "distractors": len(scene.distractors),
     }

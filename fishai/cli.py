@@ -506,17 +506,18 @@ def cmd_lab(args: argparse.Namespace) -> int:
         det = build_detector(dict(cfg.section("detection"), backend="yolo", models_dir=cfg.get_path("paths.models_dir", "models")))
         clips = [Path(p) for p in args.inputs] or [p for p in sorted((REPO_ROOT_PATH / "datasets" / "public_clips").glob("*.mp4")) if "4020" not in p.name]
         out = Path(args.out) if args.out else REPO_ROOT_PATH / "datasets" / "silver_public"
-        m = build_silver(clips, det, out, per_clip=args.per_clip)
+        m = build_silver(clips, det, out, per_clip=args.per_clip, split="train" if args.train_split else "val")
         _emit(args, m, f"{m['frames']} real frames, {m['boxes']} silver boxes -> {out}\n({m['labels_are']})")
         return 0
     if what == "train":
         from fishai.lab.trainer import TrainConfig, train
 
         tc = TrainConfig(arch=args.arch, pretrained=not args.no_pretrained, min_size=args.min_size, max_size=args.max_size, epochs=args.epochs,
-                         batch_size=args.batch, lr=args.lr, max_minutes=args.max_minutes, max_train_images=args.max_images, threads=args.threads)
+                         batch_size=args.batch, lr=args.lr, max_minutes=args.max_minutes, max_train_images=args.max_images, threads=args.threads,
+                         init_from=args.init)
         out = Path(args.out) if args.out else REPO_ROOT_PATH / "models" / "ours" / "detector.pt"
         extra = dict(e.split("=", 1) for e in (args.eval or []))
-        rec = train([Path(p) for p in args.inputs], Path(args.val) if args.val else Path(args.inputs[0]), out, tc, extra_eval_sets=extra)
+        rec = train(list(args.inputs), Path(args.val) if args.val else Path(args.inputs[0].partition("*")[0]), out, tc, extra_eval_sets=extra)
         _emit(args, rec, f"saved {out}\nselected: {json.dumps(rec['selected'].get('val', {}))}\nextra: {json.dumps(rec.get('eval', {}))}")
         return 0
     if what == "eval":
@@ -747,6 +748,8 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--max-minutes", type=float)
     s.add_argument("--max-images", type=int)
     s.add_argument("--threads", type=int)
+    s.add_argument("--init", help="train: fine-tune from one of our checkpoints")
+    s.add_argument("--train-split", action="store_true", help="silver: put the frames in the TRAIN split (pseudo-labels for training)")
     s.add_argument("--eval", nargs="*", metavar="NAME=DATASET", help="train: also score the result on these sets")
     s.add_argument("--detectors", nargs="*", default=["yolo:fishial_detector_v26"], help="eval: backend:model, e.g. torchvision:models/ours/detector.pt")
     s.add_argument("--min-confidence", type=float, default=0.5)

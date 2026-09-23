@@ -135,6 +135,8 @@ class TrainConfig:
     eval_confidence: float = 0.5
     seed: int = 0
     threads: int | None = None
+    # Start from a previous checkpoint of ours (fine-tune) instead of the torchvision weights.
+    init_from: str | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -170,13 +172,21 @@ def train(
         torch.set_num_threads(cfg.threads)
     images: list[Path] = []
     for s in train_sets:
-        images += _images_from(s, "train")
+        # "path*4" repeats a set four times per epoch: how a small real set is not drowned by synthetic ones.
+        spec, _, rep = str(s).partition("*")
+        images += _images_from(spec, "train") * (int(rep) if rep else 1)
     random.Random(cfg.seed).shuffle(images)
     if cfg.max_train_images:
         images = images[: cfg.max_train_images]
     val_images = _images_from(val_set, "val") if val_set else []
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = build_model(cfg.arch, cfg.pretrained, cfg.min_size, cfg.max_size).to(device)
+    if cfg.init_from:
+        model, ck = load_checkpoint(cfg.init_from, device)
+        if ck["arch"] != cfg.arch:
+            raise ValueError(f"--init {cfg.init_from} is {ck['arch']}, not {cfg.arch}")
+        model.train()
+    else:
+        model = build_model(cfg.arch, cfg.pretrained, cfg.min_size, cfg.max_size).to(device)
     params = [p for p in model.parameters() if p.requires_grad]
     opt = torch.optim.SGD(params, lr=cfg.lr, momentum=0.9, weight_decay=cfg.weight_decay)
     steps_per_epoch = max(1, math.ceil(len(images) / cfg.batch_size))
@@ -247,7 +257,8 @@ def _save(out_path: Path, model: Any, cfg: TrainConfig, row: dict[str, Any], ima
     record = {
         "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "framework": "torchvision Faster R-CNN (BSD-3); no Ultralytics",
-        "start_weights": "torchvision COCO detection weights (ImageNet-initialised backbone: research-only terms, see trainer.py)" if cfg.pretrained else "none (trained from scratch)",
+        "start_weights": (f"our checkpoint {cfg.init_from}" if cfg.init_from else
+                          "torchvision COCO detection weights (ImageNet-initialised backbone: research-only terms, see trainer.py)" if cfg.pretrained else "none (trained from scratch)"),
         "config": asdict(cfg), "train_sets": [str(s) for s in train_sets], "val_set": str(val_set) if val_set else None,
         "train_images": len(images), "val_images": len(val_images), "selected": row, "history": history,
     }

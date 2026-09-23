@@ -68,8 +68,10 @@ def score_predictions(images: list[Path], predict: Any, iou: float = 0.5) -> dic
 
 
 def evaluate_model(model: Any, images: list[Path], device: str = "cpu", min_confidence: float = 0.5, iou: float = 0.5) -> dict[str, Any]:
-    """Score a torchvision detection model in memory."""
+    """Score a torchvision detection model in memory, with the same post-processing the backend uses."""
     import torch
+
+    from fishai.perception.detection.torchvision_det import postprocess
 
     model.eval()
 
@@ -77,7 +79,8 @@ def evaluate_model(model: Any, images: list[Path], device: str = "cpu", min_conf
         t = torch.from_numpy(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)).permute(2, 0, 1).float().div(255.0).to(device)
         with torch.no_grad():
             out = model([t])[0]
-        return [BBox(*(float(v) for v in b)) for b, s in zip(out["boxes"].cpu().numpy(), out["scores"].cpu().numpy(), strict=True) if s >= min_confidence]
+        h, w = img.shape[:2]
+        return [d.bbox for d in postprocess(out["boxes"].cpu().numpy(), out["scores"].cpu().numpy(), w, h, min_confidence)]
 
     return score_predictions(images, predict, iou)
 

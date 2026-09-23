@@ -28,7 +28,10 @@ def build_silver(
     per_clip: int = 30,
     min_confidence: float = 0.5,
     size: tuple[int, int] = (640, 360),
+    split: str = "val",
 ) -> dict[str, Any]:
+    """``split="val"`` for an evaluation set; ``split="train"`` to use the pseudo-labels for training
+    (self-training from the bootstrap: real textures and real clutter, at the bootstrap's accuracy)."""
     n_frames = n_boxes = 0
     sources = []
     for clip in clips:
@@ -48,12 +51,12 @@ def build_silver(
         cap.release()
         n_frames += taken
         sources.append({"clip": clip.name, "frames": taken})
-    # Everything is evaluation data: put it all in "val".
     write_split(out, 1.0, group_of=lambda p: p.stem.rsplit("_", 1)[0])
-    (out / "val.txt").write_text("\n".join(str(p.resolve()) for p in sorted((out / "images").iterdir())) + "\n", encoding="utf-8")
-    (out / "train.txt").write_text("", encoding="utf-8")
+    listing = "\n".join(str(p.resolve()) for p in sorted((out / "images").iterdir())) + "\n"
+    (out / "val.txt").write_text(listing if split == "val" else "", encoding="utf-8")
+    (out / "train.txt").write_text(listing if split == "train" else "", encoding="utf-8")
     manifest = {
-        "kind": "silver", "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "frames": n_frames, "boxes": n_boxes,
+        "kind": "silver", "split": split, "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "frames": n_frames, "boxes": n_boxes,
         "min_confidence": min_confidence, "labeller": getattr(detector, "name", "?"), "sources": sources,
         "labels_are": "SILVER: the bootstrap detector's boxes. Scores against this set measure agreement with it, not truth.",
     }
