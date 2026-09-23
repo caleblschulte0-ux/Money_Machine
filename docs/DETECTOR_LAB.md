@@ -93,6 +93,43 @@ Three kinds of test set, never confused:
 The silver set is built from clips **held out** of asset harvesting, so it
 is footage of tanks and fish the detector never saw.
 
-## First results (2026-09-23)
+## Results so far (2026-09-23)
 
-See the "Results" section appended by the first training run below.
+Every model is judged on the same two sets: `synth_v1` validation (400
+rendered frames, exact labels) and `silver_holdout` (60 real frames from
+two clips that were held out of ALL asset harvesting and training: the
+Denison barbs tank and the waiting-room tank; labels are Fishial's).
+
+| model | trained on | synthetic F1 | synthetic recall | small-fish recall | night F1 | held-out real F1 | held-out real recall | held-out real precision |
+|---|---|---|---|---|---|---|---|---|
+| Fishial (bootstrap) | its own real photos | 0.48 | 0.32 | 0.04 | 0.34 | (is the label source) | | |
+| **ours v1** | 3,600 synthetic frames, 3 epochs, 70 min CPU | **0.83** | 0.79 | 0.30 | 0.80 | **0.72** | **0.71** | 0.73 |
+| ours v2 | v1 + decoy synthetic + real pseudo-labels x4 | 0.83 | 0.76 | 0.26 | 0.81 | 0.55 | 0.45 | 0.70 |
+
+The v1 held-out numbers include the post-processing added in round 2 (NMS
+0.4, no box over half the frame, no box wrapping two others); before it
+they were F1 0.69, precision 0.67.
+
+What the numbers say:
+
+- **A detector trained only on synthetic footage from the rail's view
+  already works on real tanks it never saw.** In the barbs tank it finds
+  the same fish as Fishial with near-identical boxes
+  (`bench/ours_v1_vs_fishial.jpg`, left column Fishial, right column ours).
+- **Its real-world errors were specific**: boxes on the couch, the person
+  and the room seen through the glass behind the waiting-room tank, and
+  wrapper boxes around several fish. Nothing in the synthetic tanks looked
+  like a room behind glass.
+- **Round 2 made it worse on real footage** even though it improved on
+  synthetic. The leading suspect is the real pseudo-labels: Fishial's
+  boxes miss many fish, so every missed fish was taught as background, and
+  those frames were weighted four times. The ablation below separates that
+  from the decoys.
+- **Fishial's low synthetic recall mostly measures the renderer**: it finds
+  54% of the cartoon fish but only 12% of pasted real fish, while handling
+  real video well. Pasted fish do not yet look real enough to a detector
+  trained on photographs. Better compositing (edge blending, lighting
+  match, motion blur) is the next renderer improvement.
+- **Small, distant fish are the weak spot for everyone** (0.30 at best).
+  Training at a higher input resolution is the obvious lever and costs CPU
+  time; a GPU removes the trade-off.
