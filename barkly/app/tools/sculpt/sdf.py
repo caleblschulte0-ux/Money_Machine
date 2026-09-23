@@ -199,6 +199,28 @@ def warp(field, amount=0.08, freq=1.3, seed=0):
 # ------------------------------------------------------------------ meshing
 
 
+def _weld(verts, faces, normals):
+    """Merge duplicate vertices and drop zero-area triangles.
+
+    Marching cubes emits the same point twice wherever the surface passes
+    exactly through a grid vertex, and a sliver triangle between them. The
+    Home chair came out with 1,629 duplicated points and 3,734 zero-area
+    faces; unwelded, smooth shading breaks at every one, and the arm caps
+    rendered with rings of dark speckles.
+    """
+    # 1e-5: the PLY is written to five decimals, so points closer than that
+    # become duplicates in the file even if they were distinct here.
+    key = np.round(verts / 1e-5).astype(np.int64)
+    _, first, inverse = np.unique(key, axis=0, return_index=True, return_inverse=True)
+    inverse = inverse.reshape(-1)
+    verts, normals = verts[first], normals[first]
+    faces = inverse[faces]
+    distinct = (faces[:, 0] != faces[:, 1]) & (faces[:, 1] != faces[:, 2]) & (faces[:, 0] != faces[:, 2])
+    faces = faces[distinct]
+    area = np.linalg.norm(np.cross(verts[faces[:, 1]] - verts[faces[:, 0]], verts[faces[:, 2]] - verts[faces[:, 0]]), axis=1)
+    return verts, faces[area > 1e-12], normals
+
+
 def mesh(field, lo, hi, res=0.03):
     """Marching cubes over the box [lo, hi] at `res` world units per cell."""
     from skimage.measure import marching_cubes
@@ -213,6 +235,7 @@ def mesh(field, lo, hi, res=0.03):
     step = (hi - lo) / (n - 1)
     verts, faces, normals, _ = marching_cubes(vol, 0.0, spacing=tuple(step))
     verts += lo
+    verts, faces, normals = _weld(verts, faces, normals)
     _, paint = field(verts)
     # marching_cubes' normals point down the gradient (into the solid); flip
     # them so +z means "faces the sky".

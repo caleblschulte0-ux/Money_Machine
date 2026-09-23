@@ -301,6 +301,22 @@ Fixed, from a full-size read of each plate:
 - **Beach:** a deeper toy-blue sea; the far shore is rolling green-topped
   hills, quieted because distance should not shout; pebbles smaller.
 
+### Round three (2026-09-23)
+
+- **Welded meshes.** Marching cubes emits a point twice wherever the surface
+  passes exactly through a grid vertex, plus a sliver triangle between them;
+  the Home chair had 1,629 duplicated points and 3,734 zero-area faces, and
+  smooth shading broke at every one -- the rings of dark speckles on the
+  chair's arms. `sdf._weld` merges and drops them for every kit object.
+- **The sea has waves.** Moulded crests (`wave_*`) dotted across the water,
+  smaller and sparser with distance, instead of one flat blue band.
+- **Town grout** a touch darker than the tiles and soft-edged; a light grout
+  line read as a bright grid across the square.
+- **Far hills** at 0.82 of their colour: distant land is quieter than the
+  beach.
+- **No outline on sculpted sprites.** `ink.SCULPTED_PATHS`: the Home
+  furniture was the only inked thing in a room where Barkly has none.
+
 ## What is blocked, with numbers
 
 `scripts/art-hierarchy.py` measures whether Barkly still reads against his

@@ -144,6 +144,7 @@ PAINT.update({
 BRICK, TERRACOTTA, GLOW, WATER, LAMP, DAISY, BLOSSOM, APPLE = range(41, 49)
 # Home's upholstery and plush.
 UPHOLSTERY, SEAT, PILLOW, PLUSH, CUSHION, SHADE, SHELFWOOD, RECESS, BOOK_RED, BOOK_BLUE, PLUSH_LIGHT, BED_CUSHION = range(60, 72)
+WAVE = 72
 PAINT.update({
     BRICK: ramp("brick", ("deep", "shade", "base"), (1.0, 1.0, 1.0)),
     TERRACOTTA: ramp("brick", ("shade", "base", "base"), (1.05, 1.1, 1.05)),
@@ -180,6 +181,8 @@ PAINT.update({
     RECESS: ramp("wood", ("shade", "shade", "base"), (1.0, 1.0, 1.0)),   # deep/deep read as a black hole
     BOOK_RED: ramp("berry", ("shade", "base", "base"), (1.0, 1.0, 1.0)),
     BOOK_BLUE: ramp("sea", ("shade", "base", "base"), (1.0, 1.0, 1.0)),
+    # Moulded wave crests: the sea's own blue a step lighter on top.
+    WAVE: ramp("sea", ("base", "base", "lit"), (1.25, 1.3, 1.2)),
 })
 
 #: Flower heads take their colour from the bed, so they get ids above the rest.
@@ -651,6 +654,17 @@ def headland(seed=0):
     return sdf.sit(sdf.warp(sdf.smooth_union(*mounds, k=0.7), amount=0.15, freq=0.6, seed=seed), k=0.05)
 
 
+def wave(seed):
+    """A moulded wave crest for a toy sea: a low, soft ridge of three or four
+    swells in a row. Dotted across the water, they turn one flat band of blue
+    into a sea -- the way a playset moulds its water."""
+    rng = np.random.default_rng(seed)
+    n = 3 + seed % 2
+    swells = [sdf.place(sdf.ellipsoid((0.75 + rng.uniform(-0.1, 0.15), 0.30, 0.14 + rng.uniform(0, 0.05)), paint=WAVE),
+                        at=(-0.9 * (n - 1) / 2 + i * 0.9, rng.uniform(-0.06, 0.06), 0.0)) for i in range(n)]
+    return sdf.sit(sdf.smooth_union(*swells, k=0.25), k=0.03)
+
+
 def dune(seed):
     """A low dune: a crest, a long windward slope and a short leeward one,
     as one soft mass."""
@@ -877,6 +891,8 @@ for s in range(3):
 KIT["shell"] = (shell, (-0.6, -0.4, -0.05), (0.6, 0.4, 0.25), 0.01)
 KIT["windbreak"] = (windbreak, (-1.9, -0.4, -0.05), (1.9, 0.4, 1.6), 0.018)
 KIT["towel"] = (towel, (-1.1, -2.1, -0.05), (1.1, 2.1, 0.3), 0.02)
+for s in range(3):
+    KIT[f"wave_{s}"] = (lambda s=s: wave(s), (-2.4, -0.6, -0.05), (2.4, 0.6, 0.35), 0.02)
 KIT["headland"] = (headland, (-38.0, -2.8, -0.1), (38.0, 5.2, 2.4), 0.09)
 for s in range(2):
     KIT[f"dune_{s}"] = (lambda s=s: dune(s), (-4.4, -2.4, -0.1), (4.0, 2.4, 1.2), 0.05)

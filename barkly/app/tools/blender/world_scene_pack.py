@@ -681,9 +681,11 @@ def town():
         plane = ground(_toy(tone("brick", "base"), 1.1, gv), _toy(tone("brick", "base"), 1.2, gv * 1.08), tooth=30.0, bump=0.02)
         # Grout only a step lighter than the tiles and the tiles bigger: with
         # cream grout at 2.2 units the square was a buzzing grid of lines.
+        # Grout a touch DARKER than the tiles, soft-edged: a light grout line
+        # under the toy light read as a bright grid across the whole square.
         plane.data.materials[0] = tile_material("Toy tiles", _toy(tone("brick", "base"), 1.1, gv),
-                                                _toy(tone("brick", "base"), 1.12, gv * 1.07),
-                                                _toy(tone("brick", "lit"), 0.9, gv * 1.02), tile=3.2)
+                                                _toy(tone("brick", "base"), 1.12, gv * 1.06),
+                                                _toy(tone("brick", "base"), 1.05, gv * 0.9), tile=3.2)
     else:
         ground(tone("brick", "base"), tone("brick", "lit"), tooth=30.0, bump=0.07)
     _anchor("stand", 0.0, -3.0)
@@ -834,8 +836,8 @@ def tile_material(name: str, hex_a: str, hex_b: str, hex_grout: str, tile: float
     brick.inputs["Scale"].default_value = 1.0 / tile
     brick.inputs["Brick Width"].default_value = 1.0
     brick.inputs["Row Height"].default_value = 1.0
-    brick.inputs["Mortar Size"].default_value = 0.035
-    brick.inputs["Mortar Smooth"].default_value = 0.6
+    brick.inputs["Mortar Size"].default_value = 0.03
+    brick.inputs["Mortar Smooth"].default_value = 0.85
     brick.inputs["Bias"].default_value = 0.0
     brick.inputs["Color1"].default_value = (*pack.rgb(hex_a), 1.0)
     brick.inputs["Color2"].default_value = (*pack.rgb(hex_b), 1.0)
@@ -1663,6 +1665,15 @@ def beach():
           depth_material("Sea", sea_near, sea_far, self_lit=0.22))
 
     _surf(25.0)
+    if SCULPTED:
+        # Wave crests across the sea, sparser and smaller with distance, so
+        # the water recedes instead of lying there as one flat band.
+        for i in range(22):
+            t, u = _scatter(i + 300)
+            wy = 26.5 + u * 15.0
+            wx = -20.0 + t * 40.0
+            name, flip = _pick("wave", wx, wy)
+            kit(name, wx, wy, 1.25 - u * 0.6, flip=flip)
     _headland(40.0)
 
     # THE BACK OF THE BEACH. Low mounds behind the tide line give the sand a
@@ -1826,7 +1837,8 @@ def _headland(y: float):
     differ.
     """
     if SCULPTED:
-        return kit("headland", 0.0, y)
+        # 0.82: distant land, quieter than anything on the beach.
+        return kit("headland", 0.0, y, tint=0.82)
     # ONE TONE, and this took a second pass to accept. Alternating three
     # steps of the stone ramp across neighbouring mounds rendered a cow-print
     # ridge: adjacent lumps in visibly different colours read as separate

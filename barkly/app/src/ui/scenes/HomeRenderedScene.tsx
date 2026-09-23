@@ -64,10 +64,10 @@ const NEAR_FLOOR = require('../../../assets/world/home/props/near_floor.png');
  * and the town's LAMP_ASPECT both exist.
  */
 const WINDOW_FRAME_ASPECT = 466 / 485;
-const CHAIR_ASPECT = 335 / 350;
-const LAMP_ASPECT = 254 / 474;
-const BED_ASPECT = 500 / 192;
-const SHELF_ASPECT = 284 / 425;
+const CHAIR_ASPECT = 327 / 342;
+const LAMP_ASPECT = 248 / 468;
+const BED_ASPECT = 490 / 182;
+const SHELF_ASPECT = 278 / 419;
 
 const NEAR_FLOOR_ASPECT = 654 / 66;
 const PANELLING = require('../../../assets/world/home/props/panelling.png');

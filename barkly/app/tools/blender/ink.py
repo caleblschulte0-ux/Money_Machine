@@ -102,6 +102,14 @@ EXEMPT_PREFIXES = ("sky/",)
 #: And individual props that are, wherever they live.
 EXEMPT_WORDS = ("shadow", "haze", "glow", "surf")
 
+#: SCULPTED props, which carry no drawn edge. Since 2026-09-23 the scene plates
+#: and Home's furniture are sculpted and lit as soft toys (tools/sculpt), and
+#: the plates render with the contour off. The furniture sprites still got a
+#: dark outline at promotion, so in Home the chair and the lamp were the only
+#: inked things in a room where Barkly himself has none. Sculpted art takes
+#: its edge from its own light and occlusion, like the character.
+SCULPTED_PATHS = ("home/chair", "home/lamp", "home/bed", "home/shelf")
+
 
 def contour_on() -> bool:
     """Is the drawn edge switched on? A FUNCTION, deliberately.
@@ -123,6 +131,8 @@ def contour_on() -> bool:
 def takes_ink(path: str) -> bool:
     """Does the prop at this BUILDERS path get an edge at all?"""
     if not CONTOUR:
+        return False
+    if path in SCULPTED_PATHS:
         return False
     if any(path.startswith(prefix) for prefix in EXEMPT_PREFIXES):
         return False
