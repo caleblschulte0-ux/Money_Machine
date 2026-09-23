@@ -314,6 +314,53 @@ def contact_shadow(frame, cx, feet_y, width, alpha=0.24):
     frame[:] = (frame * (1 - sh[:, :, None] * alpha)).astype(np.uint8)
 
 
+def relight(sp, sun=(-0.25, -1.0), key=0.55, fill=0.72, contrast=1.2, warm=(0.98, 1.0, 1.03)):
+    """Put a cutout under THIS shot's sun. The mammoth plate is lit like a
+    soft studio render; Falls Park at noon is a hard sun from high behind
+    the camera -- bright backs, dark bellies. A pseudo-normal from the
+    silhouette's distance field (it bends to face outward at the edges) is
+    lit by that sun, and everything below the belly line is shadowed by the
+    body itself. Without this it read as a sticker however well it was
+    placed (operator 2026-09-23: "the mammoth still looks like shit")."""
+    a = (sp[:, :, 3] > 100).astype(np.uint8)
+    d = cv2.GaussianBlur(cv2.distanceTransform(a, cv2.DIST_L2, 5).astype(np.float32), (0, 0), 6)
+    gy, gx = np.gradient(d)
+    nz = np.clip(d / (d.max() * 0.35), 0, 1)
+    nx, ny = -gx, -gy
+    n = np.sqrt(nx * nx + ny * ny + nz * nz) + 1e-6
+    lx, ly, lz = sun[0], sun[1], 0.55
+    ln = math.sqrt(lx * lx + ly * ly + lz * lz)
+    lam = np.clip((nx * lx + ny * ly + nz * lz) / (n * ln), 0, 1)
+    ys = np.linspace(0, 1, a.shape[0]).reshape(-1, 1)
+    gain = fill + key * lam - np.clip((ys - 0.62) / 0.18, 0, 1) * 0.45
+    rgb = sp[:, :, :3].astype(np.float32)
+    m = rgb[a > 0].mean()
+    rgb = ((rgb - m) * contrast + m) * gain[:, :, None]
+    hl = np.clip(lam - 0.6, 0, 1)[:, :, None] * 6.0
+    rgb = rgb * (1 + hl * (np.array(warm, np.float32) - 1))
+    out = sp.copy()
+    out[:, :, :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+    return out
+
+
+def desaturate(sp, sat):
+    hsv = cv2.cvtColor(sp[:, :, :3], cv2.COLOR_BGR2HSV).astype(np.float32)
+    hsv[:, :, 1] *= sat
+    out = sp.copy()
+    out[:, :, :3] = cv2.cvtColor(np.clip(hsv, 0, 255).astype(np.uint8), cv2.COLOR_HSV2BGR)
+    return out
+
+
+def ground_shadow(frame, cx, feet_y, width, alpha=0.7):
+    """A noon shadow: short, hard-edged and dark, pooled right under the
+    body. contact_shadow's soft wide ellipse is right for an overcast
+    shot; on sunlit rock it reads as a smudge and the figure floats."""
+    sh = np.zeros((H, W), np.float32)
+    cv2.ellipse(sh, (int(cx), int(feet_y + 2)), (int(width * 0.42), max(3, int(width * 0.07))), 0, 0, 360, 1.0, -1)
+    sh = cv2.GaussianBlur(sh, (0, 0), max(1.5, width * 0.02))
+    frame[:] = (frame * (1 - sh[:, :, None] * alpha)).astype(np.uint8)
+
+
 def warp_sprite(sprite, M):
     """Affine-warp a BGRA sprite into a frame-sized transparent canvas.
     BORDER_TRANSPARENT leaves untouched pixels as whatever was in memory,
@@ -751,7 +798,7 @@ def reveal_frame(sprite, u):
 
 
 def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.3),
-               reflection=None, breathe=True, color_strength=0.55, lock=False):
+               reflection=None, breathe=True, color_strength=0.55, lock=False, sun=None, sat=1.0):
     """Track the background, then stand a cutout on the real ground:
     colour-matched, defocus-matched, light-wrapped, with a contact shadow
     (and a water reflection when asked), dissolving in under a bloom.
@@ -773,9 +820,14 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
     ry0, ry1 = max(0, int(y0 - sh * 1.1)), min(H, int(y0 + 30))
     rx0, rx1 = max(0, int(x0 - sw * 0.7)), min(W, int(x0 + sw * 0.7))
     region = frames[0][ry0:ry1, rx0:rx1]
+    if sun is not None:
+        sprite = relight(sprite, sun=sun)
     sprite = color_transfer(sprite, region, strength=color_strength)
     sprite = cv2.resize(sprite, (sw, sh), interpolation=cv2.INTER_AREA)
     sprite, sigma = match_focus(sprite, region)
+    if sat != 1.0:
+        sprite = desaturate(sprite, sat)
+    grain = np.random.default_rng(1)
     print(f"    focus-matched with sigma={sigma:.2f}; bg sharp={sharpness(region):.0f}")
     out = []
     n = len(frames)
@@ -788,7 +840,10 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
             continue
         s = 1.0 + (0.006 * math.sin(2 * math.pi * 0.22 * t) if breathe else 0.0)
         fx_, fy_ = apply_pt(A[i], x0, y0)
-        contact_shadow(g, fx_, fy_ - 3, sw * 0.9, alpha=0.26 * u)
+        if sun is not None:
+            ground_shadow(g, fx_, fy_, sw, alpha=0.7 * u)
+        else:
+            contact_shadow(g, fx_, fy_ - 3, sw * 0.9, alpha=0.26 * u)
         sp, glow = reveal_frame(sprite, u)
         if reflection:
             # mirror into the water below the feet, squashed and faded
@@ -813,8 +868,12 @@ def fx_element(frames, sprite_path, anchor, scale, exclude_rect, appear=(0.4, 1.
             ga = wg[:, :, 3:4].astype(np.float32) / 255.0
             g[:] = np.clip(g.astype(np.float32) + np.array(ACCENT_BGR, np.float32) * ga * 0.6, 0, 255).astype(np.uint8)
         bg = g.copy()
+        if sun is not None:
+            # the plate has sensor grain; a clean cutout is a tell
+            n_ = grain.normal(0, 2.5, warped[:, :, :3].shape)
+            warped[:, :, :3] = np.clip(warped[:, :, :3] + n_, 0, 255).astype(np.uint8)
         blit(g, warped, 0, 0, 1.0)
-        g = light_wrap(g, warped[:, :, 3], bg)
+        g = light_wrap(g, warped[:, :, 3], bg, **(dict(width=5, amount=0.4) if sun is not None else {}))
         out.append(g)
     return out
 
@@ -998,7 +1057,7 @@ def stage_fx():
             M_ = FX["mammoth"]
             res = fx_element(frames, f"{HERE}/work/mam_rembg.png", anchor=M_["anchor"], scale=M_["scale"],
                              exclude_rect=M_["exclude"], appear=(0.35, 1.35), lock=True, breathe=False,
-                             reflection=dict(squash=0.45, alpha=0.28, water_poly=M_["water_poly"]))
+                             color_strength=0.35, sun=(-0.25, -1.0), sat=0.82)
         elif fx == "sync":
             res = fx_sync(frames, t0)
         elif fx == "activate":
@@ -1192,11 +1251,13 @@ def stage_picture():
         for a, b_ in sweep_shots:
             if a + 0.3 <= t < a + 1.9:
                 f = light_sweep(f, (t - a - 0.3) / 1.6)
-        for a, b_, kind, amt in moves:
+        for a, b_, kind, amt, *at in moves:
             if a <= t < b_:
                 u = ease((t - a) / (b_ - a))
                 s = 1.0 + amt * (u if kind == "in" else 1 - u)
-                M = cv2.getRotationMatrix2D((W * 0.5, H * 0.5), 0, s)
+                # an optional third element holds that point still: the
+                # frame grows AROUND it (the mammoth stays where it stands)
+                M = cv2.getRotationMatrix2D(tuple(at[0]) if at else (W * 0.5, H * 0.5), 0, s)
                 f = cv2.warpAffine(f, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
                 break
         for a, b_, kind, z, p in pushes:

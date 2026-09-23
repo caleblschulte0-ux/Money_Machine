@@ -48,7 +48,7 @@ SHOTS = [
     # the viewing tower, and the cut lands on him standing on that tower
     ("map",     None,                            0.0, 5.5, dict(gen="map")),
     ("markers", f"{RAW}/IMG_6799.MOV",           2.0, 3.0, dict(mc=True, fx="markers", move=("in", 0.03))),
-    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.05))),
+    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.08, (420, 620)))),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     # safety, at the water: audio only near it, a warning too close, off
     # closer than that (operator 2026-09-22) -- the lens readout says so
@@ -137,8 +137,10 @@ FX = {
     # on the rock bank below the mill, facing the falls -- NOT in the river:
     # standing in the water with every foot and toenail showing, it read as
     # floating on the surface (operator 2026-09-22: "looks weird")
-    "mammoth": dict(anchor=(335, 752), scale=0.58, exclude=(1180, 0, 1920, 1080),
-                    water_poly=[(0, 775), (560, 770), (980, 800), (980, 1080), (0, 1080)]),
+    # on the flat TOP of the rock shelf below the mill, not at the foot of
+    # its face (that was standing in the river). Scaled to the people on the
+    # deck behind it: ~3.5 m at the shoulder, not a 6 m giant.
+    "mammoth": dict(anchor=(330, 700), scale=0.27, exclude=(1180, 0, 1920, 1080)),
     "dakota": dict(anchor=(1275, 760), scale=0.78, exclude=(0, 0, 780, 1080)),
 }
 
