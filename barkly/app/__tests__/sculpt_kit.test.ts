@@ -19,6 +19,16 @@ const scene = readFileSync(join(ROOT, 'tools', 'blender', 'world_scene_pack.py')
 const kit = readFileSync(join(ROOT, 'tools', 'sculpt', 'kit.py')).toString();
 
 describe('sculpt kit', () => {
+  it('makes a storefront for every colourway the town builds', () => {
+    const fronts = scene.match(/fronts = \(([\s\S]*?)\n    \)/);
+    expect(fronts).not.toBeNull();
+    const names = [...(fronts as RegExpMatchArray)[1].matchAll(/^\s*\("(\w+)",/gm)].map((m) => m[1].toLowerCase());
+    expect(names.length).toBe(3);
+    const families = kit.match(/STORE_FAMILIES = \{([^}]*)\}/);
+    expect(families).not.toBeNull();
+    for (const n of names) expect((families as RegExpMatchArray)[1]).toContain(`"${n}"`);
+  });
+
   it('makes every fixed object a sculpted scene asks for', () => {
     const asked = [...scene.matchAll(/\bkit\("([a-z_]+)"/g)].map((m) => m[1]);
     expect(asked.length).toBeGreaterThan(0);

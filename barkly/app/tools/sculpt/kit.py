@@ -134,6 +134,24 @@ PAINT.update({
     HEADLAND: ramp("stone", ("deep", "shade", "shade"), (1.0, 1.0, 1.0)),
 })
 
+# The town. Each storefront colourway is a family with three jobs: body,
+# edge (the darker trim), and awning (the loud stripe).
+BRICK, TERRACOTTA, GLOW, WATER = range(41, 45)
+PAINT.update({
+    BRICK: ramp("brick", ("deep", "shade", "base"), (1.0, 1.0, 1.0)),
+    TERRACOTTA: ramp("brick", ("shade", "base", "base"), (1.05, 1.1, 1.05)),
+    GLOW: ramp("sun", ("lit", "pop", "pop"), (1.0, 1.0, 1.0)),
+    WATER: ramp("sea", ("base", "lit", "lit"), (1.1, 1.1, 1.05)),
+})
+STORE_FAMILIES = {"coral": "roof", "aqua": "sea", "violet": "grape"}
+STORE = {}
+for n, (key, fam) in enumerate(STORE_FAMILIES.items()):
+    body, edge, awning = 50 + n * 3, 51 + n * 3, 52 + n * 3
+    STORE[key] = (body, edge, awning)
+    PAINT[body] = ramp(fam, ("shade", "base", "base"), (1.0, 1.05, 1.0))
+    PAINT[edge] = ramp(fam, ("deep", "shade", "shade"), (1.0, 1.05, 1.05))
+    PAINT[awning] = ramp(fam, ("base", "base", "lit"), (1.05, 1.1, 1.05))
+
 #: Flower heads take their colour from the bed, so they get ids above the rest.
 PETALS = {"berry": 20, "sun": 21, "cream": 22, "grape": 23}
 for fam, pid in PETALS.items():
@@ -538,6 +556,110 @@ def dune(seed):
                                             (0.95, -0.25, 0.14 - 0.6, 0.95, 0.80, 1.05))]
     return sdf.sit(sdf.warp(sdf.smooth_union(*lobes, k=0.45), amount=0.10, freq=0.9, seed=seed), k=0.05)
 
+
+# ------------------------------------------------------------------ the town
+
+def storefront(colour):
+    """A toy shopfront: a fat plinth, a rounded body, a crown and cornice, a
+    cream sign, a framed window with a little display, a door with a brass
+    knob, and a striped awning with a scalloped hem -- the playset detail."""
+    body_p, edge_p, awning_p = STORE[colour]
+    parts = [
+        sdf.place(sdf.round_box((2.02, 0.72, 0.30), 0.14, paint=edge_p), at=(0, 0.44, 0.30)),
+        sdf.place(sdf.round_box((1.78, 0.64, 2.10), 0.24, paint=body_p), at=(0, 0.48, 2.32)),
+        sdf.place(sdf.round_box((2.28, 0.90, 0.34), 0.20, paint=edge_p), at=(0, 0.26, 4.34)),
+        sdf.place(sdf.round_box((2.00, 0.80, 0.16), 0.12, paint=body_p), at=(0, 0.24, 4.68)),
+    ]
+    shell = sdf.smooth_union(*parts, k=0.06)
+    # window and door are pressed INTO the body, then filled
+    shell = sdf.smooth_subtract(shell, sdf.place(sdf.round_box((0.80, 0.30, 1.28), 0.10), at=(-0.54, -0.20, 1.86)), k=0.04)
+    shell = sdf.smooth_subtract(shell, sdf.place(sdf.round_box((0.46, 0.30, 1.50), 0.10), at=(1.02, -0.20, 1.66)), k=0.04)
+    glass = sdf.place(sdf.round_box((0.76, 0.05, 1.22), 0.06, paint=GLASS), at=(-0.54, -0.02, 1.88))
+    door = sdf.place(sdf.round_box((0.42, 0.05, 1.44), 0.06, paint=GLASS), at=(1.02, -0.02, 1.68))
+    knob = sdf.place(sdf.ellipsoid((0.08, 0.08, 0.08), paint=GOLD), at=(0.74, -0.12, 1.62))
+    sign = sdf.smooth_union(sdf.place(sdf.round_box((1.40, 0.16, 0.36), 0.14, paint=STRIPE), at=(0, -0.28, 3.70)),
+                            sdf.place(sdf.round_box((0.94, 0.05, 0.08), 0.04, paint=awning_p), at=(0, -0.44, 3.70)), k=0.02)
+    shelf = sdf.place(sdf.round_box((0.66, 0.12, 0.10), 0.05, paint=WOOD), at=(-0.54, -0.30, 0.86))
+    goods = sdf.union(sdf.place(sdf.ellipsoid((0.22, 0.12, 0.22), paint=awning_p), at=(-0.83, -0.32, 1.18)),
+                      sdf.place(sdf.round_box((0.20, 0.10, 0.26), 0.06, paint=STRIPE), at=(-0.28, -0.32, 1.20)))
+    awning = sdf.smooth_union(
+        sdf.place(sdf.round_box((2.00, 0.72, 0.14), 0.12, paint=awning_p), at=(0, -0.86, 3.18), rot=[("x", math.radians(12))]),
+        *[sdf.place(sdf.ellipsoid((0.28, 0.17, 0.20), paint=awning_p), at=(-1.68 + i * 0.56, -1.46, 3.00)) for i in range(7)],
+        k=0.06)
+    awning = sdf.repaint(awning, lambda p, m: np.where((np.floor((p[:, 0] + 1.96) / 0.56).astype(int) % 2) == 0, awning_p, STRIPE))
+    return sdf.sit(sdf.union(shell, glass, door, knob, sign, shelf, goods, awning), k=0.03)
+
+
+def rooftops(seed=0):
+    """The town behind the town: a row of little PASTEL houses with rounded
+    gables and chimneys. The first cut was all maroon brick with pointed
+    gables and read as a fortress wall along the skyline -- the wrong mood for
+    this game. Toy houses come in different colours."""
+    walls = (STRIPE, SAND, STORE["coral"][0], STRIPE, STORE["aqua"][0], SAND, STORE["violet"][0], STRIPE, SAND)
+    # Mixed roof colours -- the second cut was all ROOF and BERRY, two reds,
+    # and scaled up for the skyline they read as a field of red mushrooms.
+    roofs = (ROOF, TRIM, CORAL, AQUA, ROOF, SEA, CORAL, TRIM, BERRY)
+    parts = []
+    for i, (x, half, h) in enumerate(((-3.05, 0.62, 0.86), (-2.30, 0.48, 0.62), (-1.62, 0.74, 1.02), (-0.92, 0.54, 0.70),
+                                      (-0.16, 0.66, 0.92), (0.60, 0.46, 0.58), (1.30, 0.72, 0.98), (2.06, 0.52, 0.66),
+                                      (2.78, 0.62, 0.84))):
+        parts.append(sdf.place(sdf.round_box((half, 0.30, h * 0.5), 0.07, paint=walls[i]), at=(x, 0, h * 0.5)))
+        # A PITCHED roof with its GABLE END to the camera: a rounded bar
+        # turned 45 degrees about the depth axis, so each house shows a soft
+        # triangle. Domes read as mushrooms at skyline scale, and a ridge
+        # running across the view showed only its flat slope -- a coloured bar.
+        a = half * 1.08 / math.sqrt(2)
+        parts.append(sdf.place(sdf.round_box((a, 0.34, a), 0.05, paint=roofs[i]), at=(x, 0.0, h),
+                               rot=[("y", math.pi / 4)]))
+        if i % 3 == 1:
+            parts.append(sdf.place(sdf.round_box((0.07, 0.07, 0.16), 0.03, paint=BRICK), at=(x + half * 0.5, -0.04, h + 0.30)))
+        # one window per house
+        parts.append(sdf.place(sdf.round_box((0.10, 0.03, 0.12), 0.03, paint=GLASS), at=(x, -0.30, h * 0.55)))
+    return sdf.sit(sdf.union(*parts), k=0.02)
+
+
+def fountain(seed=0):
+    """A round two-tier fountain: plinth, a fat rolled lower basin full of
+    water, a column, a smaller basin, and a finial."""
+    stone_parts = [
+        sdf.cone(1.34, 1.16, 0.34, paint=ROCK),
+        sdf.squash(sdf.place(sdf.torus(1.04, 0.30, paint=STONE), at=(0, 0, 0.62)), (1.22, 0.84, 0.66), about=(0, 0, 0.62)),
+        sdf.place(sdf.cone(0.46, 0.30, 1.10, paint=ROCK), at=(0, 0.08, 0.60)),
+        sdf.squash(sdf.place(sdf.torus(0.62, 0.20, paint=STONE), at=(0, 0.02, 1.82)), (1.16, 0.84, 0.62), about=(0, 0.02, 1.82)),
+        sdf.place(sdf.ellipsoid((0.24, 0.21, 0.30), paint=STONE), at=(0, 0.05, 2.24)),
+    ]
+    water = sdf.union(sdf.place(sdf.ellipsoid((1.20, 0.72, 0.10), paint=WATER), at=(0, -0.02, 0.68)),
+                      sdf.place(sdf.ellipsoid((0.66, 0.38, 0.08), paint=WATER), at=(0, -0.02, 1.88)))
+    return sdf.sit(sdf.union(sdf.smooth_union(*stone_parts, k=0.08), water), k=0.03)
+
+
+def lamp(seed=0):
+    """A street lamp: flared foot, tapering post, brass collar, a lantern
+    with a glowing pane, a peaked cap and a brass finial."""
+    iron = [sdf.cone(0.34, 0.26, 0.34, paint=IRON),
+            sdf.capsule((0, 0, 0.30), (0, 0, 2.84), 0.20, 0.13, paint=IRON)]
+    collar = sdf.place(sdf.cone(0.28, 0.20, 0.22, paint=GOLD), at=(0, 0, 2.80))
+    lz = 3.30
+    lantern = sdf.place(sdf.round_box((0.52, 0.42, 0.56), 0.12, paint=IRON), at=(0, 0, lz))
+    pane = sdf.place(sdf.round_box((0.40, 0.05, 0.42), 0.06, paint=GLOW), at=(0, -0.40, lz))
+    cap = sdf.place(sdf.cone(0.78, 0.14, 0.40, paint=IRON), at=(0, 0, lz + 0.50))
+    fin = sdf.place(sdf.ellipsoid((0.13, 0.12, 0.17), paint=GOLD), at=(0, 0, lz + 1.00))
+    return sdf.sit(sdf.union(sdf.smooth_union(*iron, collar, lantern, cap, fin, k=0.05), pane), k=0.02)
+
+
+def planter(seed=0):
+    """A terracotta pot with a rolled rim and a lumpy plant with two yellow
+    blooms."""
+    pot = sdf.smooth_union(sdf.cone(0.46, 0.80, 0.90, paint=TERRACOTTA),
+                           sdf.place(sdf.torus(0.82, 0.12, paint=TERRACOTTA), at=(0, 0, 0.92)), k=0.05)
+    pz = 1.30
+    plant = sdf.smooth_union(sdf.place(sdf.ellipsoid((0.78, 0.60, 0.50), paint=LEAF), at=(0, 0.02, pz)),
+                             *[sdf.place(sdf.ellipsoid((r, r * 0.8, r * 0.8), paint=LEAF), at=(x, -0.04, pz + z))
+                               for x, z, r in ((-0.50, 0.14, 0.50), (0.06, 0.50, 0.54), (0.52, 0.08, 0.46))], k=0.10)
+    blooms = sdf.union(*[sdf.place(sdf.ellipsoid((0.12, 0.12, 0.12), paint=YELLOW), at=(x, y, pz + z))
+                         for x, y, z in ((-0.34, -0.40, 0.46), (0.40, -0.42, 0.38))])
+    return sdf.sit(sdf.union(pot, plant, blooms), k=0.03)
+
 #: name -> (builder, bounds lo, bounds hi, resolution)
 KIT = {}
 for s in range(6):
@@ -575,6 +697,14 @@ KIT["headland"] = (headland, (-38.0, -2.8, -0.1), (38.0, 5.2, 1.6), 0.09)
 for s in range(2):
     KIT[f"dune_{s}"] = (lambda s=s: dune(s), (-4.4, -2.4, -0.1), (4.0, 2.4, 1.2), 0.05)
 
+
+# The town.
+for key in STORE_FAMILIES:
+    KIT[f"store_{key}"] = (lambda key=key: storefront(key), (-2.5, -1.8, -0.1), (2.5, 1.3, 5.0), 0.03)
+KIT["rooftops"] = (rooftops, (-3.9, -0.6, -0.1), (3.6, 0.6, 1.8), 0.02)
+KIT["fountain"] = (fountain, (-1.8, -1.2, -0.1), (1.8, 1.2, 2.7), 0.022)
+KIT["lamp"] = (lamp, (-0.9, -0.7, -0.1), (0.9, 0.7, 4.6), 0.02)
+KIT["planter"] = (planter, (-1.1, -1.0, -0.1), (1.1, 1.0, 2.2), 0.02)
 
 def build(name, out: Path):
     builder, lo, hi, res = KIT[name]

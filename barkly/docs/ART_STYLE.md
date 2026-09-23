@@ -294,7 +294,10 @@ script reports and is deliberately not a CI gate — `npm run art:hierarchy`.
 
 ## What is NOT decided yet
 
-- Town and Home are still primitive. Park and beach are sculpted; the rest
-  convert the same way, one at a time, each judged on its own.
+- Home is still primitive. Park, beach and town are sculpted (town: three
+  storefront colourways with striped scalloped awnings, fountain, lamps,
+  planters, and a skyline of pastel gabled houses -- the first skyline was
+  domes, which read as a field of red mushrooms, then ridges across the view,
+  which read as coloured bars; gable ends to the camera read as houses).
 - The lawn's shadows (see the warm-shadow row above).
 - The UI. It is still drawn in its own language.

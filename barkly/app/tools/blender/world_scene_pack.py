@@ -658,7 +658,11 @@ def town():
     #   lit->pop      sat 0.280  val 0.522   back to where concrete was
     #
     # Against town's composited 0.292 / 0.475 and park's 0.516 / 0.659.
-    ground(tone("brick", "base"), tone("brick", "lit"), tooth=30.0, bump=0.07)
+    if SCULPTED:
+        gv = TOY_LIGHT["ground_value"]
+        ground(_toy(tone("brick", "base"), 1.1, gv), _toy(tone("brick", "base"), 1.2, gv * 1.08), tooth=30.0, bump=0.02)
+    else:
+        ground(tone("brick", "base"), tone("brick", "lit"), tooth=30.0, bump=0.07)
     _anchor("stand", 0.0, -3.0)
     _anchor("standTop", 0.0, -3.0, 1.0)
     _anchor("horizon", 0.0, 43.0)
@@ -696,6 +700,9 @@ def town():
     )
     for i, x in enumerate((-16.0, -9.6, -3.2, 3.2, 9.6, 16.0)):
         name, body, edge, awning = fronts[i % 3]
+        if SCULPTED:
+            kit(f"store_{name.lower()}", x, 29.0 + (i % 2) * 1.1, 1.28, flip=(i % 2 == 1))
+            continue
         place(lambda n=name, b=body, e=edge, a=awning: pack.storefront(n, b, e, a),
               x, 29.0 + (i % 2) * 1.1, 1.28, flip=(i % 2 == 1))
 
@@ -1049,7 +1056,7 @@ def _poly(name: str, points, z: float, mat):
 # Which scenes are sculpted is this table, and going back is one word in it
 # (or SCENE_STYLE=primitive for a single run) -- the primitive builders are
 # untouched underneath.
-SCENE_STYLE = {"park": "sculpt", "town": "primitive", "beach": "sculpt"}
+SCENE_STYLE = {"park": "sculpt", "town": "sculpt", "beach": "sculpt"}
 SCULPTED = False  # set per scene by main(), read by every builder
 KIT_DIR = ROOT / "art-review" / "sculpt" / "kit"
 _KIT_MESHES: dict = {}
@@ -1062,6 +1069,11 @@ SCULPTED_BUILDERS = {
     "beach_castle": "castle",
     "beach_palm": "palm_",
     "beach_shells": "shell",
+    "town_rooftops": "rooftops",
+    "town_fountain": "fountain",
+    "town_lamp": "lamp",
+    "town_planter": "planter",
+    "park_bench": "bench",
 }
 
 #: The kit is painted against the canon's STUDIO light (render_sculpt.py) and
