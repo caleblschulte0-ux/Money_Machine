@@ -48,7 +48,7 @@ SHOTS = [
     # the viewing tower, and the cut lands on him standing on that tower
     ("map",     None,                            0.0, 5.5, dict(gen="map")),
     ("markers", f"{RAW}/IMG_6799.MOV",           2.0, 3.0, dict(mc=True, fx="markers", move=("in", 0.03))),
-    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.08, (420, 620)))),
+    ("mammoth", f"{RAW_MORE}/IMG_6806.MOV",     44.0, 5.0, dict(fx="mammoth", move=("in", 0.16, (420, 620)))),
     ("dakota",  f"{RAW_MORE}/IMG_6804.MOV",     22.5, 3.0, dict(fx="dakota", move=("in", 0.04))),
     # safety, at the water: audio only near it, a warning too close, off
     # closer than that (operator 2026-09-22) -- the lens readout says so
