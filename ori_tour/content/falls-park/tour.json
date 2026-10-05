@@ -1,0 +1,135 @@
+{
+  "schema": "ori.tour/1",
+  "id": "falls-park-sioux-falls",
+  "title": "Falls Park",
+  "subtitle": "Sioux Falls, South Dakota",
+  "version": "0.1.0-prototype",
+  "status": "PROTOTYPE. Stop placement is provisional and all copy is unreviewed. Not for public use.",
+  "credits": [
+    "Map data (c) OpenStreetMap contributors, ODbL",
+    "History drawn only from the sources listed on each stop"
+  ],
+  "safety": {
+    "pictures_only_when_still": true,
+    "still_below_mps": 0.7,
+    "still_for_seconds": 2,
+    "keep_lower_field_clear": true,
+    "note": "While walking the tour is audio only. Stops sit on paths, away from the water's edge."
+  },
+  "start": {
+    "name": "Viewing Tower",
+    "position": { "lat": 43.558266, "lon": -96.722404 },
+    "note": "Proposed start near the Visitor Information Center and viewing tower (managed by Experience Sioux Falls)."
+  },
+  "stops": [
+    {
+      "id": "falls",
+      "order": 1,
+      "name": "The falls",
+      "position": { "lat": 43.557453, "lon": -96.722301 },
+      "radius_m": 20,
+      "placement": "provisional: an OpenStreetMap information-board node on the path; confirm on site with Parks staff",
+      "facing": {
+        "target_name": "Middle Sioux Falls",
+        "target": { "lat": 43.557196, "lon": -96.722249 },
+        "tolerance_deg": 25,
+        "hint": "Face the falls"
+      },
+      "narration": {
+        "text": "You're standing above the Big Sioux River. The water ahead of you drops over Middle Sioux Falls, and Upper Sioux Falls is further upstream to your right. The full story of how these falls formed is still being researched and checked, and it will be added here once it is.",
+        "audio": null,
+        "review": "unreviewed"
+      },
+      "scene": {
+        "kind": "falls",
+        "kicker": "STOP 1 OF 3",
+        "title": "The falls",
+        "lines": ["Middle Sioux Falls, ahead", "Upper Sioux Falls, upstream"],
+        "image": null,
+        "placeholder": "Scene art to come. Geology content needs a verified source."
+      },
+      "sources": [
+        { "label": "Waterfall names and positions: OpenStreetMap", "url": "https://www.openstreetmap.org/#map=18/43.5570/-96.7225" }
+      ],
+      "todo": [
+        "Geology narration (how the falls formed, the rock): no verified source in ORI research yet. Do not use the promo's 'twelve thousand years ago' line until it is sourced.",
+        "Confirm 'upstream to your right' on site once the stop is placed."
+      ]
+    },
+    {
+      "id": "dakota",
+      "order": 2,
+      "name": "The river and the Dakota",
+      "position": { "lat": 43.557043, "lon": -96.723136 },
+      "radius_m": 20,
+      "placement": "provisional: an OpenStreetMap viewpoint node on the path; confirm on site with Parks staff",
+      "facing": {
+        "target_name": "Upper Sioux Falls",
+        "target": { "lat": 43.556549, "lon": -96.722872 },
+        "tolerance_deg": 25,
+        "hint": "Face upstream, toward the upper falls"
+      },
+      "narration": {
+        "text": "People were coming to this river long before there was a city here. Use of this place by Indigenous people goes back thousands of years, as a hub for trade and seasonal travel. A historical marker in this park, put up in 2025, describes the Dakota, one of the three prominent subcultures of the Oceti Sakowin people, using the river and the falls as a trading and reference point.",
+        "audio": null,
+        "review": "draft: needs advice and review from Dakota tribal historic preservation offices before any visitor hears it"
+      },
+      "scene": {
+        "kind": "quote",
+        "kicker": "STOP 2 OF 3",
+        "title": "A trading and reference point",
+        "lines": ["The Dakota used the river and the falls as a trading and reference point."],
+        "attribution": "Historical marker, 'Falls Park: Transformation Over Time' (2025)",
+        "image": null,
+        "placeholder": "Scene art only with Dakota guidance. No invented people or scenes."
+      },
+      "sources": [
+        { "label": "HMdb: 'Falls Park: Transformation Over Time'", "url": "https://www.hmdb.org/m.asp?m=288394" },
+        { "label": "Explore the Falls: park history", "url": "https://www.explorethefalls.org/parks-paths/falls-park/park-history" }
+      ],
+      "todo": [
+        "Seek advice from the Flandreau Santee Sioux and Sisseton-Wahpeton THPOs (honorarium) on this stop's words and any images.",
+        "Verify who erected the 2025 marker and its exact Dakota wording."
+      ]
+    },
+    {
+      "id": "mill",
+      "order": 3,
+      "name": "The Queen Bee Mill",
+      "position": { "lat": 43.556236, "lon": -96.722009 },
+      "radius_m": 20,
+      "placement": "provisional: an OpenStreetMap information-board node near the mill; confirm on site with Parks staff",
+      "facing": {
+        "target_name": "Queen Bee Mill",
+        "target": { "lat": 43.5564, "lon": -96.722472 },
+        "tolerance_deg": 25,
+        "hint": "Face the mill"
+      },
+      "narration": {
+        "text": "What's left in front of you is the Queen Bee Mill. Richard Pettigrew built it in 1881, and it closed in 1883, only two years later. The land at the falls had been fought over even before that: in 1856, the Western Town Company and the Dakota Land Company competed to claim the site.",
+        "audio": null,
+        "review": "draft: Siouxland Heritage Museums to fact-check"
+      },
+      "scene": {
+        "kind": "timeline",
+        "kicker": "STOP 3 OF 3",
+        "title": "The Queen Bee Mill",
+        "timeline": [
+          { "year": "1856", "text": "Two town companies race to claim the falls" },
+          { "year": "1881", "text": "Richard Pettigrew builds the mill" },
+          { "year": "1883", "text": "The mill closes" }
+        ],
+        "image": null,
+        "placeholder": "Archival photo to request from Siouxland Heritage Museums."
+      },
+      "sources": [
+        { "label": "Explore the Falls: park history", "url": "https://www.explorethefalls.org/parks-paths/falls-park/park-history" },
+        { "label": "Wikipedia: Falls Park", "url": "https://en.wikipedia.org/wiki/Falls_Park" }
+      ],
+      "todo": [
+        "Ask Siouxland Heritage Museums to check this stop and for an archival image of the mill.",
+        "Add why the mill closed only once a source says."
+      ]
+    }
+  ]
+}
