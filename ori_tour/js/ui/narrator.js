@@ -1,6 +1,8 @@
-// Plays a stop's narration: a recorded file when the package has one,
-// otherwise the browser's own voice, sentence by sentence so captions follow.
-// With no voice available it still runs the captions on a reading-pace timer.
+// Plays a stop's narration: the package's pre-generated audio file when it has
+// one (captions follow the audio from its cue file, and it works with no
+// signal once cached), otherwise the browser's own voice, sentence by sentence
+// so captions follow. With no voice at all it still runs the captions on a
+// reading-pace timer.
 
 export class Narrator {
   constructor(onCaption, onEnd) {
@@ -35,10 +37,17 @@ export class Narrator {
     const done = () => { if (token === this.token) { this.onCaption(""); this.onEnd(); } };
 
     if (narration.audio && !this.muted) {
-      this.audio = new Audio(narration.audio);
-      this.audio.onended = done;
-      this.onCaption(narration.text);
-      this.audio.play().catch(() => this.captionsOnly(sentences, token, done));
+      const audio = (this.audio = new Audio(narration.audio));
+      audio.onended = done;
+      this.onCaption(sentences[0].trim());
+      this.cues(narration).then((cues) => {
+        if (!cues || token !== this.token) return;
+        audio.ontimeupdate = () => {
+          const c = cues.find((x) => audio.currentTime >= x.start && audio.currentTime < x.end) || cues.findLast((x) => audio.currentTime >= x.start);
+          if (c) this.onCaption(c.text);
+        };
+      });
+      audio.play().catch(() => { if (token === this.token) { this.audio = null; this.captionsOnly(sentences, token, done); } });
       return;
     }
     const voice = "speechSynthesis" in window && !this.muted;
@@ -65,6 +74,15 @@ export class Narrator {
       speechSynthesis.speak(u);
     };
     next();
+  }
+
+  async cues(narration) {
+    if (!narration.cues) return null;
+    this.cueCache = this.cueCache || {};
+    if (!this.cueCache[narration.cues]) {
+      this.cueCache[narration.cues] = fetch(narration.cues).then((r) => r.json()).catch(() => null);
+    }
+    return this.cueCache[narration.cues];
   }
 
   captionsOnly(sentences, token, done) {

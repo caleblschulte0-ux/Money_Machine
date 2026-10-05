@@ -1,0 +1,10 @@
+{
+  "name": "ori-tour",
+  "private": true,
+  "description": "Open Range Interactive tour player. No dependencies; package.json only marks js/ as ES modules for Node tests.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 -m http.server 8000"
+  }
+}
