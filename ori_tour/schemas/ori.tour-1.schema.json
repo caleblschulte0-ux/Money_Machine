@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openrangeinteractive.example/schemas/ori.tour-1.schema.json",
+  "title": "ORI tour content package, version 1",
+  "description": "One tour: stops, where to stand and face, what is said and shown, and where every fact comes from. Device-neutral: every player (phone, glasses, Lens Studio, Android) reads this same file. Breaking changes get a new schema id (ori.tour/2); additive optional fields stay in /1.",
+  "type": "object",
+  "required": ["schema", "id", "title", "subtitle", "version", "status", "credits", "safety", "start", "stops"],
+  "properties": {
+    "schema": { "const": "ori.tour/1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "title": { "type": "string", "minLength": 1 },
+    "subtitle": { "type": "string" },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Content version (semver-like), bumped when visitors would notice."
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Plain statement of review state, shown to anyone starting the tour."
+    },
+    "credits": { "type": "array", "items": { "type": "string" } },
+    "safety": {
+      "type": "object",
+      "required": ["pictures_only_when_still", "still_below_mps", "still_for_seconds"],
+      "properties": {
+        "pictures_only_when_still": { "type": "boolean" },
+        "still_below_mps": { "type": "number", "exclusiveMinimum": 0 },
+        "still_for_seconds": { "type": "number", "minimum": 0 },
+        "keep_lower_field_clear": { "type": "boolean" },
+        "note": { "type": "string" }
+      }
+    },
+    "start": {
+      "type": "object",
+      "required": ["name", "position"],
+      "properties": {
+        "name": { "type": "string" },
+        "position": { "$ref": "#/$defs/latlon" },
+        "note": { "type": "string" }
+      }
+    },
+    "stops": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stop" } }
+  },
+  "$defs": {
+    "latlon": {
+      "type": "object",
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "stop": {
+      "type": "object",
+      "required": [
+        "id",
+        "order",
+        "name",
+        "position",
+        "radius_m",
+        "placement",
+        "facing",
+        "narration",
+        "scene",
+        "sources",
+        "todo"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "order": { "type": "number" },
+        "name": { "type": "string", "minLength": 1 },
+        "position": { "$ref": "#/$defs/latlon" },
+        "radius_m": { "type": "number", "exclusiveMinimum": 0 },
+        "placement": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How the stop was placed: 'provisional: ...' or 'placed on site <date>'."
+        },
+        "facing": {
+          "type": "object",
+          "required": ["target_name", "tolerance_deg", "hint"],
+          "anyOf": [
+            { "required": ["target"] },
+            { "required": ["bearing_deg"], "properties": { "bearing_deg": { "type": "number" } } }
+          ],
+          "properties": {
+            "target_name": { "type": "string", "minLength": 1 },
+            "target": { "$ref": "#/$defs/latlon" },
+            "bearing_deg": { "type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360 },
+            "tolerance_deg": { "type": "number", "exclusiveMinimum": 0, "maximum": 180 },
+            "hint": { "type": "string", "minLength": 1 }
+          }
+        },
+        "narration": {
+          "type": "object",
+          "required": ["text", "review"],
+          "properties": {
+            "text": { "type": "string", "minLength": 1 },
+            "audio": { "type": ["string", "null"] },
+            "cues": { "type": ["string", "null"] },
+            "duration_s": { "type": "number", "minimum": 0 },
+            "voice": { "type": "string" },
+            "text_sha": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+            "review": { "type": "string", "minLength": 1 }
+          },
+          "if": { "required": ["audio"], "properties": { "audio": { "type": "string" } } },
+          "then": { "required": ["cues"], "properties": { "cues": { "type": "string" } } }
+        },
+        "scene": {
+          "type": "object",
+          "required": ["kind", "title"],
+          "properties": {
+            "kind": { "enum": ["falls", "quote", "timeline", "list", "image", "layers"] },
+            "kicker": { "type": "string" },
+            "title": { "type": "string", "minLength": 1 },
+            "lines": { "type": "array", "items": { "type": "string" } },
+            "attribution": { "type": "string" },
+            "timeline": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["year", "text"],
+                "properties": { "year": { "type": "string" }, "text": { "type": "string" } }
+              }
+            },
+            "image": { "type": ["string", "null"] },
+            "layers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["src"],
+                "properties": {
+                  "src": { "type": "string" },
+                  "depth": { "type": "number" },
+                  "motion": { "enum": ["none", "drift", "rise", "fade-in"] },
+                  "alt": { "type": "string" }
+                }
+              }
+            },
+            "placeholder": { "type": "string" }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "url"],
+            "properties": { "label": { "type": "string" }, "url": { "type": "string", "format": "uri" } }
+          }
+        },
+        "todo": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

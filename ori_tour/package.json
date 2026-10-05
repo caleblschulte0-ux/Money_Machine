@@ -1,0 +1,33 @@
+{
+  "name": "ori-tour",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Open Range Interactive tour player: a portable tour engine (src/core) with web adapters for phone and glasses (src/web).",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && python3 tools/build_offline.py",
+    "typecheck": "tsc -p tsconfig.core.json && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "check:dist": "npm run build && git diff --exit-code -- dist offline.json",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.20.5",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.1"
+  }
+}
