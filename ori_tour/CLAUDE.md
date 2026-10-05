@@ -32,38 +32,54 @@ runs the build. This folder is the tour player and its content package.
 - **Scenes are 2.5D**: layered photos and illustrations with motion, not 3D.
 - **Narration voice is generated** (Kokoro-82M, Apache-2.0, run locally),
   marked on every stop as a placeholder until a human narrator records.
-- **Code lives here**, Money_Machine `ori_tour/`, on the tour branch with
-  draft PR #12 as the record.
+- **Code lives here**, Money_Machine `ori_tour/`. Branch
+  `claude/ori-tour-app-f8hh67-w6ho3n` (PR #13) stacks on PR #12's branch
+  `claude/ori-tour-app-f8hh67`; merging #13 folds it into #12.
 
-## Architecture: one core, thin shells
+## Caleb's standing requirements (2026-10-05)
+
+- **Enterprise-level foundation**: typed code, tests that run headless,
+  lint, format and CI on every push, a versioned and validated content
+  schema, and docs a stranger can run and extend from.
+- **Easy to port, universal**: the glasses are undecided. Portability is the
+  top design constraint. The core stays platform-free; a new device is a set of
+  adapters (docs/PORTING.md). Never put device code in `src/core`.
+- **First test is his phone in a parking lot**, not the park: test-anywhere
+  mode (`?here=1`) must keep working.
+
+## Architecture: a portable core behind ports
 
 ```
-js/core/      device-agnostic, pure, runs in Node and the browser
-  tour.js       load + validate the content package, on-site placement edits
-  geo.js        distance, bearing, turn
-  heading.js    compass smoothing: spike rejection, circular time-based filter, steadiness
-  stillness.js  walking vs still from GPS + accelerometer, with dwell hysteresis
-  engine.js     THE loop: geofence -> facing -> still -> narrate -> next stop
-  replay.js     play a recorded walk (ori.trace/1 JSON or GPX) through the engine
-js/device/    browser sensor adapters (GPS, compass, accelerometer, simulator, recorder)
-js/ui/        scene window, narrator (audio + cue captions, device-voice fallback), route map
-js/shells/    runtime.js (engine + narrator + sources, shared guidance text)
-              phone.js (full UI), glasses.js (600x600 additive: scene, guidance, captions)
-js/dev/       synthwalk.js: a SYNTHETIC walk generated from route geometry, for tests
-js/app.js     boot: load package, build runtime, mount the shell for ?display=
+src/core/     TypeScript, platform-free. Compiled with NO DOM and NO Node types
+              (tsconfig.core.json); lint refuses window/navigator/fetch/timers/Date.now.
+  ports.ts      THE porting contract: LocationSource, HeadingSource, MotionSource,
+                Clock, Scheduler, AudioPort, Display, AssetLoader, Storage
+  types.ts      the content package types (ori.tour/1)
+  tour.ts       version check, validation, asset paths, on-site placements
+  geo.ts        distance, bearing, turn, offset
+  heading.ts    compass smoothing: spike rejection, circular time-based filter, steadiness
+  stillness.ts  walking vs still from accelerometer + GPS, dwell hysteresis, stale-fix rule
+  engine.ts     THE loop: geofence -> facing -> still -> narrate -> next stop
+  view.ts       ViewModel: what any display shows and says, decided once
+  session.ts    TourSession: engine + ports. All a port gets for free.
+  relocate.ts   test anywhere: move the tour around the tester, scaled to a parking lot
+  replay.ts     replay a recorded walk (ori.trace/1 or GPX) on a virtual clock
+  synthwalk.ts  a SYNTHETIC walk from route geometry, for tests (labelled as such)
+  text.ts       caption sentence rule (shared with tools/make_narration.py)
+src/web/      browser adapters: platform (clock, fetch, storage), sensors (GPS,
+              compass, accelerometer, simulator, replay, recorder), audio, scene,
+              map, hud (sensor readout), shells/phone.ts, shells/glasses.ts, app.ts
+dist/         compiled JS, COMMITTED (static hosting has no build step); CI fails if stale
+schemas/      JSON Schemas: ori.tour-1 (content), ori.trace-1 (recorded walks)
+docs/PORTING.md   what a Lens Studio, Android or Ray-Ban port implements, and its acceptance test
 sw.js + offline.json   offline cache of the app and the whole package
-content/<tour>/        tour.json (schema ori.tour/1), map.json, audio/, traces/
+content/<tour>/        tour.json, map.json, audio/, traces/
 tools/        build_map.py, make_narration.py, build_offline.py
-test/         node --test, headless
+test/         node:test on the TypeScript source (Node strips types), headless
 ```
 
-Shells never decide anything: they feed the engine raw timestamped readings
-and draw `engine.state`. A new device (Snap Spectacles in Lens Studio
-TypeScript, an Android wrapper for XREAL/RayNeo) is a new shell that reads the
-same `tour.json` and ports `js/core` behaviour, and `test/` is the spec it has
-to match.
-
-The engine's events: `narrate` (shell plays it and calls `narrationEnded`),
+Displays never decide anything: they draw the ViewModel. The engine's events:
+`narrate` (the session plays it through the AudioPort and reports the end),
 `stop-done`, `tour-done`. Walking on to the next stop mid-narration counts the
 earlier stop as done, so the tour can always complete.
 
@@ -71,29 +87,42 @@ earlier stop as done, so the tour can always complete.
 
 ```bash
 cd ori_tour
-python3 -m http.server 8000      # any static server; no build, no dependencies
-node --test                      # 15 headless tests, a couple of seconds
+npm ci                            # dev tools only; the app itself has no runtime dependencies
+npm run build                     # tsc -> dist/, then offline.json
+npm run check                     # typecheck (core with no DOM), lint, format, tests
+npm run serve                     # http://localhost:8000
 ```
 
-URL switches: `?sim=1` (tap the map to stand, slider to turn),
-`?autostart=sim&demo=1&speedup=8` (walks itself), `?replay=synthetic` or
-`?replay=<file in content/<tour>/traces/>` (a walk through the real engine),
-`?record=1` (records GPS, compass and motion; "Save the walk" downloads an
-ori.trace/1 file), `?display=glasses` (600x600), `?edit=1` (place stops on
-site, export tour.json), `?facing=off` (device with no compass: arrival +
-stillness shows the scene), `?offline=off`.
+CI: `.github/workflows/ori-tour.yml` runs the same checks plus "dist and
+offline.json match the source" on every push touching `ori_tour/`.
+
+URL switches: `?here=1` (test anywhere: stops moved around you, readout and
+camera on), `?hud=1` (sensor readout), `?sim=1` (tap the map to stand, slider
+to turn), `?autostart=sim&demo=1&speedup=8` (walks itself),
+`?replay=synthetic` or `?replay=<file in content/<tour>/traces/>`,
+`?record=1` ("Save the walk" downloads an ori.trace/1 file),
+`?display=glasses` (600x600), `?edit=1` (place stops on site, export
+tour.json), `?facing=off` (no compass: arrival + stillness shows the scene),
+`?offline=off`.
 
 GPS, compass and camera need HTTPS or localhost. iOS asks for motion
 permission on the Start tap.
 
+Hosted: `https://raw.githack.com/caleblschulte0-ux/Money_Machine/claude/ori-tour-app-f8hh67-w6ho3n/ori_tour/index.html`
+(an interstitial page first; checked from outside with Apify web-fetch, because
+the cloud agent proxy blocks githack, jsDelivr and github.io). GitHub Pages from
+that branch gives a clean URL once Caleb enables it in repo settings.
+
 ## After changing things
 
+- Any source change: `npm run build` and commit `dist/` and `offline.json`.
 - Changed narration text: `KOKORO_DIR=<models> python3 tools/make_narration.py`
   (model files and setup in the script's docstring; Hugging Face is blocked
   from cloud sessions, the GitHub release works). The tests fail if text and
   audio disagree (`text_sha`).
-- Changed any app or content file: `python3 tools/build_offline.py`. The tests
-  fail if `offline.json` is stale or misses a file.
+- Changed the package shape: update `src/core/types.ts`, `validateTour` and
+  `schemas/ori.tour-1.schema.json` together; `test/schema.test.ts` holds them
+  in agreement. A breaking change is `ori.tour/2`, never a silent edit to /1.
 - Moved a stop: `python3 tools/build_map.py` re-routes the legs.
 - A real recorded walk goes in `content/<tour>/traces/` and is replayed by the
   tests from then on. The synthetic walk is generated, not recorded; say so
@@ -102,12 +131,13 @@ permission on the Start tap.
 ## The plan (Caleb agreed 2026-10-05)
 
 1. Core/shell split, compass smoothing, stillness, walk replay, generated
-   audio, offline cache: **done** (phase two).
+   audio, offline cache: **done** (phase two). TypeScript core behind ports,
+   CI, schema, test-anywhere mode, porting guide: **done**.
 2. Make the phone version real: a hosted URL, one recorded walk at the park
    (Caleb, `?record=1`), placement fixes from `?edit=1`.
 3. Content pipeline: folder in, validated bundle out, so site two is a
-   weekend. 2.5D scene layers (`scene.layers`, resolved by `tour.js`, not yet
-   drawn by `ui/scene.js`).
+   weekend. 2.5D scene layers (`scene.layers`: drawn with heading parallax by
+   `src/web/scene.ts`; no stop has real layer art yet).
 4. Device shells as hardware appears: Snap Spectacles (Lens Studio, has GPS,
    heading and world anchors), Meta Ray-Ban Display (600x600 heading-gated
    cards; whether its Web Apps expose a compass heading is the first thing to
