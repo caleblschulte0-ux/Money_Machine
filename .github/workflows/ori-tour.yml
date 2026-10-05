@@ -1,0 +1,35 @@
+name: ori-tour
+
+on:
+  push:
+    paths: ["ori_tour/**", ".github/workflows/ori-tour.yml"]
+  pull_request:
+    paths: ["ori_tour/**", ".github/workflows/ori-tour.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ori_tour
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ori_tour/package-lock.json
+      - run: npm ci
+      - name: Typecheck (core has no DOM or Node types)
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Format
+        run: npm run format:check
+      - name: Built files and offline list match the source
+        run: npm run check:dist
+      - name: Tests (engine, replayed walks, schema, test-anywhere, ports)
+        run: npm test

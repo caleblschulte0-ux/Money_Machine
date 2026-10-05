@@ -21,13 +21,17 @@ async function fill(list) {
 
 let refreshing = null;
 function refresh() {
-  refreshing = refreshing || (async () => {
-    try {
-      const list = await fetch(LIST, { cache: "no-store" }).then((r) => r.json());
-      if (!(await caches.has(PREFIX + list.version))) await fill(list);
-    } catch { /* no signal: keep what we have */ }
-    refreshing = null;
-  })();
+  refreshing =
+    refreshing ||
+    (async () => {
+      try {
+        const list = await fetch(LIST, { cache: "no-store" }).then((r) => r.json());
+        if (!(await caches.has(PREFIX + list.version))) await fill(list);
+      } catch {
+        /* no signal: keep what we have */
+      }
+      refreshing = null;
+    })();
   return refreshing;
 }
 
@@ -60,14 +64,16 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
   if (e.request.mode === "navigate") e.waitUntil(refresh());
-  e.respondWith((async () => {
-    // ignore ?query switches so index.html?sim=1 is served from the cache too
-    const hit = await caches.match(e.request, { ignoreSearch: true });
-    if (hit) return ranged(e.request, hit);
-    try {
-      return await fetch(e.request);
-    } catch {
-      return new Response("Offline and not cached.", { status: 503 });
-    }
-  })());
+  e.respondWith(
+    (async () => {
+      // ignore ?query switches so index.html?sim=1 is served from the cache too
+      const hit = await caches.match(e.request, { ignoreSearch: true });
+      if (hit) return ranged(e.request, hit);
+      try {
+        return await fetch(e.request);
+      } catch {
+        return new Response("Offline and not cached.", { status: 503 });
+      }
+    })(),
+  );
 });

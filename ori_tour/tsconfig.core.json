@@ -1,0 +1,10 @@
+{
+  "//": "The portability guarantee: src/core compiles with NO DOM and NO Node types. If core code touches window, document, navigator, fetch or fs, this fails.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": [],
+    "noEmit": true
+  },
+  "include": ["src/core"]
+}

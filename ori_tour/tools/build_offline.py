@@ -13,13 +13,13 @@ import json
 import os
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-INCLUDE_DIRS = ["js/core", "js/device", "js/shells", "js/ui", "js/dev", "css", "assets", "content"]
+INCLUDE_DIRS = ["dist", "css", "assets", "content"]
 INCLUDE_FILES = ["index.html", "manifest.webmanifest"]
 SKIP_EXT = {".py", ".md"}
 
 
 def files():
-    out = list(INCLUDE_FILES) + ["js/app.js"]
+    out = list(INCLUDE_FILES)
     for d in INCLUDE_DIRS:
         for base, _, names in os.walk(os.path.join(ROOT, d)):
             for n in names:

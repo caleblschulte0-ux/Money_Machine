@@ -35,6 +35,7 @@ SPEED = 0.95
 
 
 def sentences(text):
+    # same rule as src/core/text.ts, so captions line up with the audio
     return [s.strip() for s in re.findall(r"[^.!?]+[.!?]+[\"']?\s*", text) or [text] if s.strip()]
 
 
