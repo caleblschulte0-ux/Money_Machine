@@ -5,3 +5,4 @@ tools/falls_park_osm.json
 offline.json
 package-lock.json
 *.md
+vendor/

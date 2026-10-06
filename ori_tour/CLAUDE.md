@@ -23,18 +23,52 @@ runs the build. This folder is the tour player and its content package.
 - **The app never claims what is not built.** The promo video describes
   recognising what you look at, water-edge cutoff and group audio sync; none
   of that exists. Offline play now does (below).
-- **Pictures only when the visitor stands still.** Walking is audio only.
-  This is a safety rule; do not weaken it to make a demo smoother.
+- **Pictures only when the visitor stands still**, with one exception:
+  between stops, walking is audio only. At a stop, a world-locked figure may
+  stay visible while the visitor walks around it (Caleb's requirement,
+  2026-10-06; the exception is that narrow on purpose). This is a safety rule;
+  do not widen it to make a demo smoother.
 - No model identifiers in commits, PR text or code.
+
+## Caleb's top requirement (2026-10-06): figures that sit in one spot
+
+*"Things need to be able to sit in one spot, like a mammoth, or a settler."*
+A 3D figure is put on the ground and STAYS there, in the world, while the
+visitor walks all the way around it, walks away and comes back. This replaces
+the earlier default of heading-gated 2.5D cards with no world-locked figures
+outdoors, and it decides which glasses are viable (the comparison is in the
+project files, `ori/build/glasses-world-locked-figures.md`: Snap Spectacles
+can; Meta Ray-Ban Display cannot).
+
+- Built: `WorldTracker` port, `FigureStage` (`src/core/anchoring.ts`), pose
+  math (`space.ts`), the figure list with true sizes (`figures.ts`), headless
+  tests with a drifting fake tracker (`test/anchoring.test.ts`), and the phone
+  test page `ar.html` (`src/web/ar.ts`). Android Chrome with ARCore runs it in
+  the page (`src/web/xr.ts`, WebXR hit-test + anchors). iPhone has no WebXR
+  AR: `src/web/quicklook.ts` exports the figure to USDZ in the page and opens
+  Apple's AR Quick Look, which anchors it but runs outside our page (no
+  prompts, readout or tour logic).
+- **Figures are stand-ins drawn in code** (`src/web/figures3d.ts`). Real art
+  is a glTF per figure with its source and licence in `figures.ts` `credit`;
+  open licences only (the Smithsonian's CC0 woolly mammoth scan is a known
+  candidate; the cloud proxy blocks 3d.si.edu, so fetch it from a computer).
+  A figure stands for no real person; "settler" makes no period claim.
+- **Not built yet:** figures tied to a stop. GPS is good to a few metres, so
+  "the mammoth stands at stop 1" needs either the visitor's tap at the stop or
+  a device that re-finds a scanned spot (Snap Custom Locations, ARCore
+  Geospatial; neither reachable from a phone web page). WebXR anchors on a
+  phone last only while the AR session runs: lock the phone and it is gone.
 
 ## Defaults in force (Caleb can overrule any of them)
 
-- **Scenes are 2.5D**: layered photos and illustrations with motion, not 3D.
+- **Scenes are 2.5D** where a stop has no figure: layered photos and
+  illustrations with motion.
 - **Narration voice is generated** (Kokoro-82M, Apache-2.0, run locally),
   marked on every stop as a placeholder until a human narrator records.
 - **Code lives here**, Money_Machine `ori_tour/`. Branch
   `claude/ori-tour-app-f8hh67-w6ho3n` (PR #13) stacks on PR #12's branch
-  `claude/ori-tour-app-f8hh67`; merging #13 folds it into #12.
+  `claude/ori-tour-app-f8hh67`; merging #13 folds it into #12. The figures
+  work is `claude/ori-anchored-figures-5k24tv` (PR #14), stacked on #13.
 
 ## Caleb's standing requirements (2026-10-05)
 
@@ -53,7 +87,10 @@ runs the build. This folder is the tour player and its content package.
 src/core/     TypeScript, platform-free. Compiled with NO DOM and NO Node types
               (tsconfig.core.json); lint refuses window/navigator/fetch/timers/Date.now.
   ports.ts      THE porting contract: LocationSource, HeadingSource, MotionSource,
-                Clock, Scheduler, AudioPort, Display, AssetLoader, Storage
+                Clock, Scheduler, AudioPort, Display, AssetLoader, Storage, WorldTracker
+  space.ts      vectors, quaternions, poses in a device's tracking space
+  anchoring.ts  FigureStage: place a figure, keep it in one spot, prompts (world-locked figures)
+  figures.ts    the figures (mammoth, settler), true sizes, model credits
   types.ts      the content package types (ori.tour/1)
   tour.ts       version check, validation, asset paths, on-site placements
   geo.ts        distance, bearing, turn, offset
@@ -68,7 +105,10 @@ src/core/     TypeScript, platform-free. Compiled with NO DOM and NO Node types
   text.ts       caption sentence rule (shared with tools/make_narration.py)
 src/web/      browser adapters: platform (clock, fetch, storage), sensors (GPS,
               compass, accelerometer, simulator, replay, recorder), audio, scene,
-              map, hud (sensor readout), shells/phone.ts, shells/glasses.ts, app.ts
+              map, hud (sensor readout), shells/phone.ts, shells/glasses.ts, app.ts;
+              figures: xr.ts (WebXRTracker), quicklook.ts (iPhone), figures3d.ts, ar.ts
+vendor/       three.js bundled by tools/vendor_three.mjs (the build runs it), MIT
+ar.html       the figure test page
 dist/         compiled JS, COMMITTED (static hosting has no build step); CI fails if stale
 schemas/      JSON Schemas: ori.tour-1 (content), ori.trace-1 (recorded walks)
 docs/PORTING.md   what a Lens Studio, Android or Ray-Ban port implements, and its acceptance test
@@ -87,8 +127,8 @@ earlier stop as done, so the tour can always complete.
 
 ```bash
 cd ori_tour
-npm ci                            # dev tools only; the app itself has no runtime dependencies
-npm run build                     # tsc -> dist/, then offline.json
+npm ci                            # dev tools; three.js is bundled into vendor/ by the build
+npm run build                     # tsc -> dist/, vendor/three.js, then offline.json
 npm run check                     # typecheck (core with no DOM), lint, format, tests
 npm run serve                     # http://localhost:8000
 ```
@@ -108,6 +148,10 @@ tour.json), `?facing=off` (no compass: arrival + stillness shows the scene),
 GPS, compass and camera need HTTPS or localhost. iOS asks for motion
 permission on the Start tap.
 
+Figure test: `ar.html` (Android: Chrome with ARCore; iPhone: Safari, Quick
+Look). Hosted at
+`https://raw.githack.com/caleblschulte0-ux/Money_Machine/claude/ori-anchored-figures-5k24tv/ori_tour/ar.html`.
+
 Hosted: `https://raw.githack.com/caleblschulte0-ux/Money_Machine/claude/ori-tour-app-f8hh67-w6ho3n/ori_tour/index.html`
 (an interstitial page first; checked from outside with Apify web-fetch, because
 the cloud agent proxy blocks githack, jsDelivr and github.io). GitHub Pages from
@@ -115,7 +159,7 @@ that branch gives a clean URL once Caleb enables it in repo settings.
 
 ## After changing things
 
-- Any source change: `npm run build` and commit `dist/` and `offline.json`.
+- Any source change: `npm run build` and commit `dist/`, `vendor/` and `offline.json`.
 - Changed narration text: `KOKORO_DIR=<models> python3 tools/make_narration.py`
   (model files and setup in the script's docstring; Hugging Face is blocked
   from cloud sessions, the GitHub release works). The tests fail if text and

@@ -13,9 +13,9 @@ import json
 import os
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-INCLUDE_DIRS = ["dist", "css", "assets", "content"]
-INCLUDE_FILES = ["index.html", "manifest.webmanifest"]
-SKIP_EXT = {".py", ".md"}
+INCLUDE_DIRS = ["dist", "css", "assets", "content", "vendor"]
+INCLUDE_FILES = ["index.html", "ar.html", "manifest.webmanifest"]
+SKIP_EXT = {".py", ".md", ".LICENSE"}
 
 
 def files():

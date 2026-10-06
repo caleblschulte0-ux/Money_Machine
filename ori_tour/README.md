@@ -35,10 +35,15 @@ the compass is bad), **Skip stop**, and captions that run even with no voice.
   window and a readout shows GPS accuracy, heading, whether you count as
   still, and the distance to the next stop. "Re-centre here" redoes it.
 - **No walking:** "Simulator", then "Walk the whole route".
+- **A figure in one spot (AR):** `ar.html`. Put a full-size mammoth or settler
+  on the ground and walk around it. Android (Chrome with ARCore) runs it in
+  the page on the portable `FigureStage`, with an anchor and a live readout;
+  iPhone opens Apple's AR Quick Look, which anchors it but runs outside the
+  page. Both figures are stand-ins drawn in code (`src/web/figures3d.ts`).
 
 ## Develop
 
-Node 22.18 or newer. The app has no runtime dependencies; npm is only for dev tools.
+Node 22.18 or newer. npm is only for dev tools; the one runtime library, three.js (MIT), is bundled into `vendor/three.js` by the build and served with the app.
 
 ```bash
 cd ori_tour

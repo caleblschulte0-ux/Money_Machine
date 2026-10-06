@@ -10,6 +10,10 @@
 // src/web/ implements all of them for browsers. docs/PORTING.md walks through
 // each one for Lens Studio and Android.
 //
+// World-locked figures (a mammoth that stays where it was put while you walk
+// around it) need one more port, WorldTracker, from devices that track their
+// own position in 3D: ARCore, ARKit, Lens Studio, an Android XR runtime.
+//
 // Units, everywhere: time in milliseconds on one monotonic-enough clock,
 // angles in degrees clockwise from TRUE north, distances in metres,
 // acceleration in m/s^2.
