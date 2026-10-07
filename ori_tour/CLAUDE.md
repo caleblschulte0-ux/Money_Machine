@@ -120,6 +120,12 @@ can; Meta Ray-Ban Display cannot).
   `?occlusion=off`, `?estimate=off`. Occlusion's screen-to-depth mapping is
   written to the WebXR spec and NOT yet seen on a phone; if figures vanish
   wrongly, `?occlusion=off` and fix `OCCLUDE_MAIN`.
+- **The real sun on every device (`src/core/sun.ts`):** where no camera
+  estimate exists (iPhone through Variant Launch, later glasses) the shadow
+  sun points where the real sun is, from the clock, the GPS fix and the
+  learned north (NOAA solar position, tested against solstice/equinox
+  geometry in `test/sun.test.ts`). Needs north learned (steady compass);
+  until then the default high sun. An estimate, where there is one, wins.
 - **Ground:** `isLevel` refuses hits steeper than 20 degrees (walls, car
   doors); `TourFigures.groundY()` is the median of recent level hits and
   waits until they agree within 15 cm, so one hit on a car bonnet does not

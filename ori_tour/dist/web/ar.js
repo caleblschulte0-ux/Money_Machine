@@ -373,6 +373,7 @@ async function startTest() {
                 at: fix ? siteAt(points.sites(), fix.pos) : null,
             });
             showReticle(ret, fv.stage, fv.mode === "tap" || fv.mode === "none" || fv.stage.canPlace);
+            look.light.placeSun(fv.northYaw, fix?.pos ?? null, Date.now());
             layer.draw(fv.stage.figures);
             const shown = noteText && noteText.until > performance.now() ? noteText.text : null;
             setPrompt(shown ?? fv.prompt);
@@ -563,6 +564,7 @@ async function startTour(where, ar) {
                 at: st.atStop,
             });
             showReticle(ret, fv.stage, fv.mode === "tap");
+            look.light.placeSun(fv.northYaw, st.pos, Date.now());
             layer.draw(fv.stage.figures);
             setPrompt(fv.prompt ?? display.view?.guide.title ?? null);
             $("readout").textContent = tourReadout(session, fv, figures);

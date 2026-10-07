@@ -1,5 +1,5 @@
 {
- "version": "1e3cbde8db75",
+ "version": "ac4b8c93b550",
  "files": [
   "./",
   "ar.html",
@@ -30,6 +30,7 @@
   "dist/core/session.js",
   "dist/core/space.js",
   "dist/core/stillness.js",
+  "dist/core/sun.js",
   "dist/core/synthwalk.js",
   "dist/core/testpoints.js",
   "dist/core/text.js",

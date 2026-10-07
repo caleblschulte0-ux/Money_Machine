@@ -2,6 +2,9 @@
 // it, casting a shadow on the real ground, and hidden behind real things that
 // stand in front of it.
 //
+//   Sun        where the real sun is, from the clock, the GPS fix and the
+//              learned north (core/sun.ts): the shadow falls the way the
+//              visitor's does on any device, estimate or not.
 //   Light      WebXR light estimation ("light-estimation", Chrome on ARCore):
 //              the main light's direction and strength, ambient light as
 //              spherical harmonics, and a reflection cube map of the
@@ -21,6 +24,9 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { XREstimatedLight } from "three/addons/webxr/XREstimatedLight.js";
+
+import { sunDirection, sunPosition } from "../core/sun.ts";
+import type { LatLon } from "../core/types.ts";
 
 export interface LookOptions {
   shadows: boolean;
@@ -52,6 +58,10 @@ export class SceneLight {
   private estimating = false;
   private readonly dir = new THREE.Vector3(0.35, 1, 0.25).normalize();
   private readonly scene: THREE.Scene;
+  /** The real sun's direction in tracking space, once north and a fix are known. */
+  private realSun: THREE.Vector3 | null = null;
+  private realSunAt = 0;
+  private realSunUp = true;
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, o: LookOptions) {
     this.scene = scene;
@@ -93,6 +103,20 @@ export class SceneLight {
     this.dir.set(0.35, 1, 0.25).normalize();
   }
 
+  /**
+   * Point the sun where the real one is. Cheap to call every frame: it
+   * recomputes at most every 10 s. Null north or fix leaves the default sun.
+   */
+  placeSun(northYaw: number | null, at: LatLon | null, tMs: number): void {
+    if (northYaw == null || !at) return;
+    if (this.realSun && tMs - this.realSunAt < 10_000) return;
+    const pos = sunPosition(tMs, at);
+    const d = sunDirection(pos, northYaw);
+    this.realSun = new THREE.Vector3(d.x, d.y, d.z);
+    this.realSunUp = pos.elevationDeg > 0;
+    this.realSunAt = tMs;
+  }
+
   /** Aim the sun's shadow at a figure (the nearest one) of the given size. Call every frame. */
   follow(target: THREE.Vector3, sizeM: number): void {
     const est = this.estimated?.directionalLight;
@@ -102,6 +126,11 @@ export class SceneLight {
       if (this.dir.y < 0.26) this.dir.setY(0.26).normalize();
       this.sun.color.copy(est.color);
       this.sun.intensity = Math.max(est.intensity, 0.2);
+    } else if (this.realSun) {
+      this.dir.copy(this.realSun);
+      if (this.dir.y < 0.26) this.dir.setY(0.26).normalize();
+      // after sunset the "sun" only softens the figure, it does not light it
+      this.sun.intensity = this.realSunUp ? 2.2 : 0.4;
     }
     const reach = sizeM * 2 + 2;
     this.sun.position.copy(target).addScaledVector(this.dir, reach * 2);
@@ -115,7 +144,9 @@ export class SceneLight {
   }
 
   status(): string {
-    return this.estimating ? "estimated from the camera" : this.estimated ? "default (no estimate yet)" : "default";
+    if (this.estimating) return "estimated from the camera";
+    if (this.realSun) return "real sun from time and place (no camera estimate)";
+    return this.estimated ? "default (no estimate yet)" : "default";
   }
 }
 
