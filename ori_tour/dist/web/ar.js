@@ -679,8 +679,11 @@ async function main() {
     const goPark = $("goPark");
     const route = $("route");
     // iPhone: the Launch SDK (when keyed) gives this page WebXR inside its App Clip viewer
-    const launch = quickLookAvailable() ? await initLaunch(new URLSearchParams(location.search)) : null;
-    if (await webxrArAvailable()) {
+    // no WebXR here (iPhone Safari, or Launch's own viewer before its SDK runs): the Launch SDK, when
+    // configured, adds it. Gated on capability, not on the device, so no browser is named here.
+    const native = await webxrArAvailable();
+    const launch = native ? null : await initLaunch(new URLSearchParams(location.search));
+    if (native || (launch && (await webxrArAvailable()))) {
         goFree.textContent = "Test mode: spawn a figure";
         for (const b of [goTour, goFree, goPark])
             b.disabled = false;
