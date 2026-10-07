@@ -22,8 +22,8 @@ fails if a figure is missing from this file.
   `html-in-canvas/public/assets/woolly-mammoth-100k-4096-gltf_std/`.
 - **Changes:** meshopt-compressed; normal and occlusion maps converted to 2048 px
   WebP (the scan has no colour texture; the app tints it bone-coloured). The
-  USDZ is the same model simplified to 20,000 triangles with a 512 px normal
-  map, made by `tools/build_figures.mjs`.
+  USDZ is the same model decimated to 60,000 triangles with its 2048 px normal
+  map as JPEG, written by Blender through `tools/build_figures.mjs --usdz`.
 
 ### Woolly mammoth (fleshed) and mammoth calf: `mammoth-calf.glb`, `woolly-mammoth.usdz`, `mammoth-calf.usdz`
 
@@ -36,8 +36,8 @@ fails if a figure is missing from this file.
   `3b8adfd3`, whose `LICENSING.md` keeps the models under CC BY 4.0.
 - **Changes:** the material's metalness set to 0 and roughness to 0.9 (the file
   left metalness at the glTF default of 1, which drew the fur almost black).
-  The USDZ is simplified to 20,000 triangles with a 512 px texture, made by
-  `tools/build_figures.mjs`.
+  The USDZ keeps the full mesh, the 1024 px texture (as JPEG), the rig and the
+  idle animation, written by Blender through `tools/build_figures.mjs --usdz`.
 - **Two uses of one model:** "mammoth calf" shows it at the size it was
   published (1.28 m). "Woolly mammoth" shows the same model scaled to an adult
   woolly mammoth's shoulder height (about 3 m), because its proportions and

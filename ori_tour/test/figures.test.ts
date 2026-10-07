@@ -50,6 +50,29 @@ test("every USDZ is a zip with a USD layer at its root (what Quick Look opens)",
   }
 });
 
+test("every USDZ is laid out the way AR Quick Look reads it: stored, 64-byte aligned, PNG or JPEG only", () => {
+  for (const f of FIGURES) {
+    const b = readFileSync(join(ROOT, f.file.usdz));
+    let at = 0;
+    const names: string[] = [];
+    while (b.readUInt32LE(at) === 0x04034b50) {
+      const method = b.readUInt16LE(at + 8);
+      const size = b.readUInt32LE(at + 18);
+      const nameLen = b.readUInt16LE(at + 26);
+      const extraLen = b.readUInt16LE(at + 28);
+      const name = b.toString("utf8", at + 30, at + 30 + nameLen);
+      const data = at + 30 + nameLen + extraLen;
+      assert.equal(method, 0, `${f.id}: ${name} is compressed; USDZ entries must be stored`);
+      assert.equal(data % 64, 0, `${f.id}: ${name} data is not 64-byte aligned`);
+      names.push(name);
+      at = data + size;
+    }
+    assert.ok(names.length > 0, `${f.id}: no entries`);
+    for (const n of names.slice(1))
+      assert.match(n, /\.(png|jpe?g|usdc?a?)$/i, `${f.id}: ${n}: Quick Look shows only PNG and JPEG textures`);
+  }
+});
+
 test("every figure is credited, with its licence and source, in CREDITS.md", () => {
   const credits = readFileSync(join(ROOT, "CREDITS.md"), "utf8");
   for (const f of FIGURES) {

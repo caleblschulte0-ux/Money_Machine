@@ -1,30 +1,31 @@
 // Figures, built and measured in a real browser (headless Chromium):
 //
-//   node tools/build_figures.mjs --usdz            write assets/figures/<id>.usdz from each glb, the
-//                                                  mesh simplified to USDZ_TRIANGLES (USDZ stores
-//                                                  geometry as text, uncompressed) and textures
-//                                                  capped at 512 px (no occlusion map)
+//   node tools/build_figures.mjs --usdz            write assets/figures/<id>.usdz from each glb with
+//                                                  Blender (tools/usdz_blender.py, `pip install bpy`
+//                                                  for Python 3.11; $BLENDER_PYTHON overrides
+//                                                  python3.11): binary USD, the full mesh and
+//                                                  textures, and the idle clip, which Quick Look
+//                                                  plays. Needs no browser.
 //   node tools/build_figures.mjs --views <dir>     PNG views of each figure as the phone draws it
 //                                                  (front, side, top), to check which way it faces
 //   node tools/build_figures.mjs --measure         load time of each figure on a slow phone
 //                                                  connection (1.6 Mbit/s, 150 ms round trip)
 //
-// It serves this folder, opens a page that imports the BUILT app (dist/ and
+// --views and --measure serve this folder, open a page that imports the BUILT app (dist/ and
 // vendor/, so run `npm run build` first) and uses the same loadFigure() the
 // phone uses: what is exported and measured is what a visitor gets.
 // Chromium: $CHROMIUM, else /opt/pw-browsers/chromium (cloud sessions), else Playwright's own.
-import { createReadStream, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { createReadStream, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
-import { simplify, weld } from "@gltf-transform/functions";
-import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from "meshoptimizer";
+import { dequantize } from "@gltf-transform/functions";
+import { MeshoptDecoder } from "meshoptimizer";
 import { chromium } from "playwright-core";
-
-/** Triangles kept in a USDZ: Quick Look figures are seen from a few metres, and every triangle is text. */
-const USDZ_TRIANGLES = 20000;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -45,12 +46,10 @@ const TYPES = {
 const PAGE = `<!doctype html><meta charset="utf-8"><canvas id="c" width="640" height="640"></canvas>
 <script type="importmap">{"imports":{
   "three":"./vendor/three.js",
-  "three/addons/exporters/USDZExporter.js":"./vendor/three.js",
   "three/addons/loaders/GLTFLoader.js":"./vendor/three.js",
   "three/addons/libs/meshopt_decoder.module.js":"./vendor/three.js"}}</script>
 <script type="module">
   import * as THREE from "three";
-  import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
   import { FIGURES } from "./dist/core/figures.js";
   import { loadFigure } from "./dist/web/figures3d.js";
   const byId = (id) => FIGURES.find((f) => f.id === id);
@@ -93,55 +92,47 @@ const PAGE = `<!doctype html><meta charset="utf-8"><canvas id="c" width="640" he
     return { shots, source };
   };
 
-  window.usdz = async (id, glb) => {
-    const info = byId(id);
-    const { node, source } = await loadFigure({ ...info, file: { ...info.file, glb } }, 1);
-    // the occlusion map doubles the file for shading Quick Look's own lighting already gives
-    node.traverse((o) => {
-      if (o.isMesh && o.material.aoMap) o.material.aoMap = null;
-    });
-    const scene = new THREE.Scene();
-    // Quick Look puts the model's +z toward the viewer; a figure faces -z, turned by its yaw
-    const turn = new THREE.Group();
-    turn.rotation.y = Math.PI + (info.yawDeg * Math.PI) / 180;
-    turn.add(node);
-    scene.add(turn);
-    const bytes = await new USDZExporter().parseAsync(scene, {
-      quickLookCompatible: true,
-      includeAnchoringProperties: true,
-      maxTextureSize: 512,
-      ar: { anchoring: { type: "plane" }, planeAnchoring: { alignment: "horizontal" } },
-    });
-    let s = "";
-    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-    return { b64: btoa(s), source, path: info.file.usdz };
-  };
   window.ready = true;
 </script>`;
 
-/** Simplified copies of the glbs for USDZ export, served from memory at /__usdz/<id>.glb. */
-const lighter = new Map();
-async function simplified(glbPath) {
-  await Promise.all([MeshoptDecoder.ready, MeshoptEncoder.ready, MeshoptSimplifier.ready]);
-  const io = new NodeIO()
-    .registerExtensions(ALL_EXTENSIONS)
-    .registerDependencies({ "meshopt.decoder": MeshoptDecoder, "meshopt.encoder": MeshoptEncoder });
-  const doc = await io.read(join(root, glbPath));
-  let tris = 0;
-  for (const mesh of doc.getRoot().listMeshes())
-    for (const prim of mesh.listPrimitives())
-      tris += (prim.getIndices()?.getCount() ?? prim.getAttribute("POSITION").getCount()) / 3;
-  const ratio = Math.min(1, USDZ_TRIANGLES / tris);
-  if (ratio < 1) await doc.transform(weld(), simplify({ simplifier: MeshoptSimplifier, ratio, error: 0.01 }));
-  return { bytes: Buffer.from(await io.writeBinary(doc)), tris: Math.round(tris), ratio };
+/** Write each figure's USDZ with Blender, from a plain (meshopt-decoded, dequantized) copy of its glb. */
+async function writeUsdz() {
+  const { FIGURES } = await import("../dist/core/figures.js");
+  await MeshoptDecoder.ready;
+  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.decoder": MeshoptDecoder });
+  const tmp = mkdtempSync(join(tmpdir(), "ori-usdz-"));
+  const py = process.env.BLENDER_PYTHON ?? "python3.11";
+  try {
+    for (const f of FIGURES) {
+      const doc = await io.read(join(root, f.file.glb));
+      await doc.transform(dequantize());
+      for (const e of doc.getRoot().listExtensionsUsed())
+        if (["EXT_meshopt_compression", "KHR_mesh_quantization"].includes(e.extensionName)) e.dispose();
+      const plain = join(tmp, `${f.id}.glb`);
+      await io.write(plain, doc);
+      // Quick Look shows the model's +z to the viewer; the glb faces frontYawDeg, the figure turns by yawDeg
+      const yaw = (((f.file.frontYawDeg + 180 + f.yawDeg) % 360) + 360) % 360;
+      const out = join(root, f.file.usdz);
+      const run = spawnSync(
+        py,
+        [join(root, "tools/usdz_blender.py"), plain, out, "--height", String(f.heightM), "--yaw", String(yaw),
+          ...(f.file.idleClip ? ["--clip", f.file.idleClip] : [])],
+        { encoding: "utf8" },
+      );
+      if (run.status !== 0) throw new Error(`${f.id}: Blender failed\n${run.stderr || run.stdout}`);
+      const size = run.stdout.split("\n").find((l) => l.startsWith("size")) ?? "";
+      console.log(`${f.id}: ${f.file.usdz} ${statSync(out).size} bytes, ${size}`);
+    }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 }
+
+if (want("--usdz")) await writeUsdz();
+if (!want("--views") && !want("--measure")) process.exit(0);
 
 const server = createServer((req, res) => {
   const path = decodeURIComponent(new URL(req.url, "http://x").pathname);
-  if (lighter.has(path)) {
-    res.writeHead(200, { "content-type": TYPES[".glb"] });
-    return res.end(lighter.get(path));
-  }
   if (path === "/__figures.html") {
     res.writeHead(200, { "content-type": "text/html" });
     return res.end(PAGE);
@@ -198,19 +189,6 @@ try {
     }
   }
 
-  if (want("--usdz")) {
-    const files = await page.evaluate(() => Object.fromEntries(window.figureIds.map((i) => [i, window.glbOf(i)])));
-    for (const id of ids) {
-      const light = await simplified(files[id]);
-      lighter.set(`/__usdz/${id}.glb`, light.bytes);
-      console.log(`${id}: ${light.tris} triangles, kept ${Math.round(light.ratio * 100)}% for USDZ`);
-      const { b64, source, path } = await page.evaluate(([i, g]) => window.usdz(i, g), [id, `/__usdz/${id}.glb`]);
-      if (source !== "model") throw new Error(`${id}: the model did not load; refusing to write a stand-in USDZ`);
-      const out = join(root, path);
-      writeFileSync(out, Buffer.from(b64, "base64"));
-      console.log(`${id}: ${out.slice(root.length + 1)} ${statSync(out).size} bytes`);
-    }
-  }
   await ctx.close();
 
   if (want("--measure")) {

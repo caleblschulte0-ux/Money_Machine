@@ -52,7 +52,7 @@ can; Meta Ray-Ban Display cannot).
 - **Figures in the tour:** `stop.figure` in tour.json (model, scale,
   `offset_m` and `bearing_deg` from the stop, `yaw_deg`, `anchoring`
   auto|tap, `note`), validated by `validateTour` and the schema. Falls:
-  mammoth skeleton 9 m toward the falls. Mill: settler. Dakota: no figure
+  woolly mammoth 9 m toward the falls. Mill: settler. Dakota: no figure
   until the Dakota THPOs advise. Positions are provisional, to be set on
   site. On arrival `TourFigures` learns north in tracking space from
   compass/tracking-yaw pairs and puts the figure on the ground near its spot
@@ -70,6 +70,27 @@ can; Meta Ray-Ban Display cannot).
   `node tools/build_figures.mjs --usdz` (also `--views <dir>` to check which
   way each model faces, `--measure` for load time on a throttled
   connection). Budgets in `figures.ts`, held by `test/figures.test.ts`.
+- **iPhone = AR Quick Look, so the USDZ IS the iPhone figure** (Caleb tests
+  on an iPhone; first run 2026-10-07: "like a 2020 Snapchat filter, not
+  terrible but it can be a lot better"). USDZ is written by Blender
+  (`tools/usdz_blender.py`, `pip install bpy` on Python 3.11): binary USD, full
+  mesh (static scans decimated to 60k triangles), full textures as JPEG, the
+  rig and the idle clip, which Quick Look loops. three's USDZExporter (text,
+  static, which forced 20k triangles and 512 px) is now only the stand-in
+  fallback in `quicklook.ts`. Blender's glTF importer adds an icosphere for
+  bone display; the script deletes it (it once put the mammoth 1.26 m in the
+  air). Check a USDZ by re-importing it in Blender and rendering it from +z.
+  Quick Look link: `#allowsContentScaling=0` (no pinch scaling); one-finger
+  drag still moves the figure, and Quick Look cannot turn that off.
+- **What iPhone cannot do in the page (checked 2026-10-07):** Safari on
+  iPhone still exposes no WebXR AR, so test mode, our light/shadow/occlusion
+  and the in-page readout are Android Chrome only. Routes to test mode on an
+  iPhone: Variant Launch (an App Clip that injects WebXR: hit-test, anchors,
+  dom-overlay, "local" space; no light estimation or depth; free developer
+  tier 3,000 views/month, Basic $99/project/month; needs an account and a
+  project key), or a native ARKit app (a Mac with Xcode; a free Apple ID
+  installs on his own phone for 7 days at a time, $99/year Apple Developer
+  for TestFlight/keeping it installed).
   The drawn stand-ins (`src/web/figures3d.ts`) show if a model fails to load.
 - **Test mode (Caleb, 2026-10-07: "go into test mode, open my phone ...
   spawn in this mammoth"):** `ar.html` "Test mode: spawn a figure". Pick a

@@ -27,7 +27,7 @@ export const FIGURES = [
             tint: null,
             idleClip: "Idle",
         },
-        budgetBytes: { glb: 1_300_000, usdz: 2_100_000 },
+        budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
     },
     {
         id: "mammoth",
@@ -47,7 +47,7 @@ export const FIGURES = [
             tint: 0xd9ccb0,
             idleClip: null,
         },
-        budgetBytes: { glb: 2_000_000, usdz: 3_600_000 },
+        budgetBytes: { glb: 2_000_000, usdz: 5_600_000 },
     },
     {
         id: "mammoth-calf",
@@ -67,7 +67,7 @@ export const FIGURES = [
             tint: null,
             idleClip: "Idle",
         },
-        budgetBytes: { glb: 1_300_000, usdz: 2_100_000 },
+        budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
     },
     {
         id: "settler",
@@ -86,7 +86,7 @@ export const FIGURES = [
             tint: null,
             idleClip: "Idle",
         },
-        budgetBytes: { glb: 400_000, usdz: 700_000 },
+        budgetBytes: { glb: 400_000, usdz: 450_000 },
     },
 ];
 export const figureById = (id) => FIGURES.find((f) => f.id === id);
