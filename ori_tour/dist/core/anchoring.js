@@ -29,6 +29,8 @@ export class FigureStage {
     maxPlace;
     aimWords;
     maxSlope;
+    settleMs;
+    normalSince = null;
     tracker;
     constructor(tracker, specs, options = {}) {
         this.tracker = tracker;
@@ -40,6 +42,12 @@ export class FigureStage {
         this.maxPlace = options.maxPlaceM ?? 25;
         this.aimWords = options.device === "glasses" ? "Look at" : "Point the phone at";
         this.maxSlope = options.maxSlopeDeg ?? 20;
+        this.settleMs = options.settleMs ?? 1500;
+    }
+    /** Whether tracking has been normal long enough to place something that should stay put. */
+    get settled() {
+        const f = this.last;
+        return f != null && this.normalSince != null && f.t - this.normalSince >= this.settleMs;
     }
     /** The frame's aim, if it is on level ground. */
     groundAim(f) {
@@ -94,7 +102,7 @@ export class FigureStage {
     async place() {
         const f = this.last;
         const aim = f ? this.groundAim(f) : null;
-        if (!f || !aim || !f.viewer || f.quality === "lost")
+        if (!f || !aim || !f.viewer || !this.settled)
             return false;
         const spec = this.selected;
         return this.pin(spec, this.placement(spec, aim, f.viewer));
@@ -109,7 +117,7 @@ export class FigureStage {
         const spec = this.specs.get(id);
         if (!spec)
             throw new Error(`unknown figure ${id}`);
-        if (!f?.viewer || f.quality === "lost")
+        if (!f?.viewer || !this.settled)
             return false;
         return this.pin(spec, this.placement(spec, { position: target, orientation: IDENTITY }, f.viewer));
     }
@@ -194,6 +202,10 @@ export class FigureStage {
     /** Answer one tracking frame. Call once per rendered frame, then draw the result. */
     frame(f) {
         this.last = f;
+        if (f.quality !== "normal")
+            this.normalSince = null;
+        else
+            this.normalSince ??= f.t;
         const viewer = f.quality === "lost" ? null : f.viewer;
         const figures = [];
         for (const p of this.placed.values()) {
@@ -255,7 +267,7 @@ export class FigureStage {
         }
         this.lastFigures = figures;
         const aim = this.groundAim(f);
-        const reticle = viewer && aim ? this.placement(this.selected, aim, viewer) : null;
+        const reticle = viewer && aim && this.settled ? this.placement(this.selected, aim, viewer) : null;
         const phase = f.viewer == null && this.placed.size === 0 && f.quality !== "lost"
             ? "starting"
             : f.quality === "lost"
@@ -268,6 +280,7 @@ export class FigureStage {
         return {
             phase,
             quality: f.quality,
+            settled: this.settled,
             prompt: this.prompt(phase, reticle != null, figures),
             reticle,
             canPlace: reticle != null,

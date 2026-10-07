@@ -106,6 +106,8 @@ export interface TourFiguresOptions {
   groundSamples?: number;
   /** The ground counts as found once recent hits agree within this, metres. Default 0.15. */
   groundSpreadM?: number;
+  /** Tracking must have been normal this long before a figure is placed, ms (see StageOptions). Default 1500. */
+  settleMs?: number;
 }
 
 /** Everything a device needs to know about the stop's figure this frame. */
@@ -208,7 +210,10 @@ export class TourFigures {
     };
     const specs = sites.map(stopFigureSpec).filter((s): s is FigureSpec => s != null);
     // the catalogue too, for spawn(); a stage needs at least one figure to select
-    this.stage = new FigureStage(tracker, [...specs, ...FIGURES], { device: this.o.device });
+    this.stage = new FigureStage(tracker, [...specs, ...FIGURES], {
+      device: this.o.device,
+      settleMs: opts.settleMs,
+    });
   }
 
   /** Ground height: the median of recent level hits, once they agree. Null while the ground is not found. */

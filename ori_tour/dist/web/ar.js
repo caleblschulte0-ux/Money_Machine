@@ -259,6 +259,7 @@ async function startXr(scene, frame, onEnd) {
     renderer.xr.enabled = true;
     const look = getXrLook();
     tracker.onXrFrame = (xrFrame, ref) => look.occlusion.update(xrFrame, ref);
+    readoutTracker = tracker;
     const err = await tracker.start((f) => frame(f, tracker));
     if (err) {
         renderer.xr.enabled = false;
@@ -599,9 +600,12 @@ async function startTour(where, ar) {
 function holdWords(f) {
     return f.hold === "anchored" ? "pinned (anchor)" : f.hold === "anchoring" ? "pinning…" : "tracking only (no anchor)";
 }
+/** The running tracker, for the readout's anchor kind. */
+let readoutTracker = null;
 function figureLines(f) {
+    const kind = f.anchorId != null ? readoutTracker?.anchorKind(f.anchorId) : null;
     return [
-        `${f.name.padEnd(10)} ${holdWords(f)}`,
+        `${f.name.padEnd(10)} ${holdWords(f)}${kind === "plane" ? " to the ground plane" : kind === "space" ? " in space" : ""}`,
         `           ${f.distanceM == null ? "–" : f.distanceM.toFixed(1)} m away · ${Math.round(f.aroundDeg)}° around`,
         `           corrected ${(f.correctionM * 100).toFixed(0)} cm since placed`,
     ];
@@ -616,7 +620,7 @@ function testReadout(fv, fix, heading, points, look, canAnchor, fps) {
     const lines = [
         `GPS        ${fix ? `±${Math.round(fix.accuracy)} m` : "no fix"}`,
         `compass    ${heading.value == null ? "none" : `${Math.round(heading.value)}°${heading.steady() ? "" : " (unsteady)"}`}`,
-        `tracking   ${fv.stage.quality} · north ${fv.northYaw == null ? "learning" : "learned"}`,
+        `tracking   ${fv.stage.quality}${fv.stage.settled ? "" : " (settling)"} · north ${fv.northYaw == null ? "learning" : "learned"}`,
         `ground     ${fv.groundY == null ? "looking" : "found"}`,
         `light      ${look.light.status()}`,
         `occlusion  ${look.occlusion.status()}`,
@@ -638,7 +642,7 @@ function tourReadout(session, fv, figures) {
         `stop       ${st.atStop ? `at ${st.atStop.name}` : next && st.pos ? `${Math.round(distance(st.pos, next.position))} m to ${next.name}` : "–"}`,
     ];
     if (fv && figures) {
-        lines.push(`tracking   ${fv.stage.quality}`, `north      ${fv.northYaw == null ? "learning" : "learned"}`);
+        lines.push(`tracking   ${fv.stage.quality}${fv.stage.settled ? "" : " (settling)"}`, `north      ${fv.northYaw == null ? "learning" : "learned"}`);
         lines.push(`figure     ${fv.mode}${fv.waitingFor ? ` (waiting for ${fv.waitingFor})` : ""}`);
         for (const f of fv.stage.figures)
             lines.push(...figureLines(f));

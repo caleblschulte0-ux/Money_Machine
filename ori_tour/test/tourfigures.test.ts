@@ -71,7 +71,7 @@ function setup(opts: Partial<Walk> = {}, storage?: Storage, persist = false): Wa
   return {
     world: w,
     tour,
-    figures: new TourFigures(w, tourSites(tour), { storage }),
+    figures: new TourFigures(w, tourSites(tour), { storage, settleMs: 0 }),
     compassErr: 0,
     gpsErrEast: 0,
     accuracy: 5,

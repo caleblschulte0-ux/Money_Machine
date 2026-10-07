@@ -26,7 +26,7 @@ const settle = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 function rig(points: TestPoints, w = new FakeWorld()): { w: FakeWorld; figures: TourFigures } {
   w.drift = { position: vec(-2, 0.1, 4), orientation: yawQuat(-0.6) };
-  return { w, figures: new TourFigures(w, points.sites(), { freeSpawn: true }) };
+  return { w, figures: new TourFigures(w, points.sites(), { freeSpawn: true, settleMs: 0 }) };
 }
 
 function step(w: FakeWorld, figures: TourFigures, sites: TestPoints, aim: number | null = 5): TourFiguresView {

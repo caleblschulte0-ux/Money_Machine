@@ -91,6 +91,15 @@ can; Meta Ray-Ban Display cannot).
   doors); `TourFigures.groundY()` is the median of recent level hits and
   waits until they agree within 15 cm, so one hit on a car bonnet does not
   lift a figure. WebXR hit tests ask for planes first.
+- **Drift while circling** (Caleb's first phone test, 2026-10-07: "somewhat
+  the same spot"): a figure within 3 m of the aimed hit gets an anchor made
+  from the hit itself (`XRHitTestResult.createAnchor`, attached to the
+  detected plane, which ARCore keeps fixed to the real surface as its map
+  improves); farther, a free anchor. The readout says which ("to the ground
+  plane" / "in space"). The hit must be from the SAME frame, so `xr.ts`
+  `tick` runs the hit test before the pending anchor requests. And nothing
+  is placed until tracking has been normal for `settleMs` (1.5 s): anchors
+  made in the first moments drift most. Readout shows "(settling)".
 - **What a web page cannot do (say so, do not paper over it):** Chrome on
   Android has no persistent anchors, so a screen lock ends the AR session
   and the anchor is gone; "Back to AR" starts a new session and the figure is

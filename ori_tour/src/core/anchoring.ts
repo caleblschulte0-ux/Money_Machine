@@ -56,6 +56,13 @@ export interface StageOptions {
   device?: "phone" | "glasses";
   /** Steepest surface a figure may stand on, degrees from level. A wall or a car door is not ground. Default 20. */
   maxSlopeDeg?: number;
+  /**
+   * How long tracking must have been "normal" without a break before anything
+   * is placed, ms. An anchor made in the first moments of a session, before the
+   * phone has mapped the ground, is the one that drifts most as the map
+   * corrects. Default 1500.
+   */
+  settleMs?: number;
 }
 
 /**
@@ -101,6 +108,8 @@ export type StagePhase = "starting" | "scanning" | "ready" | "placed" | "lost";
 export interface StageView {
   phase: StagePhase;
   quality: TrackingQuality;
+  /** Tracking has been normal long enough to place something (see StageOptions.settleMs). */
+  settled: boolean;
   /** One sentence for the visitor. */
   prompt: string;
   /** Where a placement would land (already pushed clear of the visitor), or null. */
@@ -141,6 +150,8 @@ export class FigureStage {
   private readonly maxPlace: number;
   private readonly aimWords: string;
   private readonly maxSlope: number;
+  private readonly settleMs: number;
+  private normalSince: number | null = null;
   private readonly tracker: WorldTracker;
 
   constructor(tracker: WorldTracker, specs: readonly FigureSpec[], options: StageOptions = {}) {
@@ -152,6 +163,13 @@ export class FigureStage {
     this.maxPlace = options.maxPlaceM ?? 25;
     this.aimWords = options.device === "glasses" ? "Look at" : "Point the phone at";
     this.maxSlope = options.maxSlopeDeg ?? 20;
+    this.settleMs = options.settleMs ?? 1500;
+  }
+
+  /** Whether tracking has been normal long enough to place something that should stay put. */
+  get settled(): boolean {
+    const f = this.last;
+    return f != null && this.normalSince != null && f.t - this.normalSince >= this.settleMs;
   }
 
   /** The frame's aim, if it is on level ground. */
@@ -214,7 +232,7 @@ export class FigureStage {
   async place(): Promise<boolean> {
     const f = this.last;
     const aim = f ? this.groundAim(f) : null;
-    if (!f || !aim || !f.viewer || f.quality === "lost") return false;
+    if (!f || !aim || !f.viewer || !this.settled) return false;
     const spec = this.selected;
     return this.pin(spec, this.placement(spec, aim, f.viewer));
   }
@@ -228,7 +246,7 @@ export class FigureStage {
     const f = this.last;
     const spec = this.specs.get(id);
     if (!spec) throw new Error(`unknown figure ${id}`);
-    if (!f?.viewer || f.quality === "lost") return false;
+    if (!f?.viewer || !this.settled) return false;
     return this.pin(spec, this.placement(spec, { position: target, orientation: IDENTITY }, f.viewer));
   }
 
@@ -311,6 +329,8 @@ export class FigureStage {
   /** Answer one tracking frame. Call once per rendered frame, then draw the result. */
   frame(f: TrackedFrame): StageView {
     this.last = f;
+    if (f.quality !== "normal") this.normalSince = null;
+    else this.normalSince ??= f.t;
     const viewer = f.quality === "lost" ? null : f.viewer;
     const figures: FigureView[] = [];
 
@@ -373,7 +393,7 @@ export class FigureStage {
 
     this.lastFigures = figures;
     const aim = this.groundAim(f);
-    const reticle = viewer && aim ? this.placement(this.selected, aim, viewer) : null;
+    const reticle = viewer && aim && this.settled ? this.placement(this.selected, aim, viewer) : null;
     const phase: StagePhase =
       f.viewer == null && this.placed.size === 0 && f.quality !== "lost"
         ? "starting"
@@ -387,6 +407,7 @@ export class FigureStage {
     return {
       phase,
       quality: f.quality,
+      settled: this.settled,
       prompt: this.prompt(phase, reticle != null, figures),
       reticle,
       canPlace: reticle != null,

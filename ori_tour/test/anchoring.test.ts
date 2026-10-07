@@ -33,7 +33,7 @@ async function placeMammoth(world: FakeWorld, stage: FigureStage, aim = 6): Prom
 
 test("placing: the figure lands on the aimed ground, faces the visitor side-on, and never on top of them", () => {
   const world = new FakeWorld();
-  const stage = new FigureStage(world, [MAMMOTH, SETTLER]);
+  const stage = new FigureStage(world, [MAMMOTH, SETTLER], { settleMs: 0 });
   world.standAt(vec(0, 0, 0), vec(0, 0, -10));
 
   let v = world.frame(stage, 8);
@@ -66,7 +66,7 @@ test("placing: the figure lands on the aimed ground, faces the visitor side-on, 
 
 test("walking all the way around: the mammoth stays in its spot in the world while tracking drifts", async () => {
   const world = new FakeWorld();
-  const stage = new FigureStage(world, [MAMMOTH]);
+  const stage = new FigureStage(world, [MAMMOTH], { settleMs: 0 });
   const home = await placeMammoth(world, stage, 6);
 
   // walk a full circle of radius 8 m around it, plus a bit, while the
@@ -94,7 +94,7 @@ test("walking all the way around: the mammoth stays in its spot in the world whi
 
 test("walking away, losing tracking and coming back: it is still where it was", async () => {
   const world = new FakeWorld();
-  const stage = new FigureStage(world, [MAMMOTH]);
+  const stage = new FigureStage(world, [MAMMOTH], { settleMs: 0 });
   const home = await placeMammoth(world, stage, 6);
 
   // walk 60 m away, facing away from it
@@ -126,7 +126,7 @@ test("walking away, losing tracking and coming back: it is still where it was", 
 test("a device that cannot anchor still shows the figure, holds it by tracking alone, and says so", async () => {
   const world = new FakeWorld();
   world.canAnchor = false;
-  const stage = new FigureStage(world, [MAMMOTH]);
+  const stage = new FigureStage(world, [MAMMOTH], { settleMs: 0 });
   world.standAt(vec(0, 0, 0), vec(0, 0, -10));
   world.frame(stage, 6);
   await stage.place();
@@ -143,7 +143,7 @@ test("a device that cannot anchor still shows the figure, holds it by tracking a
 
 test("placing again moves the figure and releases the old anchor; a second figure can stand beside it", async () => {
   const world = new FakeWorld();
-  const stage = new FigureStage(world, [MAMMOTH, SETTLER]);
+  const stage = new FigureStage(world, [MAMMOTH, SETTLER], { settleMs: 0 });
   await placeMammoth(world, stage, 6);
   const first = [...world.worldAnchors.keys()][0]!;
 
@@ -165,7 +165,7 @@ test("placing again moves the figure and releases the old anchor; a second figur
 
 test("an anchor that arrives after the figure was placed again is released, not leaked", async () => {
   const world = new FakeWorld();
-  const stage = new FigureStage(world, [MAMMOTH]);
+  const stage = new FigureStage(world, [MAMMOTH], { settleMs: 0 });
   world.standAt(vec(0, 0, 0), vec(0, 0, -10));
   world.frame(stage, 6);
   const a = stage.place();
@@ -177,7 +177,7 @@ test("an anchor that arrives after the figure was placed again is released, not 
 
 test("before any ground is found there is nothing to place on", async () => {
   const world = new FakeWorld();
-  const stage = new FigureStage(world, [MAMMOTH], { device: "glasses" });
+  const stage = new FigureStage(world, [MAMMOTH], { device: "glasses", settleMs: 0 });
   world.standAt(vec(0, 0, 0), vec(0, 0, -10));
   const v = world.frame(stage, null);
   assert.equal(v.phase, "scanning");
@@ -195,4 +195,30 @@ test("figure sizes are true scale and every figure says where its model comes fr
     assert.ok(f.heightM > 0 && f.footprintM > 0);
   }
   assert.ok(MAMMOTH.heightM >= 2.7 && MAMMOTH.heightM <= 3.6, "woolly mammoth: 2.7 to 3.4 m at the shoulder");
+});
+
+test("nothing is placed until tracking has settled: an anchor made in the first moments drifts most", async () => {
+  const world = new FakeWorld();
+  const stage = new FigureStage(world, [MAMMOTH]);
+  world.standAt(vec(0, 0, 0), vec(0, 0, -10));
+
+  let v = world.frame(stage, 8);
+  assert.equal(v.phase, "scanning", "tracking just started");
+  assert.equal(v.reticle, null);
+  assert.match(v.prompt, /move slowly side to side/);
+  assert.equal(await stage.place(), false, "a tap this early places nothing");
+
+  for (let i = 0; i < 50; i++) v = world.frame(stage, 8); // ~1.65 s of normal tracking
+  assert.equal(v.phase, "ready");
+  assert.equal(stage.settled, true);
+
+  // a stumble in tracking starts the wait again
+  world.quality = "limited";
+  world.frame(stage, 8);
+  world.quality = "normal";
+  v = world.frame(stage, 8);
+  assert.equal(v.reticle, null);
+  assert.equal(await stage.place(), false);
+  for (let i = 0; i < 50; i++) v = world.frame(stage, 8);
+  assert.equal(await stage.place(), true);
 });

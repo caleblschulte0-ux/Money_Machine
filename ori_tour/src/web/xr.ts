@@ -29,11 +29,18 @@ export async function webxrArAvailable(): Promise<boolean> {
   }
 }
 
+/** Attach a new anchor to the aimed plane when the figure stands within this of the aim point, metres. */
+const PLANE_ANCHOR_REACH_M = 3;
+
 export class WebXRTracker implements WorldTracker {
   private session: XRSession | null = null;
   private ref: XRReferenceSpace | null = null;
   private hitSource: XRHitTestSource | null = null;
   private readonly anchors = new Map<string, XRAnchor>();
+  /** What each anchor is attached to: a detected plane (steadier) or a point in space. */
+  private readonly kinds = new Map<string, "plane" | "space">();
+  /** This frame's ground hit, kept so an anchor can be attached to the plane under it. */
+  private lastHit: { hit: XRHitTestResult; pose: Pose } | null = null;
   private pending: { pose: Pose; resolve: (id: string | null) => void }[] = [];
   private next = 1;
   private onFrame: ((f: TrackedFrame) => void) | null = null;
@@ -117,6 +124,12 @@ export class WebXRTracker implements WorldTracker {
   deleteAnchor(id: string): void {
     this.anchors.get(id)?.delete();
     this.anchors.delete(id);
+    this.kinds.delete(id);
+  }
+
+  /** "plane" when the anchor is attached to a detected surface, "space" otherwise, null if unknown. */
+  anchorKind(id: string): "plane" | "space" | null {
+    return this.kinds.get(id) ?? null;
   }
 
   async persistAnchor(id: string): Promise<string | null> {
@@ -153,23 +166,6 @@ export class WebXRTracker implements WorldTracker {
 
   private tick(frame: XRFrame): void {
     const ref = this.ref!;
-    for (const req of this.pending.splice(0)) {
-      const { position: p, orientation: q } = req.pose;
-      const made = frame.createAnchor?.(new XRRigidTransform({ x: p.x, y: p.y, z: p.z }, q), ref);
-      if (!made) {
-        req.resolve(null);
-        continue;
-      }
-      made.then(
-        (anchor) => {
-          const id = `xr${this.next++}`;
-          this.anchors.set(id, anchor);
-          req.resolve(id);
-        },
-        () => req.resolve(null),
-      );
-    }
-
     this.onXrFrame?.(frame, ref);
     const vp = frame.getViewerPose(ref);
     const quality: TrackingQuality = !vp ? "lost" : vp.emulatedPosition ? "limited" : "normal";
@@ -178,7 +174,39 @@ export class WebXRTracker implements WorldTracker {
       const hit = frame.getHitTestResults(this.hitSource)[0];
       const hp = hit?.getPose(ref);
       if (hp) aim = toPose(hp.transform);
+      this.lastHit = hit && aim ? { hit, pose: aim } : null;
+    } else this.lastHit = null;
+    // after this frame's hit test: a hit result can only make an anchor in its own frame
+    for (const req of this.pending.splice(0)) {
+      const { position: p, orientation: q } = req.pose;
+      // Attach to the detected plane under the aim when the figure stands near
+      // it: ARCore keeps a plane anchor fixed to the real surface as its map
+      // improves, where a free anchor in space drifts more. The core learns the
+      // figure's offset from whatever anchor it gets, so the pose may differ.
+      const h = this.lastHit;
+      const near = h != null && Math.hypot(h.pose.position.x - p.x, h.pose.position.z - p.z) < PLANE_ANCHOR_REACH_M;
+      let kind: "plane" | "space" = "space";
+      let made: Promise<XRAnchor> | undefined;
+      if (near && h.hit.createAnchor) {
+        made = h.hit.createAnchor();
+        kind = "plane";
+      }
+      made ??= frame.createAnchor?.(new XRRigidTransform({ x: p.x, y: p.y, z: p.z }, q), ref);
+      if (!made) {
+        req.resolve(null);
+        continue;
+      }
+      made.then(
+        (anchor) => {
+          const id = `xr${this.next++}`;
+          this.anchors.set(id, anchor);
+          this.kinds.set(id, kind);
+          req.resolve(id);
+        },
+        () => req.resolve(null),
+      );
     }
+
     const anchors = new Map<string, Pose | null>();
     for (const [id, a] of this.anchors) {
       const tracked = frame.trackedAnchors ? frame.trackedAnchors.has(a) : true;
