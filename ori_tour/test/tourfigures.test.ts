@@ -14,7 +14,7 @@ import type { Storage } from "../src/core/ports.ts";
 import { relocate } from "../src/core/relocate.ts";
 import { groundDist, vec, yawQuat, type Vec3 } from "../src/core/space.ts";
 import { figurePosition } from "../src/core/tour.ts";
-import { stopFigureId, TourFigures, type TourFiguresView } from "../src/core/tourfigures.ts";
+import { stopFigureId, TourFigures, tourSites, type TourFiguresView } from "../src/core/tourfigures.ts";
 import type { Stop, Tour } from "../src/core/types.ts";
 import { FakeWorld, geo as geoOf, ORIGIN, world } from "./fakeworld.ts";
 import { fallsPark } from "./helpers.ts";
@@ -56,7 +56,7 @@ function step(w: Walk): TourFiguresView {
     fix: { pos, accuracy: w.accuracy },
     heading: (w.world.heading() + w.compassErr + 360) % 360,
     headingSteady: true,
-    atStop,
+    at: atStop,
   });
 }
 
@@ -71,7 +71,7 @@ function setup(opts: Partial<Walk> = {}, storage?: Storage, persist = false): Wa
   return {
     world: w,
     tour,
-    figures: new TourFigures(w, tour, { storage }),
+    figures: new TourFigures(w, tourSites(tour), { storage }),
     compassErr: 0,
     gpsErrEast: 0,
     accuracy: 5,

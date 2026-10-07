@@ -18,6 +18,8 @@ await build({
       'export { USDZExporter } from "three/addons/exporters/USDZExporter.js";',
       'export { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";',
       'export { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";',
+      'export { XREstimatedLight } from "three/addons/webxr/XREstimatedLight.js";',
+      'export { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";',
     ].join("\n"),
     resolveDir: root,
   },

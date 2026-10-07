@@ -41,6 +41,10 @@ export class WebXRTracker implements WorldTracker {
   onEnd: (() => void) | null = null;
   /** Whether this session can anchor (set once started). */
   canAnchor = false;
+  /** Called every XR frame before the tracking frame, with the raw frame (depth, light). */
+  onXrFrame: ((frame: XRFrame, ref: XRReferenceSpace) => void) | null = null;
+  /** The features the browser granted, for the readout. */
+  features: readonly string[] = [];
 
   private readonly renderer: THREE.WebGLRenderer;
   private readonly overlay: HTMLElement;
@@ -59,8 +63,9 @@ export class WebXRTracker implements WorldTracker {
     try {
       session = await navigator.xr.requestSession("immersive-ar", {
         requiredFeatures: ["hit-test"],
-        optionalFeatures: ["anchors", "dom-overlay"],
+        optionalFeatures: ["anchors", "dom-overlay", "light-estimation", "depth-sensing"],
         domOverlay: { root: this.overlay },
+        depthSensing: { usagePreference: ["cpu-optimized"], dataFormatPreference: ["luminance-alpha", "float32"] },
       });
     } catch (e) {
       return `AR could not start (${e instanceof Error ? e.message : String(e)}). This phone may need Google Play Services for AR.`;
@@ -71,8 +76,14 @@ export class WebXRTracker implements WorldTracker {
     await this.renderer.xr.setSession(session);
     this.ref = this.renderer.xr.getReferenceSpace();
     const viewer = await session.requestReferenceSpace("viewer");
-    this.hitSource = (await session.requestHitTestSource?.({ space: viewer })) ?? null;
+    // detected planes first: steadier ground than single feature points
+    try {
+      this.hitSource = (await session.requestHitTestSource?.({ space: viewer, entityTypes: ["plane"] })) ?? null;
+    } catch {
+      this.hitSource = (await session.requestHitTestSource?.({ space: viewer })) ?? null;
+    }
     const enabled = (session as XRSession & { enabledFeatures?: readonly string[] }).enabledFeatures;
+    this.features = enabled ?? [];
     this.canAnchor = enabled ? enabled.includes("anchors") : "createAnchor" in XRFrame.prototype;
     session.addEventListener("end", () => {
       this.renderer.setAnimationLoop(null);
@@ -159,6 +170,7 @@ export class WebXRTracker implements WorldTracker {
       );
     }
 
+    this.onXrFrame?.(frame, ref);
     const vp = frame.getViewerPose(ref);
     const quality: TrackingQuality = !vp ? "lost" : vp.emulatedPosition ? "limited" : "normal";
     let aim: Pose | null = null;

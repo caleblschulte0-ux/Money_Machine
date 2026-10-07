@@ -17,19 +17,74 @@
 // position. Surviving a reload or screen lock needs persistent anchors
 // (WorldTracker.persistAnchor), which only some platforms have; without them
 // the figure is re-placed from the stop's position when the visitor is back.
+//
+// It works on FigureSites, not on tour stops directly: a tour's stops with a
+// figure (tourSites) and a tester's saved test points (testpoints.ts) are both
+// sites, so the parking lot runs exactly the code the park does. With
+// freeSpawn, any catalogue figure can also be put where the visitor aims
+// (spawn), with no site at all: "I'm looking at the falls, put the mammoth
+// there".
 
-import { FigureStage, type FigureSpec, type StageView } from "./anchoring.ts";
-import { figureById } from "./figures.ts";
-import { bearing, distance } from "./geo.ts";
+import { FigureStage, isLevel, type FigureSpec, type StageView } from "./anchoring.ts";
+import { FIGURES, figureById } from "./figures.ts";
+import { bearing, distance, norm, offset } from "./geo.ts";
 import type { Storage, TrackedFrame, WorldTracker } from "./ports.ts";
-import { angleDiff, toRad, yawOf, type Vec3 } from "./space.ts";
-import { figurePosition } from "./tour.ts";
-import type { LatLon, Stop, Tour } from "./types.ts";
+import { angleDiff, toDeg, toRad, yawOf, yawToward, type Vec3 } from "./space.ts";
+import { targetBearing } from "./tour.ts";
+import type { LatLon, StopFigure, Tour } from "./types.ts";
+
+/** A place with a figure: a tour stop with a figure, or a saved test point. */
+export interface FigureSite {
+  id: string;
+  name: string;
+  position: LatLon;
+  radius_m: number;
+  figure: StopFigure;
+  /** Direction from the site to its figure when figure.bearing_deg is null, degrees. */
+  facingDeg: number;
+}
+
+/** The sites of a tour: its stops that have a figure. */
+export function tourSites(tour: Tour): FigureSite[] {
+  const out: FigureSite[] = [];
+  for (const s of tour.stops)
+    if (s.figure)
+      out.push({
+        id: s.id,
+        name: s.name,
+        position: s.position,
+        radius_m: s.radius_m,
+        figure: s.figure,
+        facingDeg: targetBearing(s),
+      });
+  return out;
+}
+
+/** Where a site's figure stands on the ground. */
+export function siteFigurePosition(site: FigureSite): LatLon {
+  const f = site.figure;
+  const b = f.bearing_deg ?? site.facingDeg;
+  return f.offset_m > 0 ? offset(site.position, f.offset_m, norm(b)) : { ...site.position };
+}
+
+/** The nearest site whose radius contains `pos`, or null. */
+export function siteAt(sites: readonly FigureSite[], pos: LatLon): FigureSite | null {
+  let best: FigureSite | null = null;
+  let bestD = Infinity;
+  for (const s of sites) {
+    const d = distance(pos, s.position);
+    if (d <= s.radius_m && d < bestD) {
+      best = s;
+      bestD = d;
+    }
+  }
+  return best;
+}
 
 export interface TourFiguresOptions {
   /** Persisted anchor handles, where the platform can persist anchors. */
   storage?: Storage;
-  /** Storage key prefix (one tour, one device). */
+  /** Storage key prefix for anchor handles (one tour or test area, one device). Default "ori-figure-anchor". */
   storageKey?: string;
   /** Auto placement waits for a GPS fix at least this good, metres. Default 20. */
   maxAccuracyM?: number;
@@ -45,6 +100,12 @@ export interface TourFiguresOptions {
   keepBeyondM?: number;
   /** "phone" or "glasses": prompt wording. */
   device?: "phone" | "glasses";
+  /** Let spawn() put any catalogue figure where the visitor aims (test mode). Default false. */
+  freeSpawn?: boolean;
+  /** Ground hits kept to judge the ground (median height, spread). Default 15. */
+  groundSamples?: number;
+  /** The ground counts as found once recent hits agree within this, metres. Default 0.15. */
+  groundSpreadM?: number;
 }
 
 /** Everything a device needs to know about the stop's figure this frame. */
@@ -55,8 +116,12 @@ export interface TourFiguresInput {
   /** Compass heading in use (smoothed, calibrated), degrees, or null. */
   heading: number | null;
   headingSteady: boolean;
-  /** The stop the visitor is at (inside its geofence), from the tour engine. */
-  atStop: Stop | null;
+  /**
+   * Where the visitor is: the tour engine's current stop (anything with an id;
+   * a stop without a figure counts, it takes the last figure down), or for
+   * test points siteAt(). Null between stops.
+   */
+  at: { id: string } | null;
 }
 
 export type FigureMode = "none" | "waiting" | "tap" | "standing";
@@ -64,8 +129,10 @@ export type FigureMode = "none" | "waiting" | "tap" | "standing";
 export interface TourFiguresView {
   stage: StageView;
   mode: FigureMode;
-  /** The stop whose figure is active, or null. */
+  /** The site whose figure is active, or null. */
   stopId: string | null;
+  /** The ground height in use (median of recent level hits), or null while the ground is not found. */
+  groundY: number | null;
   /** One sentence for the visitor, or null when the figure has nothing to say (the tour guide speaks). */
   prompt: string | null;
   /** Why auto placement is waiting, for the readout. */
@@ -81,18 +148,20 @@ const D = {
   tapAfterMs: 12000,
   lostReplaceMs: 4000,
   keepBeyondM: 25,
+  groundSamples: 15,
+  groundSpreadM: 0.15,
 };
 
-export const stopFigureId = (stop: Stop): string => `stop:${stop.id}`;
+/** The stage id of a site's figure (a free-spawned figure's id is its model id). */
+export const stopFigureId = (site: { id: string }): string => `stop:${site.id}`;
 
-/** The FigureSpec for a stop's figure: the catalogue figure at the stop's scale and turn. */
-export function stopFigureSpec(stop: Stop): FigureSpec | null {
-  const f = stop.figure;
-  if (!f) return null;
+/** The FigureSpec for a site's figure: the catalogue figure at the site's scale and turn. */
+export function stopFigureSpec(site: FigureSite): FigureSpec | null {
+  const f = site.figure;
   const base = figureById(f.model);
   if (!base) return null;
   return {
-    id: stopFigureId(stop),
+    id: stopFigureId(site),
     name: base.name,
     model: base.id,
     scale: f.scale,
@@ -104,19 +173,24 @@ export function stopFigureSpec(stop: Stop): FigureSpec | null {
 
 export class TourFigures {
   readonly stage: FigureStage;
-  private readonly tour: Tour;
+  private readonly sites: Map<string, FigureSite>;
   private readonly tracker: WorldTracker;
-  private readonly o: typeof D & { storage: Storage | undefined; storageKey: string; device: "phone" | "glasses" };
+  private readonly o: typeof D & {
+    storage: Storage | undefined;
+    storageKey: string;
+    device: "phone" | "glasses";
+    freeSpawn: boolean;
+  };
   private readonly pairs: number[] = [];
-  private groundY: number | null = null;
-  private active: Stop | null = null;
+  private readonly grounds: number[] = [];
+  private active: FigureSite | null = null;
   private arrivedT: number | null = null;
   private placing = false;
   private persisted = new Set<string>();
 
-  constructor(tracker: WorldTracker, tour: Tour, opts: TourFiguresOptions = {}) {
+  constructor(tracker: WorldTracker, sites: readonly FigureSite[], opts: TourFiguresOptions = {}) {
     this.tracker = tracker;
-    this.tour = tour;
+    this.sites = new Map(sites.map((s) => [s.id, s]));
     const pick = <K extends keyof typeof D>(k: K): number => opts[k] ?? D[k];
     this.o = {
       maxAccuracyM: pick("maxAccuracyM"),
@@ -125,19 +199,58 @@ export class TourFigures {
       tapAfterMs: pick("tapAfterMs"),
       lostReplaceMs: pick("lostReplaceMs"),
       keepBeyondM: pick("keepBeyondM"),
+      groundSamples: pick("groundSamples"),
+      groundSpreadM: pick("groundSpreadM"),
       storage: opts.storage,
-      storageKey: opts.storageKey ?? `ori-figure-anchor:${tour.id}`,
+      storageKey: opts.storageKey ?? "ori-figure-anchor",
       device: opts.device ?? "phone",
+      freeSpawn: opts.freeSpawn ?? false,
     };
-    const specs = tour.stops.map(stopFigureSpec).filter((s): s is FigureSpec => s != null);
-    // a stage needs a figure to select; a tour with none never activates one
-    this.stage = new FigureStage(
-      tracker,
-      specs.length ? specs : [{ id: "none", name: "figure", heightM: 1, footprintM: 0.5, yawDeg: 0 }],
-      {
-        device: this.o.device,
-      },
-    );
+    const specs = sites.map(stopFigureSpec).filter((s): s is FigureSpec => s != null);
+    // the catalogue too, for spawn(); a stage needs at least one figure to select
+    this.stage = new FigureStage(tracker, [...specs, ...FIGURES], { device: this.o.device });
+  }
+
+  /** Ground height: the median of recent level hits, once they agree. Null while the ground is not found. */
+  groundY(): number | null {
+    const n = this.grounds.length;
+    if (n < Math.min(5, this.o.groundSamples)) return null;
+    const sorted = [...this.grounds].sort((a, b) => a - b);
+    const mid = sorted[Math.floor(n / 2)]!;
+    // the middle two thirds must agree: one hit on a car bonnet does not move the ground
+    const lo = sorted[Math.floor(n / 6)]!;
+    const hi = sorted[Math.ceil((5 * n) / 6) - 1]!;
+    return hi - lo <= this.o.groundSpreadM ? mid : null;
+  }
+
+  /** Replace the sites (a test point saved or deleted). Figures of sites that are gone are taken down. */
+  setSites(sites: readonly FigureSite[]): void {
+    for (const id of this.sites.keys())
+      if (!sites.some((s) => s.id === id)) {
+        this.stage.remove(stopFigureId({ id }));
+        if (this.active?.id === id) {
+          this.active = null;
+          this.arrivedT = null;
+        }
+      }
+    this.sites.clear();
+    for (const s of sites) {
+      this.sites.set(s.id, s);
+      const spec = stopFigureSpec(s);
+      if (spec) this.stage.addSpec(spec);
+    }
+  }
+
+  /** Make a standing spawned figure the figure of a site, where it stands (no jump). */
+  adoptSpawned(model: string, site: FigureSite): boolean {
+    return this.stage.transfer(model, stopFigureId(site));
+  }
+
+  /** Put a catalogue figure where the visitor aims (freeSpawn). A second spawn of the same figure moves it. */
+  async spawn(model: string): Promise<boolean> {
+    if (!this.o.freeSpawn) return false;
+    this.stage.select(model);
+    return this.stage.place();
   }
 
   /** The learned turn from tracking space to the map, or null while the compass pairs disagree or are too few. */
@@ -157,15 +270,37 @@ export class TourFigures {
   /** Where a map point is in tracking space, on the ground. Null until north, a fix and the ground are known. */
   toTracking(target: LatLon, viewerPos: Vec3, fix: LatLon): Vec3 | null {
     const north = this.northYaw();
-    if (north == null || this.groundY == null) return null;
+    const ground = this.groundY();
+    if (north == null || ground == null) return null;
     const d = distance(fix, target);
     const yaw = north - toRad(bearing(fix, target));
-    return { x: viewerPos.x - Math.sin(yaw) * d, y: this.groundY, z: viewerPos.z - Math.cos(yaw) * d };
+    return { x: viewerPos.x - Math.sin(yaw) * d, y: ground, z: viewerPos.z - Math.cos(yaw) * d };
+  }
+
+  /**
+   * A standing figure as a site figure relative to where the visitor stands
+   * (their fix): how far, which bearing, which way it is turned. Null until
+   * north is learned. This is how "Set test point here" remembers a spawned
+   * figure on the map.
+   */
+  capture(figureId: string, viewerPos: Vec3): Pick<StopFigure, "offset_m" | "bearing_deg" | "yaw_deg"> | null {
+    const north = this.northYaw();
+    const fig = this.stage.figuresNow().find((f) => f.id === figureId);
+    if (north == null || !fig) return null;
+    const p = fig.pose.position;
+    const d = Math.hypot(p.x - viewerPos.x, p.z - viewerPos.z);
+    const yaw = yawToward(viewerPos, p);
+    const yawDeg = toDeg(angleDiff(yawToward(p, viewerPos), yawOf(fig.pose.orientation)));
+    return {
+      offset_m: Math.round(d * 10) / 10,
+      bearing_deg: (Math.round(norm(toDeg(north - yaw)) * 10) / 10) % 360,
+      yaw_deg: Math.round(yawDeg),
+    };
   }
 
   /** The visitor tapped: place the active stop's figure on the aimed ground. */
   async tap(): Promise<boolean> {
-    if (!this.active) return this.stage.place();
+    if (!this.active) return false;
     this.stage.select(stopFigureId(this.active));
     const ok = await this.stage.place();
     if (ok) await this.persist();
@@ -179,12 +314,19 @@ export class TourFigures {
       this.pairs.push(yawOf(f.viewer.orientation) + toRad(input.heading));
       if (this.pairs.length > this.o.alignSamples) this.pairs.shift();
     }
-    if (f.aim) this.groundY = f.aim.position.y;
+    if (f.aim && isLevel(f.aim)) {
+      this.grounds.push(f.aim.position.y);
+      if (this.grounds.length > this.o.groundSamples) this.grounds.shift();
+    }
 
     this.follow(input);
     const stage = this.stage.frame(f);
     const stop = this.active;
-    if (!stop) return { stage, mode: "none", stopId: null, prompt: null, waitingFor: null, northYaw: this.northYaw() };
+    const groundY = this.groundY();
+    if (!stop) {
+      const prompt = this.o.freeSpawn ? stage.prompt : null;
+      return { stage, mode: "none", stopId: null, prompt, waitingFor: null, northYaw: this.northYaw(), groundY };
+    }
 
     const id = stopFigureId(stop);
     const fig = stage.figures.find((x) => x.id === id);
@@ -203,7 +345,7 @@ export class TourFigures {
     }
 
     const waitedLong = this.arrivedT != null && f.t - this.arrivedT > this.o.tapAfterMs;
-    const tapMode = !fig && (stop.figure?.anchoring === "tap" || waitedLong);
+    const tapMode = !fig && (stop.figure.anchoring === "tap" || waitedLong);
     if (tapMode) this.stage.select(id);
     const mode: FigureMode = fig ? "standing" : tapMode ? "tap" : "waiting";
     let prompt: string | null;
@@ -214,13 +356,13 @@ export class TourFigures {
         ? `Tap the ground to place the ${spec.name}.`
         : `${this.o.device === "glasses" ? "Look at" : "Point the phone at"} the ground to place the ${spec.name}.`;
     else prompt = `Look around slowly: the ${spec.name} is about to appear.`;
-    return { stage, mode, stopId: stop.id, prompt, waitingFor, northYaw: this.northYaw() };
+    return { stage, mode, stopId: stop.id, prompt, waitingFor, northYaw: this.northYaw(), groundY };
   }
 
   /** Track which stop's figure should be up: arrive to raise it, walk well away to take it down. */
   private follow(input: TourFiguresInput): void {
-    const at = input.atStop?.figure ? input.atStop : null;
-    if (this.active && input.atStop && input.atStop.id !== this.active.id && !at) {
+    const at = input.at ? (this.sites.get(input.at.id) ?? null) : null;
+    if (this.active && input.at && input.at.id !== this.active.id && !at) {
       // at another stop, one without a figure: this one's figure goes
       this.stage.remove(stopFigureId(this.active));
       this.active = null;
@@ -245,20 +387,20 @@ export class TourFigures {
   }
 
   /** Why auto placement cannot happen yet, in words, or null when it can. */
-  private autoBlocker(input: TourFiguresInput, stop: Stop): string | null {
-    if (stop.figure?.anchoring !== "auto") return "this figure is placed by a tap";
+  private autoBlocker(input: TourFiguresInput, stop: FigureSite): string | null {
+    if (stop.figure.anchoring !== "auto") return "this figure is placed by a tap";
     if (input.frame.quality !== "normal" || !input.frame.viewer) return "tracking";
     if (!input.fix) return "GPS";
     if (input.fix.accuracy > this.o.maxAccuracyM) return `GPS (±${Math.round(input.fix.accuracy)} m)`;
-    if (this.groundY == null) return "the ground";
+    if (this.groundY() == null) return "the ground";
     if (this.northYaw() == null) return "a steady compass";
     return null;
   }
 
-  private autoPlace(input: TourFiguresInput, stop: Stop): void {
+  private autoPlace(input: TourFiguresInput, stop: FigureSite): void {
     const viewer = input.frame.viewer;
-    if (!viewer || !input.fix || !stop.figure) return;
-    const target = this.toTracking(figurePosition(stop, stop.figure), viewer.position, input.fix.pos);
+    if (!viewer || !input.fix) return;
+    const target = this.toTracking(siteFigurePosition(stop), viewer.position, input.fix.pos);
     if (!target) return;
     this.placing = true;
     void this.stage.placeAt(stopFigureId(stop), target).finally(() => (this.placing = false));
@@ -266,11 +408,11 @@ export class TourFigures {
 
   // ---- persistence (only where the platform has persistent anchors) ----
 
-  private key(stop: Stop): string {
+  private key(stop: FigureSite): string {
     return `${this.o.storageKey}:${stop.id}`;
   }
 
-  private restore(stop: Stop): void {
+  private restore(stop: FigureSite): void {
     const handle = this.o.storage?.get(this.key(stop));
     if (!handle || !this.tracker.restoreAnchor) return;
     this.placing = true;
@@ -296,7 +438,7 @@ export class TourFigures {
     else this.persisted.delete(stop.id);
   }
 
-  private forget(stop: Stop): void {
+  private forget(stop: FigureSite): void {
     const handle = this.o.storage?.get(this.key(stop));
     if (handle) {
       this.tracker.forgetAnchor?.(handle);

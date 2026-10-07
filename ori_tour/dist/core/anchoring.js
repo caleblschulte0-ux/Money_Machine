@@ -8,7 +8,14 @@
 // the figure (never on top of the visitor), which way it faces, where it is
 // this frame (anchor pose, corrected as the platform's map improves), whether
 // to draw it, and what to tell the visitor. A display only draws StageView.
-import { IDENTITY, angleDiff, compose, dist, groundDist, invert, scale, sub, add, toDeg, toRad, yawOf, yawQuat, yawToward, } from "./space.js";
+import { IDENTITY, angleDiff, compose, dist, groundDist, invert, rotate, scale, sub, add, toDeg, toRad, yawOf, yawQuat, yawToward, } from "./space.js";
+/**
+ * Whether a hit is on ground a figure can stand on: the hit pose's +y is the
+ * surface normal (WebXR hit-test results, and the convention for any port).
+ */
+export function isLevel(hit, maxSlopeDeg = 20) {
+    return rotate(hit.orientation, { x: 0, y: 1, z: 0 }).y >= Math.cos(toRad(maxSlopeDeg));
+}
 /** Counting "walked around" stops beyond this distance, where a few steps sideways sweep large angles from GPS-free noise. */
 const AROUND_MAX_M = 30;
 export class FigureStage {
@@ -16,10 +23,12 @@ export class FigureStage {
     placed = new Map();
     selectedId;
     last = null;
+    lastFigures = [];
     gen = 0;
     clearance;
     maxPlace;
     aimWords;
+    maxSlope;
     tracker;
     constructor(tracker, specs, options = {}) {
         this.tracker = tracker;
@@ -30,6 +39,11 @@ export class FigureStage {
         this.clearance = options.clearanceM ?? 1.5;
         this.maxPlace = options.maxPlaceM ?? 25;
         this.aimWords = options.device === "glasses" ? "Look at" : "Point the phone at";
+        this.maxSlope = options.maxSlopeDeg ?? 20;
+    }
+    /** The frame's aim, if it is on level ground. */
+    groundAim(f) {
+        return f.aim && isLevel(f.aim, this.maxSlope) ? f.aim : null;
     }
     get selected() {
         return this.specs.get(this.selectedId);
@@ -68,6 +82,10 @@ export class FigureStage {
         const p = this.placed.get(id);
         return p ? { anchorId: p.anchorId, hold: p.hold } : null;
     }
+    /** The figures as the last frame() saw them. */
+    figuresNow() {
+        return this.lastFigures;
+    }
     /** Ids of the figures standing now. */
     get placedIds() {
         return [...this.placed.keys()];
@@ -75,10 +93,11 @@ export class FigureStage {
     /** Put the selected figure where the visitor is aiming. False if there is no ground to put it on yet. */
     async place() {
         const f = this.last;
-        if (!f?.aim || !f.viewer || f.quality === "lost")
+        const aim = f ? this.groundAim(f) : null;
+        if (!f || !aim || !f.viewer || f.quality === "lost")
             return false;
         const spec = this.selected;
-        return this.pin(spec, this.placement(spec, f.aim, f.viewer));
+        return this.pin(spec, this.placement(spec, aim, f.viewer));
     }
     /**
      * Put a figure at a point worked out some other way (a tour stop's position
@@ -143,6 +162,21 @@ export class FigureStage {
             current.hold = "tracking-only";
         else
             current.anchorId = id;
+        return true;
+    }
+    /**
+     * Hand a standing figure, anchor and all, to another figure id (a spawned
+     * figure becomes a test point's figure without moving). False if `from` is
+     * not standing.
+     */
+    transfer(from, to) {
+        const p = this.placed.get(from);
+        const spec = this.specs.get(to);
+        if (!p || !spec)
+            return false;
+        this.placed.delete(from);
+        this.remove(to);
+        this.placed.set(to, { ...p, spec });
         return true;
     }
     remove(id) {
@@ -219,7 +253,9 @@ export class FigureStage {
                 correctionM: p.correctionM,
             });
         }
-        const reticle = viewer && f.aim ? this.placement(this.selected, f.aim, viewer) : null;
+        this.lastFigures = figures;
+        const aim = this.groundAim(f);
+        const reticle = viewer && aim ? this.placement(this.selected, aim, viewer) : null;
         const phase = f.viewer == null && this.placed.size === 0 && f.quality !== "lost"
             ? "starting"
             : f.quality === "lost"

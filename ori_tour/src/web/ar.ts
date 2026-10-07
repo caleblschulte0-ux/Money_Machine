@@ -2,12 +2,15 @@
 // the tour.
 //
 // Route per phone, decided at load:
-//   Android, Chrome with ARCore  -> WebXR here. "Walk the tour here" moves the
-//                                   Falls Park stops around the tester and runs
-//                                   the real TourSession; TourFigures puts each
-//                                   stop's figure on the ground near the stop
-//                                   (src/core/tourfigures.ts). "Just place a
-//                                   figure" is the free FigureStage.
+//   Android, Chrome with ARCore  -> WebXR here. "Test mode": pick a figure,
+//                                   "Spawn here" puts it where the phone aims,
+//                                   "Set test point here" saves the spot so it
+//                                   comes back on its own (src/core/testpoints.ts).
+//                                   "Walk the tour here" moves the Falls Park
+//                                   stops around the tester and runs the real
+//                                   TourSession; TourFigures puts each stop's
+//                                   figure near the stop (src/core/tourfigures.ts).
+//                                   Lighting, shadow and occlusion: look.ts.
 //   iPhone (Safari and friends)  -> the tour runs in the page without AR, and
 //                                   at a figure's stop "See it here" opens
 //                                   Apple's AR Quick Look with that figure.
@@ -15,18 +18,21 @@
 
 import * as THREE from "three";
 
-import { FigureStage, type FigureView, type StageView } from "../core/anchoring.ts";
+import type { FigureView, StageView } from "../core/anchoring.ts";
 import { FIGURES, figureById, type FigureInfo } from "../core/figures.ts";
 import { compassWord, distance } from "../core/geo.ts";
+import { HeadingFilter } from "../core/heading.ts";
 import type { Display } from "../core/ports.ts";
 import { relocate } from "../core/relocate.ts";
 import { TourSession } from "../core/session.ts";
 import { loadTour } from "../core/tour.ts";
-import { TourFigures, type TourFiguresView } from "../core/tourfigures.ts";
-import type { Tour } from "../core/types.ts";
+import { TestPoints } from "../core/testpoints.ts";
+import { siteAt, stopFigureId, TourFigures, tourSites, type TourFiguresView } from "../core/tourfigures.ts";
+import type { LatLon, Tour } from "../core/types.ts";
 import type { ViewModel } from "../core/view.ts";
 import { WebAudio } from "./audio.ts";
 import { contactShadow, loadFigure } from "./figures3d.ts";
+import { DepthOcclusion, lookOptions, SceneLight, setUpRenderer, shadowCatcher } from "./look.ts";
 import { browserStorage, fetchAssets, intervalScheduler, wallClock } from "./platform.ts";
 import { openQuickLook, quickLookAvailable, usdzFor } from "./quicklook.ts";
 import { AccelerometerSource, CompassSource, GeolocationSource, settleFix } from "./sensors.ts";
@@ -36,6 +42,7 @@ const params = new URLSearchParams(location.search);
 const TOUR_ID = (params.get("tour") ?? "falls-park").replace(/[^\w-]/g, "");
 const BASE = `content/${TOUR_ID}/`;
 const storage = browserStorage();
+const LOOK = lookOptions(params);
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -48,7 +55,7 @@ const noSelect = (el: HTMLElement): void => el.addEventListener("beforexrselect"
 const canvas = $<HTMLCanvasElement>("stage");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+setUpRenderer(renderer, LOOK);
 
 const lights = (scene: THREE.Scene): void => {
   scene.add(new THREE.HemisphereLight(0xfff4e0, 0x3a3328, 1.6));
@@ -64,21 +71,39 @@ const shadowFor = (info: FigureInfo, scale: number): THREE.Mesh => {
 };
 
 /** One figure in a scene: a holder at once, the model inside it when it arrives. */
-async function figureNode(info: FigureInfo, scale: number, holder: THREE.Group): Promise<THREE.AnimationMixer | null> {
+async function figureNode(
+  info: FigureInfo,
+  scale: number,
+  holder: THREE.Group,
+  occlusion: DepthOcclusion | null = null,
+): Promise<THREE.AnimationMixer | null> {
   holder.add(shadowFor(info, scale));
+  if (LOOK.shadows) holder.add(shadowCatcher(Math.max(info.heightM * 2.2, info.footprintM * 3) * scale));
   const loaded = await loadFigure(info, scale);
+  if (occlusion)
+    loaded.node.traverse((o) => {
+      if (o instanceof THREE.Mesh) for (const m of [o.material].flat() as THREE.Material[]) occlusion.patch(m);
+    });
   holder.add(loaded.node);
   return loaded.mixer;
 }
 
-/** The figures of a stage, kept in a three.js scene. */
+/** The figures of a stage, kept in a three.js scene, lit and shadowed by `look`. */
 class FigureLayer {
   private readonly scene: THREE.Scene;
-  private readonly nodes = new Map<string, { holder: THREE.Group; mixer: THREE.AnimationMixer | null }>();
+  private readonly look: XrLook;
+  private readonly nodes = new Map<string, { holder: THREE.Group; mixer: THREE.AnimationMixer | null; size: number }>();
   private last = performance.now();
 
-  constructor(scene: THREE.Scene) {
-    this.scene = scene;
+  constructor(look: XrLook) {
+    this.look = look;
+    this.scene = look.scene;
+  }
+
+  /** Take every figure out of the scene (the AR session ended). */
+  clear(): void {
+    for (const n of this.nodes.values()) this.scene.remove(n.holder);
+    this.nodes.clear();
   }
 
   draw(figures: readonly FigureView[]): void {
@@ -89,8 +114,9 @@ class FigureLayer {
       if (!n) {
         const info = figureById(f.model);
         const holder = new THREE.Group();
-        const entry = { holder, mixer: null as THREE.AnimationMixer | null };
-        if (info) void figureNode(info, f.scale, holder).then((m) => (entry.mixer = m));
+        const size = info ? Math.max(info.heightM, info.footprintM) * f.scale : 1;
+        const entry = { holder, mixer: null as THREE.AnimationMixer | null, size };
+        if (info) void figureNode(info, f.scale, holder, this.look.occlusion).then((m) => (entry.mixer = m));
         this.scene.add(holder);
         this.nodes.set(f.id, entry);
         n = entry;
@@ -109,6 +135,39 @@ class FigureLayer {
     const dt = Math.min((now - this.last) / 1000, 0.1);
     this.last = now;
     for (const n of this.nodes.values()) n.mixer?.update(dt);
+    // the sun's shadow covers the nearest visible figure
+    let near: { n: { holder: THREE.Group; size: number }; d: number } | null = null;
+    for (const f of figures) {
+      const n = this.nodes.get(f.id);
+      if (n && f.visible && f.distanceM != null && (!near || f.distanceM < near.d)) near = { n, d: f.distanceM };
+    }
+    if (near) this.look.light.follow(near.n.holder.position, near.n.size);
+  }
+}
+
+/** The AR scene, its light and its occlusion: made once, reused by every AR session. */
+interface XrLook {
+  scene: THREE.Scene;
+  light: SceneLight;
+  occlusion: DepthOcclusion;
+}
+let xrLook: XrLook | null = null;
+function getXrLook(): XrLook {
+  if (!xrLook) {
+    const scene = new THREE.Scene();
+    xrLook = { scene, light: new SceneLight(renderer, scene, LOOK), occlusion: new DepthOcclusion(LOOK.occlusion) };
+  }
+  return xrLook;
+}
+
+/** Frames per second, smoothed, for the readout. */
+class Fps {
+  private last = 0;
+  value = 0;
+  tick(): void {
+    const now = performance.now();
+    if (this.last) this.value = this.value * 0.9 + (1000 / Math.max(now - this.last, 1)) * 0.1;
+    this.last = now;
   }
 }
 
@@ -234,6 +293,8 @@ async function startXr(
   const tracker = new WebXRTracker(renderer, $("xrOverlay"), () => renderer.render(scene, camera));
   renderer.setAnimationLoop(null);
   renderer.xr.enabled = true;
+  const look = getXrLook();
+  tracker.onXrFrame = (xrFrame, ref) => look.occlusion.update(xrFrame, ref);
   const err = await tracker.start((f) => frame(f, tracker));
   if (err) {
     renderer.xr.enabled = false;
@@ -275,13 +336,12 @@ function showReticle(r: ReturnType<typeof reticle>, v: StageView, show: boolean)
   }
 }
 
-function enterOverlay(kind: "free" | "tour" | "flat"): void {
+function enterOverlay(kind: "test" | "tour" | "flat"): void {
   $("intro").hidden = true;
   $("xrOverlay").hidden = false;
   document.body.classList.toggle("flat", kind === "flat");
-  $("xrPicker").hidden = kind !== "free";
-  $("remove").hidden = kind !== "free";
-  $("guide").hidden = kind === "free";
+  for (const id of ["xrPicker", "spawn", "setPoint", "remove", "clearPoints"]) $(id).hidden = kind !== "test";
+  $("guide").hidden = kind === "test";
   $("resumeAr").hidden = true;
   $("quicklook").hidden = true;
   for (const id of ["skip", "calib", "force", "caption"]) $(id).hidden = true;
@@ -298,38 +358,141 @@ function backToIntro(message: string | null): void {
   previewLoop();
 }
 
-/** Free placement: pick a figure, tap the ground, walk around it. */
-async function startFree(): Promise<void> {
-  enterOverlay("free");
-  const scene = new THREE.Scene();
-  lights(scene);
-  const layer = new FigureLayer(scene);
-  const ret = reticle(scene);
-  let stage: FigureStage | null = null;
-  let view: StageView | null = null;
-  const tracker = await startXr(
-    scene,
-    (f) => {
-      if (!stage) return;
-      view = stage.frame(f);
-      showReticle(ret, view, true);
-      layer.draw(view.figures);
-      setPrompt(view.prompt);
-      $("readout").textContent = stageReadout(view);
-    },
-    () => backToIntro(null),
-  );
-  if (!tracker) return backToIntro($("prompt").textContent);
-  stage = new FigureStage(tracker, FIGURES, { device: "phone" });
-  stage.select(selected);
-  running = { tracker, exiting: false };
-  if (!tracker.canAnchor) setPrompt("This phone's browser cannot anchor; the figure is held by tracking alone.");
-  tracker.xrSession?.addEventListener("select", () => {
-    if (view?.canPlace) void stage?.place();
-  });
-  pickHandler = (id) => stage?.select(id);
-  $("remove").onclick = () => stage?.clear();
-  $("exit").onclick = () => tracker.stop();
+/**
+ * Test mode: no tour, no stops. Spawn any figure where the phone aims, walk
+ * around it, save the spot as a test point; saved points bring their figure
+ * back on their own when you return, through the same code a tour stop uses.
+ */
+async function startTest(): Promise<void> {
+  const compass = new CompassSource();
+  const permission = await compass.request();
+  enterOverlay("test");
+  const points = new TestPoints(storage);
+  let fix: { pos: LatLon; accuracy: number } | null = null;
+  const heading = new HeadingFilter();
+  const stops = [
+    new GeolocationSource().start((r) => {
+      if (r.error === undefined) fix = { pos: r.pos, accuracy: r.accuracy };
+    }),
+    compass.start((h, t) => heading.push(h, t)),
+  ];
+  let ended = false;
+  const finish = (message: string | null): void => {
+    ended = true;
+    for (const stop of stops) stop();
+    backToIntro(message);
+  };
+  const note = (text: string): void => {
+    noteText = { text, until: performance.now() + 5000 };
+  };
+  let noteText: { text: string; until: number } | null = permission ? { text: permission, until: Infinity } : null;
+  if (points.loadProblems.length) note(`Some saved test points were unreadable and were skipped.`);
+
+  const runAr = async (): Promise<void> => {
+    $("resumeAr").hidden = true;
+    const look = getXrLook();
+    const layer = new FigureLayer(look);
+    const ret = reticle(look.scene);
+    const fps = new Fps();
+    let figures: TourFigures | null = null;
+    let fv: TourFiguresView | null = null;
+    let viewerPos: THREE.Vector3 | null = null;
+    const tracker = await startXr(
+      look.scene,
+      (f) => {
+        if (!figures) return;
+        fps.tick();
+        viewerPos = f.viewer ? new THREE.Vector3(f.viewer.position.x, f.viewer.position.y, f.viewer.position.z) : null;
+        fv = figures.update({
+          frame: f,
+          fix,
+          heading: heading.value,
+          headingSteady: heading.steady(),
+          at: fix ? siteAt(points.sites(), fix.pos) : null,
+        });
+        showReticle(ret, fv.stage, fv.mode === "tap" || fv.mode === "none" || fv.stage.canPlace);
+        layer.draw(fv.stage.figures);
+        const shown = noteText && noteText.until > performance.now() ? noteText.text : null;
+        setPrompt(shown ?? fv.prompt);
+        $("readout").textContent = testReadout(fv, fix, heading, points, look, tracker?.canAnchor ?? true, fps);
+      },
+      () => {
+        layer.clear();
+        look.scene.remove(ret.group);
+        if (ended) return;
+        if (running?.exiting) return finish(null);
+        $("resumeAr").hidden = false;
+        setPrompt("AR paused (screen locked or closed). Saved test points come back when you tap Back to AR.");
+        previewLoop();
+      },
+    );
+    if (!tracker) {
+      $("resumeAr").hidden = false;
+      return;
+    }
+    figures = new TourFigures(tracker, points.sites(), {
+      storage,
+      storageKey: "ori-figure-anchor:test",
+      device: "phone",
+      freeSpawn: true,
+    });
+    figures.stage.select(selected);
+    running = { tracker, exiting: false };
+    if (!tracker.canAnchor) note("This phone's browser cannot anchor; figures are held by tracking alone.");
+    const spawn = (): void => {
+      if (fv?.mode === "tap") void figures?.tap();
+      else
+        void figures?.spawn(selected).then((ok) => {
+          if (!ok) note("No ground yet. Point the phone at the ground a few steps ahead and move it slowly.");
+        });
+    };
+    tracker.xrSession?.addEventListener("select", spawn);
+    $("spawn").onclick = spawn;
+    pickHandler = (id) => figures?.stage.select(id);
+    $("remove").onclick = () => {
+      if (!figures) return;
+      // the picked figure if it stands, else the nearest one
+      const standing = fv?.stage.figures ?? [];
+      const target =
+        standing.find((x) => x.id === selected) ??
+        [...standing].sort((a, b) => (a.distanceM ?? 1e9) - (b.distanceM ?? 1e9))[0];
+      if (target) figures.stage.remove(target.id);
+    };
+    $("setPoint").onclick = () => {
+      if (!figures || !viewerPos) return;
+      const v = fv?.stage.figures.find((x) => x.id === selected);
+      if (!v) return note(`Spawn the ${figureById(selected)!.name} first, then save the spot.`);
+      if (!fix || fix.accuracy > 20)
+        return note(`GPS is ${fix ? `±${Math.round(fix.accuracy)} m` : "not ready"}; wait for ±20 m or better.`);
+      const rel = figures.capture(selected, { x: viewerPos.x, y: viewerPos.y, z: viewerPos.z });
+      if (!rel) return note("Still learning which way north is. Hold the phone level and look around slowly.");
+      const point = points.add({
+        position: fix.pos,
+        figure: { model: selected, scale: 1, ...rel },
+        facingDeg: heading.value ?? 0,
+        savedAt: Date.now(),
+      });
+      figures.setSites(points.sites());
+      figures.adoptSpawned(selected, point);
+      note(`Saved ${point.name}. Walk away and come back: it reappears on its own.`);
+      $("clearPoints").textContent = `Clear test points (${points.list().length})`;
+    };
+    $("clearPoints").textContent = `Clear test points (${points.list().length})`;
+    $("clearPoints").onclick = () => {
+      for (const p of points.list()) figures?.stage.remove(stopFigureId(p));
+      points.clear();
+      figures?.setSites([]);
+      $("clearPoints").textContent = "Clear test points (0)";
+      note("Test points cleared.");
+    };
+    $("exit").onclick = () => {
+      if (running) running.exiting = true;
+      tracker.stop();
+    };
+  };
+  $("resumeAr").onclick = () => void runAr();
+  $("exit").onclick = () => finish(null);
+  await runAr();
 }
 
 /** The tour, around the tester ("here") or at the park, with each stop's figure in AR. */
@@ -417,14 +580,13 @@ async function startTour(where: "here" | "park", ar: boolean): Promise<void> {
   // the figure (or restores it, where the browser keeps anchors).
   const runAr = async (): Promise<void> => {
     $("resumeAr").hidden = true;
-    const scene = new THREE.Scene();
-    lights(scene);
-    const layer = new FigureLayer(scene);
-    const ret = reticle(scene);
+    const look = getXrLook();
+    const layer = new FigureLayer(look);
+    const ret = reticle(look.scene);
     let figures: TourFigures | null = null;
     let fv: TourFiguresView | null = null;
     const tracker = await startXr(
-      scene,
+      look.scene,
       (f) => {
         if (!figures) return;
         const st = session.engine.state;
@@ -433,7 +595,7 @@ async function startTour(where: "here" | "park", ar: boolean): Promise<void> {
           fix: st.pos && st.accuracy != null ? { pos: st.pos, accuracy: st.accuracy } : null,
           heading: st.heading,
           headingSteady: st.headingSteady,
-          atStop: st.atStop,
+          at: st.atStop,
         });
         showReticle(ret, fv.stage, fv.mode === "tap");
         layer.draw(fv.stage.figures);
@@ -441,6 +603,8 @@ async function startTour(where: "here" | "park", ar: boolean): Promise<void> {
         $("readout").textContent = tourReadout(session, fv, figures);
       },
       () => {
+        layer.clear();
+        look.scene.remove(ret.group);
         if (ended) return;
         if (running?.exiting) return finish(null);
         $("resumeAr").hidden = false;
@@ -452,7 +616,7 @@ async function startTour(where: "here" | "park", ar: boolean): Promise<void> {
       $("resumeAr").hidden = false;
       return;
     }
-    figures = new TourFigures(tracker, tour, { storage, device: "phone" });
+    figures = new TourFigures(tracker, tourSites(tour), { storage, storageKey: `ori-figure-anchor:${tour.id}` });
     running = { tracker, exiting: false };
     tracker.xrSession?.addEventListener("select", () => {
       if (fv?.mode === "tap") void figures?.tap();
@@ -481,8 +645,34 @@ function figureLines(f: FigureView): string[] {
   ];
 }
 
-function stageReadout(v: StageView): string {
-  return [`tracking   ${v.quality}`, ...v.figures.flatMap(figureLines)].join("\n");
+function testReadout(
+  fv: TourFiguresView,
+  fix: { pos: LatLon; accuracy: number } | null,
+  heading: HeadingFilter,
+  points: TestPoints,
+  look: XrLook,
+  canAnchor: boolean,
+  fps: Fps,
+): string {
+  const nearest = fix
+    ? points
+        .list()
+        .map((p) => ({ p, d: distance(fix.pos, p.position) }))
+        .sort((a, b) => a.d - b.d)[0]
+    : undefined;
+  const lines = [
+    `GPS        ${fix ? `±${Math.round(fix.accuracy)} m` : "no fix"}`,
+    `compass    ${heading.value == null ? "none" : `${Math.round(heading.value)}°${heading.steady() ? "" : " (unsteady)"}`}`,
+    `tracking   ${fv.stage.quality} · north ${fv.northYaw == null ? "learning" : "learned"}`,
+    `ground     ${fv.groundY == null ? "looking" : "found"}`,
+    `light      ${look.light.status()}`,
+    `occlusion  ${look.occlusion.status()}`,
+    `frame rate ${Math.round(fps.value)} fps${canAnchor ? "" : " · no anchors"}`,
+    `points     ${points.list().length} saved${nearest ? ` · nearest ${Math.round(nearest.d)} m` : ""}`,
+  ];
+  if (fv.waitingFor) lines.push(`waiting    for ${fv.waitingFor}`);
+  for (const f of fv.stage.figures) lines.push(...figureLines(f));
+  return lines.join("\n");
 }
 
 function tourReadout(session: TourSession, fv: TourFiguresView | null, figures: TourFigures | null): string {
@@ -513,22 +703,33 @@ async function main(): Promise<void> {
   markPicked();
   showPreview(selected);
   previewLoop();
-  for (const id of ["exit", "remove", "resumeAr", "quicklook", "skip", "calib", "force"]) noSelect($(id));
+  for (const id of [
+    "exit",
+    "remove",
+    "resumeAr",
+    "quicklook",
+    "skip",
+    "calib",
+    "force",
+    "spawn",
+    "setPoint",
+    "clearPoints",
+  ])
+    noSelect($(id));
 
   const goTour = $<HTMLButtonElement>("goTour");
-  const goFree = $<HTMLButtonElement>("goFree");
+  const goFree = $<HTMLButtonElement>("goTest");
   const goPark = $<HTMLButtonElement>("goPark");
   const route = $("route");
   if (await webxrArAvailable()) {
-    goTour.textContent = "Walk the tour here";
+    goFree.textContent = "Test mode: spawn a figure";
     for (const b of [goTour, goFree, goPark]) b.disabled = false;
     route.textContent =
-      "Android AR (ARCore in Chrome): each stop's figure is put on the ground near the stop and pinned with an anchor.";
+      "Android AR (ARCore in Chrome): figures are pinned with an anchor, lit from the camera's light estimate, with a live readout.";
     goTour.onclick = () => void startTour("here", true);
     goPark.onclick = () => void startTour("park", true);
-    goFree.onclick = () => void startFree();
+    goFree.onclick = () => void startTest();
   } else if (quickLookAvailable()) {
-    goTour.textContent = "Walk the tour here";
     for (const b of [goTour, goFree, goPark]) b.disabled = false;
     route.textContent =
       "iPhone: the tour runs in the page; at a figure's stop, \"See it here\" opens Apple's AR view, where you tap the ground once and the figure stays put.";
@@ -539,11 +740,11 @@ async function main(): Promise<void> {
     // prepare ahead of the tap: Quick Look has to open inside the tap itself
     const urls = new Map<string, string>();
     await Promise.all(FIGURES.map(async (f) => urls.set(f.id, (await usdzFor(f)).url)));
-    goFree.textContent = "See a figure in your space";
+    goFree.textContent = "Spawn it here (Apple AR view)";
     goFree.disabled = false;
     goFree.onclick = () => openQuickLook(urls.get(selected)!);
   } else {
-    goTour.textContent = "AR not available here";
+    goFree.textContent = "AR not available here";
     route.textContent =
       "Open this page on an Android phone in Chrome (with Google Play Services for AR) or on an iPhone in Safari.";
   }

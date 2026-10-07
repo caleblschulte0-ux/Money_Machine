@@ -12,7 +12,7 @@ export const SCHEMA = "ori.tour/1";
 const isNum = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
 const isStr = (x: unknown): x is string => typeof x === "string" && x.length > 0;
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
-const isLatLon = (p: unknown): p is LatLon =>
+export const isLatLon = (p: unknown): p is LatLon =>
   isObj(p) && isNum(p.lat) && isNum(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180;
 
 /**
@@ -74,7 +74,8 @@ export function validateTour(input: unknown): string[] {
   return errs;
 }
 
-function validateFigure(raw: unknown, at: string): string[] {
+/** Problems with a figure entry (a stop's, or a saved test point's), or none. */
+export function validateFigure(raw: unknown, at: string): string[] {
   if (!isObj(raw)) return [`${at}: figure must be an object`];
   const f = raw;
   const errs: string[] = [];

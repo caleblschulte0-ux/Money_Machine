@@ -34,6 +34,10 @@ export class WebXRTracker {
     onEnd = null;
     /** Whether this session can anchor (set once started). */
     canAnchor = false;
+    /** Called every XR frame before the tracking frame, with the raw frame (depth, light). */
+    onXrFrame = null;
+    /** The features the browser granted, for the readout. */
+    features = [];
     renderer;
     overlay;
     draw;
@@ -50,8 +54,9 @@ export class WebXRTracker {
         try {
             session = await navigator.xr.requestSession("immersive-ar", {
                 requiredFeatures: ["hit-test"],
-                optionalFeatures: ["anchors", "dom-overlay"],
+                optionalFeatures: ["anchors", "dom-overlay", "light-estimation", "depth-sensing"],
                 domOverlay: { root: this.overlay },
+                depthSensing: { usagePreference: ["cpu-optimized"], dataFormatPreference: ["luminance-alpha", "float32"] },
             });
         }
         catch (e) {
@@ -63,8 +68,15 @@ export class WebXRTracker {
         await this.renderer.xr.setSession(session);
         this.ref = this.renderer.xr.getReferenceSpace();
         const viewer = await session.requestReferenceSpace("viewer");
-        this.hitSource = (await session.requestHitTestSource?.({ space: viewer })) ?? null;
+        // detected planes first: steadier ground than single feature points
+        try {
+            this.hitSource = (await session.requestHitTestSource?.({ space: viewer, entityTypes: ["plane"] })) ?? null;
+        }
+        catch {
+            this.hitSource = (await session.requestHitTestSource?.({ space: viewer })) ?? null;
+        }
         const enabled = session.enabledFeatures;
+        this.features = enabled ?? [];
         this.canAnchor = enabled ? enabled.includes("anchors") : "createAnchor" in XRFrame.prototype;
         session.addEventListener("end", () => {
             this.renderer.setAnimationLoop(null);
@@ -145,6 +157,7 @@ export class WebXRTracker {
                 req.resolve(id);
             }, () => req.resolve(null));
         }
+        this.onXrFrame?.(frame, ref);
         const vp = frame.getViewerPose(ref);
         const quality = !vp ? "lost" : vp.emulatedPosition ? "limited" : "normal";
         let aim = null;

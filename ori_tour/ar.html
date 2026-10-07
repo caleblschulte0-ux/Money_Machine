@@ -16,7 +16,9 @@
           "three": "./vendor/three.js",
           "three/addons/exporters/USDZExporter.js": "./vendor/three.js",
           "three/addons/loaders/GLTFLoader.js": "./vendor/three.js",
-          "three/addons/libs/meshopt_decoder.module.js": "./vendor/three.js"
+          "three/addons/libs/meshopt_decoder.module.js": "./vendor/three.js",
+          "three/addons/webxr/XREstimatedLight.js": "./vendor/three.js",
+          "three/addons/environments/RoomEnvironment.js": "./vendor/three.js"
         }
       }
     </script>
@@ -31,14 +33,33 @@
       <div class="picker" id="picker"></div>
       <p id="credit" class="muted small"></p>
       <ol class="how" id="how">
-        <li>"Walk the tour here" drops the three Falls Park stops around you, stop 1 straight ahead.</li>
-        <li>Walk to a stop. Its figure appears on the ground near it and stays there.</li>
-        <li>Walk all the way around it. Walk on: it is gone between stops, audio only.</li>
+        <li>Test mode: pick a figure, point at the ground, tap "Spawn here". It stands there at true size.</li>
+        <li>"Set test point here" saves the spot. Walk away and come back: it reappears on its own.</li>
+        <li>"Walk the tour here" drops the three Falls Park stops around you, with each stop's figure.</li>
       </ol>
+      <details class="judge">
+        <summary>How to judge it</summary>
+        <ol>
+          <li>
+            Circle it slowly, all the way round. It should not slide; "corrected" in the readout stays under about 10
+            cm.
+          </li>
+          <li>Walk 50 m away and come back. It should be where you left it.</li>
+          <li>
+            Lock the screen, unlock, tap "Back to AR". A saved test point's figure comes back near the same spot (a web
+            page cannot keep the exact spot).
+          </li>
+          <li>
+            In the sun: its shadow should fall the same way as yours, and it should not look brighter or darker than
+            things around it.
+          </li>
+          <li>Walk so a car or a person is between you and it: where this phone senses depth, they hide it.</li>
+        </ol>
+      </details>
       <p class="safety">In a parking lot: watch for cars, and look up from the screen while you walk.</p>
-      <button id="goTour" disabled>Checking this phone…</button>
+      <button id="goTest" disabled>Checking this phone…</button>
       <div class="row">
-        <button id="goFree" class="ghost" disabled>Just place a figure</button>
+        <button id="goTour" class="ghost" disabled>Walk the tour here</button>
         <button id="goPark" class="ghost" disabled>Start at the park</button>
       </div>
       <p id="route" class="muted"></p>
@@ -52,12 +73,15 @@
       <div id="caption" hidden></div>
       <div class="controls">
         <div class="picker" id="xrPicker"></div>
+        <button id="spawn" hidden>Spawn here</button>
+        <button id="setPoint" class="ghost" hidden>Set test point here</button>
         <button id="quicklook" hidden>See it here in AR</button>
         <button id="resumeAr" hidden>Back to AR</button>
         <button id="calib" class="ghost" hidden>I'm facing it: set compass</button>
         <button id="force" class="ghost" hidden>Show scene</button>
         <button id="skip" class="ghost" hidden>Skip stop</button>
         <button id="remove" class="ghost">Remove</button>
+        <button id="clearPoints" class="ghost" hidden>Clear test points</button>
         <button id="exit" class="ghost">Exit</button>
       </div>
     </div>

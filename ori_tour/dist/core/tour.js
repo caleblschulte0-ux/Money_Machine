@@ -7,7 +7,7 @@ export const SCHEMA = "ori.tour/1";
 const isNum = (x) => typeof x === "number" && Number.isFinite(x);
 const isStr = (x) => typeof x === "string" && x.length > 0;
 const isObj = (x) => typeof x === "object" && x !== null && !Array.isArray(x);
-const isLatLon = (p) => isObj(p) && isNum(p.lat) && isNum(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180;
+export const isLatLon = (p) => isObj(p) && isNum(p.lat) && isNum(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180;
 /**
  * Every problem with a package, as plain sentences. Empty means usable.
  * Kept in step with schemas/ori.tour-1.schema.json by test/schema.test.ts.
@@ -95,7 +95,8 @@ export function validateTour(input) {
     }
     return errs;
 }
-function validateFigure(raw, at) {
+/** Problems with a figure entry (a stop's, or a saved test point's), or none. */
+export function validateFigure(raw, at) {
     if (!isObj(raw))
         return [`${at}: figure must be an object`];
     const f = raw;

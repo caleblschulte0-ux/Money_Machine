@@ -1,5 +1,5 @@
 {
- "version": "1002ac4b690e",
+ "version": "c3d85843a0c9",
  "files": [
   "./",
   "ar.html",
@@ -31,6 +31,7 @@
   "dist/core/space.js",
   "dist/core/stillness.js",
   "dist/core/synthwalk.js",
+  "dist/core/testpoints.js",
   "dist/core/text.js",
   "dist/core/tour.js",
   "dist/core/tourfigures.js",
@@ -41,6 +42,7 @@
   "dist/web/audio.js",
   "dist/web/figures3d.js",
   "dist/web/hud.js",
+  "dist/web/look.js",
   "dist/web/map.js",
   "dist/web/platform.js",
   "dist/web/quicklook.js",

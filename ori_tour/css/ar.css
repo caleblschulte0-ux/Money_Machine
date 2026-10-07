@@ -94,7 +94,7 @@ button.ghost {
 button:disabled {
   opacity: 0.5;
 }
-#go {
+#goTest {
   width: 100%;
   font-size: 17px;
 }
@@ -209,4 +209,20 @@ button:disabled {
 /* iPhone tour (no AR session): the overlay is the page */
 body.flat #xrOverlay {
   background: var(--ground);
+}
+.judge {
+  margin: 8px 0;
+  color: var(--subtle);
+}
+.judge summary {
+  color: var(--ink);
+  font-weight: 600;
+}
+#xrOverlay #spawn {
+  background-color: var(--accent);
+  color: #16130d;
+  flex-basis: 100%;
+}
+#xrOverlay .controls .picker {
+  flex-basis: 100%;
 }

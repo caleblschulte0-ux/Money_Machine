@@ -17,6 +17,7 @@ import {
   dist,
   groundDist,
   invert,
+  rotate,
   scale,
   sub,
   add,
@@ -53,6 +54,16 @@ export interface StageOptions {
   maxPlaceM?: number;
   /** "phone" or "glasses": only changes the words of the prompts. */
   device?: "phone" | "glasses";
+  /** Steepest surface a figure may stand on, degrees from level. A wall or a car door is not ground. Default 20. */
+  maxSlopeDeg?: number;
+}
+
+/**
+ * Whether a hit is on ground a figure can stand on: the hit pose's +y is the
+ * surface normal (WebXR hit-test results, and the convention for any port).
+ */
+export function isLevel(hit: Pose, maxSlopeDeg = 20): boolean {
+  return rotate(hit.orientation, { x: 0, y: 1, z: 0 }).y >= Math.cos(toRad(maxSlopeDeg));
 }
 
 /**
@@ -124,10 +135,12 @@ export class FigureStage {
   private readonly placed = new Map<string, Placed>();
   private selectedId: string;
   private last: TrackedFrame | null = null;
+  private lastFigures: FigureView[] = [];
   private gen = 0;
   private readonly clearance: number;
   private readonly maxPlace: number;
   private readonly aimWords: string;
+  private readonly maxSlope: number;
   private readonly tracker: WorldTracker;
 
   constructor(tracker: WorldTracker, specs: readonly FigureSpec[], options: StageOptions = {}) {
@@ -138,6 +151,12 @@ export class FigureStage {
     this.clearance = options.clearanceM ?? 1.5;
     this.maxPlace = options.maxPlaceM ?? 25;
     this.aimWords = options.device === "glasses" ? "Look at" : "Point the phone at";
+    this.maxSlope = options.maxSlopeDeg ?? 20;
+  }
+
+  /** The frame's aim, if it is on level ground. */
+  private groundAim(f: TrackedFrame): Pose | null {
+    return f.aim && isLevel(f.aim, this.maxSlope) ? f.aim : null;
   }
 
   get selected(): FigureSpec {
@@ -181,6 +200,11 @@ export class FigureStage {
     return p ? { anchorId: p.anchorId, hold: p.hold } : null;
   }
 
+  /** The figures as the last frame() saw them. */
+  figuresNow(): readonly FigureView[] {
+    return this.lastFigures;
+  }
+
   /** Ids of the figures standing now. */
   get placedIds(): string[] {
     return [...this.placed.keys()];
@@ -189,9 +213,10 @@ export class FigureStage {
   /** Put the selected figure where the visitor is aiming. False if there is no ground to put it on yet. */
   async place(): Promise<boolean> {
     const f = this.last;
-    if (!f?.aim || !f.viewer || f.quality === "lost") return false;
+    const aim = f ? this.groundAim(f) : null;
+    if (!f || !aim || !f.viewer || f.quality === "lost") return false;
     const spec = this.selected;
-    return this.pin(spec, this.placement(spec, f.aim, f.viewer));
+    return this.pin(spec, this.placement(spec, aim, f.viewer));
   }
 
   /**
@@ -254,6 +279,21 @@ export class FigureStage {
     }
     if (id == null) current.hold = "tracking-only";
     else current.anchorId = id;
+    return true;
+  }
+
+  /**
+   * Hand a standing figure, anchor and all, to another figure id (a spawned
+   * figure becomes a test point's figure without moving). False if `from` is
+   * not standing.
+   */
+  transfer(from: string, to: string): boolean {
+    const p = this.placed.get(from);
+    const spec = this.specs.get(to);
+    if (!p || !spec) return false;
+    this.placed.delete(from);
+    this.remove(to);
+    this.placed.set(to, { ...p, spec });
     return true;
   }
 
@@ -331,7 +371,9 @@ export class FigureStage {
       });
     }
 
-    const reticle = viewer && f.aim ? this.placement(this.selected, f.aim, viewer) : null;
+    this.lastFigures = figures;
+    const aim = this.groundAim(f);
+    const reticle = viewer && aim ? this.placement(this.selected, aim, viewer) : null;
     const phase: StagePhase =
       f.viewer == null && this.placed.size === 0 && f.quality !== "lost"
         ? "starting"
