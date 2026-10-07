@@ -122,19 +122,54 @@ Locations); Meta Ray-Ban Display cannot (heads-up display, no 6DoF for
 developers); XREAL Air 2 Ultra can through the XREAL SDK's spatial anchors,
 tethered to a phone or Beam Pro; RayNeo X3 Pro is not reliable yet.
 
-**Snap Spectacles (Lens Studio, TypeScript).** Lens Studio scripts are
-TypeScript, so `src/core` can be copied in as source. Two adjustments:
-(a) Lens Studio resolves imports its own way, so the `.ts` extensions in the
-import paths may need rewriting (a small copy script); (b) everything in
-`src/core` is plain ES2022, but check Lens Studio's runtime for `Array.prototype.findLast`
-(used only in `src/web`, not the core). Adapters: a `WorldTracker` from Lens Studio's world tracking
-(device pose each frame, a world hit test for the aim point, its anchors, and
-Custom Locations to put a figure back at the same spot at the park on every
-visit), location and heading from Lens Studio's location and orientation APIs, motion from its IMU, `Display` as a
-component that shows the scene card in front of the user (or anchored at the
-landmark, which Spectacles can do and phones cannot), `AudioPort` with an
-AudioComponent. Lens Studio has a preview with simulated location, which runs
-on Caleb's computer.
+### Snap Spectacles port (Lens Studio)
+
+Spectacles are the one pair that can pin a figure outdoors today (Lens Studio
+world tracking, Custom Locations). Lens Studio scripts are TypeScript, so the
+port is the same shape as the web one: the core copied in, small adapters
+around it. Written 2026-10-07, before we have held a pair; the Lens Studio API
+names below are from Snap's documentation and are to be checked against the
+Lens Studio version we install.
+
+**Carries over as is (copied source, no edits):** all of `src/core`, which is
+plain ES2022 with no DOM, Node or device code (`tsconfig.core.json` compiles
+it with no platform types and ESLint refuses browser globals there, so a
+regression fails CI). That is the tour engine and session (`engine.ts`,
+`session.ts`, `view.ts`, `text.ts`), arrival and facing (`geo.ts`,
+`heading.ts`, `stillness.ts`, `relocate.ts`), the content loader and
+validation (`tour.ts`, `types.ts`), and every figure rule: placement,
+clearance, facing, ground, settling, anchor bookkeeping and test points
+(`anchoring.ts`, `tourfigures.ts`, `testpoints.ts`, `space.ts`,
+`figures.ts`). The content package (`content/<tour>/`) is shared unchanged.
+The only mechanical step is the import paths: the core imports `./x.ts`, and
+Lens Studio may want `./x`; a small copy script rewrites them.
+
+**Needs a Spectacles adapter (one each, behind `src/core/ports.ts`):**
+
+| Port | Spectacles source (to verify) |
+|---|---|
+| `WorldTracker` | Device pose from the camera's DeviceTracking (world mode); the aim point from the World Query hit test; anchors from Spectacles' anchor support; `persistAnchor` / `restoreAnchor` from Custom Locations (a scanned place the device re-finds, so the mammoth stands on the same spot every visit). |
+| `LocationSource` / `HeadingSource` | Lens Studio's location service (GPS from the paired phone) and device heading. |
+| `MotionSource` | IMU; optional. |
+| `Display` | A small panel in view for prompts and captions, or anchored at the landmark. The `ViewModel` already says what to show. |
+| `AudioPort` | An AudioComponent playing the package's narration files, caption cues as now. |
+| `Storage` | Lens persistent storage. |
+| `AssetLoader` | Bundled assets in the Lens. |
+| Figure drawing | Import the same glb files (`assets/figures/`) into Lens Studio; credits in `CREDITS.md` travel with them. No USDZ needed. |
+
+The web port's own pieces stay behind: three.js drawing, WebXR (`xr.ts`),
+Quick Look (`quicklook.ts`), the Variant Launch loader (`launch.ts`) and its
+config. None of them is imported by the core.
+
+**Cannot know until we hold a pair:**
+- How tightly Custom Locations holds a figure outdoors at Falls Park (light,
+  season, crowds) and how far from the scan point a visitor can stand.
+- Whether the consumer Specs run Custom Locations or only the developer kit.
+- Whether location and heading are good enough on the glasses for the tour's
+  arrival rules, or must come from the phone.
+- Frame rate and heat with a 57,000-triangle skinned mammoth, and the Lens
+  size limit against our figure files.
+- Battery (about 45 minutes on the developer kit) against a three-stop tour.
 
 **XREAL / RayNeo (Android).** Two routes:
 1. A WebView wrapping this web app (fastest; the glasses are an external
