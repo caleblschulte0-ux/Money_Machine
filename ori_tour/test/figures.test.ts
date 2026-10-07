@@ -73,6 +73,33 @@ test("every USDZ is laid out the way AR Quick Look reads it: stored, 64-byte ali
   }
 });
 
+test("ports name no figure: a figure's fallback shape is catalogue data", () => {
+  for (const f of FIGURES) assert.ok(["mammoth", "settler"].includes(f.standIn), `${f.id}: standIn ${f.standIn}`);
+  for (const file of [
+    "src/web/figures3d.ts",
+    "src/web/quicklook.ts",
+    "src/web/ar.ts",
+    "src/web/xr.ts",
+    "src/web/launch.ts",
+  ]) {
+    const src = readFileSync(join(ROOT, file), "utf8");
+    for (const f of FIGURES)
+      assert.ok(!src.includes(`"${f.id}"`), `${file} names figure "${f.id}"; put it in the catalogue instead`);
+  }
+});
+
+test("the iPhone launcher is configured, not hard-coded", () => {
+  const c = JSON.parse(readFileSync(join(ROOT, "config/launch.json"), "utf8")) as Record<string, unknown>;
+  assert.equal(c.schema, "ori.launch/1");
+  assert.equal(typeof c.key, "string");
+  assert.match(String(c.sdkUrl), /^https:\/\//);
+  const src = readFileSync(join(ROOT, "src/web/launch.ts"), "utf8");
+  assert.ok(
+    !/https?:\/\/launchar/.test(src.replace(/^\s*\/\/.*$/gm, "")),
+    "the SDK address belongs in config/launch.json",
+  );
+});
+
 test("every figure is credited, with its licence and source, in CREDITS.md", () => {
   const credits = readFileSync(join(ROOT, "CREDITS.md"), "utf8");
   for (const f of FIGURES) {

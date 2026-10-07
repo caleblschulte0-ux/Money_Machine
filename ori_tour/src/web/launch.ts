@@ -6,13 +6,31 @@
 // available on this route: light estimation and depth (no sun-matched light,
 // no occlusion); the readout says so.
 //
-// The SDK key is publishable (it sits in a public script tag, bound to the
-// hosting domain in Launch's dashboard), so it lives here. Empty means the
-// route is off and an iPhone gets AR Quick Look only. `?vlkey=` overrides it
-// for trying a key without a commit.
+// Nothing here is hard-coded: the SDK address and key are config
+// (config/launch.json, read at run time), and `?vlkey=` overrides the key for
+// trying one without a commit. An empty key means the route is off and an
+// iPhone gets AR Quick Look only. Only this web port knows Launch exists; the
+// core and the figure stage see a WebXR session like any other.
 
-/** ORI's Variant Launch SDK key (free Developer tier). Empty until the account exists. */
-export const LAUNCH_KEY = "";
+/** config/launch.json */
+interface LaunchConfig {
+  schema: "ori.launch/1";
+  sdkUrl: string;
+  key: string;
+}
+
+async function readConfig(path: string): Promise<LaunchConfig | null> {
+  try {
+    const r = await fetch(path, { cache: "no-cache" });
+    if (!r.ok) return null;
+    const c = (await r.json()) as Partial<LaunchConfig>;
+    return c.schema === "ori.launch/1" && typeof c.sdkUrl === "string" && typeof c.key === "string"
+      ? (c as LaunchConfig)
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export interface LaunchState {
   /** True on an iPhone in Safari where opening launchUrl gives this page WebXR. */
@@ -27,13 +45,18 @@ interface InitDetail {
 }
 
 /**
- * Load the Launch SDK if a key is set. Resolves when it has initialised (inside
+ * Load the Launch SDK if a key is configured. Resolves when it has initialised (inside
  * the Launch viewer that is when WebXR becomes available), or null if there is
  * no key, it cannot load, or it does not answer within `timeoutMs`.
  */
-export function initLaunch(params: URLSearchParams, timeoutMs = 8000): Promise<LaunchState | null> {
-  const key = params.get("vlkey") ?? LAUNCH_KEY;
-  if (!key) return Promise.resolve(null);
+export async function initLaunch(
+  params: URLSearchParams,
+  configPath = "config/launch.json",
+  timeoutMs = 8000,
+): Promise<LaunchState | null> {
+  const config = await readConfig(configPath);
+  const key = params.get("vlkey") ?? config?.key ?? "";
+  if (!key || !config?.sdkUrl) return null;
   return new Promise((resolve) => {
     const done = (v: LaunchState | null): void => {
       clearTimeout(timer);
@@ -49,7 +72,7 @@ export function initLaunch(params: URLSearchParams, timeoutMs = 8000): Promise<L
       { once: true },
     );
     const s = document.createElement("script");
-    s.src = `https://launchar.app/sdk/v1?key=${encodeURIComponent(key)}`;
+    s.src = `${config.sdkUrl}?key=${encodeURIComponent(key)}`;
     s.onerror = () => done(null);
     document.head.appendChild(s);
   });

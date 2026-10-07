@@ -12,7 +12,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
-import type { FigureInfo } from "../core/figures.ts";
+import type { FigureInfo, StandIn } from "../core/figures.ts";
 
 /** Deterministic noise, so a figure looks the same on every load and every device. */
 function rng(seed: number): () => number {
@@ -124,7 +124,7 @@ function hairSkirt(rx: number, rz: number, y0: number, y1: number, seed: number,
 
 function mammoth(): THREE.Group {
   const g = new THREE.Group();
-  g.name = "mammoth";
+  g.name = "stand-in mammoth";
   const fur = mat(0x6b4426);
   const furDark = mat(0x4a2d18);
   const ivory = mat(0xe9dfc6, 0.55);
@@ -215,7 +215,7 @@ function mammoth(): THREE.Group {
 
 function settler(): THREE.Group {
   const g = new THREE.Group();
-  g.name = "settler";
+  g.name = "stand-in settler";
   const coat = mat(0x7a5a3a);
   const trousers = mat(0x3b3a36);
   const boots = mat(0x241a12, 0.7);
@@ -263,25 +263,18 @@ function settler(): THREE.Group {
   return g;
 }
 
-const BUILDERS: Record<string, () => THREE.Group> = {
-  "woolly-mammoth": mammoth,
-  mammoth,
-  "mammoth-calf": mammoth,
-  settler,
-};
+const BUILDERS: Record<StandIn, () => THREE.Group> = { mammoth, settler };
 
-/** The model for a figure id. Throws for an id with no model: a figure that silently draws as something else is a bug. */
-export function buildFigure(id: string): THREE.Group {
-  const build = BUILDERS[id];
-  if (!build) throw new Error(`no 3D model for figure "${id}"`);
+/** The code-drawn stand-in of a kind (a figure's `standIn`). Throws for an unknown kind: drawing it as something else is a bug. */
+export function buildFigure(kind: StandIn): THREE.Group {
+  const build = BUILDERS[kind];
+  if (!build) throw new Error(`no stand-in shape "${kind}"`);
   const g = build();
   g.traverse((o) => {
     if (o instanceof THREE.Mesh) o.castShadow = true;
   });
   return g;
 }
-
-export const hasModel = (id: string): boolean => id in BUILDERS;
 
 /** A soft dark patch on the ground under a figure: what makes it read as standing there, not floating. */
 export function contactShadow(radiusX: number, radiusZ: number): THREE.Mesh {
@@ -368,6 +361,6 @@ export async function loadFigure(info: FigureInfo, scale = 1): Promise<LoadedFig
     return { node, mixer, source: "model" };
   } catch (e) {
     console.warn(`figure ${info.id}: model failed, showing the stand-in`, e);
-    return { node: fitToSize(buildFigure(info.model), height), mixer: null, source: "stand-in" };
+    return { node: fitToSize(buildFigure(info.standIn), height), mixer: null, source: "stand-in" };
   }
 }

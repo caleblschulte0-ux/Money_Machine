@@ -110,7 +110,7 @@ function hairSkirt(rx, rz, y0, y1, seed, m) {
 }
 function mammoth() {
     const g = new THREE.Group();
-    g.name = "mammoth";
+    g.name = "stand-in mammoth";
     const fur = mat(0x6b4426);
     const furDark = mat(0x4a2d18);
     const ivory = mat(0xe9dfc6, 0.55);
@@ -176,7 +176,7 @@ function mammoth() {
 }
 function settler() {
     const g = new THREE.Group();
-    g.name = "settler";
+    g.name = "stand-in settler";
     const coat = mat(0x7a5a3a);
     const trousers = mat(0x3b3a36);
     const boots = mat(0x241a12, 0.7);
@@ -215,17 +215,12 @@ function settler() {
     add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.12, 16), hat), 0, 1.83, 0);
     return g;
 }
-const BUILDERS = {
-    "woolly-mammoth": mammoth,
-    mammoth,
-    "mammoth-calf": mammoth,
-    settler,
-};
-/** The model for a figure id. Throws for an id with no model: a figure that silently draws as something else is a bug. */
-export function buildFigure(id) {
-    const build = BUILDERS[id];
+const BUILDERS = { mammoth, settler };
+/** The code-drawn stand-in of a kind (a figure's `standIn`). Throws for an unknown kind: drawing it as something else is a bug. */
+export function buildFigure(kind) {
+    const build = BUILDERS[kind];
     if (!build)
-        throw new Error(`no 3D model for figure "${id}"`);
+        throw new Error(`no stand-in shape "${kind}"`);
     const g = build();
     g.traverse((o) => {
         if (o instanceof THREE.Mesh)
@@ -233,7 +228,6 @@ export function buildFigure(id) {
     });
     return g;
 }
-export const hasModel = (id) => id in BUILDERS;
 /** A soft dark patch on the ground under a figure: what makes it read as standing there, not floating. */
 export function contactShadow(radiusX, radiusZ) {
     const c = document.createElement("canvas");
@@ -308,6 +302,6 @@ export async function loadFigure(info, scale = 1) {
     }
     catch (e) {
         console.warn(`figure ${info.id}: model failed, showing the stand-in`, e);
-        return { node: fitToSize(buildFigure(info.model), height), mixer: null, source: "stand-in" };
+        return { node: fitToSize(buildFigure(info.standIn), height), mixer: null, source: "stand-in" };
     }
 }

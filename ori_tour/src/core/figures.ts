@@ -22,6 +22,8 @@ export interface FigureModel {
   idleClip: string | null;
 }
 
+export type StandIn = "mammoth" | "settler";
+
 export interface FigureInfo extends FigureSpec {
   /** Who made the model, where it comes from, and its licence. Shown to visitors. */
   credit: string;
@@ -30,6 +32,8 @@ export interface FigureInfo extends FigureSpec {
   /** The source page the licence was checked on. */
   sourceUrl: string;
   model: string;
+  /** Which code-drawn shape stands in if the model file cannot load. Data, so a new figure needs no port change. */
+  standIn: StandIn;
   file: FigureModel;
   /** Download budgets, bytes, for a phone on a cell connection. test/figures.test.ts holds the files to them. */
   budgetBytes: { glb: number; usdz: number };
@@ -40,6 +44,7 @@ export const FIGURES: readonly FigureInfo[] = [
     id: "woolly-mammoth",
     name: "woolly mammoth",
     model: "woolly-mammoth",
+    standIn: "mammoth",
     // The only openly licensed fleshed mammoth we found (CREDITS.md) is titled
     // a baby by its author but has adult proportions and tusks; shown here at
     // an adult woolly mammoth's shoulder height, about 3 m. Said in the credit.
@@ -63,6 +68,7 @@ export const FIGURES: readonly FigureInfo[] = [
     id: "mammoth",
     name: "mammoth skeleton",
     model: "mammoth",
+    standIn: "mammoth",
     // the specimen's own measured size: 3.44 m tall, 5.08 m long (Smithsonian scan, units in metres)
     heightM: 3.44,
     footprintM: 2.6,
@@ -84,6 +90,7 @@ export const FIGURES: readonly FigureInfo[] = [
     id: "mammoth-calf",
     name: "mammoth calf",
     model: "mammoth-calf",
+    standIn: "mammoth",
     // the model as published: about 2 m long and 1.28 m tall, calf proportions
     heightM: 1.28,
     footprintM: 1.0,
@@ -105,6 +112,7 @@ export const FIGURES: readonly FigureInfo[] = [
     id: "settler",
     name: "settler",
     model: "settler",
+    standIn: "settler",
     heightM: 1.75,
     footprintM: 0.4,
     yawDeg: 0,

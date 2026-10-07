@@ -43,7 +43,7 @@ export async function usdzFor(info: FigureInfo): Promise<{ url: string; source: 
 
 async function exportStandIn(info: FigureInfo): Promise<string> {
   const scene = new THREE.Scene();
-  const fig = buildFigure(info.model);
+  const fig = buildFigure(info.standIn);
   // Quick Look puts the model's +z toward the viewer; our figures face -z
   const turn = new THREE.Group();
   turn.rotation.y = Math.PI + (info.yawDeg * Math.PI) / 180;

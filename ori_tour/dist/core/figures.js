@@ -11,6 +11,7 @@ export const FIGURES = [
         id: "woolly-mammoth",
         name: "woolly mammoth",
         model: "woolly-mammoth",
+        standIn: "mammoth",
         // The only openly licensed fleshed mammoth we found (CREDITS.md) is titled
         // a baby by its author but has adult proportions and tusks; shown here at
         // an adult woolly mammoth's shoulder height, about 3 m. Said in the credit.
@@ -33,6 +34,7 @@ export const FIGURES = [
         id: "mammoth",
         name: "mammoth skeleton",
         model: "mammoth",
+        standIn: "mammoth",
         // the specimen's own measured size: 3.44 m tall, 5.08 m long (Smithsonian scan, units in metres)
         heightM: 3.44,
         footprintM: 2.6,
@@ -53,6 +55,7 @@ export const FIGURES = [
         id: "mammoth-calf",
         name: "mammoth calf",
         model: "mammoth-calf",
+        standIn: "mammoth",
         // the model as published: about 2 m long and 1.28 m tall, calf proportions
         heightM: 1.28,
         footprintM: 1.0,
@@ -73,6 +76,7 @@ export const FIGURES = [
         id: "settler",
         name: "settler",
         model: "settler",
+        standIn: "settler",
         heightM: 1.75,
         footprintM: 0.4,
         yawDeg: 0,
