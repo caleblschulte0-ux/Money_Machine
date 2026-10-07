@@ -102,7 +102,7 @@ test("walking away, losing tracking and coming back: it is still where it was", 
   world.drift = { position: vec(1.2, 0, 0.4), orientation: yawQuat(0.05) };
   let v = world.frame(stage, null);
   assert.equal(v.phase, "placed");
-  assert.match(v.prompt, /mammoth is behind you, 6\d m away/);
+  assert.match(v.prompt, /mammoth skeleton is behind you, 6\d m away/);
 
   // tracking lost (phone covered, fast turn)
   world.quality = "lost";

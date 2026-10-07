@@ -25,7 +25,7 @@ fails if a figure is missing from this file.
   USDZ is the same model simplified to 20,000 triangles with a 512 px normal
   map, made by `tools/build_figures.mjs`.
 
-### Mammoth calf: `mammoth-calf.glb`, `mammoth-calf.usdz`
+### Woolly mammoth (fleshed) and mammoth calf: `mammoth-calf.glb`, `woolly-mammoth.usdz`, `mammoth-calf.usdz`
 
 - **What:** "3D High-poly Baby Woolly Mammoth" by **SDPM Esare**, rigged and
   given an idle animation by the **Prehistoric Animal Museum** project. A life
@@ -38,6 +38,11 @@ fails if a figure is missing from this file.
   left metalness at the glTF default of 1, which drew the fur almost black).
   The USDZ is simplified to 20,000 triangles with a 512 px texture, made by
   `tools/build_figures.mjs`.
+- **Two uses of one model:** "mammoth calf" shows it at the size it was
+  published (1.28 m). "Woolly mammoth" shows the same model scaled to an adult
+  woolly mammoth's shoulder height (about 3 m), because its proportions and
+  tusks are an adult's and no openly licensed adult model exists that we could
+  verify; the visitor-facing credit says it is shown at adult size.
 
 ### Settler: `settler.glb`, `settler.usdz`
 
@@ -61,9 +66,18 @@ fails if a figure is missing from this file.
 
 ## Not used, and why
 
+Searched 2026-10-07: Smithsonian Open Access, Sketchfab (CC0 and CC BY),
+Poly Pizza, Quaternius, Kenney, Mixamo, GitHub.
+
 - Kenchoo's "Mammoth" on Sketchfab: CC BY-NC-SA (non-commercial), so not usable
   by a company.
-- No openly licensed, realistic adult woolly mammoth with skin, and no realistic
-  openly licensed 19th-century settler, was found. Until one is, the falls stop
-  uses the Smithsonian skeleton at true size, and the settler is Quaternius's
-  stylised figure.
+- Sketchfab "MAMMOTH" (5e0a1d6b…) and identical copies: the same mesh is
+  posted by at least four accounts under CC BY, CC BY-SA and CC BY-NC, so the
+  uploader's licence cannot be trusted.
+- `ir-engine/ir-engine-assets-basic` WoolyMammoth.glb: no per-asset licence;
+  it matches kenchoo's CC BY-NC-SA model.
+- Other CC BY mammoths found were untextured fur tests, static statues of
+  unclear origin, or over a million triangles.
+- "RDR1 - John Marston": labelled CC BY but described as ripped from a game.
+- No realistic, openly licensed 19th-century settler was found; the settler
+  stays Quaternius's stylised figure.

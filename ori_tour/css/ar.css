@@ -100,10 +100,11 @@ button:disabled {
 }
 .picker {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .picker button {
-  flex: 1;
+  flex: 1 1 40%;
   color: var(--ink);
   background: transparent;
   border: 1px solid var(--line);

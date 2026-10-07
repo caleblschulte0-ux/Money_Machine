@@ -35,6 +35,10 @@ the compass is bad), **Skip stop**, and captions that run even with no voice.
   window and a readout shows GPS accuracy, heading, whether you count as
   still, and the distance to the next stop. "Re-centre here" redoes it.
 - **No walking:** "Simulator", then "Walk the whole route".
+- **Test mode (AR):** `ar.html`, "Test mode: spawn a figure". Pick the
+  mammoth, calf or settler, point at the ground, "Spawn here". "Set test
+  point here" saves the spot; come back and it reappears on its own. The
+  page lists how to judge it (circle it, walk 50 m away, lock the screen, sun).
 - **Figures in one spot (AR):** `ar.html`. "Walk the tour here" moves the
   three stops around you and runs the tour; at the falls a full-size
   Smithsonian mammoth skeleton, and at the mill a settler, appear on the

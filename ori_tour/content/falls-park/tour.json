@@ -76,7 +76,7 @@
         "Place the figure on site (?edit=1 does not move figures yet; set figure.bearing_deg and offset_m from a site walk)."
       ],
       "figure": {
-        "model": "mammoth",
+        "model": "woolly-mammoth",
         "scale": 1,
         "offset_m": 9,
         "bearing_deg": null,

@@ -263,7 +263,12 @@ function settler(): THREE.Group {
   return g;
 }
 
-const BUILDERS: Record<string, () => THREE.Group> = { mammoth, "mammoth-calf": mammoth, settler };
+const BUILDERS: Record<string, () => THREE.Group> = {
+  "woolly-mammoth": mammoth,
+  mammoth,
+  "mammoth-calf": mammoth,
+  settler,
+};
 
 /** The model for a figure id. Throws for an id with no model: a figure that silently draws as something else is a bug. */
 export function buildFigure(id: string): THREE.Group {

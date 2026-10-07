@@ -60,15 +60,37 @@ can; Meta Ray-Ban Display cannot).
   on. If GPS, compass or ground is not good enough within 12 s it asks for a
   tap. Between stops the figure is taken down (audio only).
 - **Real models, open licences only** (`assets/figures/`, credits in
-  `CREDITS.md`, `figures.ts` `credit`): the Smithsonian woolly mammoth
-  skeleton scan (CC0, true size 3.44 m), SDPM Esare's mammoth calf (CC BY
-  4.0), Quaternius's stylised cowboy as "settler" (CC0, no period claim).
-  No open realistic fleshed adult mammoth or realistic settler exists that we
-  found. glb is meshopt-compressed; USDZ is made from it by
+  `CREDITS.md`, `figures.ts` `credit`): "woolly mammoth" (the falls stop's
+  figure) is SDPM Esare's CC BY 4.0 model at adult size, 3 m, said so in its
+  credit; "mammoth skeleton" is the Smithsonian scan (CC0, 3.44 m); "mammoth
+  calf" is the SDPM model as published; "settler" is Quaternius's stylised
+  cowboy (CC0, no period claim). The 2026-10-07 search found no verifiable
+  free realistic adult mammoth or settler (CREDITS.md "Not used"); paid
+  options went to Caleb as a cost ask, nothing bought. glb is meshopt-compressed; USDZ is made from it by
   `node tools/build_figures.mjs --usdz` (also `--views <dir>` to check which
   way each model faces, `--measure` for load time on a throttled
   connection). Budgets in `figures.ts`, held by `test/figures.test.ts`.
   The drawn stand-ins (`src/web/figures3d.ts`) show if a model fails to load.
+- **Test mode (Caleb, 2026-10-07: "go into test mode, open my phone ...
+  spawn in this mammoth"):** `ar.html` "Test mode: spawn a figure". Pick a
+  figure, "Spawn here" (or tap the screen) puts it where the phone aims;
+  again moves it; Remove takes it down. "Set test point here" saves where
+  he stands and where the figure stands (`src/core/testpoints.ts`,
+  `ori.testpoints/1` in Storage); walking back brings it back on its own
+  through `TourFigures` (sites = test points). "How to judge it" is on the
+  page. Tests: `test/testpoints.test.ts`.
+- **Looks right in the sun (`src/web/look.ts`):** WebXR light estimation
+  (sun direction and colour, ambient, reflection map), a shadow-casting sun
+  aimed at the nearest figure onto a shadow catcher, neutral tone mapping,
+  a room environment until an estimate arrives, and depth-sensing occlusion
+  where the phone gives CPU depth. Switches: `?shadows=off`,
+  `?occlusion=off`, `?estimate=off`. Occlusion's screen-to-depth mapping is
+  written to the WebXR spec and NOT yet seen on a phone; if figures vanish
+  wrongly, `?occlusion=off` and fix `OCCLUDE_MAIN`.
+- **Ground:** `isLevel` refuses hits steeper than 20 degrees (walls, car
+  doors); `TourFigures.groundY()` is the median of recent level hits and
+  waits until they agree within 15 cm, so one hit on a car bonnet does not
+  lift a figure. WebXR hit tests ask for planes first.
 - **What a web page cannot do (say so, do not paper over it):** Chrome on
   Android has no persistent anchors, so a screen lock ends the AR session
   and the anchor is gone; "Back to AR" starts a new session and the figure is
@@ -111,7 +133,8 @@ src/core/     TypeScript, platform-free. Compiled with NO DOM and NO Node types
   space.ts      vectors, quaternions, poses in a device's tracking space
   anchoring.ts  FigureStage: place a figure, keep it in one spot, prompts (world-locked figures)
   figures.ts    the figures (mammoth, mammoth calf, settler), true sizes, model files, credits
-  tourfigures.ts  TourFigures: each stop's figure placed near the stop, kept, taken down, restored
+  tourfigures.ts  TourFigures: each site's figure (tour stop or test point) placed, kept, taken down, restored
+  testpoints.ts   test points saved on the device (ori.testpoints/1)
   types.ts      the content package types (ori.tour/1)
   tour.ts       version check, validation, asset paths, on-site placements
   geo.ts        distance, bearing, turn, offset
@@ -127,7 +150,8 @@ src/core/     TypeScript, platform-free. Compiled with NO DOM and NO Node types
 src/web/      browser adapters: platform (clock, fetch, storage), sensors (GPS,
               compass, accelerometer, simulator, replay, recorder), audio, scene,
               map, hud (sensor readout), shells/phone.ts, shells/glasses.ts, app.ts;
-              figures: xr.ts (WebXRTracker), quicklook.ts (iPhone), figures3d.ts, ar.ts
+              figures: xr.ts (WebXRTracker), quicklook.ts (iPhone), figures3d.ts, look.ts
+              (light, shadow, occlusion), ar.ts
 vendor/       three.js bundled by tools/vendor_three.mjs (the build runs it), MIT
 ar.html       the figure page: the tour with figures in AR, and free placement
 assets/figures/  figure models (glb + usdz), credited in CREDITS.md

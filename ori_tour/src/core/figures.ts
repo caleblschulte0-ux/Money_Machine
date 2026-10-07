@@ -37,8 +37,31 @@ export interface FigureInfo extends FigureSpec {
 
 export const FIGURES: readonly FigureInfo[] = [
   {
+    id: "woolly-mammoth",
+    name: "woolly mammoth",
+    model: "woolly-mammoth",
+    // The only openly licensed fleshed mammoth we found (CREDITS.md) is titled
+    // a baby by its author but has adult proportions and tusks; shown here at
+    // an adult woolly mammoth's shoulder height, about 3 m. Said in the credit.
+    heightM: 3.0,
+    footprintM: 2.3,
+    yawDeg: 90,
+    credit:
+      'Woolly mammoth, a life restoration: "3D High-poly Baby Woolly Mammoth" by SDPM Esare, CC BY 4.0, rigged and animated by the Prehistoric Animal Museum project (github.com/s010s/prehistoric-animal-museum), CC BY 4.0; shown by ORI at adult size (about 3 m at the shoulder).',
+    licence: "CC BY 4.0",
+    sourceUrl: "https://sketchfab.com/3d-models/3d-high-poly-baby-woolly-mammoth-fce1c86ccedf47a5b9627098be6719d5",
+    file: {
+      glb: "assets/figures/mammoth-calf.glb",
+      usdz: "assets/figures/woolly-mammoth.usdz",
+      frontYawDeg: -90, // the model faces -x (checked: tools/build_figures.mjs --views)
+      tint: null,
+      idleClip: "Idle",
+    },
+    budgetBytes: { glb: 1_300_000, usdz: 2_100_000 },
+  },
+  {
     id: "mammoth",
-    name: "mammoth",
+    name: "mammoth skeleton",
     model: "mammoth",
     // the specimen's own measured size: 3.44 m tall, 5.08 m long (Smithsonian scan, units in metres)
     heightM: 3.44,

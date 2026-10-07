@@ -215,7 +215,12 @@ function settler() {
     add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.12, 16), hat), 0, 1.83, 0);
     return g;
 }
-const BUILDERS = { mammoth, "mammoth-calf": mammoth, settler };
+const BUILDERS = {
+    "woolly-mammoth": mammoth,
+    mammoth,
+    "mammoth-calf": mammoth,
+    settler,
+};
 /** The model for a figure id. Throws for an id with no model: a figure that silently draws as something else is a bug. */
 export function buildFigure(id) {
     const build = BUILDERS[id];

@@ -97,10 +97,10 @@ const figureInWorld = (w: Walk, v: TourFiguresView, stop: Stop): Vec3 | null => 
   return f ? w.world.inWorld(f.pose) : null;
 };
 
-test("the package gives the falls a mammoth and the mill a settler; the Dakota stop has none until Dakota advisers say", () => {
+test("the package gives the falls a woolly mammoth and the mill a settler; the Dakota stop has none until Dakota advisers say", () => {
   const tour = lotTour();
   const byId = Object.fromEntries(tour.stops.map((s) => [s.id, s]));
-  assert.equal(byId.falls?.figure?.model, "mammoth");
+  assert.equal(byId.falls?.figure?.model, "woolly-mammoth");
   assert.equal(byId.mill?.figure?.model, "settler");
   assert.equal(byId.dakota?.figure ?? null, null);
   for (const s of tour.stops) if (s.figure) assert.ok(s.figure.note.length > 20, `${s.id}: figure note`);
@@ -116,7 +116,7 @@ test("arriving at a stop puts its figure on the ground at its spot, without a ta
   const want = world(figurePosition(falls, falls.figure!));
   assert.ok(groundDist(at, want) < 0.3, `within 30 cm of its spot (${groundDist(at, want).toFixed(2)} m)`);
   assert.ok(Math.abs(at.y) < 1e-6, "standing on the ground");
-  assert.equal(v.stage.figures[0]?.model, "mammoth");
+  assert.equal(v.stage.figures[0]?.model, "woolly-mammoth");
 });
 
 test("with a 6 degree compass error and 4 m of GPS error it still lands near its spot, then never moves", async () => {
@@ -158,16 +158,17 @@ test("when auto placement cannot happen, it asks for a tap, and the tap places i
   const falls = w.tour.stops.find((s) => s.id === "falls")!;
   let v = await standAt(w, falls, 400); // 400 frames of 33 ms: past the 12 s wait
   assert.equal(v.mode, "tap");
-  assert.match(v.prompt!, /Tap the ground to place the mammoth/);
+  assert.match(v.prompt!, /Tap the ground to place the woolly mammoth/);
   assert.equal(await w.figures.tap(), true);
   await settle();
   v = step(w);
   assert.equal(v.mode, "standing");
   assert.ok(
     Math.abs(
-      groundDist(world(falls.position), figureInWorld(w, v, falls)!) - (figureById("mammoth")!.footprintM + 1.5),
+      groundDist(world(falls.position), figureInWorld(w, v, falls)!) -
+        Math.max(4, figureById("woolly-mammoth")!.footprintM + 1.5),
     ) < 0.01,
-    "on the aimed ground, pushed clear",
+    "on the aimed ground (4 m ahead), or pushed clear of the visitor",
   );
 });
 

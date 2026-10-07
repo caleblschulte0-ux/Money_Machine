@@ -334,7 +334,7 @@
         "model": {
           "type": "string",
           "description": "A figure id from the player's figure list (src/core/figures.ts); test/schema.test.ts keeps this list equal to it.",
-          "enum": ["mammoth", "mammoth-calf", "settler"]
+          "enum": ["woolly-mammoth", "mammoth", "mammoth-calf", "settler"]
         },
         "scale": {
           "type": "number",

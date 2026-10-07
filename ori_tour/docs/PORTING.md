@@ -77,7 +77,17 @@ What a port must provide for figures:
    idle clip. Fit it to `heightM` standing on y = 0, front turned to -z
    (`fitToSize` in `src/web/figures3d.ts` is the reference). Show the
    `credit` line somewhere a visitor can read it (CREDITS.md).
-3. A tap ("select") that calls `TourFigures.tap()` when the mode is `tap`.
+3. A tap ("select") that calls `TourFigures.tap()` when the mode is `tap`,
+   and in test mode `spawn(model)`.
+4. Hit poses whose +y is the surface normal (WebXR's convention): the core
+   refuses ground steeper than 20 degrees (`isLevel`).
+5. For a figure that looks real: light the model from the platform's light
+   estimate, cast its shadow on the real ground, and hide it behind real
+   things where the device senses depth. `src/web/look.ts` is the reference
+   (Lens Studio and ARKit/ARCore native have all three built in).
+
+Test points (`src/core/testpoints.ts`) are sites too: a port gets test mode
+by passing `TestPoints.sites()` to `TourFigures` instead of `tourSites(tour)`.
 
 `test/tourfigures.test.ts` and `test/anchoring.test.ts` simulate a tracker
 whose space is turned and shifted from the world, with compass and GPS
