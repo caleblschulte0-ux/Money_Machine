@@ -126,6 +126,7 @@ async function writeUsdz() {
           "--yaw",
           String(yaw),
           ...(f.file.idleClip ? ["--clip", f.file.idleClip] : []),
+          ...(f.file.tint != null ? ["--tint", `0x${f.file.tint.toString(16).padStart(6, "0")}`] : []),
         ],
         { encoding: "utf8" },
       );

@@ -748,6 +748,8 @@ async function main(): Promise<void> {
       "iPhone: the tour runs in the page; at a figure's stop, \"See it here\" opens Apple's AR view, where you tap the ground once and the figure stays put.";
     goTour.onclick = () => void startTour("here", false);
     goPark.onclick = () => void startTour("park", false);
+    $("judgeXr").hidden = true;
+    $("judgeIos").hidden = false;
     goFree.textContent = "Preparing…";
     goFree.disabled = true;
     // prepare ahead of the tap: Quick Look has to open inside the tap itself

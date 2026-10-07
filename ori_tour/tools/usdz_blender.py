@@ -25,6 +25,7 @@ a.add_argument("out")
 a.add_argument("--height", type=float, required=True)
 a.add_argument("--yaw", type=float, default=0.0)
 a.add_argument("--clip", default=None)
+a.add_argument("--tint", default=None, help="0xRRGGBB base colour for a model with no colour texture")
 a.add_argument("--max-tris", type=int, default=60000, help="decimate a static mesh above this (USDZ size)")
 args = a.parse_args(sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else sys.argv[1:])
 
@@ -56,6 +57,16 @@ else:
     for o in objs:
         if o.animation_data:
             o.animation_data_clear()
+
+# a bare scan has no colour texture: give it the tint the phone draws it with
+if args.tint:
+    v = int(args.tint, 16)
+    srgb = [((v >> s) & 255) / 255 for s in (16, 8, 0)]
+    lin = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in srgb]
+    for m in bpy.data.materials:
+        b = m.node_tree and m.node_tree.nodes.get("Principled BSDF")
+        if b and not b.inputs["Base Color"].is_linked:
+            b.inputs["Base Color"].default_value = (*lin, 1)
 
 # a static scan of 100,000 triangles is an 8 MB download Quick Look must finish
 # before it shows anything; past --max-tris, decimate (never a skinned mesh)
