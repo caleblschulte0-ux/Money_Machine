@@ -1,8 +1,11 @@
 {
- "version": "792010a437bb",
+ "version": "1002ac4b690e",
  "files": [
   "./",
   "ar.html",
+  "assets/figures/mammoth-calf.glb",
+  "assets/figures/mammoth-skeleton.glb",
+  "assets/figures/settler.glb",
   "assets/icon-192.png",
   "assets/icon-512.png",
   "assets/sim-backdrop.jpg",
@@ -30,6 +33,7 @@
   "dist/core/synthwalk.js",
   "dist/core/text.js",
   "dist/core/tour.js",
+  "dist/core/tourfigures.js",
   "dist/core/types.js",
   "dist/core/view.js",
   "dist/web/app.js",

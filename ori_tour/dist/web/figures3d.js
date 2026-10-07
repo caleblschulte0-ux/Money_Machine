@@ -1,12 +1,15 @@
-// The browser's 3D models for the figures in src/core/figures.ts, drawn in
-// code from simple shapes with three.js. They are STAND-INS, made here, with
-// no external source: real art replaces them (a glTF file per figure, with
-// its source and licence in figures.ts) without touching anything else.
+// The browser's 3D figures (src/core/figures.ts): loadFigure() reads the
+// figure's real glTF model (meshopt-compressed) and fits it to its true size;
+// if that fails (offline before first load, a bad file, an old phone) it
+// falls back to a STAND-IN drawn here in code from simple shapes, with no
+// external source, so a stop never loses its figure.
 //
 // Units are metres. Origin is the middle of the footprint on the ground; the
 // figure's front (the mammoth's head, the settler's face) looks down -z, the
 // convention in src/core/space.ts.
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 /** Deterministic noise, so a figure looks the same on every load and every device. */
 function rng(seed) {
     let s = seed >>> 0;
@@ -212,7 +215,7 @@ function settler() {
     add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.12, 16), hat), 0, 1.83, 0);
     return g;
 }
-const BUILDERS = { mammoth, settler };
+const BUILDERS = { mammoth, "mammoth-calf": mammoth, settler };
 /** The model for a figure id. Throws for an id with no model: a figure that silently draws as something else is a bug. */
 export function buildFigure(id) {
     const build = BUILDERS[id];
@@ -242,4 +245,64 @@ export function contactShadow(radiusX, radiusZ) {
     m.position.y = 0.01;
     m.renderOrder = -1;
     return m;
+}
+/**
+ * Scale an object to `heightM` tall, stand it on y = 0 and centre its
+ * footprint on the origin, after turning its front to -z. Measures the real
+ * (skinned, posed) geometry, so a model in any unit or offset fits.
+ */
+export function fitToSize(obj, heightM, frontYawDeg = 0) {
+    const turn = new THREE.Group();
+    turn.rotation.y = (frontYawDeg * Math.PI) / 180;
+    turn.add(obj);
+    const outer = new THREE.Group();
+    outer.add(turn);
+    outer.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(outer, true);
+    const size = box.getSize(new THREE.Vector3());
+    const k = size.y > 0 ? heightM / size.y : 1;
+    turn.scale.setScalar(k);
+    turn.position.set(-((box.min.x + box.max.x) / 2) * k, -box.min.y * k, -((box.min.z + box.max.z) / 2) * k);
+    return outer;
+}
+const files = new Map();
+/** The figure's model at true size (times `scale`), or its drawn stand-in if the model cannot be loaded. */
+export async function loadFigure(info, scale = 1) {
+    const height = info.heightM * scale;
+    try {
+        let bytes = files.get(info.file.glb);
+        if (!bytes) {
+            bytes = fetch(info.file.glb).then((r) => {
+                if (!r.ok)
+                    throw new Error(`${info.file.glb}: HTTP ${r.status}`);
+                return r.arrayBuffer();
+            });
+            files.set(info.file.glb, bytes);
+            bytes.catch(() => files.delete(info.file.glb));
+        }
+        const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+        // parse a fresh copy per figure: two of the same model each get their own skeleton
+        const gltf = await loader.parseAsync((await bytes).slice(0), "");
+        const scene = gltf.scene;
+        scene.traverse((o) => {
+            if (o instanceof THREE.Mesh) {
+                o.castShadow = true;
+                if (info.file.tint != null && o.material instanceof THREE.MeshStandardMaterial) {
+                    o.material.color.setHex(info.file.tint);
+                }
+            }
+        });
+        const node = fitToSize(scene, height, info.file.frontYawDeg);
+        let mixer = null;
+        const clip = info.file.idleClip ? THREE.AnimationClip.findByName(gltf.animations, info.file.idleClip) : null;
+        if (clip) {
+            mixer = new THREE.AnimationMixer(scene);
+            mixer.clipAction(clip).play();
+        }
+        return { node, mixer, source: "model" };
+    }
+    catch (e) {
+        console.warn(`figure ${info.id}: model failed, showing the stand-in`, e);
+        return { node: fitToSize(buildFigure(info.model), height), mixer: null, source: "stand-in" };
+    }
 }

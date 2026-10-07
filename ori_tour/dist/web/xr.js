@@ -3,6 +3,12 @@
 // anchors all come from ARCore through the WebXR Device API:
 //   immersive-ar session, "hit-test" (required), "anchors" and "dom-overlay" (optional).
 // Safari on iPhone does not offer WebXR AR; see quicklook.ts for the iPhone route.
+//
+// Persistent anchors (surviving a reload or a screen lock) use the WebXR
+// anchors module's persistence calls where the browser has them (Meta Quest
+// Browser: requestPersistentHandle / restorePersistentAnchor). Chrome on
+// Android phones does not (2026): there, persistAnchor resolves null and the
+// tour re-places a figure from its stop's position instead.
 const toPose = (t) => ({
     position: { x: t.position.x, y: t.position.y, z: t.position.z },
     orientation: { x: t.orientation.x, y: t.orientation.y, z: t.orientation.z, w: t.orientation.w },
@@ -91,6 +97,38 @@ export class WebXRTracker {
     deleteAnchor(id) {
         this.anchors.get(id)?.delete();
         this.anchors.delete(id);
+    }
+    async persistAnchor(id) {
+        const a = this.anchors.get(id);
+        if (!a?.requestPersistentHandle)
+            return null;
+        try {
+            return await a.requestPersistentHandle();
+        }
+        catch {
+            return null;
+        }
+    }
+    async restoreAnchor(handle) {
+        const s = this.session;
+        if (!s?.restorePersistentAnchor)
+            return null;
+        try {
+            const anchor = await s.restorePersistentAnchor(handle);
+            const id = `xr${this.next++}`;
+            this.anchors.set(id, anchor);
+            return id;
+        }
+        catch {
+            return null;
+        }
+    }
+    forgetAnchor(handle) {
+        void this.session?.deletePersistentAnchor?.(handle).catch(() => undefined);
+    }
+    /** Whether this browser can keep anchors across sessions. */
+    get canPersist() {
+        return typeof this.session?.restorePersistentAnchor === "function";
     }
     tick(frame) {
         const ref = this.ref;

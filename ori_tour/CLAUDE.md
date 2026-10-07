@@ -40,24 +40,44 @@ outdoors, and it decides which glasses are viable (the comparison is in the
 project files, `ori/build/glasses-world-locked-figures.md`: Snap Spectacles
 can; Meta Ray-Ban Display cannot).
 
-- Built: `WorldTracker` port, `FigureStage` (`src/core/anchoring.ts`), pose
-  math (`space.ts`), the figure list with true sizes (`figures.ts`), headless
-  tests with a drifting fake tracker (`test/anchoring.test.ts`), and the phone
-  test page `ar.html` (`src/web/ar.ts`). Android Chrome with ARCore runs it in
-  the page (`src/web/xr.ts`, WebXR hit-test + anchors). iPhone has no WebXR
-  AR: `src/web/quicklook.ts` exports the figure to USDZ in the page and opens
-  Apple's AR Quick Look, which anchors it but runs outside our page (no
-  prompts, readout or tour logic).
-- **Figures are stand-ins drawn in code** (`src/web/figures3d.ts`). Real art
-  is a glTF per figure with its source and licence in `figures.ts` `credit`;
-  open licences only (the Smithsonian's CC0 woolly mammoth scan is a known
-  candidate; the cloud proxy blocks 3d.si.edu, so fetch it from a computer).
-  A figure stands for no real person; "settler" makes no period claim.
-- **Not built yet:** figures tied to a stop. GPS is good to a few metres, so
-  "the mammoth stands at stop 1" needs either the visitor's tap at the stop or
-  a device that re-finds a scanned spot (Snap Custom Locations, ARCore
-  Geospatial; neither reachable from a phone web page). WebXR anchors on a
-  phone last only while the AR session runs: lock the phone and it is gone.
+- **Built (PR #14):** `WorldTracker` port (optional persistence),
+  `FigureStage` (`src/core/anchoring.ts`, free placement), `TourFigures`
+  (`src/core/tourfigures.ts`, figures inside the tour), pose math
+  (`space.ts`), the figure catalogue (`figures.ts`), and `ar.html`
+  (`src/web/ar.ts`): "Walk the tour here", "Start at the park", "Just place a
+  figure". Android Chrome with ARCore runs it in the page (`src/web/xr.ts`,
+  WebXR hit-test + anchors). iPhone has no WebXR AR: the tour runs in the page
+  and "See the mammoth here" opens the figure's USDZ in Apple's AR Quick Look
+  (`src/web/quicklook.ts`), which anchors it but runs outside our page.
+- **Figures in the tour:** `stop.figure` in tour.json (model, scale,
+  `offset_m` and `bearing_deg` from the stop, `yaw_deg`, `anchoring`
+  auto|tap, `note`), validated by `validateTour` and the schema. Falls:
+  mammoth skeleton 9 m toward the falls. Mill: settler. Dakota: no figure
+  until the Dakota THPOs advise. Positions are provisional, to be set on
+  site. On arrival `TourFigures` learns north in tracking space from
+  compass/tracking-yaw pairs and puts the figure on the ground near its spot
+  with no tap; GPS (±5 m) and compass (a few degrees) error means NEAR, not
+  on. If GPS, compass or ground is not good enough within 12 s it asks for a
+  tap. Between stops the figure is taken down (audio only).
+- **Real models, open licences only** (`assets/figures/`, credits in
+  `CREDITS.md`, `figures.ts` `credit`): the Smithsonian woolly mammoth
+  skeleton scan (CC0, true size 3.44 m), SDPM Esare's mammoth calf (CC BY
+  4.0), Quaternius's stylised cowboy as "settler" (CC0, no period claim).
+  No open realistic fleshed adult mammoth or realistic settler exists that we
+  found. glb is meshopt-compressed; USDZ is made from it by
+  `node tools/build_figures.mjs --usdz` (also `--views <dir>` to check which
+  way each model faces, `--measure` for load time on a throttled
+  connection). Budgets in `figures.ts`, held by `test/figures.test.ts`.
+  The drawn stand-ins (`src/web/figures3d.ts`) show if a model fails to load.
+- **What a web page cannot do (say so, do not paper over it):** Chrome on
+  Android has no persistent anchors, so a screen lock ends the AR session
+  and the anchor is gone; "Back to AR" starts a new session and the figure is
+  re-placed from the stop's position, not the exact spot. Where a browser
+  has persistent anchors (Quest Browser), the handle is stored and the figure
+  comes back exactly. "The mammoth stands on THE spot at the park every
+  visit" needs a device that re-finds a scanned place (Snap Custom
+  Locations, ARCore Geospatial/cloud anchors), not reachable from a phone web
+  page.
 
 ## Defaults in force (Caleb can overrule any of them)
 
@@ -90,7 +110,8 @@ src/core/     TypeScript, platform-free. Compiled with NO DOM and NO Node types
                 Clock, Scheduler, AudioPort, Display, AssetLoader, Storage, WorldTracker
   space.ts      vectors, quaternions, poses in a device's tracking space
   anchoring.ts  FigureStage: place a figure, keep it in one spot, prompts (world-locked figures)
-  figures.ts    the figures (mammoth, settler), true sizes, model credits
+  figures.ts    the figures (mammoth, mammoth calf, settler), true sizes, model files, credits
+  tourfigures.ts  TourFigures: each stop's figure placed near the stop, kept, taken down, restored
   types.ts      the content package types (ori.tour/1)
   tour.ts       version check, validation, asset paths, on-site placements
   geo.ts        distance, bearing, turn, offset
@@ -108,13 +129,15 @@ src/web/      browser adapters: platform (clock, fetch, storage), sensors (GPS,
               map, hud (sensor readout), shells/phone.ts, shells/glasses.ts, app.ts;
               figures: xr.ts (WebXRTracker), quicklook.ts (iPhone), figures3d.ts, ar.ts
 vendor/       three.js bundled by tools/vendor_three.mjs (the build runs it), MIT
-ar.html       the figure test page
+ar.html       the figure page: the tour with figures in AR, and free placement
+assets/figures/  figure models (glb + usdz), credited in CREDITS.md
 dist/         compiled JS, COMMITTED (static hosting has no build step); CI fails if stale
 schemas/      JSON Schemas: ori.tour-1 (content), ori.trace-1 (recorded walks)
 docs/PORTING.md   what a Lens Studio, Android or Ray-Ban port implements, and its acceptance test
 sw.js + offline.json   offline cache of the app and the whole package
 content/<tour>/        tour.json, map.json, audio/, traces/
-tools/        build_map.py, make_narration.py, build_offline.py
+tools/        build_map.py, make_narration.py, build_offline.py, vendor_three.mjs,
+              build_figures.mjs (USDZ export, orientation views, throttled load time)
 test/         node:test on the TypeScript source (Node strips types), headless
 ```
 
@@ -148,7 +171,7 @@ tour.json), `?facing=off` (no compass: arrival + stillness shows the scene),
 GPS, compass and camera need HTTPS or localhost. iOS asks for motion
 permission on the Start tap.
 
-Figure test: `ar.html` (Android: Chrome with ARCore; iPhone: Safari, Quick
+Figures: `ar.html` (Android: Chrome with ARCore; iPhone: Safari, Quick
 Look). Hosted at
 `https://raw.githack.com/caleblschulte0-ux/Money_Machine/claude/ori-anchored-figures-5k24tv/ori_tour/ar.html`.
 

@@ -8,7 +8,7 @@
 // the figure (never on top of the visitor), which way it faces, where it is
 // this frame (anchor pose, corrected as the platform's map improves), whether
 // to draw it, and what to tell the visitor. A display only draws StageView.
-import { angleDiff, compose, dist, groundDist, invert, scale, sub, add, toDeg, toRad, yawOf, yawQuat, yawToward, } from "./space.js";
+import { IDENTITY, angleDiff, compose, dist, groundDist, invert, scale, sub, add, toDeg, toRad, yawOf, yawQuat, yawToward, } from "./space.js";
 /** Counting "walked around" stops beyond this distance, where a few steps sideways sweep large angles from GPS-free noise. */
 const AROUND_MAX_M = 30;
 export class FigureStage {
@@ -59,19 +59,63 @@ export class FigureStage {
         const face = yawToward(position, viewer.position) + toRad(spec.yawDeg);
         return { position, orientation: yawQuat(face) };
     }
+    /** Add a figure the stage did not start with (a tour adds each stop's figure). */
+    addSpec(spec) {
+        this.specs.set(spec.id, spec);
+    }
+    /** A standing figure's anchor and hold, or null if it is not standing. */
+    standing(id) {
+        const p = this.placed.get(id);
+        return p ? { anchorId: p.anchorId, hold: p.hold } : null;
+    }
+    /** Ids of the figures standing now. */
+    get placedIds() {
+        return [...this.placed.keys()];
+    }
     /** Put the selected figure where the visitor is aiming. False if there is no ground to put it on yet. */
     async place() {
         const f = this.last;
         if (!f?.aim || !f.viewer || f.quality === "lost")
             return false;
         const spec = this.selected;
-        const pose = this.placement(spec, f.aim, f.viewer);
-        this.remove(spec.id);
-        const gen = ++this.gen;
-        const p = {
+        return this.pin(spec, this.placement(spec, f.aim, f.viewer));
+    }
+    /**
+     * Put a figure at a point worked out some other way (a tour stop's position
+     * through the compass and GPS), on the ground, with the same clearance and
+     * facing rules as a tap. False while the device does not know where it is.
+     */
+    async placeAt(id, target) {
+        const f = this.last;
+        const spec = this.specs.get(id);
+        if (!spec)
+            throw new Error(`unknown figure ${id}`);
+        if (!f?.viewer || f.quality === "lost")
+            return false;
+        return this.pin(spec, this.placement(spec, { position: target, orientation: IDENTITY }, f.viewer));
+    }
+    /**
+     * Stand a figure on an anchor the platform restored from an earlier session
+     * (persistent anchors). The anchor was made at the figure's own pose.
+     */
+    adopt(id, anchorId) {
+        const spec = this.specs.get(id);
+        if (!spec)
+            throw new Error(`unknown figure ${id}`);
+        this.remove(id);
+        const pose = { position: { x: 0, y: 0, z: 0 }, orientation: IDENTITY };
+        this.placed.set(id, {
+            ...this.fresh(spec, pose),
+            anchorId,
+            // the anchor IS the figure's pose: no offset to learn
+            offset: { position: { x: 0, y: 0, z: 0 }, orientation: IDENTITY },
+        });
+    }
+    fresh(spec, pose) {
+        return {
             spec,
             placed: pose,
-            gen,
+            gen: ++this.gen,
             anchorId: null,
             hold: "anchoring",
             offset: null,
@@ -79,7 +123,13 @@ export class FigureStage {
             correctionM: 0,
             around: 0,
             lastAngle: null,
+            seenT: this.last?.t ?? null,
         };
+    }
+    async pin(spec, pose) {
+        this.remove(spec.id);
+        const p = this.fresh(spec, pose);
+        const gen = p.gen;
         this.placed.set(spec.id, p);
         const id = await this.tracker.createAnchor(pose);
         const current = this.placed.get(spec.id);
@@ -117,9 +167,16 @@ export class FigureStage {
             if (p.anchorId != null) {
                 const a = f.anchors.get(p.anchorId);
                 if (a) {
-                    // first sighting fixes the figure's place in the anchor's frame, so
-                    // a platform that turns or snaps its anchors cannot turn the figure
-                    p.offset ??= compose(invert(a), p.placed);
+                    p.seenT = f.t;
+                    if (p.offset == null) {
+                        // first sighting fixes the figure's place in the anchor's frame, so
+                        // a platform that turns or snaps its anchors cannot turn the figure
+                        p.offset = compose(invert(a), p.placed);
+                    }
+                    else if (p.hold === "anchoring") {
+                        // adopted from an earlier session: it stands where the anchor came back
+                        p.placed = compose(a, p.offset);
+                    }
                     p.pose = compose(a, p.offset);
                     p.hold = "anchored";
                     p.correctionM = dist(p.pose.position, p.placed.position);
@@ -144,9 +201,14 @@ export class FigureStage {
                     p.lastAngle = null;
                 }
             }
+            const unlocatedMs = p.anchorId != null && !located && f.quality === "normal" && p.seenT != null ? f.t - p.seenT : 0;
             figures.push({
                 id: p.spec.id,
                 name: p.spec.name,
+                model: p.spec.model ?? p.spec.id,
+                scale: p.spec.scale ?? 1,
+                anchorId: p.anchorId,
+                unlocatedMs,
                 pose: p.pose,
                 // an anchor not located this frame keeps its last pose while tracking holds
                 visible: viewer != null && (located || p.offset != null || p.anchorId == null),

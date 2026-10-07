@@ -136,4 +136,14 @@ export interface WorldTracker {
   /** Pin an anchor at this pose. Resolves to its id, or null where the device cannot anchor. */
   createAnchor(pose: Pose): Promise<string | null>;
   deleteAnchor(id: string): void;
+  /**
+   * Optional: make an anchor outlive this session (a reload, a screen lock).
+   * Resolves to a handle worth storing, or null where the platform cannot.
+   * Meta Quest's browser can; Chrome on Android phones cannot (2026).
+   */
+  persistAnchor?(id: string): Promise<string | null>;
+  /** Optional: bring a persisted anchor back. Resolves to its id, or null if the platform cannot find it. */
+  restoreAnchor?(handle: string): Promise<string | null>;
+  /** Optional: drop a persisted anchor for good. */
+  forgetAnchor?(handle: string): void;
 }

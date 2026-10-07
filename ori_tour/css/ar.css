@@ -120,7 +120,7 @@ button:disabled {
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
 }
 #prompt {
@@ -158,4 +158,55 @@ button:disabled {
 }
 #xrOverlay .controls .picker button[aria-pressed="true"] {
   background-color: var(--panel);
+}
+.row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.row button {
+  flex: 1;
+}
+#guide {
+  margin-top: 6px;
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 6px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+#guide:empty,
+#guideDetail:empty {
+  display: none;
+}
+#arrow {
+  display: inline-block;
+  font-size: 22px;
+  color: var(--accent);
+}
+#caption {
+  margin-top: auto;
+  margin-bottom: 8px;
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 17px;
+  line-height: 1.35;
+}
+#caption + .controls {
+  margin-top: 0;
+}
+#xrOverlay .controls {
+  flex-wrap: wrap;
+}
+#xrOverlay #quicklook,
+#xrOverlay #resumeAr {
+  background-color: var(--accent);
+  color: #16130d;
+  flex-basis: 100%;
+}
+/* iPhone tour (no AR session): the overlay is the page */
+body.flat #xrOverlay {
+  background: var(--ground);
 }

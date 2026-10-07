@@ -29,6 +29,7 @@ import {
   Recorder,
   ReplaySources,
   SimulatedSensors,
+  settleFix,
 } from "./sensors.ts";
 import { GlassesDisplay } from "./shells/glasses.ts";
 import { PhoneDisplay } from "./shells/phone.ts";
@@ -337,33 +338,6 @@ async function main(): Promise<void> {
   const auto = params.get("autostart");
   if (auto === "sim" || auto === "replay") void start(auto);
   registerOffline();
-}
-
-/** Best fix within a few seconds: good enough (<= 15 m) or the best seen by the deadline. */
-function settleFix(notify?: (t: string) => void): Promise<LatLon | null> {
-  return new Promise((resolve) => {
-    if (!("geolocation" in navigator)) return resolve(null);
-    let best: GeolocationPosition | null = null;
-    const finish = (): void => {
-      navigator.geolocation.clearWatch(id);
-      clearTimeout(deadline);
-      resolve(best ? { lat: best.coords.latitude, lon: best.coords.longitude } : null);
-    };
-    const id = navigator.geolocation.watchPosition(
-      (p) => {
-        if (!best || p.coords.accuracy < best.coords.accuracy) best = p;
-        if (p.coords.accuracy <= 15) setTimeout(finish, 1500); // one more second for the compass
-      },
-      (e) => {
-        if (e.code === 1) {
-          notify?.("Location permission was denied.");
-          finish();
-        }
-      },
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
-    );
-    const deadline = setTimeout(finish, 12000);
-  });
 }
 
 // Offline: a service worker caches the app and the whole package (narration

@@ -11,6 +11,7 @@
 
 import type { TrackedFrame, TrackingQuality, WorldTracker } from "./ports.ts";
 import {
+  IDENTITY,
   angleDiff,
   compose,
   dist,
@@ -25,6 +26,7 @@ import {
   yawQuat,
   yawToward,
   type Pose,
+  type Vec3,
 } from "./space.ts";
 
 /** A figure the visitor can place. Its 3D model is the display's business; the core needs only its size. */
@@ -38,6 +40,10 @@ export interface FigureSpec {
   footprintM: number;
   /** Turn from facing the visitor, degrees counter-clockwise from above. 90 = shown side-on. */
   yawDeg: number;
+  /** Which 3D model draws it, when that differs from id (a tour's per-stop figure). Default: id. */
+  model?: string;
+  /** Model scale, 1 = true size. heightM and footprintM are already scaled. Default 1. */
+  scale?: number;
 }
 
 export interface StageOptions {
@@ -58,6 +64,9 @@ export type HoldState = "anchoring" | "anchored" | "tracking-only";
 export interface FigureView {
   id: string;
   name: string;
+  /** Which 3D model to draw, at what scale. */
+  model: string;
+  scale: number;
   /** Where to draw it this frame, tracking space. Its -z is its front. */
   pose: Pose;
   visible: boolean;
@@ -70,6 +79,10 @@ export interface FigureView {
   aroundDeg: number;
   /** How far the platform has moved it since placement while correcting its map, metres. */
   correctionM: number;
+  /** The platform anchor holding it, if any (for persistence). */
+  anchorId: string | null;
+  /** How long its anchor has gone unlocated while tracking was normal, ms (0 when located). */
+  unlocatedMs: number;
 }
 
 export type StagePhase = "starting" | "scanning" | "ready" | "placed" | "lost";
@@ -99,6 +112,8 @@ interface Placed {
   correctionM: number;
   around: number;
   lastAngle: number | null;
+  /** When the anchor was last located, or when it was pinned. */
+  seenT: number | null;
 }
 
 /** Counting "walked around" stops beyond this distance, where a few steps sideways sweep large angles from GPS-free noise. */
@@ -155,18 +170,65 @@ export class FigureStage {
     return { position, orientation: yawQuat(face) };
   }
 
+  /** Add a figure the stage did not start with (a tour adds each stop's figure). */
+  addSpec(spec: FigureSpec): void {
+    this.specs.set(spec.id, spec);
+  }
+
+  /** A standing figure's anchor and hold, or null if it is not standing. */
+  standing(id: string): { anchorId: string | null; hold: HoldState } | null {
+    const p = this.placed.get(id);
+    return p ? { anchorId: p.anchorId, hold: p.hold } : null;
+  }
+
+  /** Ids of the figures standing now. */
+  get placedIds(): string[] {
+    return [...this.placed.keys()];
+  }
+
   /** Put the selected figure where the visitor is aiming. False if there is no ground to put it on yet. */
   async place(): Promise<boolean> {
     const f = this.last;
     if (!f?.aim || !f.viewer || f.quality === "lost") return false;
     const spec = this.selected;
-    const pose = this.placement(spec, f.aim, f.viewer);
-    this.remove(spec.id);
-    const gen = ++this.gen;
-    const p: Placed = {
+    return this.pin(spec, this.placement(spec, f.aim, f.viewer));
+  }
+
+  /**
+   * Put a figure at a point worked out some other way (a tour stop's position
+   * through the compass and GPS), on the ground, with the same clearance and
+   * facing rules as a tap. False while the device does not know where it is.
+   */
+  async placeAt(id: string, target: Vec3): Promise<boolean> {
+    const f = this.last;
+    const spec = this.specs.get(id);
+    if (!spec) throw new Error(`unknown figure ${id}`);
+    if (!f?.viewer || f.quality === "lost") return false;
+    return this.pin(spec, this.placement(spec, { position: target, orientation: IDENTITY }, f.viewer));
+  }
+
+  /**
+   * Stand a figure on an anchor the platform restored from an earlier session
+   * (persistent anchors). The anchor was made at the figure's own pose.
+   */
+  adopt(id: string, anchorId: string): void {
+    const spec = this.specs.get(id);
+    if (!spec) throw new Error(`unknown figure ${id}`);
+    this.remove(id);
+    const pose: Pose = { position: { x: 0, y: 0, z: 0 }, orientation: IDENTITY };
+    this.placed.set(id, {
+      ...this.fresh(spec, pose),
+      anchorId,
+      // the anchor IS the figure's pose: no offset to learn
+      offset: { position: { x: 0, y: 0, z: 0 }, orientation: IDENTITY },
+    });
+  }
+
+  private fresh(spec: FigureSpec, pose: Pose): Placed {
+    return {
       spec,
       placed: pose,
-      gen,
+      gen: ++this.gen,
       anchorId: null,
       hold: "anchoring",
       offset: null,
@@ -174,7 +236,14 @@ export class FigureStage {
       correctionM: 0,
       around: 0,
       lastAngle: null,
+      seenT: this.last?.t ?? null,
     };
+  }
+
+  private async pin(spec: FigureSpec, pose: Pose): Promise<boolean> {
+    this.remove(spec.id);
+    const p = this.fresh(spec, pose);
+    const gen = p.gen;
     this.placed.set(spec.id, p);
     const id = await this.tracker.createAnchor(pose);
     const current = this.placed.get(spec.id);
@@ -210,9 +279,15 @@ export class FigureStage {
       if (p.anchorId != null) {
         const a = f.anchors.get(p.anchorId);
         if (a) {
-          // first sighting fixes the figure's place in the anchor's frame, so
-          // a platform that turns or snaps its anchors cannot turn the figure
-          p.offset ??= compose(invert(a), p.placed);
+          p.seenT = f.t;
+          if (p.offset == null) {
+            // first sighting fixes the figure's place in the anchor's frame, so
+            // a platform that turns or snaps its anchors cannot turn the figure
+            p.offset = compose(invert(a), p.placed);
+          } else if (p.hold === "anchoring") {
+            // adopted from an earlier session: it stands where the anchor came back
+            p.placed = compose(a, p.offset);
+          }
           p.pose = compose(a, p.offset);
           p.hold = "anchored";
           p.correctionM = dist(p.pose.position, p.placed.position);
@@ -236,9 +311,15 @@ export class FigureStage {
         }
       }
 
+      const unlocatedMs =
+        p.anchorId != null && !located && f.quality === "normal" && p.seenT != null ? f.t - p.seenT : 0;
       figures.push({
         id: p.spec.id,
         name: p.spec.name,
+        model: p.spec.model ?? p.spec.id,
+        scale: p.spec.scale ?? 1,
+        anchorId: p.anchorId,
+        unlocatedMs,
         pose: p.pose,
         // an anchor not located this frame keeps its last pose while tracking holds
         visible: viewer != null && (located || p.offset != null || p.anchorId == null),

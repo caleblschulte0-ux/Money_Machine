@@ -29,8 +29,8 @@ refuses `window`, `navigator`, `fetch`, timers and `Date.now()` in `src/core`.
 | `AudioPort` | Play narration, report caption lines, call `onEnd` exactly once | `WebAudio` | Prefer the package's pre-generated audio (`narration.audio` + `cues`). With no audio output, still step the captions at reading pace (`readingMs` in `core/text.ts`) and end. |
 | `Display` | Draw the `ViewModel`; optional `notify(text)` | `PhoneDisplay`, `GlassesDisplay` | The ViewModel already says what to show: scene or guidance, the guide line and arrow, the caption, status, and a sensor readout. Do not re-derive any of it. |
 | `AssetLoader` | Read package files (`json`, `text`) | `fetchAssets` | Lens Studio: bundled assets. Android: app assets or a downloaded package. |
-| `Storage` | Small key-value store | `browserStorage` | Only used for on-site placements. |
-| `WorldTracker` | World tracking for figures that stay in one spot: viewer pose, ground under the aim point, anchors | `WebXRTracker` (`src/web/xr.ts`) | Optional; only devices with 6DoF tracking. Poses in tracking space (`core/space.ts`: metres, +y up, right-handed, viewer looks down -z). `createAnchor` returns null where the device cannot anchor; the core then holds the figure by tracking alone and says so. |
+| `Storage` | Small key-value store | `browserStorage` | On-site placements, and persistent anchor handles for figures. |
+| `WorldTracker` | World tracking for figures that stay in one spot: viewer pose, ground under the aim point, anchors | `WebXRTracker` (`src/web/xr.ts`) | Optional; only devices with 6DoF tracking. Poses in tracking space (`core/space.ts`: metres, +y up, right-handed, viewer looks down -z). `createAnchor` returns null where the device cannot anchor; the core then holds the figure by tracking alone and says so. Optional `persistAnchor` / `restoreAnchor` / `forgetAnchor` let a figure survive a restart where the platform keeps anchors (Lens Studio, ARCore cloud or Geospatial anchors, Quest Browser); leave them out and the figure is re-placed from the stop's position instead. |
 
 Then construct and start a session:
 
@@ -47,17 +47,43 @@ example of a port.
 
 ### World-locked figures
 
-`FigureStage` (`src/core/anchoring.ts`) is the whole figure logic: where a
-tap puts the figure (on the aimed ground, pushed clear of the visitor, turned
-to face them), where it is each frame (its anchor, with the platform's
-corrections), whether to draw it, and the prompt. A port feeds it one
-`TrackedFrame` per rendered frame and draws `StageView`: each figure's pose,
-the placement reticle, the prompt. The figures and their true sizes are in
-`src/core/figures.ts`; the 3D models are per device (`src/web/figures3d.ts`
-draws them for browsers; another device loads an exported glTF/USDZ of the
-same figure). `test/anchoring.test.ts` simulates a drifting tracker and is the
-acceptance test for the logic; on a device, the test is the parking lot:
-place it, walk all the way around, walk 50 m away, come back.
+Two core classes do all of it; a port supplies a `WorldTracker` and draws.
+
+- **`TourFigures`** (`src/core/tourfigures.ts`) is the tour's figure logic.
+  Each frame, give it the `TrackedFrame`, the session's GPS fix and accuracy,
+  compass heading and steadiness, and the stop the visitor is at (all in
+  `session.engine.state`). It learns where north is in tracking space by
+  pairing the tracking yaw with the compass, puts the stop's figure on the
+  ground at the spot the package names (`stop.figure`: model, scale, metres
+  from the stop and bearing) without a tap, falls back to a tap when GPS, the
+  compass or the ground is not good enough, takes the figure down between
+  stops, replaces an anchor the platform lost, and stores and restores
+  persistent anchors through `Storage`. It returns a `TourFiguresView`: what
+  to draw (`stage`), the mode, and one prompt line.
+- **`FigureStage`** (`src/core/anchoring.ts`) under it: where a tap puts a
+  figure (on the aimed ground, pushed clear of the visitor, turned to face
+  them), where it is each frame (its anchor, with the platform's corrections),
+  whether to draw it, and the prompt. Use it alone for free placement.
+
+What a port must provide for figures:
+
+1. A `WorldTracker`: one `TrackedFrame` per rendered frame (viewer pose,
+   tracking quality, the ground under the aim point, every anchor's pose or
+   null), `createAnchor` / `deleteAnchor`, and persistence if the platform
+   has it.
+2. The models: `src/core/figures.ts` lists each figure's glTF binary
+   (meshopt-compressed; any glTF loader with the meshopt decoder) and USDZ
+   (Apple), its true height, which way its front faces, its tint and its
+   idle clip. Fit it to `heightM` standing on y = 0, front turned to -z
+   (`fitToSize` in `src/web/figures3d.ts` is the reference). Show the
+   `credit` line somewhere a visitor can read it (CREDITS.md).
+3. A tap ("select") that calls `TourFigures.tap()` when the mode is `tap`.
+
+`test/tourfigures.test.ts` and `test/anchoring.test.ts` simulate a tracker
+whose space is turned and shifted from the world, with compass and GPS
+error, and are the acceptance tests for the logic. On a device the test is
+the parking lot: "Walk the tour here" on `ar.html`, walk to stop 1, walk all
+the way around the figure, walk on (it goes), come back.
 
 ## Acceptance for any port
 

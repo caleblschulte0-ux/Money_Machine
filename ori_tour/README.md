@@ -35,11 +35,14 @@ the compass is bad), **Skip stop**, and captions that run even with no voice.
   window and a readout shows GPS accuracy, heading, whether you count as
   still, and the distance to the next stop. "Re-centre here" redoes it.
 - **No walking:** "Simulator", then "Walk the whole route".
-- **A figure in one spot (AR):** `ar.html`. Put a full-size mammoth or settler
-  on the ground and walk around it. Android (Chrome with ARCore) runs it in
-  the page on the portable `FigureStage`, with an anchor and a live readout;
-  iPhone opens Apple's AR Quick Look, which anchors it but runs outside the
-  page. Both figures are stand-ins drawn in code (`src/web/figures3d.ts`).
+- **Figures in one spot (AR):** `ar.html`. "Walk the tour here" moves the
+  three stops around you and runs the tour; at the falls a full-size
+  Smithsonian mammoth skeleton, and at the mill a settler, appear on the
+  ground near the stop and stay there while you walk around them. Android
+  (Chrome with ARCore) runs it in the page with an anchor and a live readout;
+  iPhone runs the tour in the page and opens each figure in Apple's AR Quick
+  Look at its stop. "Just place a figure" places any figure with a tap.
+  Model credits: [CREDITS.md](CREDITS.md).
 
 ## Develop
 

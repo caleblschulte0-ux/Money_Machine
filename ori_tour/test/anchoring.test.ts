@@ -13,97 +13,11 @@ import { test } from "node:test";
 
 import { FigureStage, type FigureSpec, type StageView } from "../src/core/anchoring.ts";
 import { FIGURES } from "../src/core/figures.ts";
-import type { TrackedFrame, TrackingQuality, WorldTracker } from "../src/core/ports.ts";
-import {
-  compose,
-  dist,
-  groundDist,
-  IDENTITY,
-  invert,
-  vec,
-  yawOf,
-  yawQuat,
-  yawToward,
-  type Pose,
-  type Vec3,
-} from "../src/core/space.ts";
+import { dist, groundDist, IDENTITY, vec, yawOf, yawQuat, yawToward, type Vec3 } from "../src/core/space.ts";
+import { FakeWorld } from "./fakeworld.ts";
 
 const MAMMOTH = FIGURES.find((f) => f.id === "mammoth")!;
 const SETTLER = FIGURES.find((f) => f.id === "settler")!;
-const EYE = 1.5; // phone held at chest/eye height
-
-/** A world the visitor walks in, seen through a drifting tracker. */
-class FakeWorld implements WorldTracker {
-  /** tracking space from world: grows on a long walk, the way phone tracking drifts */
-  drift: Pose = { position: vec(0, 0, 0), orientation: IDENTITY };
-  viewer: Pose = { position: vec(0, EYE, 0), orientation: IDENTITY };
-  quality: TrackingQuality = "normal";
-  canAnchor = true;
-  readonly worldAnchors = new Map<string, Pose>();
-  deleted: string[] = [];
-  private next = 1;
-  private onFrame: ((f: TrackedFrame) => void) | null = null;
-  t = 0;
-
-  start(onFrame: (f: TrackedFrame) => void): Promise<string | null> {
-    this.onFrame = onFrame;
-    return Promise.resolve(null);
-  }
-  stop(): void {
-    this.onFrame = null;
-  }
-  createAnchor(pose: Pose): Promise<string | null> {
-    if (!this.canAnchor) return Promise.resolve(null);
-    const id = `a${this.next++}`;
-    this.worldAnchors.set(id, compose(invert(this.drift), pose));
-    return Promise.resolve(id);
-  }
-  deleteAnchor(id: string): void {
-    this.deleted.push(id);
-    this.worldAnchors.delete(id);
-  }
-
-  /** Stand at a world point, facing a world point (both on the ground). */
-  standAt(at: Vec3, facing: Vec3): void {
-    this.viewer = { position: vec(at.x, EYE, at.z), orientation: yawQuat(yawToward(at, facing)) };
-  }
-
-  /** The visitor's view of the ground 'metres' ahead, in tracking space. */
-  aim(metres: number): Pose {
-    const yaw = yawOf(this.viewer.orientation);
-    const world = {
-      position: vec(
-        this.viewer.position.x - Math.sin(yaw) * metres,
-        0,
-        this.viewer.position.z - Math.cos(yaw) * metres,
-      ),
-      orientation: IDENTITY,
-    };
-    return compose(this.drift, world);
-  }
-
-  frame(stage: FigureStage, aimMetres: number | null = 6): StageView {
-    this.t += 33;
-    const lost = this.quality === "lost";
-    const anchors = new Map<string, Pose | null>();
-    for (const [id, w] of this.worldAnchors) anchors.set(id, lost ? null : compose(this.drift, w));
-    const f: TrackedFrame = {
-      t: this.t,
-      viewer: lost ? null : compose(this.drift, this.viewer),
-      quality: this.quality,
-      aim: lost || aimMetres == null ? null : this.aim(aimMetres),
-      anchors,
-    };
-    this.onFrame?.(f);
-    return stage.frame(f);
-  }
-
-  /** Where a figure the stage drew really is, in the world. */
-  inWorld(pose: Pose): Vec3 {
-    return compose(invert(this.drift), pose).position;
-  }
-}
-
 const settle = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 async function placeMammoth(world: FakeWorld, stage: FigureStage, aim = 6): Promise<Vec3> {

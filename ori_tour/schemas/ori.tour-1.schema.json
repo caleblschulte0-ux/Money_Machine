@@ -6,10 +6,20 @@
   "type": "object",
   "required": ["schema", "id", "title", "subtitle", "version", "status", "credits", "safety", "start", "stops"],
   "properties": {
-    "schema": { "const": "ori.tour/1" },
-    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-    "title": { "type": "string", "minLength": 1 },
-    "subtitle": { "type": "string" },
+    "schema": {
+      "const": "ori.tour/1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subtitle": {
+      "type": "string"
+    },
     "version": {
       "type": "string",
       "minLength": 1,
@@ -20,36 +30,73 @@
       "minLength": 1,
       "description": "Plain statement of review state, shown to anyone starting the tour."
     },
-    "credits": { "type": "array", "items": { "type": "string" } },
+    "credits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "safety": {
       "type": "object",
       "required": ["pictures_only_when_still", "still_below_mps", "still_for_seconds"],
       "properties": {
-        "pictures_only_when_still": { "type": "boolean" },
-        "still_below_mps": { "type": "number", "exclusiveMinimum": 0 },
-        "still_for_seconds": { "type": "number", "minimum": 0 },
-        "keep_lower_field_clear": { "type": "boolean" },
-        "note": { "type": "string" }
+        "pictures_only_when_still": {
+          "type": "boolean"
+        },
+        "still_below_mps": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "still_for_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "keep_lower_field_clear": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
       }
     },
     "start": {
       "type": "object",
       "required": ["name", "position"],
       "properties": {
-        "name": { "type": "string" },
-        "position": { "$ref": "#/$defs/latlon" },
-        "note": { "type": "string" }
+        "name": {
+          "type": "string"
+        },
+        "position": {
+          "$ref": "#/$defs/latlon"
+        },
+        "note": {
+          "type": "string"
+        }
       }
     },
-    "stops": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stop" } }
+    "stops": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/stop"
+      }
+    }
   },
   "$defs": {
     "latlon": {
       "type": "object",
       "required": ["lat", "lon"],
       "properties": {
-        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
-        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
       }
     },
     "stop": {
@@ -68,11 +115,24 @@
         "todo"
       ],
       "properties": {
-        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-        "order": { "type": "number" },
-        "name": { "type": "string", "minLength": 1 },
-        "position": { "$ref": "#/$defs/latlon" },
-        "radius_m": { "type": "number", "exclusiveMinimum": 0 },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "order": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "position": {
+          "$ref": "#/$defs/latlon"
+        },
+        "radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
         "placement": {
           "type": "string",
           "minLength": 1,
@@ -82,64 +142,154 @@
           "type": "object",
           "required": ["target_name", "tolerance_deg", "hint"],
           "anyOf": [
-            { "required": ["target"] },
-            { "required": ["bearing_deg"], "properties": { "bearing_deg": { "type": "number" } } }
+            {
+              "required": ["target"]
+            },
+            {
+              "required": ["bearing_deg"],
+              "properties": {
+                "bearing_deg": {
+                  "type": "number"
+                }
+              }
+            }
           ],
           "properties": {
-            "target_name": { "type": "string", "minLength": 1 },
-            "target": { "$ref": "#/$defs/latlon" },
-            "bearing_deg": { "type": ["number", "null"], "minimum": 0, "exclusiveMaximum": 360 },
-            "tolerance_deg": { "type": "number", "exclusiveMinimum": 0, "maximum": 180 },
-            "hint": { "type": "string", "minLength": 1 }
+            "target_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "target": {
+              "$ref": "#/$defs/latlon"
+            },
+            "bearing_deg": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "exclusiveMaximum": 360
+            },
+            "tolerance_deg": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 180
+            },
+            "hint": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "narration": {
           "type": "object",
           "required": ["text", "review"],
           "properties": {
-            "text": { "type": "string", "minLength": 1 },
-            "audio": { "type": ["string", "null"] },
-            "cues": { "type": ["string", "null"] },
-            "duration_s": { "type": "number", "minimum": 0 },
-            "voice": { "type": "string" },
-            "text_sha": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
-            "review": { "type": "string", "minLength": 1 }
+            "text": {
+              "type": "string",
+              "minLength": 1
+            },
+            "audio": {
+              "type": ["string", "null"]
+            },
+            "cues": {
+              "type": ["string", "null"]
+            },
+            "duration_s": {
+              "type": "number",
+              "minimum": 0
+            },
+            "voice": {
+              "type": "string"
+            },
+            "text_sha": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{16}$"
+            },
+            "review": {
+              "type": "string",
+              "minLength": 1
+            }
           },
-          "if": { "required": ["audio"], "properties": { "audio": { "type": "string" } } },
-          "then": { "required": ["cues"], "properties": { "cues": { "type": "string" } } }
+          "if": {
+            "required": ["audio"],
+            "properties": {
+              "audio": {
+                "type": "string"
+              }
+            }
+          },
+          "then": {
+            "required": ["cues"],
+            "properties": {
+              "cues": {
+                "type": "string"
+              }
+            }
+          }
         },
         "scene": {
           "type": "object",
           "required": ["kind", "title"],
           "properties": {
-            "kind": { "enum": ["falls", "quote", "timeline", "list", "image", "layers"] },
-            "kicker": { "type": "string" },
-            "title": { "type": "string", "minLength": 1 },
-            "lines": { "type": "array", "items": { "type": "string" } },
-            "attribution": { "type": "string" },
+            "kind": {
+              "enum": ["falls", "quote", "timeline", "list", "image", "layers"]
+            },
+            "kicker": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "lines": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "attribution": {
+              "type": "string"
+            },
             "timeline": {
               "type": "array",
               "items": {
                 "type": "object",
                 "required": ["year", "text"],
-                "properties": { "year": { "type": "string" }, "text": { "type": "string" } }
+                "properties": {
+                  "year": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
               }
             },
-            "image": { "type": ["string", "null"] },
+            "image": {
+              "type": ["string", "null"]
+            },
             "layers": {
               "type": "array",
               "items": {
                 "type": "object",
                 "required": ["src"],
                 "properties": {
-                  "src": { "type": "string" },
-                  "depth": { "type": "number" },
-                  "motion": { "enum": ["none", "drift", "rise", "fade-in"] },
-                  "alt": { "type": "string" }
+                  "src": {
+                    "type": "string"
+                  },
+                  "depth": {
+                    "type": "number"
+                  },
+                  "motion": {
+                    "enum": ["none", "drift", "rise", "fade-in"]
+                  },
+                  "alt": {
+                    "type": "string"
+                  }
                 }
               }
             },
-            "placeholder": { "type": "string" }
+            "placeholder": {
+              "type": "string"
+            }
           }
         },
         "sources": {
@@ -147,10 +297,76 @@
           "items": {
             "type": "object",
             "required": ["label", "url"],
-            "properties": { "label": { "type": "string" }, "url": { "type": "string", "format": "uri" } }
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
           }
         },
-        "todo": { "type": "array", "items": { "type": "string" } }
+        "todo": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "figure": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/figure"
+            }
+          ]
+        }
+      }
+    },
+    "figure": {
+      "type": "object",
+      "description": "A world-locked 3D figure that stands near the stop while the visitor is there and stays in one spot as they walk around it. Gone between stops.",
+      "required": ["model", "scale", "offset_m", "yaw_deg", "anchoring", "note"],
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "A figure id from the player's figure list (src/core/figures.ts); test/schema.test.ts keeps this list equal to it.",
+          "enum": ["mammoth", "mammoth-calf", "settler"]
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 4,
+          "description": "1 = true size."
+        },
+        "offset_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60,
+          "description": "Ground distance from the stop's position to the figure, metres."
+        },
+        "bearing_deg": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "exclusiveMaximum": 360,
+          "description": "Direction from the stop to the figure, degrees from true north; null = the stop's facing bearing."
+        },
+        "yaw_deg": {
+          "type": "number",
+          "description": "Turn, degrees counter-clockwise from facing the stop. 90 = side-on."
+        },
+        "anchoring": {
+          "enum": ["auto", "tap"],
+          "description": "auto: placed on the detected ground on arrival from the stop's position and the compass; tap: the visitor places it."
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why the figure is here, or its review status."
+        }
       }
     }
   }

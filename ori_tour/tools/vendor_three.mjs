@@ -13,9 +13,12 @@ const version = JSON.parse(readFileSync(join(root, "node_modules/three/package.j
 mkdirSync(join(root, "vendor"), { recursive: true });
 await build({
   stdin: {
-    contents: ['export * from "three";', 'export { USDZExporter } from "three/addons/exporters/USDZExporter.js";'].join(
-      "\n",
-    ),
+    contents: [
+      'export * from "three";',
+      'export { USDZExporter } from "three/addons/exporters/USDZExporter.js";',
+      'export { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";',
+      'export { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";',
+    ].join("\n"),
     resolveDir: root,
   },
   bundle: true,

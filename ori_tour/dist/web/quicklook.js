@@ -6,7 +6,9 @@
 // What that costs: Quick Look is Apple's viewer, not ours. Inside it the tour
 // cannot run (no prompts, captions, narration triggers or readout), and the
 // figure is placed by the visitor, not at a stop. It proves the anchoring on
-// an iPhone today; a tour that runs on iPhones with figures needs a native
+// an iPhone today. In the tour, an iPhone runs the walk in the page and offers
+// a "See it here" button at a figure's stop, which opens the figure in Quick
+// Look. A tour that keeps figures inside it on iPhones needs a native
 // app (ARKit) or an App Clip, which needs a Mac and an Apple developer account.
 import * as THREE from "three";
 import { USDZExporter } from "three/addons/exporters/USDZExporter.js";
@@ -16,13 +18,31 @@ export function quickLookAvailable() {
     const a = document.createElement("a");
     return a.relList.supports("ar");
 }
-/** Export a figure to USDZ in the page (no server, so no file type to get wrong), as a blob URL. */
-export async function usdzFor(spec) {
+/**
+ * A blob URL for the figure's USDZ: the prepared file (assets/figures/*.usdz,
+ * made from the real model by tools/build_figures.mjs), or, if that cannot be
+ * fetched, the code-drawn stand-in exported in the page. A blob URL needs no
+ * server file type, which static hosts often get wrong for .usdz.
+ */
+export async function usdzFor(info) {
+    try {
+        const r = await fetch(info.file.usdz);
+        if (!r.ok)
+            throw new Error(`${info.file.usdz}: HTTP ${r.status}`);
+        const bytes = await r.arrayBuffer();
+        return { url: URL.createObjectURL(new Blob([bytes], { type: "model/vnd.usdz+zip" })), source: "model" };
+    }
+    catch (e) {
+        console.warn(`figure ${info.id}: USDZ failed, exporting the stand-in`, e);
+        return { url: await exportStandIn(info), source: "stand-in" };
+    }
+}
+async function exportStandIn(info) {
     const scene = new THREE.Scene();
-    const fig = buildFigure(spec.id);
+    const fig = buildFigure(info.model);
     // Quick Look puts the model's +z toward the viewer; our figures face -z
     const turn = new THREE.Group();
-    turn.rotation.y = Math.PI + (spec.yawDeg * Math.PI) / 180;
+    turn.rotation.y = Math.PI + (info.yawDeg * Math.PI) / 180;
     turn.add(fig);
     scene.add(turn);
     const bytes = await new USDZExporter().parseAsync(scene, {
