@@ -28,6 +28,7 @@ import { WebAudio } from "./audio.js";
 import { contactShadow, loadFigure } from "./figures3d.js";
 import { DepthOcclusion, lookOptions, SceneLight, setUpRenderer, shadowCatcher } from "./look.js";
 import { browserStorage, fetchAssets, intervalScheduler, wallClock } from "./platform.js";
+import { initLaunch } from "./launch.js";
 import { openQuickLook, quickLookAvailable, usdzFor } from "./quicklook.js";
 import { AccelerometerSource, CompassSource, GeolocationSource, settleFix } from "./sensors.js";
 import { WebXRTracker, webxrArAvailable } from "./xr.js";
@@ -677,12 +678,16 @@ async function main() {
     const goFree = $("goTest");
     const goPark = $("goPark");
     const route = $("route");
+    // iPhone: the Launch SDK (when keyed) gives this page WebXR inside its App Clip viewer
+    const launch = quickLookAvailable() ? await initLaunch(new URLSearchParams(location.search)) : null;
     if (await webxrArAvailable()) {
         goFree.textContent = "Test mode: spawn a figure";
         for (const b of [goTour, goFree, goPark])
             b.disabled = false;
         route.textContent =
-            "Android AR (ARCore in Chrome): figures are pinned with an anchor, lit from the camera's light estimate, with a live readout.";
+            launch && !launch.launchRequired
+                ? "iPhone AR (ARKit through Variant Launch): figures are pinned with an anchor, with a live readout. No sun-matched light or occlusion on this route."
+                : "Android AR (ARCore in Chrome): figures are pinned with an anchor, lit from the camera's light estimate, with a live readout.";
         goTour.onclick = () => void startTour("here", true);
         goPark.onclick = () => void startTour("park", true);
         goFree.onclick = () => void startTest();
@@ -702,6 +707,15 @@ async function main() {
         goFree.textContent = "Spawn it here (Apple AR view)";
         goFree.disabled = false;
         goFree.onclick = () => openQuickLook(urls.get(selected));
+        if (launch?.launchRequired) {
+            const full = $("goLaunch");
+            full.hidden = false;
+            full.onclick = () => {
+                location.href = launch.launchUrl;
+            };
+            route.textContent +=
+                " \"Full test mode\" opens the same page in Variant Launch's App Clip (Apple's instant-app card, tap Open), with Spawn here, test points and the readout.";
+        }
     }
     else {
         goFree.textContent = "AR not available here";

@@ -1,5 +1,5 @@
 {
- "version": "95804d3feba8",
+ "version": "6215c0a3d6ca",
  "files": [
   "./",
   "ar.html",
@@ -42,6 +42,7 @@
   "dist/web/audio.js",
   "dist/web/figures3d.js",
   "dist/web/hud.js",
+  "dist/web/launch.js",
   "dist/web/look.js",
   "dist/web/map.js",
   "dist/web/platform.js",

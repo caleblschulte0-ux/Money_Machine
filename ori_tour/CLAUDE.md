@@ -91,6 +91,14 @@ can; Meta Ray-Ban Display cannot).
   project key), or a native ARKit app (a Mac with Xcode; a free Apple ID
   installs on his own phone for 7 days at a time, $99/year Apple Developer
   for TestFlight/keeping it installed).
+- **Variant Launch is WIRED but OFF** (`src/web/launch.ts`, `LAUNCH_KEY`
+  empty): with a key, an iPhone gets a "Full test mode (iPhone App Clip)"
+  button that opens this page in Launch's viewer, where `xr.ts` runs as on
+  Android ("local" space; no light estimation or depth, said in the route
+  text). The key is publishable (public script tag, domain-bound in their
+  dashboard); try one with `?vlkey=`. The account could not be made from a
+  cloud session: launch.variant3d.com and launchar.app are refused by the
+  session proxy (403), 2026-10-07.
   The drawn stand-ins (`src/web/figures3d.ts`) show if a model fails to load.
 - **Test mode (Caleb, 2026-10-07: "go into test mode, open my phone ...
   spawn in this mammoth"):** `ar.html` "Test mode: spawn a figure". Pick a
