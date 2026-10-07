@@ -99,7 +99,9 @@ const PAGE = `<!doctype html><meta charset="utf-8"><canvas id="c" width="640" he
 async function writeUsdz() {
   const { FIGURES } = await import("../dist/core/figures.js");
   await MeshoptDecoder.ready;
-  const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.decoder": MeshoptDecoder });
+  const io = new NodeIO()
+    .registerExtensions(ALL_EXTENSIONS)
+    .registerDependencies({ "meshopt.decoder": MeshoptDecoder });
   const tmp = mkdtempSync(join(tmpdir(), "ori-usdz-"));
   const py = process.env.BLENDER_PYTHON ?? "python3.11";
   try {
@@ -115,8 +117,16 @@ async function writeUsdz() {
       const out = join(root, f.file.usdz);
       const run = spawnSync(
         py,
-        [join(root, "tools/usdz_blender.py"), plain, out, "--height", String(f.heightM), "--yaw", String(yaw),
-          ...(f.file.idleClip ? ["--clip", f.file.idleClip] : [])],
+        [
+          join(root, "tools/usdz_blender.py"),
+          plain,
+          out,
+          "--height",
+          String(f.heightM),
+          "--yaw",
+          String(yaw),
+          ...(f.file.idleClip ? ["--clip", f.file.idleClip] : []),
+        ],
         { encoding: "utf8" },
       );
       if (run.status !== 0) throw new Error(`${f.id}: Blender failed\n${run.stderr || run.stdout}`);
