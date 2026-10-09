@@ -1,0 +1,6 @@
+{
+  "schema": "ori.launch/1",
+  "about": "iPhone WebXR through Variant Launch's App Clip (src/web/launch.ts). Empty key = off. Caleb's project \"ORI Falls Park\" (free Developer tier), authorised for raw.githack.com. Their snippet adds &redirect=true; we leave it off and show our own button instead. The key is publishable (it goes in a public script tag) and bound to the hosting domain in Launch's dashboard. ?vlkey= on the URL overrides it.",
+  "sdkUrl": "https://launchar.app/sdk/v1",
+  "key": "pXK7uT3XzBZkukh9YNOcCoMBmc6kWEGl"
+}

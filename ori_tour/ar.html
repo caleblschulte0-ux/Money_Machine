@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1012" />
+    <title>AR tour</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M2 11a6 6 0 0 1 12 0z%22 fill=%22%23ffbe5a%22/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="css/ar.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.js",
+          "three/addons/exporters/USDZExporter.js": "./vendor/three.js",
+          "three/addons/loaders/GLTFLoader.js": "./vendor/three.js",
+          "three/addons/libs/meshopt_decoder.module.js": "./vendor/three.js",
+          "three/addons/webxr/XREstimatedLight.js": "./vendor/three.js",
+          "three/addons/environments/RoomEnvironment.js": "./vendor/three.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+
+    <!-- Before AR: pick a figure, see it turn, start. -->
+    <section id="intro">
+      <div class="brand">OPEN RANGE <span>INTERACTIVE</span></div>
+      <h1>Figures that stay in one spot</h1>
+      <div class="picker" id="picker"></div>
+      <p id="credit" class="muted small"></p>
+      <ol class="how" id="how">
+        <li>Test mode: pick a figure, point at the ground, tap "Spawn here". It stands there at true size.</li>
+        <li>"Set test point here" saves the spot. Walk away and come back: it reappears on its own.</li>
+        <li>"Walk the tour here" drops the three Falls Park stops around you, with each stop's figure.</li>
+      </ol>
+      <details class="judge">
+        <summary>How to judge it</summary>
+        <ol id="judgeXr">
+          <li>
+            Circle it slowly, all the way round. It should not slide; "corrected" in the readout stays under about 10
+            cm.
+          </li>
+          <li>Walk 50 m away and come back. It should be where you left it.</li>
+          <li>
+            Lock the screen, unlock, tap "Back to AR". A saved test point's figure comes back near the same spot (a web
+            page cannot keep the exact spot).
+          </li>
+          <li>
+            In the sun: its shadow should fall the same way as yours, and it should not look brighter or darker than
+            things around it.
+          </li>
+          <li>Walk so a car or a person is between you and it: where this phone senses depth, they hide it.</li>
+        </ol>
+        <ol id="judgeIos" hidden>
+          <li>Point at open ground a few steps ahead until Apple's view finds the floor; the figure lands on it.</li>
+          <li>
+            Don't touch the screen once it's down: one finger drags it and two fingers turn it, which looks like drift.
+          </li>
+          <li>Circle it slowly, all the way round. It should stay on the same patch of ground.</li>
+          <li>Walk 20 m away and back. It should still be there.</li>
+          <li>
+            Feet on the ground, not floating or sunk; its shadow under it; true size next to a car (the mammoth is 3 m).
+          </li>
+          <li>
+            The mammoth should move a little (its idle animation); a frozen one is the old cached file: reload the page.
+          </li>
+        </ol>
+      </details>
+      <p class="safety">In a parking lot: watch for cars, and look up from the screen while you walk.</p>
+      <button id="goTest" disabled>Checking this phone…</button>
+      <button id="goLaunch" hidden>Full test mode (iPhone App Clip)</button>
+      <div class="row">
+        <button id="goTour" class="ghost" disabled>Walk the tour here</button>
+        <button id="goPark" class="ghost" disabled>Start at the park</button>
+      </div>
+      <p id="route" class="muted"></p>
+    </section>
+
+    <!-- During the tour (and AR on Android, as the browser's DOM overlay). -->
+    <div id="xrOverlay" hidden>
+      <div id="prompt"></div>
+      <div id="guide"><span id="arrow" hidden>↑</span><span id="guideDetail"></span></div>
+      <div id="readout"></div>
+      <div id="caption" hidden></div>
+      <div class="controls">
+        <div class="picker" id="xrPicker"></div>
+        <button id="spawn" hidden>Spawn here</button>
+        <button id="setPoint" class="ghost" hidden>Set test point here</button>
+        <button id="quicklook" hidden>See it here in AR</button>
+        <button id="resumeAr" hidden>Back to AR</button>
+        <button id="calib" class="ghost" hidden>I'm facing it: set compass</button>
+        <button id="force" class="ghost" hidden>Show scene</button>
+        <button id="skip" class="ghost" hidden>Skip stop</button>
+        <button id="remove" class="ghost">Remove</button>
+        <button id="clearPoints" class="ghost" hidden>Clear test points</button>
+        <button id="exit" class="ghost">Exit</button>
+      </div>
+    </div>
+
+    <script type="module" src="dist/web/ar.js"></script>
+  </body>
+</html>

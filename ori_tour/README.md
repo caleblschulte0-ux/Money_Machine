@@ -35,10 +35,22 @@ the compass is bad), **Skip stop**, and captions that run even with no voice.
   window and a readout shows GPS accuracy, heading, whether you count as
   still, and the distance to the next stop. "Re-centre here" redoes it.
 - **No walking:** "Simulator", then "Walk the whole route".
+- **Test mode (AR):** `ar.html`, "Test mode: spawn a figure". Pick the
+  mammoth, calf or settler, point at the ground, "Spawn here". "Set test
+  point here" saves the spot; come back and it reappears on its own. The
+  page lists how to judge it (circle it, walk 50 m away, lock the screen, sun).
+- **Figures in one spot (AR):** `ar.html`. "Walk the tour here" moves the
+  three stops around you and runs the tour; at the falls a full-size
+  Smithsonian mammoth skeleton, and at the mill a settler, appear on the
+  ground near the stop and stay there while you walk around them. Android
+  (Chrome with ARCore) runs it in the page with an anchor and a live readout;
+  iPhone runs the tour in the page and opens each figure in Apple's AR Quick
+  Look at its stop. "Just place a figure" places any figure with a tap.
+  Model credits: [CREDITS.md](CREDITS.md).
 
 ## Develop
 
-Node 22.18 or newer. The app has no runtime dependencies; npm is only for dev tools.
+Node 22.18 or newer. npm is only for dev tools; the one runtime library, three.js (MIT), is bundled into `vendor/three.js` by the build and served with the app.
 
 ```bash
 cd ori_tour

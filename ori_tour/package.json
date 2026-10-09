@@ -1,32 +1,40 @@
 {
   "name": "ori-tour",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Open Range Interactive tour player: a portable tour engine (src/core) with web adapters for phone and glasses (src/web).",
+  "description": "Open Range Interactive tour player: a portable tour engine (src/core) with web adapters for phone and glasses (src/web), and world-locked figures (src/core/anchoring.ts).",
   "license": "UNLICENSED",
   "type": "module",
   "engines": {
     "node": ">=22.18"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && python3 tools/build_offline.py",
+    "build": "tsc -p tsconfig.build.json && node tools/vendor_three.mjs && python3 tools/build_offline.py",
     "typecheck": "tsc -p tsconfig.core.json && tsc -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "node --test \"test/**/*.test.ts\"",
-    "check:dist": "npm run build && git diff --exit-code -- dist offline.json",
+    "check:dist": "npm run build && git diff --exit-code -- dist vendor offline.json",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "serve": "python3 -m http.server 8000"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
     "@types/node": "^22.20.5",
+    "@types/three": "^0.186.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "globals": "^17.13.0",
+    "meshoptimizer": "^1.3.0",
+    "playwright-core": "^1.63.0",
     "prettier": "^3.9.9",
+    "three": "^0.186.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.1"
   }

@@ -1,12 +1,13 @@
 // The content package: version check, validation, asset resolution and
 // on-site placement edits. Pure; loading goes through the AssetLoader port.
-import { bearing, distance, ll } from "./geo.js";
+import { figureById } from "./figures.js";
+import { bearing, distance, ll, norm, offset } from "./geo.js";
 /** The schema this player reads. A package with another major version is refused. */
 export const SCHEMA = "ori.tour/1";
 const isNum = (x) => typeof x === "number" && Number.isFinite(x);
 const isStr = (x) => typeof x === "string" && x.length > 0;
 const isObj = (x) => typeof x === "object" && x !== null && !Array.isArray(x);
-const isLatLon = (p) => isObj(p) && isNum(p.lat) && isNum(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180;
+export const isLatLon = (p) => isObj(p) && isNum(p.lat) && isNum(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180;
 /**
  * Every problem with a package, as plain sentences. Empty means usable.
  * Kept in step with schemas/ori.tour-1.schema.json by test/schema.test.ts.
@@ -89,8 +90,37 @@ export function validateTour(input) {
             errs.push(`${at}: sources must be a list (empty is honest, missing is not)`);
         if (!Array.isArray(s.todo))
             errs.push(`${at}: todo must be a list`);
+        if (s.figure != null)
+            errs.push(...validateFigure(s.figure, at));
     }
     return errs;
+}
+/** Problems with a figure entry (a stop's, or a saved test point's), or none. */
+export function validateFigure(raw, at) {
+    if (!isObj(raw))
+        return [`${at}: figure must be an object`];
+    const f = raw;
+    const errs = [];
+    if (!isStr(f.model) || !figureById(f.model))
+        errs.push(`${at}: figure.model ${String(f.model)} is not a known figure`);
+    if (!isNum(f.scale) || f.scale <= 0 || f.scale > 4)
+        errs.push(`${at}: figure.scale must be in (0, 4]`);
+    if (!isNum(f.offset_m) || f.offset_m < 0 || f.offset_m > 60)
+        errs.push(`${at}: figure.offset_m must be 0 to 60`);
+    if (f.bearing_deg != null && (!isNum(f.bearing_deg) || f.bearing_deg < 0 || f.bearing_deg >= 360))
+        errs.push(`${at}: figure.bearing_deg must be in [0, 360) or null`);
+    if (!isNum(f.yaw_deg))
+        errs.push(`${at}: figure.yaw_deg missing`);
+    if (f.anchoring !== "auto" && f.anchoring !== "tap")
+        errs.push(`${at}: figure.anchoring must be auto or tap`);
+    if (!isStr(f.note))
+        errs.push(`${at}: figure.note must say why it is there`);
+    return errs;
+}
+/** Where a stop's figure stands on the ground. */
+export function figurePosition(stop, figure) {
+    const b = figure.bearing_deg ?? targetBearing(stop);
+    return figure.offset_m > 0 ? offset(stop.position, figure.offset_m, norm(b)) : { ...stop.position };
 }
 /** Bearing the visitor must face at a stop. */
 export const targetBearing = (s) => s.facing.bearing_deg != null ? s.facing.bearing_deg : bearing(s.position, s.facing.target ?? s.position);
