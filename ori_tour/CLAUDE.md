@@ -139,6 +139,17 @@ can; Meta Ray-Ban Display cannot).
   `tick` runs the hit test before the pending anchor requests. And nothing
   is placed until tracking has been normal for `settleMs` (1.5 s): anchors
   made in the first moments drift most. Readout shows "(settling)".
+- **The stop's scene stands in the world (`src/core/scenecard.ts`, drawn by
+  `src/web/card3d.ts`), 2026-10-09:** the visit on glasses is the whole stop,
+  not only its figure (Caleb, 10-09: "if the most special thing we are doing
+  is a mammoth staying put we are cooked"). In the AR tour, when a stop's
+  scene comes up its card (kicker, title, timeline/quote/lines, credit, the
+  draft flag) is placed 4 m out, 25 degrees left of the landmark line (aimed
+  by learned north, else where the visitor looked), and keeps that spot while
+  they stay at the stop, turning to face them. It is visible only while the
+  engine shows the scene (still and facing), per the stand-still rule; it
+  hides when they walk and returns in the same spot. Leaving the stop takes it
+  down. The core decides the words and the pose; a port draws a flat panel.
 - **What a web page cannot do (say so, do not paper over it):** Chrome on
   Android has no persistent anchors, so a screen lock ends the AR session
   and the anchor is gone; "Back to AR" starts a new session and the figure is
@@ -181,6 +192,7 @@ src/core/     TypeScript, platform-free. Compiled with NO DOM and NO Node types
   space.ts      vectors, quaternions, poses in a device's tracking space
   anchoring.ts  FigureStage: place a figure, keep it in one spot, prompts (world-locked figures)
   figures.ts    the figures (mammoth, mammoth calf, settler), true sizes, model files, credits
+  scenecard.ts  SceneCards: each stop's scene as a world-locked card (words + pose)
   tourfigures.ts  TourFigures: each site's figure (tour stop or test point) placed, kept, taken down, restored
   testpoints.ts   test points saved on the device (ori.testpoints/1)
   types.ts      the content package types (ori.tour/1)

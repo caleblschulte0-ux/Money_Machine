@@ -24,6 +24,7 @@ import { compassWord, distance } from "../core/geo.ts";
 import { HeadingFilter } from "../core/heading.ts";
 import type { Display } from "../core/ports.ts";
 import { relocate } from "../core/relocate.ts";
+import { SceneCards } from "../core/scenecard.ts";
 import { TourSession } from "../core/session.ts";
 import { loadTour } from "../core/tour.ts";
 import { TestPoints } from "../core/testpoints.ts";
@@ -31,6 +32,7 @@ import { siteAt, stopFigureId, TourFigures, tourSites, type TourFiguresView } fr
 import type { LatLon, Tour } from "../core/types.ts";
 import type { ViewModel } from "../core/view.ts";
 import { WebAudio } from "./audio.ts";
+import { CardLayer } from "./card3d.ts";
 import { contactShadow, loadFigure } from "./figures3d.ts";
 import { DepthOcclusion, lookOptions, SceneLight, setUpRenderer, shadowCatcher } from "./look.ts";
 import { browserStorage, fetchAssets, intervalScheduler, wallClock } from "./platform.ts";
@@ -586,6 +588,8 @@ async function startTour(where: "here" | "park", ar: boolean): Promise<void> {
     const look = getXrLook();
     const layer = new FigureLayer(look);
     const ret = reticle(look.scene);
+    const cardLayer = new CardLayer(look.scene);
+    const cards = new SceneCards();
     let figures: TourFigures | null = null;
     let fv: TourFiguresView | null = null;
     const tracker = await startXr(
@@ -603,11 +607,14 @@ async function startTour(where: "here" | "park", ar: boolean): Promise<void> {
         showReticle(ret, fv.stage, fv.mode === "tap");
         look.light.placeSun(fv.northYaw, st.pos, Date.now());
         layer.draw(fv.stage.figures);
+        // the stop's scene stands in the world beside the landmark, like the figure
+        cardLayer.draw(cards.update({ frame: f, showing: st.showing, at: st.atStop, northYaw: fv.northYaw }));
         setPrompt(fv.prompt ?? display.view?.guide.title ?? null);
         $("readout").textContent = tourReadout(session, fv, figures);
       },
       () => {
         layer.clear();
+        cardLayer.clear();
         look.scene.remove(ret.group);
         if (ended) return;
         if (running?.exiting) return finish(null);

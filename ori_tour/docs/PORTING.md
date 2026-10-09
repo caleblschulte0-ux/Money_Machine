@@ -140,7 +140,8 @@ regression fails CI). That is the tour engine and session (`engine.ts`,
 validation (`tour.ts`, `types.ts`), and every figure rule: placement,
 clearance, facing, ground, settling, anchor bookkeeping and test points
 (`anchoring.ts`, `tourfigures.ts`, `testpoints.ts`, `space.ts`,
-`figures.ts`). The content package (`content/<tour>/`) is shared unchanged.
+`figures.ts`), and where each stop's scene card stands and what it says
+(`scenecard.ts`; the port draws it as a Text panel at the given pose). The content package (`content/<tour>/`) is shared unchanged.
 The only mechanical step is the import paths: the core imports `./x.ts`, and
 Lens Studio may want `./x`; a small copy script rewrites them.
 

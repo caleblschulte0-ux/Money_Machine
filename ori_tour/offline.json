@@ -1,5 +1,5 @@
 {
- "version": "ac4b8c93b550",
+ "version": "0f58cd69c4c1",
  "files": [
   "./",
   "ar.html",
@@ -27,6 +27,7 @@
   "dist/core/ports.js",
   "dist/core/relocate.js",
   "dist/core/replay.js",
+  "dist/core/scenecard.js",
   "dist/core/session.js",
   "dist/core/space.js",
   "dist/core/stillness.js",
@@ -41,6 +42,7 @@
   "dist/web/app.js",
   "dist/web/ar.js",
   "dist/web/audio.js",
+  "dist/web/card3d.js",
   "dist/web/figures3d.js",
   "dist/web/hud.js",
   "dist/web/launch.js",

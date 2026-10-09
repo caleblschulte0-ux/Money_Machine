@@ -20,11 +20,13 @@ import { FIGURES, figureById } from "../core/figures.js";
 import { compassWord, distance } from "../core/geo.js";
 import { HeadingFilter } from "../core/heading.js";
 import { relocate } from "../core/relocate.js";
+import { SceneCards } from "../core/scenecard.js";
 import { TourSession } from "../core/session.js";
 import { loadTour } from "../core/tour.js";
 import { TestPoints } from "../core/testpoints.js";
 import { siteAt, stopFigureId, TourFigures, tourSites } from "../core/tourfigures.js";
 import { WebAudio } from "./audio.js";
+import { CardLayer } from "./card3d.js";
 import { contactShadow, loadFigure } from "./figures3d.js";
 import { DepthOcclusion, lookOptions, SceneLight, setUpRenderer, shadowCatcher } from "./look.js";
 import { browserStorage, fetchAssets, intervalScheduler, wallClock } from "./platform.js";
@@ -550,6 +552,8 @@ async function startTour(where, ar) {
         const look = getXrLook();
         const layer = new FigureLayer(look);
         const ret = reticle(look.scene);
+        const cardLayer = new CardLayer(look.scene);
+        const cards = new SceneCards();
         let figures = null;
         let fv = null;
         const tracker = await startXr(look.scene, (f) => {
@@ -566,10 +570,13 @@ async function startTour(where, ar) {
             showReticle(ret, fv.stage, fv.mode === "tap");
             look.light.placeSun(fv.northYaw, st.pos, Date.now());
             layer.draw(fv.stage.figures);
+            // the stop's scene stands in the world beside the landmark, like the figure
+            cardLayer.draw(cards.update({ frame: f, showing: st.showing, at: st.atStop, northYaw: fv.northYaw }));
             setPrompt(fv.prompt ?? display.view?.guide.title ?? null);
             $("readout").textContent = tourReadout(session, fv, figures);
         }, () => {
             layer.clear();
+            cardLayer.clear();
             look.scene.remove(ret.group);
             if (ended)
                 return;
