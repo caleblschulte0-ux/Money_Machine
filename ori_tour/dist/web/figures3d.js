@@ -10,6 +10,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { loadSplat, splatsAvailable } from "./splat3d.js";
 /** Deterministic noise, so a figure looks the same on every load and every device. */
 function rng(seed) {
     let s = seed >>> 0;
@@ -268,6 +269,14 @@ const files = new Map();
 /** The figure's model at true size (times `scale`), or its drawn stand-in if the model cannot be loaded. */
 export async function loadFigure(info, scale = 1) {
     const height = info.heightM * scale;
+    if (info.file.splat && splatsAvailable()) {
+        try {
+            return { node: await loadSplat(info.file.splat, height), mixer: null, source: "splat" };
+        }
+        catch (e) {
+            console.warn(`figure ${info.id}: splat failed, showing the model`, e);
+        }
+    }
     try {
         let bytes = files.get(info.file.glb);
         if (!bytes) {

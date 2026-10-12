@@ -6,6 +6,9 @@
 //                                                  python3.11): binary USD, the full mesh and
 //                                                  textures, and the idle clip, which Quick Look
 //                                                  plays. Needs no browser.
+//   node tools/build_figures.mjs --splats          write each TEST splat (FigureSplat madeFrom "model")
+//                                                  from its glb (tools/splat_from_glb.py, bpy). A real
+//                                                  capture is trained elsewhere and only copied in.
 //   node tools/build_figures.mjs --views <dir>     PNG views of each figure as the phone draws it
 //                                                  (front, side, top), to check which way it faces
 //   node tools/build_figures.mjs --measure         load time of each figure on a slow phone
@@ -31,8 +34,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const want = (flag) => args.includes(flag);
 const valueOf = (flag) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : null);
-if (!want("--usdz") && !want("--views") && !want("--measure")) {
-  console.error("usage: node tools/build_figures.mjs [--usdz] [--views <dir>] [--measure]");
+if (!want("--usdz") && !want("--splats") && !want("--views") && !want("--measure")) {
+  console.error("usage: node tools/build_figures.mjs [--usdz] [--splats] [--views <dir>] [--measure]");
   process.exit(2);
 }
 
@@ -95,6 +98,44 @@ const PAGE = `<!doctype html><meta charset="utf-8"><canvas id="c" width="640" he
   window.ready = true;
 </script>`;
 
+/** A plain (meshopt-decoded, dequantized) copy of a glb, for Blender. */
+async function plainGlb(io, src, out) {
+  const doc = await io.read(join(root, src));
+  await doc.transform(dequantize());
+  for (const e of doc.getRoot().listExtensionsUsed())
+    if (["EXT_meshopt_compression", "KHR_mesh_quantization"].includes(e.extensionName)) e.dispose();
+  await io.write(out, doc);
+}
+
+/** Write each test splat (made from the figure's own mesh) with Blender. */
+async function writeTestSplats() {
+  const { FIGURES } = await import("../dist/core/figures.js");
+  await MeshoptDecoder.ready;
+  const io = new NodeIO()
+    .registerExtensions(ALL_EXTENSIONS)
+    .registerDependencies({ "meshopt.decoder": MeshoptDecoder });
+  const tmp = mkdtempSync(join(tmpdir(), "ori-splat-"));
+  const py = process.env.BLENDER_PYTHON ?? "python3.11";
+  try {
+    for (const f of FIGURES) {
+      if (f.file.splat?.madeFrom !== "model") continue;
+      const plain = join(tmp, `${f.id}.glb`);
+      await plainGlb(io, f.file.glb, plain);
+      const run = spawnSync(
+        py,
+        [join(root, "tools/splat_from_glb.py"), plain, join(root, f.file.splat.file), "--height", String(f.heightM)],
+        {
+          encoding: "utf8",
+        },
+      );
+      if (run.status !== 0) throw new Error(`${f.id}: Blender failed\n${run.stderr || run.stdout}`);
+      console.log(run.stdout.trim().split("\n").pop());
+    }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 /** Write each figure's USDZ with Blender, from a plain (meshopt-decoded, dequantized) copy of its glb. */
 async function writeUsdz() {
   const { FIGURES } = await import("../dist/core/figures.js");
@@ -105,7 +146,10 @@ async function writeUsdz() {
   const tmp = mkdtempSync(join(tmpdir(), "ori-usdz-"));
   const py = process.env.BLENDER_PYTHON ?? "python3.11";
   try {
+    const done = new Set();
     for (const f of FIGURES) {
+      if (done.has(f.file.usdz)) continue; // two catalogue entries can share one USDZ
+      done.add(f.file.usdz);
       const doc = await io.read(join(root, f.file.glb));
       await doc.transform(dequantize());
       for (const e of doc.getRoot().listExtensionsUsed())
@@ -140,6 +184,7 @@ async function writeUsdz() {
 }
 
 if (want("--usdz")) await writeUsdz();
+if (want("--splats")) await writeTestSplats();
 if (!want("--views") && !want("--measure")) process.exit(0);
 
 const server = createServer((req, res) => {

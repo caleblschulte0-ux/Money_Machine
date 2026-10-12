@@ -34,6 +34,7 @@ import type { ViewModel } from "../core/view.ts";
 import { WebAudio } from "./audio.ts";
 import { CardLayer } from "./card3d.ts";
 import { contactShadow, loadFigure } from "./figures3d.ts";
+import { attachSplatRenderer, useSplats } from "./splat3d.ts";
 import { DepthOcclusion, lookOptions, SceneLight, setUpRenderer, shadowCatcher } from "./look.ts";
 import { browserStorage, fetchAssets, intervalScheduler, wallClock } from "./platform.ts";
 import { initLaunch } from "./launch.ts";
@@ -59,6 +60,7 @@ const canvas = $<HTMLCanvasElement>("stage");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 setUpRenderer(renderer, LOOK);
+useSplats(renderer);
 
 const lights = (scene: THREE.Scene): void => {
   scene.add(new THREE.HemisphereLight(0xfff4e0, 0x3a3328, 1.6));
@@ -83,11 +85,12 @@ async function figureNode(
   holder.add(shadowFor(info, scale));
   if (LOOK.shadows) holder.add(shadowCatcher(Math.max(info.heightM * 2.2, info.footprintM * 3) * scale));
   const loaded = await loadFigure(info, scale);
-  if (occlusion)
+  if (occlusion && !loaded.node.userData.splat)
     loaded.node.traverse((o) => {
       if (o instanceof THREE.Mesh) for (const m of [o.material].flat() as THREE.Material[]) occlusion.patch(m);
     });
   holder.add(loaded.node);
+  if (loaded.node.userData.splat) await attachSplatRenderer(holder);
   return loaded.mixer;
 }
 

@@ -57,10 +57,20 @@ fails if a figure is missing from this file.
 - **Changes:** materials merged into one palette texture and meshopt-compressed.
   The skin, clothes and animations are the artist's.
 
+### Mammoth (splat test): `woolly-mammoth-test.splat`
+
+- **What:** a Gaussian splat made by ORI from the woolly mammoth model above
+  (points sampled on its surface, coloured from its texture) by
+  `tools/splat_from_glb.py`. A pipeline test, not a capture; same licence and
+  attribution as the model it was made from (CC BY 4.0, SDPM Esare).
+
 ## Software
 
 - **three.js** 0.186.1, MIT licence, bundled into `vendor/three.js` by
   `tools/vendor_three.mjs`; licence text in `vendor/three.LICENSE`.
+- **Spark** (`@sparkjsdev/spark`) 2.3.1, MIT licence, by World Labs: draws
+  Gaussian splats; bundled into `vendor/spark.js` by `tools/vendor_three.mjs`,
+  licence text in `vendor/spark.LICENSE`.
 - **Narration voice:** Kokoro-82M, Apache-2.0, run locally by
   `tools/make_narration.py`.
 

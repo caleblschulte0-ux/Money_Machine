@@ -70,6 +70,20 @@ can; Meta Ray-Ban Display cannot).
   `node tools/build_figures.mjs --usdz` (also `--views <dir>` to check which
   way each model faces, `--measure` for load time on a throttled
   connection). Budgets in `figures.ts`, held by `test/figures.test.ts`.
+- **Gaussian splats (2026-10-12):** Caleb, of real people on Quest: "it looks
+  real as shit". Those are filmed/scanned Gaussian splats. A figure may carry
+  `file.splat` (`FigureSplat`: `.splat` file, `madeFrom` "capture"|"model",
+  `frontYawDeg`); the web port draws it with Spark 2.3.1 (MIT, World Labs,
+  vendored as `vendor/spark.js` by `tools/vendor_three.mjs`) through
+  `src/web/splat3d.ts`, falling back to the glb when WebGL2 is missing or the
+  load fails. Snap Lens Studio also takes splats (`.ply`), so the same capture
+  ports to Spectacles. Today's only splat, "mammoth (splat test)", is MADE
+  FROM the mesh by `node tools/build_figures.mjs --splats`
+  (`tools/splat_from_glb.py`, bpy): it proves the pipe, it is not realism,
+  and its name and credit must say so (held by `test/figures.test.ts`). A
+  real capture (a costumed person scanned on a phone, or studio volumetric
+  for motion) is trained elsewhere and copied in with `madeFrom: "capture"`.
+  iPhone Quick Look cannot show a splat; it keeps the USDZ.
 - **iPhone = AR Quick Look, so the USDZ IS the iPhone figure** (Caleb tests
   on an iPhone; first run 2026-10-07: "like a 2020 Snapchat filter, not
   terrible but it can be a lot better"). USDZ is written by Blender

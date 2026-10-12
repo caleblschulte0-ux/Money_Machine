@@ -20,6 +20,27 @@ export interface FigureModel {
   tint: number | null;
   /** Looping clip to play while it stands, if the model has one. */
   idleClip: string | null;
+  /** A Gaussian splat of the figure, drawn instead of the mesh by a device that can draw splats, or null. */
+  splat: FigureSplat | null;
+}
+
+/**
+ * A figure as a Gaussian splat: millions of small coloured blobs trained from
+ * photos taken all round a real person or object. That is how volumetric
+ * captures look real (Quest apps, Snap Lens Studio's GaussianSplattingVisual);
+ * the web port draws it with Spark. Metres, +y up, standing on y = 0.
+ */
+export interface FigureSplat {
+  /** .splat, .spz or .ply, relative to the app root. */
+  file: string;
+  /**
+   * "capture": photographed from something real. "model": made from the
+   * figure's own mesh by tools/splat_from_glb.py, to test the splat path before
+   * a capture exists. A "model" splat is never presented as a capture.
+   */
+  madeFrom: "capture" | "model";
+  /** Turn that makes the splat's front look down -z, degrees about +y. */
+  frontYawDeg: number;
 }
 
 export type StandIn = "mammoth" | "settler";
@@ -36,7 +57,7 @@ export interface FigureInfo extends FigureSpec {
   standIn: StandIn;
   file: FigureModel;
   /** Download budgets, bytes, for a phone on a cell connection. test/figures.test.ts holds the files to them. */
-  budgetBytes: { glb: number; usdz: number };
+  budgetBytes: { glb: number; usdz: number; splat?: number };
 }
 
 export const FIGURES: readonly FigureInfo[] = [
@@ -61,6 +82,7 @@ export const FIGURES: readonly FigureInfo[] = [
       frontYawDeg: -90, // the model faces -x (checked: tools/build_figures.mjs --views)
       tint: null,
       idleClip: "Idle",
+      splat: null,
     },
     budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
   },
@@ -83,6 +105,7 @@ export const FIGURES: readonly FigureInfo[] = [
       frontYawDeg: 180, // the scan faces +z (checked: tools/build_figures.mjs --views)
       tint: 0xd9ccb0,
       idleClip: null,
+      splat: null,
     },
     budgetBytes: { glb: 2_000_000, usdz: 5_600_000 },
   },
@@ -105,6 +128,7 @@ export const FIGURES: readonly FigureInfo[] = [
       frontYawDeg: -90, // the model faces -x (checked: tools/build_figures.mjs --views)
       tint: null,
       idleClip: "Idle",
+      splat: null,
     },
     budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
   },
@@ -126,8 +150,31 @@ export const FIGURES: readonly FigureInfo[] = [
       frontYawDeg: 180, // the model faces +z (checked: tools/build_figures.mjs --views)
       tint: null,
       idleClip: "Idle",
+      splat: null,
     },
     budgetBytes: { glb: 400_000, usdz: 450_000 },
+  },
+  {
+    id: "woolly-mammoth-splat",
+    name: "mammoth (splat test)",
+    model: "woolly-mammoth-splat",
+    standIn: "mammoth",
+    heightM: 3.0,
+    footprintM: 2.3,
+    yawDeg: 90,
+    credit:
+      'Splat TEST made by ORI from the woolly mammoth model ("3D High-poly Baby Woolly Mammoth" by SDPM Esare, CC BY 4.0; rigged by the Prehistoric Animal Museum project, CC BY 4.0), to try the photo-real splat renderer before a real capture exists. Not a capture.',
+    licence: "CC BY 4.0",
+    sourceUrl: "https://sketchfab.com/3d-models/3d-high-poly-baby-woolly-mammoth-fce1c86ccedf47a5b9627098be6719d5",
+    file: {
+      glb: "assets/figures/mammoth-calf.glb",
+      usdz: "assets/figures/woolly-mammoth.usdz",
+      frontYawDeg: -90,
+      tint: null,
+      idleClip: "Idle",
+      splat: { file: "assets/figures/woolly-mammoth-test.splat", madeFrom: "model", frontYawDeg: -90 },
+    },
+    budgetBytes: { glb: 1_300_000, usdz: 4_600_000, splat: 4_000_000 },
   },
 ];
 

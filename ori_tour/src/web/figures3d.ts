@@ -13,6 +13,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
 import type { FigureInfo, StandIn } from "../core/figures.ts";
+import { loadSplat, splatsAvailable } from "./splat3d.ts";
 
 /** Deterministic noise, so a figure looks the same on every load and every device. */
 function rng(seed: number): () => number {
@@ -321,7 +322,7 @@ export interface LoadedFigure {
   node: THREE.Group;
   /** Plays the model's idle clip; advance it every frame. Null for a still figure. */
   mixer: THREE.AnimationMixer | null;
-  source: "model" | "stand-in";
+  source: "splat" | "model" | "stand-in";
 }
 
 const files = new Map<string, Promise<ArrayBuffer>>();
@@ -329,6 +330,13 @@ const files = new Map<string, Promise<ArrayBuffer>>();
 /** The figure's model at true size (times `scale`), or its drawn stand-in if the model cannot be loaded. */
 export async function loadFigure(info: FigureInfo, scale = 1): Promise<LoadedFigure> {
   const height = info.heightM * scale;
+  if (info.file.splat && splatsAvailable()) {
+    try {
+      return { node: await loadSplat(info.file.splat, height), mixer: null, source: "splat" };
+    } catch (e) {
+      console.warn(`figure ${info.id}: splat failed, showing the model`, e);
+    }
+  }
   try {
     let bytes = files.get(info.file.glb);
     if (!bytes) {

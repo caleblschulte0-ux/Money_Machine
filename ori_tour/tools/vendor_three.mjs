@@ -20,6 +20,7 @@ await build({
       'export { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";',
       'export { XREstimatedLight } from "three/addons/webxr/XREstimatedLight.js";',
       'export { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";',
+      'export { FullScreenQuad } from "three/addons/postprocessing/Pass.js";', // for vendor/spark.js
     ].join("\n"),
     resolveDir: root,
   },
@@ -34,3 +35,25 @@ await build({
 });
 copyFileSync(join(root, "node_modules/three/LICENSE"), join(root, "vendor/three.LICENSE"));
 console.log(`vendor/three.js: three ${version}`);
+
+// Spark (Gaussian splat renderer for three.js, MIT): only loaded by a page that shows a splat figure.
+// "three" stays external so it shares the one three.js above.
+const sparkVersion = JSON.parse(
+  readFileSync(join(root, "node_modules/@sparkjsdev/spark/package.json"), "utf8"),
+).version;
+await build({
+  stdin: { contents: 'export { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";', resolveDir: root },
+  bundle: true,
+  format: "esm",
+  minify: true,
+  target: "es2022",
+  legalComments: "none",
+  external: ["three"],
+  banner: {
+    js: `/* Spark ${sparkVersion} (sparkjs.dev), MIT licence (vendor/spark.LICENSE). Built by tools/vendor_three.mjs. */`,
+  },
+  outfile: join(root, "vendor/spark.js"),
+  logLevel: "warning",
+});
+copyFileSync(join(root, "node_modules/@sparkjsdev/spark/LICENSE"), join(root, "vendor/spark.LICENSE"));
+console.log(`vendor/spark.js: spark ${sparkVersion}`);

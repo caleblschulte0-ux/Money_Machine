@@ -118,3 +118,23 @@ test("the models a tour uses are cached for offline play", () => {
     assert.ok(listed.has(glb), `${s.id}: ${glb} not cached offline`);
   }
 });
+
+test("every splat figure's file exists, fits its budget, and is a whole number of .splat records", () => {
+  for (const f of FIGURES) {
+    const s = f.file.splat;
+    if (!s) continue;
+    const p = join(ROOT, s.file);
+    assert.ok(existsSync(p), `${f.id}: ${s.file} missing (node tools/build_figures.mjs --splats)`);
+    const size = statSync(p).size;
+    assert.ok(f.budgetBytes.splat != null && size <= f.budgetBytes.splat, `${f.id}: splat ${size} bytes over budget`);
+    if (s.file.endsWith(".splat")) assert.equal(size % 32, 0, `${f.id}: not 32-byte .splat records`);
+  }
+});
+
+test("a splat made from a model never passes as a capture", () => {
+  for (const f of FIGURES) {
+    if (f.file.splat?.madeFrom !== "model") continue;
+    assert.match(f.name, /test/i, `${f.id}: a model-made splat is named as a test`);
+    assert.match(f.credit, /Not a capture/, `${f.id}: its credit says it is not a capture`);
+  }
+});

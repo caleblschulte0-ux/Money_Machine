@@ -28,6 +28,7 @@ import { siteAt, stopFigureId, TourFigures, tourSites } from "../core/tourfigure
 import { WebAudio } from "./audio.js";
 import { CardLayer } from "./card3d.js";
 import { contactShadow, loadFigure } from "./figures3d.js";
+import { attachSplatRenderer, useSplats } from "./splat3d.js";
 import { DepthOcclusion, lookOptions, SceneLight, setUpRenderer, shadowCatcher } from "./look.js";
 import { browserStorage, fetchAssets, intervalScheduler, wallClock } from "./platform.js";
 import { initLaunch } from "./launch.js";
@@ -51,6 +52,7 @@ const canvas = $("stage");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 setUpRenderer(renderer, LOOK);
+useSplats(renderer);
 const lights = (scene) => {
     scene.add(new THREE.HemisphereLight(0xfff4e0, 0x3a3328, 1.6));
     const sun = new THREE.DirectionalLight(0xffffff, 2.2);
@@ -68,13 +70,15 @@ async function figureNode(info, scale, holder, occlusion = null) {
     if (LOOK.shadows)
         holder.add(shadowCatcher(Math.max(info.heightM * 2.2, info.footprintM * 3) * scale));
     const loaded = await loadFigure(info, scale);
-    if (occlusion)
+    if (occlusion && !loaded.node.userData.splat)
         loaded.node.traverse((o) => {
             if (o instanceof THREE.Mesh)
                 for (const m of [o.material].flat())
                     occlusion.patch(m);
         });
     holder.add(loaded.node);
+    if (loaded.node.userData.splat)
+        await attachSplatRenderer(holder);
     return loaded.mixer;
 }
 /** The figures of a stage, kept in a three.js scene, lit and shadowed by `look`. */

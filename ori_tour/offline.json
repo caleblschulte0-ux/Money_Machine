@@ -1,11 +1,12 @@
 {
- "version": "0f58cd69c4c1",
+ "version": "1d3e5c9c4662",
  "files": [
   "./",
   "ar.html",
   "assets/figures/mammoth-calf.glb",
   "assets/figures/mammoth-skeleton.glb",
   "assets/figures/settler.glb",
+  "assets/figures/woolly-mammoth-test.splat",
   "assets/icon-192.png",
   "assets/icon-512.png",
   "assets/sim-backdrop.jpg",
@@ -54,9 +55,11 @@
   "dist/web/sensors.js",
   "dist/web/shells/glasses.js",
   "dist/web/shells/phone.js",
+  "dist/web/splat3d.js",
   "dist/web/xr.js",
   "index.html",
   "manifest.webmanifest",
+  "vendor/spark.js",
   "vendor/three.js"
  ]
 }

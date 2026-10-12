@@ -27,6 +27,7 @@ export const FIGURES = [
             frontYawDeg: -90, // the model faces -x (checked: tools/build_figures.mjs --views)
             tint: null,
             idleClip: "Idle",
+            splat: null,
         },
         budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
     },
@@ -48,6 +49,7 @@ export const FIGURES = [
             frontYawDeg: 180, // the scan faces +z (checked: tools/build_figures.mjs --views)
             tint: 0xd9ccb0,
             idleClip: null,
+            splat: null,
         },
         budgetBytes: { glb: 2_000_000, usdz: 5_600_000 },
     },
@@ -69,6 +71,7 @@ export const FIGURES = [
             frontYawDeg: -90, // the model faces -x (checked: tools/build_figures.mjs --views)
             tint: null,
             idleClip: "Idle",
+            splat: null,
         },
         budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
     },
@@ -89,8 +92,30 @@ export const FIGURES = [
             frontYawDeg: 180, // the model faces +z (checked: tools/build_figures.mjs --views)
             tint: null,
             idleClip: "Idle",
+            splat: null,
         },
         budgetBytes: { glb: 400_000, usdz: 450_000 },
+    },
+    {
+        id: "woolly-mammoth-splat",
+        name: "mammoth (splat test)",
+        model: "woolly-mammoth-splat",
+        standIn: "mammoth",
+        heightM: 3.0,
+        footprintM: 2.3,
+        yawDeg: 90,
+        credit: 'Splat TEST made by ORI from the woolly mammoth model ("3D High-poly Baby Woolly Mammoth" by SDPM Esare, CC BY 4.0; rigged by the Prehistoric Animal Museum project, CC BY 4.0), to try the photo-real splat renderer before a real capture exists. Not a capture.',
+        licence: "CC BY 4.0",
+        sourceUrl: "https://sketchfab.com/3d-models/3d-high-poly-baby-woolly-mammoth-fce1c86ccedf47a5b9627098be6719d5",
+        file: {
+            glb: "assets/figures/mammoth-calf.glb",
+            usdz: "assets/figures/woolly-mammoth.usdz",
+            frontYawDeg: -90,
+            tint: null,
+            idleClip: "Idle",
+            splat: { file: "assets/figures/woolly-mammoth-test.splat", madeFrom: "model", frontYawDeg: -90 },
+        },
+        budgetBytes: { glb: 1_300_000, usdz: 4_600_000, splat: 4_000_000 },
     },
 ];
 export const figureById = (id) => FIGURES.find((f) => f.id === id);
