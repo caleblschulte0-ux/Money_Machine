@@ -22,6 +22,35 @@ export interface FigureModel {
   idleClip: string | null;
   /** A Gaussian splat of the figure, drawn instead of the mesh by a device that can draw splats, or null. */
   splat: FigureSplat | null;
+  /** A coat of hair grown on the mesh where the device draws it (shell fur in the web port), or null. */
+  fur: FigureFur | null;
+}
+
+/**
+ * A coat of hair on a figure's mesh. The model's own texture paints hair on
+ * flat skin, which reads as a grey elephant (2026-10-11 comparison); real
+ * strands standing off the surface are what make it read as woolly. Every
+ * engine has a way to draw this (shell or card fur on the web and in Lens
+ * Studio, groom in Unreal), so the coat is data, not port code. Lengths are
+ * at the figure's true size.
+ */
+export interface FigureFur {
+  /** How far the coat stands off the skin, metres. */
+  lengthM: number;
+  /** Layers the coat is drawn in; more is smoother and costs more to draw. */
+  shells: number;
+  /** Strands across one texture width (the model's UV space). */
+  strands: number;
+  /** Colour at the root and at the tip, 0xRRGGBB, multiplied over the model's texture. */
+  rootColor: number;
+  tipColor: number;
+  /**
+   * A separate piece of the mesh stays bare when its average linear texture
+   * brightness (0..1) is above `bareAbove` (tusks, the lightest pieces) or
+   * below `bareBelow` (eyes, the darkest). Per model: measured on its texture.
+   */
+  bareAbove: number;
+  bareBelow: number;
 }
 
 /**
@@ -73,7 +102,7 @@ export const FIGURES: readonly FigureInfo[] = [
     footprintM: 2.3,
     yawDeg: 90,
     credit:
-      'Woolly mammoth, a life restoration: "3D High-poly Baby Woolly Mammoth" by SDPM Esare, CC BY 4.0, rigged and animated by the Prehistoric Animal Museum project (github.com/s010s/prehistoric-animal-museum), CC BY 4.0; shown by ORI at adult size (about 3 m at the shoulder).',
+      'Woolly mammoth, a life restoration: "3D High-poly Baby Woolly Mammoth" by SDPM Esare, CC BY 4.0, rigged and animated by the Prehistoric Animal Museum project (github.com/s010s/prehistoric-animal-museum), CC BY 4.0; shown by ORI at adult size (about 3 m at the shoulder), with a coat of fur added by ORI.',
     licence: "CC BY 4.0",
     sourceUrl: "https://sketchfab.com/3d-models/3d-high-poly-baby-woolly-mammoth-fce1c86ccedf47a5b9627098be6719d5",
     file: {
@@ -83,6 +112,16 @@ export const FIGURES: readonly FigureInfo[] = [
       tint: null,
       idleClip: "Idle",
       splat: null,
+      // a coat up to 12 cm deep: woolly mammoth underwool was up to about 8 cm, under far longer guard hair; colours are an art choice
+      fur: {
+        lengthM: 0.12,
+        shells: 16,
+        strands: 700,
+        rootColor: 0x241a13,
+        tipColor: 0x7c6550,
+        bareAbove: 0.15,
+        bareBelow: 0.026,
+      },
     },
     budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
   },
@@ -106,6 +145,7 @@ export const FIGURES: readonly FigureInfo[] = [
       tint: 0xd9ccb0,
       idleClip: null,
       splat: null,
+      fur: null,
     },
     budgetBytes: { glb: 2_000_000, usdz: 5_600_000 },
   },
@@ -129,6 +169,7 @@ export const FIGURES: readonly FigureInfo[] = [
       tint: null,
       idleClip: "Idle",
       splat: null,
+      fur: null,
     },
     budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
   },
@@ -151,6 +192,7 @@ export const FIGURES: readonly FigureInfo[] = [
       tint: null,
       idleClip: "Idle",
       splat: null,
+      fur: null,
     },
     budgetBytes: { glb: 400_000, usdz: 450_000 },
   },
@@ -173,6 +215,7 @@ export const FIGURES: readonly FigureInfo[] = [
       tint: null,
       idleClip: "Idle",
       splat: { file: "assets/figures/woolly-mammoth-test.splat", madeFrom: "model", frontYawDeg: -90 },
+      fur: null,
     },
     budgetBytes: { glb: 1_300_000, usdz: 4_600_000, splat: 4_000_000 },
   },

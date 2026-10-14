@@ -242,14 +242,18 @@ export class DepthOcclusion {
   /** Make a figure's material respect the depth map. */
   patch(material: THREE.Material): void {
     if (!this.enabled || !(material instanceof THREE.MeshStandardMaterial)) return;
-    material.onBeforeCompile = (shader) => {
+    // chain: a figure's material may already be patched (fur3d.ts)
+    const before = material.onBeforeCompile.bind(material);
+    const key = material.customProgramCacheKey.bind(material);
+    material.onBeforeCompile = (shader, renderer) => {
+      before(shader, renderer);
       Object.assign(shader.uniforms, this.uniforms);
       shader.fragmentShader = shader.fragmentShader.replace(
         "void main() {",
         `${OCCLUDE_PARS}\nvoid main() {\n${OCCLUDE_MAIN}`,
       );
     };
-    material.customProgramCacheKey = () => "ori-occlusion";
+    material.customProgramCacheKey = () => `${key()}-ori-occlusion`;
     material.needsUpdate = true;
   }
 

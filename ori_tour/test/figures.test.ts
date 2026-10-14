@@ -138,3 +138,16 @@ test("a splat made from a model never passes as a capture", () => {
     assert.match(f.credit, /Not a capture/, `${f.id}: its credit says it is not a capture`);
   }
 });
+
+test("a figure's fur is drawable: a few centimetres deep, a bounded number of layers, bare pieces sensible", () => {
+  for (const f of FIGURES) {
+    const fur = f.file.fur;
+    if (!fur) continue;
+    assert.ok(fur.lengthM > 0.005 && fur.lengthM < 0.5, `${f.id}: fur ${fur.lengthM} m deep`);
+    // every shell is one more draw of the whole mesh on a phone
+    assert.ok(Number.isInteger(fur.shells) && fur.shells >= 4 && fur.shells <= 24, `${f.id}: ${fur.shells} shells`);
+    assert.ok(fur.strands >= 50 && fur.strands <= 4000, `${f.id}: ${fur.strands} strands`);
+    assert.ok(fur.bareBelow >= 0 && fur.bareBelow < fur.bareAbove && fur.bareAbove <= 1, `${f.id}: bare range`);
+    for (const c of [fur.rootColor, fur.tipColor]) assert.ok(Number.isInteger(c) && c >= 0 && c <= 0xffffff);
+  }
+});

@@ -10,6 +10,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { growFur } from "./fur3d.js";
 import { loadSplat, splatsAvailable } from "./splat3d.js";
 /** Deterministic noise, so a figure looks the same on every load and every device. */
 function rng(seed) {
@@ -301,6 +302,8 @@ export async function loadFigure(info, scale = 1) {
             }
         });
         const node = fitToSize(scene, height, info.file.frontYawDeg);
+        if (info.file.fur)
+            growFur(node, { ...info.file.fur, lengthM: info.file.fur.lengthM * scale });
         let mixer = null;
         const clip = info.file.idleClip ? THREE.AnimationClip.findByName(gltf.animations, info.file.idleClip) : null;
         if (clip) {

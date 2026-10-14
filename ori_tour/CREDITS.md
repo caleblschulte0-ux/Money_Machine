@@ -44,6 +44,9 @@ fails if a figure is missing from this file.
   tusks are an adult's and no openly licensed adult model exists that we could
   verify; the visitor-facing credit says it is shown at adult size.
 
+- **Fur:** the woolly mammoth's coat on the tour page is drawn by ORI's code
+  (`src/web/fur3d.ts`) over the model; its colours are ORI's art choice.
+
 ### Settler: `settler.glb`, `settler.usdz`
 
 - **What:** "Cowboy_Male" from the **Ultimate Animated Character Pack** by

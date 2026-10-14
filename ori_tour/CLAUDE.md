@@ -84,6 +84,19 @@ can; Meta Ray-Ban Display cannot).
   real capture (a costumed person scanned on a phone, or studio volumetric
   for motion) is trained elsewhere and copied in with `madeFrom: "capture"`.
   iPhone Quick Look cannot show a splat; it keeps the USDZ.
+- **Fur (2026-10-14):** the painted-hair texture read as a grey elephant
+  (Caleb, 10-11: "How is this gonna look ultra-realistic?"). `file.fur`
+  (`FigureFur`: depth, shells, strands, root/tip colour, bare pieces) is
+  catalogue data; the web port draws it as shell fur (`src/web/fur3d.ts`):
+  `shells` copies of the skinned mesh pushed out along the normal, keeping
+  strand pixels only, sharing geometry, skeleton and texture, so it moves
+  with the idle clip and adds no download. Tusks and eyes stay bare per mesh
+  piece by average texture brightness (`bareAbove`/`bareBelow`, measured on
+  the model). Cost: one draw of the whole mesh per shell (woolly mammoth: 16
+  x 57k triangles); `?fur=off` turns it off. `look.ts` occlusion chains onto
+  the fur shader rather than replacing it. Not in the USDZ: iPhone Quick
+  Look still shows the bare model; the in-page route (App Clip) shows fur.
+  A glasses port grows the same coat with its own fur (Lens Studio shells).
 - **iPhone = AR Quick Look, so the USDZ IS the iPhone figure** (Caleb tests
   on an iPhone; first run 2026-10-07: "like a 2020 Snapchat filter, not
   terrible but it can be a lot better"). USDZ is written by Blender
