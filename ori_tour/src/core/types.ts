@@ -73,6 +73,32 @@ export interface Source {
   url: string;
 }
 
+/**
+ * A world-locked 3D figure that stands near a stop while the visitor is
+ * there (a mammoth, a settler). It stays in one spot as they walk around it
+ * and is gone between stops (audio only while walking between stops).
+ */
+export interface StopFigure {
+  /** A figure id from src/core/figures.ts ("mammoth", "settler"). */
+  model: string;
+  /** 1 = true size. */
+  scale: number;
+  /** Ground distance from the stop's position to where the figure stands, metres. */
+  offset_m: number;
+  /** Direction from the stop to the figure, degrees from true north. Null: the stop's facing bearing (in front of the landmark view). */
+  bearing_deg?: number | null;
+  /** Which way it is turned, degrees counter-clockwise from facing the stop. 90 shows it side-on. */
+  yaw_deg: number;
+  /**
+   * auto: put it on the detected ground on arrival, from the stop's position and
+   * the compass, without a tap; the visitor can tap to move it.
+   * tap: the visitor taps the ground to place it.
+   */
+  anchoring: "auto" | "tap";
+  /** Why this figure is here, or its review status, said plainly. Never empty. */
+  note: string;
+}
+
 export interface Stop {
   id: string;
   order: number;
@@ -85,6 +111,8 @@ export interface Stop {
   scene: Scene;
   sources: Source[];
   todo: string[];
+  /** Optional world-locked figure at this stop. */
+  figure?: StopFigure | null;
 }
 
 export interface Safety {

@@ -1,0 +1,227 @@
+// The figures a visitor can place, by id. Sizes are true scale: the point of
+// a world-locked figure is walking around something the size it really is.
+//
+// Each figure has a real 3D model (glTF, meshopt-compressed, for any device
+// with a glTF loader; USDZ for Apple's AR Quick Look), made from openly
+// licensed sources recorded here and in ori_tour/CREDITS.md, plus a stand-in
+// drawn in code (src/web/figures3d.ts) that a browser shows if the model
+// fails to load. A figure makes no claim about any real person or place.
+
+import type { FigureSpec } from "./anchoring.ts";
+
+export interface FigureModel {
+  /** glTF binary, relative to the app root. */
+  glb: string;
+  /** USDZ for AR Quick Look (iPhone), relative to the app root. */
+  usdz: string;
+  /** Turn that makes the model's front look down -z (this code's convention), degrees about +y. */
+  frontYawDeg: number;
+  /** Tint for a model with no colour texture (the bare scan), as 0xRRGGBB, or null. */
+  tint: number | null;
+  /** Looping clip to play while it stands, if the model has one. */
+  idleClip: string | null;
+  /** A Gaussian splat of the figure, drawn instead of the mesh by a device that can draw splats, or null. */
+  splat: FigureSplat | null;
+  /** A coat of hair grown on the mesh where the device draws it (shell fur in the web port), or null. */
+  fur: FigureFur | null;
+}
+
+/**
+ * A coat of hair on a figure's mesh. The model's own texture paints hair on
+ * flat skin, which reads as a grey elephant (2026-10-11 comparison); real
+ * strands standing off the surface are what make it read as woolly. Every
+ * engine has a way to draw this (shell or card fur on the web and in Lens
+ * Studio, groom in Unreal), so the coat is data, not port code. Lengths are
+ * at the figure's true size.
+ */
+export interface FigureFur {
+  /** How far the coat stands off the skin, metres. */
+  lengthM: number;
+  /** Layers the coat is drawn in; more is smoother and costs more to draw. */
+  shells: number;
+  /** Strands across one texture width (the model's UV space). */
+  strands: number;
+  /** Colour at the root and at the tip, 0xRRGGBB, multiplied over the model's texture. */
+  rootColor: number;
+  tipColor: number;
+  /**
+   * A separate piece of the mesh stays bare when its average linear texture
+   * brightness (0..1) is above `bareAbove` (tusks, the lightest pieces) or
+   * below `bareBelow` (eyes, the darkest). Per model: measured on its texture.
+   */
+  bareAbove: number;
+  bareBelow: number;
+}
+
+/**
+ * A figure as a Gaussian splat: millions of small coloured blobs trained from
+ * photos taken all round a real person or object. That is how volumetric
+ * captures look real (Quest apps, Snap Lens Studio's GaussianSplattingVisual);
+ * the web port draws it with Spark. Metres, +y up, standing on y = 0.
+ */
+export interface FigureSplat {
+  /** .splat, .spz or .ply, relative to the app root. */
+  file: string;
+  /**
+   * "capture": photographed from something real. "model": made from the
+   * figure's own mesh by tools/splat_from_glb.py, to test the splat path before
+   * a capture exists. A "model" splat is never presented as a capture.
+   */
+  madeFrom: "capture" | "model";
+  /** Turn that makes the splat's front look down -z, degrees about +y. */
+  frontYawDeg: number;
+}
+
+export type StandIn = "mammoth" | "settler";
+
+export interface FigureInfo extends FigureSpec {
+  /** Who made the model, where it comes from, and its licence. Shown to visitors. */
+  credit: string;
+  /** Licence name ("CC0 1.0", "CC BY 4.0"). */
+  licence: string;
+  /** The source page the licence was checked on. */
+  sourceUrl: string;
+  model: string;
+  /** Which code-drawn shape stands in if the model file cannot load. Data, so a new figure needs no port change. */
+  standIn: StandIn;
+  file: FigureModel;
+  /**
+   * Download budgets, bytes, for a phone on a cell connection. test/figures.test.ts holds the files to them.
+   * The woolly mammoth's USDZ carries its fur as shells (tools/usdz_blender.py --fur), about 6 MB of it.
+   */
+  budgetBytes: { glb: number; usdz: number; splat?: number };
+}
+
+export const FIGURES: readonly FigureInfo[] = [
+  {
+    id: "woolly-mammoth",
+    name: "woolly mammoth",
+    model: "woolly-mammoth",
+    standIn: "mammoth",
+    // The only openly licensed fleshed mammoth we found (CREDITS.md) is titled
+    // a baby by its author but has adult proportions and tusks; shown here at
+    // an adult woolly mammoth's shoulder height, about 3 m. Said in the credit.
+    heightM: 3.0,
+    footprintM: 2.3,
+    yawDeg: 90,
+    credit:
+      'Woolly mammoth, a life restoration: "3D High-poly Baby Woolly Mammoth" by SDPM Esare, CC BY 4.0, rigged and animated by the Prehistoric Animal Museum project (github.com/s010s/prehistoric-animal-museum), CC BY 4.0; shown by ORI at adult size (about 3 m at the shoulder), with a coat of fur added by ORI.',
+    licence: "CC BY 4.0",
+    sourceUrl: "https://sketchfab.com/3d-models/3d-high-poly-baby-woolly-mammoth-fce1c86ccedf47a5b9627098be6719d5",
+    file: {
+      glb: "assets/figures/mammoth-calf.glb",
+      usdz: "assets/figures/woolly-mammoth.usdz",
+      frontYawDeg: -90, // the model faces -x (checked: tools/build_figures.mjs --views)
+      tint: null,
+      idleClip: "Idle",
+      splat: null,
+      // a coat up to 12 cm deep: woolly mammoth underwool was up to about 8 cm, under far longer guard hair; colours are an art choice
+      fur: {
+        lengthM: 0.12,
+        shells: 16,
+        strands: 700,
+        rootColor: 0x241a13,
+        tipColor: 0x7c6550,
+        bareAbove: 0.15,
+        bareBelow: 0.026,
+      },
+    },
+    budgetBytes: { glb: 1_300_000, usdz: 11_000_000 },
+  },
+  {
+    id: "mammoth",
+    name: "mammoth skeleton",
+    model: "mammoth",
+    standIn: "mammoth",
+    // the specimen's own measured size: 3.44 m tall, 5.08 m long (Smithsonian scan, units in metres)
+    heightM: 3.44,
+    footprintM: 2.6,
+    yawDeg: 90,
+    credit:
+      'Woolly mammoth skeleton, "Mammuthus primigenius (Blumbach)", USNM V23792: 3D scan by the Smithsonian Institution, National Museum of Natural History. Public domain (CC0).',
+    licence: "CC0 1.0",
+    sourceUrl: "https://3d.si.edu/object/3d/mammuthus-primigenius-blumbach:341c96cd-f967-4540-8ed1-d3fc56d31f12",
+    file: {
+      glb: "assets/figures/mammoth-skeleton.glb",
+      usdz: "assets/figures/mammoth-skeleton.usdz",
+      frontYawDeg: 180, // the scan faces +z (checked: tools/build_figures.mjs --views)
+      tint: 0xd9ccb0,
+      idleClip: null,
+      splat: null,
+      fur: null,
+    },
+    budgetBytes: { glb: 2_000_000, usdz: 5_600_000 },
+  },
+  {
+    id: "mammoth-calf",
+    name: "mammoth calf",
+    model: "mammoth-calf",
+    standIn: "mammoth",
+    // the model as published: about 2 m long and 1.28 m tall, calf proportions
+    heightM: 1.28,
+    footprintM: 1.0,
+    yawDeg: 90,
+    credit:
+      '"3D High-poly Baby Woolly Mammoth" by SDPM Esare, CC BY 4.0; rigged and animated by the Prehistoric Animal Museum project (github.com/s010s/prehistoric-animal-museum), CC BY 4.0. A life restoration, not a specimen.',
+    licence: "CC BY 4.0",
+    sourceUrl: "https://sketchfab.com/3d-models/3d-high-poly-baby-woolly-mammoth-fce1c86ccedf47a5b9627098be6719d5",
+    file: {
+      glb: "assets/figures/mammoth-calf.glb",
+      usdz: "assets/figures/mammoth-calf.usdz",
+      frontYawDeg: -90, // the model faces -x (checked: tools/build_figures.mjs --views)
+      tint: null,
+      idleClip: "Idle",
+      splat: null,
+      fur: null,
+    },
+    budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
+  },
+  {
+    id: "settler",
+    name: "settler",
+    model: "settler",
+    standIn: "settler",
+    heightM: 1.75,
+    footprintM: 0.4,
+    yawDeg: 0,
+    credit:
+      'Stylized frontier figure ("Cowboy_Male") from the "Ultimate Animated Character Pack" by Quaternius, CC0. Represents no real person; not a period-accurate costume.',
+    licence: "CC0 1.0",
+    sourceUrl: "https://quaternius.com/packs/ultimatedanimatedcharacter.html",
+    file: {
+      glb: "assets/figures/settler.glb",
+      usdz: "assets/figures/settler.usdz",
+      frontYawDeg: 180, // the model faces +z (checked: tools/build_figures.mjs --views)
+      tint: null,
+      idleClip: "Idle",
+      splat: null,
+      fur: null,
+    },
+    budgetBytes: { glb: 400_000, usdz: 450_000 },
+  },
+  {
+    id: "woolly-mammoth-splat",
+    name: "mammoth (splat test)",
+    model: "woolly-mammoth-splat",
+    standIn: "mammoth",
+    heightM: 3.0,
+    footprintM: 2.3,
+    yawDeg: 90,
+    credit:
+      'Splat TEST made by ORI from the woolly mammoth model ("3D High-poly Baby Woolly Mammoth" by SDPM Esare, CC BY 4.0; rigged by the Prehistoric Animal Museum project, CC BY 4.0), to try the photo-real splat renderer before a real capture exists. Not a capture.',
+    licence: "CC BY 4.0",
+    sourceUrl: "https://sketchfab.com/3d-models/3d-high-poly-baby-woolly-mammoth-fce1c86ccedf47a5b9627098be6719d5",
+    file: {
+      glb: "assets/figures/mammoth-calf.glb",
+      usdz: "assets/figures/woolly-mammoth.usdz",
+      frontYawDeg: -90,
+      tint: null,
+      idleClip: "Idle",
+      splat: { file: "assets/figures/woolly-mammoth-test.splat", madeFrom: "model", frontYawDeg: -90 },
+      fur: null,
+    },
+    budgetBytes: { glb: 1_300_000, usdz: 11_000_000, splat: 4_000_000 },
+  },
+];
+
+export const figureById = (id: string): FigureInfo | undefined => FIGURES.find((f) => f.id === id);

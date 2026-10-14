@@ -10,10 +10,15 @@
 // src/web/ implements all of them for browsers. docs/PORTING.md walks through
 // each one for Lens Studio and Android.
 //
+// World-locked figures (a mammoth that stays where it was put while you walk
+// around it) need one more port, WorldTracker, from devices that track their
+// own position in 3D: ARCore, ARKit, Lens Studio, an Android XR runtime.
+//
 // Units, everywhere: time in milliseconds on one monotonic-enough clock,
 // angles in degrees clockwise from TRUE north, distances in metres,
 // acceleration in m/s^2.
 
+import type { Pose } from "./space.ts";
 import type { CaptionCue, LatLon, Narration } from "./types.ts";
 import type { ViewModel } from "./view.ts";
 
@@ -91,3 +96,54 @@ export interface AssetLoader {
 
 /** Caption cues for pre-generated audio, as AssetLoader returns them. */
 export type Cues = CaptionCue[];
+
+// ---------------------------------------------------------------------------
+// World tracking: what keeps a figure in one spot.
+
+/** How sure the device is of its own pose. "limited" = rotation only or degraded; "lost" = no pose. */
+export type TrackingQuality = "normal" | "limited" | "lost";
+
+/**
+ * One tracking frame, in the device's TRACKING space (src/core/space.ts:
+ * metres, right-handed, +y up). The device decides where that space's origin
+ * is; the core only ever compares poses within it.
+ */
+export interface TrackedFrame {
+  t: number;
+  /** Where the viewer (phone camera, or the wearer's head) is and faces. null while lost. */
+  viewer: Pose | null;
+  quality: TrackingQuality;
+  /** A real surface (ground) under the aim point: screen centre on a phone, gaze on glasses. null if none found yet. */
+  aim: Pose | null;
+  /** Every anchor this tracker holds, by id. null = held, but not located in this frame. */
+  anchors: ReadonlyMap<string, Pose | null>;
+}
+
+/**
+ * The device's world tracking. ONE frame callback per rendered frame; the
+ * display draws after the core has answered it.
+ *
+ * An anchor is the platform's promise to keep a point fixed to the real world
+ * and to correct it as its map of the surroundings improves (ARCore, ARKit,
+ * Lens Studio and OpenXR all offer one). Devices without anchors return null
+ * from createAnchor; the core then holds the figure at its placement pose in
+ * tracking space, which works but drifts more over a long walk, and says so.
+ */
+export interface WorldTracker {
+  /** Start tracking (inside a user gesture where the platform needs one). Resolves to an error sentence or null. */
+  start(onFrame: (frame: TrackedFrame) => void): Promise<string | null>;
+  stop(): void;
+  /** Pin an anchor at this pose. Resolves to its id, or null where the device cannot anchor. */
+  createAnchor(pose: Pose): Promise<string | null>;
+  deleteAnchor(id: string): void;
+  /**
+   * Optional: make an anchor outlive this session (a reload, a screen lock).
+   * Resolves to a handle worth storing, or null where the platform cannot.
+   * Meta Quest's browser can; Chrome on Android phones cannot (2026).
+   */
+  persistAnchor?(id: string): Promise<string | null>;
+  /** Optional: bring a persisted anchor back. Resolves to its id, or null if the platform cannot find it. */
+  restoreAnchor?(handle: string): Promise<string | null>;
+  /** Optional: drop a persisted anchor for good. */
+  forgetAnchor?(handle: string): void;
+}

@@ -76,6 +76,7 @@ export function relocate(tour: Tour, here: LatLon, opts: Partial<RelocateOptions
     s.radius_m = o.radiusM;
     if (orig) s.facing.bearing_deg = Math.round(norm(targetBearing(orig) + rotation));
     delete s.facing.target;
+    if (s.figure?.bearing_deg != null) s.figure.bearing_deg = Math.round(norm(s.figure.bearing_deg + rotation)) % 360;
     s.placement = "relocated for testing (test-anywhere mode)";
   });
   const all = [out.start.position, ...out.stops.map((s) => s.position)];

@@ -20,7 +20,7 @@ import { syntheticWalk } from "../core/synthwalk.js";
 import { applyPlacements, loadTour, targetBearing } from "../core/tour.js";
 import { WebAudio } from "./audio.js";
 import { browserStorage, download, fetchAssets, intervalScheduler, wallClock } from "./platform.js";
-import { AccelerometerSource, CompassSource, GeolocationSource, Recorder, ReplaySources, SimulatedSensors, } from "./sensors.js";
+import { AccelerometerSource, CompassSource, GeolocationSource, Recorder, ReplaySources, SimulatedSensors, settleFix, } from "./sensors.js";
 import { GlassesDisplay } from "./shells/glasses.js";
 import { PhoneDisplay } from "./shells/phone.js";
 const params = new URLSearchParams(location.search);
@@ -327,31 +327,6 @@ async function main() {
     if (auto === "sim" || auto === "replay")
         void start(auto);
     registerOffline();
-}
-/** Best fix within a few seconds: good enough (<= 15 m) or the best seen by the deadline. */
-function settleFix(notify) {
-    return new Promise((resolve) => {
-        if (!("geolocation" in navigator))
-            return resolve(null);
-        let best = null;
-        const finish = () => {
-            navigator.geolocation.clearWatch(id);
-            clearTimeout(deadline);
-            resolve(best ? { lat: best.coords.latitude, lon: best.coords.longitude } : null);
-        };
-        const id = navigator.geolocation.watchPosition((p) => {
-            if (!best || p.coords.accuracy < best.coords.accuracy)
-                best = p;
-            if (p.coords.accuracy <= 15)
-                setTimeout(finish, 1500); // one more second for the compass
-        }, (e) => {
-            if (e.code === 1) {
-                notify?.("Location permission was denied.");
-                finish();
-            }
-        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
-        const deadline = setTimeout(finish, 12000);
-    });
 }
 // Offline: a service worker caches the app and the whole package (narration
 // audio included) on first load, so the tour runs with no signal.

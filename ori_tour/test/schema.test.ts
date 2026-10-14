@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 
+import { FIGURES } from "../src/core/figures.ts";
 import { validateTour } from "../src/core/tour.ts";
 import { relocate } from "../src/core/relocate.ts";
 import { syntheticWalk } from "../src/core/synthwalk.ts";
@@ -32,6 +33,9 @@ test("a relocated test layout is still a valid package", () => {
   assert.deepEqual(validateTour(moved), []);
 });
 
+const figureOf = (p: ReturnType<typeof raw>): Record<string, unknown> =>
+  p.stops.find((s) => s.figure)!.figure as Record<string, unknown>;
+
 const breakages: [string, (p: ReturnType<typeof raw>) => void][] = [
   ["wrong schema version", (p) => (p.schema = "ori.tour/2")],
   ["no stops", (p) => (p.stops = [])],
@@ -49,6 +53,10 @@ const breakages: [string, (p: ReturnType<typeof raw>) => void][] = [
     },
   ],
   ["safety rule missing", (p) => delete (p.safety as Record<string, unknown>).pictures_only_when_still],
+  ["figure of an unknown model", (p) => ((figureOf(p).model as string) = "unicorn")],
+  ["figure with no anchoring rule", (p) => delete figureOf(p).anchoring],
+  ["figure with a negative offset", (p) => (figureOf(p).offset_m = -3)],
+  ["figure without a note", (p) => delete figureOf(p).note],
 ];
 
 for (const [name, breakIt] of breakages) {
@@ -59,6 +67,13 @@ for (const [name, breakIt] of breakages) {
     assert.notDeepEqual(validateTour(p), [], "player validator accepted it");
   });
 }
+
+test("the schema's figure models are exactly the player's figure list", () => {
+  const schema = readJson<{ $defs: { figure: { properties: { model: { enum: string[] } } } } }>(
+    join(ROOT, "schemas", "ori.tour-1.schema.json"),
+  );
+  assert.deepEqual([...schema.$defs.figure.properties.model.enum].sort(), FIGURES.map((f) => f.id).sort());
+});
 
 test("a synthetic walk is a valid ori.trace/1 file", () => {
   const { tour, map } = fallsPark();

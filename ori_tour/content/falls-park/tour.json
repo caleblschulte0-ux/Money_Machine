@@ -3,7 +3,7 @@
   "id": "falls-park-sioux-falls",
   "title": "Falls Park",
   "subtitle": "Sioux Falls, South Dakota",
-  "version": "0.1.0-prototype",
+  "version": "0.2.0-prototype",
   "status": "PROTOTYPE. Stop placement is provisional and all copy is unreviewed. Not for public use.",
   "credits": [
     "Map data (c) OpenStreetMap contributors, ODbL",
@@ -72,8 +72,18 @@
       ],
       "todo": [
         "Geology narration (how the falls formed, the rock): no verified source in ORI research yet. Do not use the promo's 'twelve thousand years ago' line until it is sourced.",
-        "Confirm 'upstream to your right' on site once the stop is placed."
-      ]
+        "Confirm 'upstream to your right' on site once the stop is placed.",
+        "Place the figure on site (?edit=1 does not move figures yet; set figure.bearing_deg and offset_m from a site walk)."
+      ],
+      "figure": {
+        "model": "woolly-mammoth",
+        "scale": 1,
+        "offset_m": 9,
+        "bearing_deg": null,
+        "yaw_deg": 90,
+        "anchoring": "auto",
+        "note": "Placeholder cast (Caleb sets the final cast). The figure makes no claim about this site's history. Provisional spot: must be set on site so that walking around it keeps visitors on the path and away from the water."
+      }
     },
     {
       "id": "dakota",
@@ -126,7 +136,8 @@
       ],
       "todo": [
         "Seek advice from the Flandreau Santee Sioux and Sisseton-Wahpeton THPOs (honorarium) on this stop's words and any images.",
-        "Verify who erected the 2025 marker and its exact Dakota wording."
+        "Verify who erected the 2025 marker and its exact Dakota wording.",
+        "No figure at this stop until Dakota tribal historic preservation offices advise; any figure here is their call."
       ]
     },
     {
@@ -190,8 +201,18 @@
       ],
       "todo": [
         "Ask Siouxland Heritage Museums to check this stop and for an archival image of the mill.",
-        "Add why the mill closed only once a source says."
-      ]
+        "Add why the mill closed only once a source says.",
+        "Place the figure on site (?edit=1 does not move figures yet; set figure.bearing_deg and offset_m from a site walk)."
+      ],
+      "figure": {
+        "model": "settler",
+        "scale": 1,
+        "offset_m": 5,
+        "bearing_deg": null,
+        "yaw_deg": 0,
+        "anchoring": "auto",
+        "note": "Placeholder cast (Caleb sets the final cast). A generic figure: it represents no real person and makes no claim about who worked at the mill. Provisional spot: set on site."
+      }
     }
   ]
 }

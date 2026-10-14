@@ -566,3 +566,10 @@ body.hud {
 body.hud #view {
   padding-top: 1vh;
 }
+
+.ar-link {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  color: var(--accent);
+}
