@@ -1,5 +1,5 @@
 {
- "version": "98467969ad3d",
+ "version": "cf85d5ae4373",
  "files": [
   "./",
   "ar.html",
@@ -24,6 +24,7 @@
   "dist/core/engine.js",
   "dist/core/figures.js",
   "dist/core/geo.js",
+  "dist/core/groupaudio.js",
   "dist/core/heading.js",
   "dist/core/ports.js",
   "dist/core/relocate.js",
@@ -46,6 +47,7 @@
   "dist/web/card3d.js",
   "dist/web/figures3d.js",
   "dist/web/fur3d.js",
+  "dist/web/groups.js",
   "dist/web/hud.js",
   "dist/web/launch.js",
   "dist/web/look.js",
@@ -58,6 +60,7 @@
   "dist/web/shells/phone.js",
   "dist/web/splat3d.js",
   "dist/web/xr.js",
+  "groups.html",
   "index.html",
   "manifest.webmanifest",
   "vendor/spark.js",

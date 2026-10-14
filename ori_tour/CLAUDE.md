@@ -21,8 +21,10 @@ runs the build. This folder is the tour player and its content package.
     all wait on that review. Scene art there only with Dakota guidance.
   - Mill content waits on a Siouxland Heritage Museums check.
 - **The app never claims what is not built.** The promo video describes
-  recognising what you look at, water-edge cutoff and group audio sync; none
-  of that exists. Offline play now does (below).
+  recognising what you look at, water-edge cutoff and group audio sync.
+  Recognition and water-edge cutoff do not exist. Group audio is planned in
+  the core and shown on `groups.html` with simulated walkers; the link
+  between groups' glasses does not exist yet, so never claim it works live. Offline play now does (below).
 - **Pictures only when the visitor stands still**, with one exception:
   between stops, walking is audio only. At a stop, a world-locked figure may
   stay visible while the visitor walks around it (Caleb's requirement,
@@ -239,13 +241,20 @@ src/core/     TypeScript, platform-free. Compiled with NO DOM and NO Node types
   replay.ts     replay a recorded walk (ori.trace/1 or GPX) on a virtual clock
   synthwalk.ts  a SYNTHETIC walk from route geometry, for tests (labelled as such)
   text.ts       caption sentence rule (shared with tools/make_narration.py)
+  groupaudio.ts passing groups never talk over each other (patent Part A): predicts
+                where each group is and when it speaks, finds encounters within
+                interferenceM, plans the cheapest holds at flex points (a silent
+                visual prompt) or skips of optional sentences, ducks as fallback;
+                plus the shared-clock playhead, clock offset and rate catch-up
+                that keep one group's glasses in sync
 src/web/      browser adapters: platform (clock, fetch, storage), sensors (GPS,
               compass, accelerometer, simulator, replay, recorder), audio, scene,
               map, hud (sensor readout), shells/phone.ts, shells/glasses.ts, app.ts;
               figures: xr.ts (WebXRTracker), quicklook.ts (iPhone), figures3d.ts, look.ts
-              (light, shadow, occlusion), ar.ts
+              (light, shadow, occlusion), ar.ts, fur3d.ts; groups.ts (demo)
 vendor/       three.js bundled by tools/vendor_three.mjs (the build runs it), MIT
 ar.html       the figure page: the tour with figures in AR, and free placement
+groups.html   group audio demo: two simulated groups on the real route (from ar.html)
 assets/figures/  figure models (glb + usdz), credited in CREDITS.md
 dist/         compiled JS, COMMITTED (static hosting has no build step); CI fails if stale
 schemas/      JSON Schemas: ori.tour-1 (content), ori.trace-1 (recorded walks)

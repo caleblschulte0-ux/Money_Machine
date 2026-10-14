@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f1012" />
+    <title>Group audio</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M2 11a6 6 0 0 1 12 0z%22 fill=%22%23ffbe5a%22/%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        --ground: #0f1012;
+        --ink: #f5f3ee;
+        --subtle: #a09e98;
+        --accent: #ffbe5a;
+        --line: rgba(255, 255, 255, 0.14);
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--ground);
+        color: var(--ink);
+        font:
+          15px/1.45 system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 18px 16px 48px;
+        display: grid;
+        gap: 14px;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 0;
+      }
+      .kicker {
+        color: var(--accent);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      p {
+        margin: 0;
+      }
+      .muted {
+        color: var(--subtle);
+        font-size: 13px;
+      }
+      #map {
+        width: 100%;
+        height: 340px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        display: block;
+      }
+      .tl {
+        position: relative;
+      }
+      #timeline {
+        width: 100%;
+        height: 92px;
+        display: block;
+        cursor: pointer;
+      }
+      #cursor {
+        position: absolute;
+        top: 0;
+        bottom: 14px;
+        width: 2px;
+        background: var(--ink);
+        pointer-events: none;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      button {
+        font: inherit;
+        color: var(--ink);
+        background: #23262c;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 12px;
+      }
+      button.on,
+      #play {
+        background: var(--accent);
+        color: #1a1408;
+        border-color: var(--accent);
+      }
+      label {
+        display: grid;
+        grid-template-columns: 9em 1fr 4.5em;
+        gap: 8px;
+        align-items: center;
+        font-size: 14px;
+      }
+      input[type="range"] {
+        width: 100%;
+      }
+      #report ul {
+        margin: 6px 0 0;
+        padding-left: 1.2em;
+      }
+      .legend span {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        margin: 0 4px 0 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="kicker">Open Range Interactive · group audio</div>
+      <h1>Two tour groups pass each other. Each hears only its own story.</h1>
+      <p>
+        Glasses speakers are open to the air, so a group's narration carries a few metres. When a faster group catches
+        up with a slower one, or both reach the same stop, the system already knows where each will be and what each
+        will be saying. It holds one group for a moment, showing something to look at, so the two never talk over each
+        other while they are close.
+      </p>
+      <canvas id="map" aria-label="Map of the Falls Park route with the two groups"></canvas>
+      <div class="row">
+        <button id="play">Play</button>
+        <button data-rate="1">1x</button>
+        <button data-rate="8" class="on">8x</button>
+        <button data-rate="30">30x</button>
+        <button id="jump">Go to where they meet</button>
+        <span id="clock" class="muted">0:00</span>
+      </div>
+      <div class="tl">
+        <canvas id="timeline" aria-label="When each group is talking"></canvas>
+        <div id="cursor"></div>
+      </div>
+      <p class="muted legend">
+        Bars: when each group is talking. Thin grey: a group waiting at a pause point.
+        <span style="background: #ff5a5a"></span>Red: both talking while within 8 m. The timeline shows three minutes
+        around now; tap it to jump.
+      </p>
+      <div class="row">
+        <span
+          ><input type="checkbox" id="coord" checked />
+          <label for="coord" style="display: inline">Coordination on</label></span
+        >
+        <button data-listen="0">Listen as group A</button>
+        <button data-listen="1">Listen as group B</button>
+      </div>
+      <div id="report">Loading the tour…</div>
+      <label
+        >Group B sets off <input type="range" id="gap" min="0" max="180" step="5" value="50" /><span id="gapOut"></span
+      ></label>
+      <label
+        >Group A walks <input type="range" id="speedA" min="0.6" max="1.6" step="0.1" value="1" /><span
+          id="speedAOut"
+        ></span
+      ></label>
+      <label
+        >Group B walks <input type="range" id="speedB" min="0.6" max="1.6" step="0.1" value="1.4" /><span
+          id="speedBOut"
+        ></span
+      ></label>
+      <p class="muted">
+        The groups here are simulated walkers on the real Falls Park route, playing the tour's real narration. "Listen
+        as" plays it at real speed: your own group at full volume, the other group as much as leaks across the distance
+        between you (a rough model, not measured on glasses). On glasses, the same planner runs from each group's live
+        position and speed, and every pair in a group plays from one shared clock. The link between groups' glasses is
+        not built yet.
+      </p>
+      <p class="muted"><a href="ar.html" style="color: var(--accent)">Back to the AR tour</a></p>
+    </main>
+    <script type="module" src="dist/web/groups.js"></script>
+  </body>
+</html>
