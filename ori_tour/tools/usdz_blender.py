@@ -27,6 +27,9 @@ a.add_argument("--yaw", type=float, default=0.0)
 a.add_argument("--clip", default=None)
 a.add_argument("--tint", default=None, help="0xRRGGBB base colour for a model with no colour texture")
 a.add_argument("--max-tris", type=int, default=60000, help="decimate a static mesh above this (USDZ size)")
+a.add_argument("--fur", default=None, help="the figure's FigureFur as JSON: grow it as shell fur Quick Look can show")
+a.add_argument("--fur-shells", type=int, default=6, help="shells in the USDZ (fewer than the page: download size)")
+a.add_argument("--fur-tris", type=int, default=12000, help="triangles per fur shell")
 args = a.parse_args(sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else sys.argv[1:])
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -124,8 +127,179 @@ bpy.context.view_layer.update()
 lo, hi = bounds()
 print(f"size {hi.x - lo.x:.2f} x {hi.y - lo.y:.2f} x {hi.z - lo.z:.2f} m, ground {lo.z:.3f}")
 
+
+def saved_image(name, rgba, colorspace):
+    """Write pixels to a file in tmp and load it back as a FILE image (a generated
+    image regenerates, losing its pixels, when its colour space changes)."""
+    import numpy as np
+
+    h, w = rgba.shape[:2]
+    img = bpy.data.images.new(name, w, h)
+    img.pixels.foreach_set(np.clip(rgba, 0, 1).astype(np.float32).ravel())
+    path = os.path.join(tmp, name)
+    img.filepath_raw = path
+    img.file_format = "JPEG" if name.endswith(".jpg") else "PNG"
+    img.save()
+    bpy.data.images.remove(img)
+    out = bpy.data.images.load(path)
+    out.colorspace_settings.name = colorspace
+    return out
+
+
+def grow_fur(fur):
+    """Shell fur Quick Look can show: --fur-shells decimated copies of the skinned
+    mesh, each pushed out along its normal, skinned to the same bones, cut to
+    strands by one strand map. The map holds len * (1 - 2d) per texel (a rounded cone
+    per strand); a shell at height s keeps the texels above s through UsdPreviewSurface's
+    opacityThreshold, which is the page's test (src/web/fur3d.ts) in one texture."""
+    import numpy as np
+
+    skinned = [o for o in scene.objects if o.type == "MESH" and any(m.type == "ARMATURE" for m in o.modifiers)]
+    for o in skinned:
+        mat = o.active_material
+        tex = mat and next((n.image for n in mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image), None)
+        if tex is None:
+            continue
+        w, h = tex.size
+        px = np.empty(w * h * 4, np.float32)
+        tex.pixels.foreach_get(px)
+        px = px.reshape(h, w, 4)  # row 0 is the bottom; values are the stored sRGB
+        lin = np.where(px[..., :3] <= 0.04045, px[..., :3] / 12.92, ((px[..., :3] + 0.055) / 1.055) ** 2.4)
+        lum = lin @ np.array([0.299, 0.587, 0.114], np.float32)
+
+        me = o.data
+        nv = len(me.vertices)
+        # each vertex's texture brightness, from its loops' UVs
+        uv = np.empty(len(me.loops) * 2, np.float32)
+        me.uv_layers.active.data.foreach_get("uv", uv)
+        uv = uv.reshape(-1, 2) % 1.0
+        lv = np.empty(len(me.loops), np.int64)
+        me.loops.foreach_get("vertex_index", lv)
+        l_lum = lum[(uv[:, 1] * (h - 1)).astype(int), (uv[:, 0] * (w - 1)).astype(int)]
+        v_sum = np.bincount(lv, l_lum, nv)
+        v_cnt = np.maximum(np.bincount(lv, None, nv), 1)
+        # connected pieces (union-find over polygon edges)
+        parent = np.arange(nv)
+
+        def find(i):
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        for poly in me.polygons:
+            vs = poly.vertices
+            r0 = find(vs[0])
+            for v in vs[1:]:
+                r = find(v)
+                if r != r0:
+                    parent[r] = r0
+        roots_ = np.array([find(i) for i in range(nv)])
+        p_sum = np.bincount(roots_, v_sum / v_cnt, nv)
+        p_cnt = np.maximum(np.bincount(roots_, None, nv), 1)
+        mean = (p_sum / p_cnt)[roots_]
+        bare = (mean > fur["bareAbove"]) | (mean < fur["bareBelow"])
+        print(f"fur: {int(bare.sum())} of {nv} vertices bare")
+
+        # the coat colour, with the model's painted hair and baked shading kept as light and dark
+        def lin_hex(v):
+            c = np.array([(v >> 16) & 255, (v >> 8) & 255, v & 255], np.float32) / 255
+            return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+        coat_lin = lin_hex(fur["rootColor"]) * 0.55 + lin_hex(fur["tipColor"]) * 0.45  # one colour per shell: near the root, or tips speckle
+        shade = np.clip(lum / 0.06, 0.35, 1.8)[..., None]
+        c = np.clip(coat_lin * shade, 0, 1)
+        c = np.where(c <= 0.0031308, c * 12.92, 1.055 * c ** (1 / 2.4) - 0.055)
+        coat = saved_image("fur_coat.jpg", np.concatenate([c, np.ones((h, w, 1), np.float32)], 2), "sRGB")
+        # the skin under the coat in the root colour, so gaps between strands read as dense fur
+        # (as the page does); the bare pieces keep the model's own material
+        r_ = np.clip(lin_hex(fur["rootColor"]) * shade, 0, 1)
+        r_ = np.where(r_ <= 0.0031308, r_ * 12.92, 1.055 * r_ ** (1 / 2.4) - 0.055)
+        skin = saved_image("fur_root.jpg", np.concatenate([r_, np.ones((h, w, 1), np.float32)], 2), "sRGB")
+        own = mat.copy()
+        own.name = "bare"
+        mat.node_tree.nodes[next(n.name for n in mat.node_tree.nodes if n.type == "TEX_IMAGE" and n.image)].image = skin
+        me.materials.append(own)
+        bare_faces = np.array([all(bare[v] for v in p.vertices) for p in me.polygons])
+        me.polygons.foreach_set("material_index", np.where(bare_faces, len(me.materials) - 1, 0).astype(np.int32))
+
+        # the strand map: a cone per strand, height = the strand's length
+        n = max(8, int(fur["strands"] * 0.35))  # coarser than the page: about 4 px per strand in a 1024 px map
+        S = 1024
+        rng = np.random.default_rng(7)
+        hsh = rng.random((n, n), dtype=np.float32)
+        jx, jy = (rng.random((n, n), dtype=np.float32) - 0.5) * 0.5, (rng.random((n, n), dtype=np.float32) - 0.5) * 0.5
+        g = (np.arange(S, dtype=np.float32) + 0.5) / S * n
+        gx, gy = np.meshgrid(g, g)
+        cx, cy = gx.astype(int), gy.astype(int)
+        fx, fy = gx - cx - 0.5 - jx[cy, cx], gy - cy - 0.5 - jy[cy, cx]
+        ln = 0.4 + 0.6 * hsh[cy, cx] ** 2
+        cone = ln * np.clip(1 - 2 * np.sqrt(fx * fx + fy * fy), 0, 1) ** 0.6  # rounded, so strands keep some body
+        mask = saved_image("fur_strands.png", np.repeat(cone[..., None], 4, 2), "Non-Color")
+
+        ws = o.matrix_world.to_scale()
+        len_local = fur["lengthM"] / ((ws.x + ws.y + ws.z) / 3)
+        down = (o.matrix_world.inverted().to_3x3() @ Vector((0, 0, -1))).normalized()
+        co = np.empty(nv * 3, np.float32)
+        me.vertices.foreach_get("co", co)
+        nrm = np.empty(nv * 3, np.float32)
+        me.vertices.foreach_get("normal", nrm)
+        co, nrm = co.reshape(-1, 3), nrm.reshape(-1, 3)
+        tris = sum(len(p.vertices) - 2 for p in me.polygons)
+        shells = args.fur_shells
+        for i in range(1, shells + 1):
+            t = i / shells
+            sh = o.copy()
+            sh.data = me.copy()
+            sh.name = f"{o.name}_fur{i}"
+            for coll in o.users_collection:
+                coll.objects.link(sh)
+            moved = co + nrm * (t * len_local) + np.array(down) * (len_local * 0.8 * t * t)
+            sh.data.vertices.foreach_set("co", moved.ravel())
+            import bmesh
+
+            bm = bmesh.new()
+            bm.from_mesh(sh.data)
+            bm.verts.ensure_lookup_table()
+            bmesh.ops.delete(bm, geom=[bm.verts[j] for j in np.nonzero(bare)[0]], context="VERTS")
+            bm.to_mesh(sh.data)
+            bm.free()
+            d = sh.modifiers.new("decimate", "DECIMATE")
+            d.ratio = min(1.0, args.fur_tris / tris)
+            bpy.context.view_layer.objects.active = sh
+            bpy.ops.object.modifier_move_to_index(modifier=d.name, index=0)
+            bpy.ops.object.modifier_apply(modifier=d.name)
+            m = bpy.data.materials.new(f"fur{i}")
+            m.use_nodes = True
+            nt = m.node_tree
+            b = nt.nodes["Principled BSDF"]
+            b.inputs["Roughness"].default_value = 1.0
+            ct = nt.nodes.new("ShaderNodeTexImage")
+            ct.image = coat
+            mt = nt.nodes.new("ShaderNodeTexImage")
+            mt.image = mask
+            gt = nt.nodes.new("ShaderNodeMath")
+            gt.operation = "GREATER_THAN"
+            gt.inputs[1].default_value = t - 1e-3
+            nt.links.new(ct.outputs["Color"], b.inputs["Base Color"])
+            nt.links.new(mt.outputs["Color"], gt.inputs[0])
+            nt.links.new(gt.outputs[0], b.inputs["Alpha"])
+            sh.data.materials.clear()
+            sh.data.materials.append(m)
+        print(f"fur: {shells} shells of about {args.fur_tris} triangles, {fur['lengthM']} m")
+
+
+if args.fur:
+    import json
+
+    grow_fur(json.loads(args.fur))
+    bpy.context.view_layer.update()
+
+# with fur, export to a plain USD first: Blender writes the strand map as the
+# shells' opacity but not the threshold that cuts it into strands
+export_to = os.path.join(tmp, "figure.usdc") if args.fur else args.out
 bpy.ops.wm.usd_export(
-    filepath=args.out,
+    filepath=export_to,
     export_animation=args.clip is not None,
     export_armatures=True,
     export_shapekeys=True,
@@ -141,3 +315,17 @@ bpy.ops.wm.usd_export(
     export_cameras=False,
     convert_world_material=False,
 )
+
+if args.fur:
+    from pxr import Sdf, Usd, UsdShade, UsdUtils
+
+    stage = Usd.Stage.Open(export_to)
+    for prim in stage.Traverse():
+        name = prim.GetParent().GetName() if prim.GetParent() else ""
+        if prim.GetTypeName() == "Shader" and name.startswith("fur") and name[3:].isdigit():
+            s = UsdShade.Shader(prim)
+            if s.GetIdAttr().Get() == "UsdPreviewSurface":
+                s.CreateInput("opacityThreshold", Sdf.ValueTypeNames.Float).Set(int(name[3:]) / args.fur_shells - 1e-3)
+    stage.GetRootLayer().Save()
+    if not UsdUtils.CreateNewARKitUsdzPackage(Sdf.AssetPath(export_to), args.out):
+        raise SystemExit("could not package the USDZ")

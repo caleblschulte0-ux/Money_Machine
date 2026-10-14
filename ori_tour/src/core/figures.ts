@@ -85,7 +85,10 @@ export interface FigureInfo extends FigureSpec {
   /** Which code-drawn shape stands in if the model file cannot load. Data, so a new figure needs no port change. */
   standIn: StandIn;
   file: FigureModel;
-  /** Download budgets, bytes, for a phone on a cell connection. test/figures.test.ts holds the files to them. */
+  /**
+   * Download budgets, bytes, for a phone on a cell connection. test/figures.test.ts holds the files to them.
+   * The woolly mammoth's USDZ carries its fur as shells (tools/usdz_blender.py --fur), about 6 MB of it.
+   */
   budgetBytes: { glb: number; usdz: number; splat?: number };
 }
 
@@ -123,7 +126,7 @@ export const FIGURES: readonly FigureInfo[] = [
         bareBelow: 0.026,
       },
     },
-    budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
+    budgetBytes: { glb: 1_300_000, usdz: 11_000_000 },
   },
   {
     id: "mammoth",
@@ -217,7 +220,7 @@ export const FIGURES: readonly FigureInfo[] = [
       splat: { file: "assets/figures/woolly-mammoth-test.splat", madeFrom: "model", frontYawDeg: -90 },
       fur: null,
     },
-    budgetBytes: { glb: 1_300_000, usdz: 4_600_000, splat: 4_000_000 },
+    budgetBytes: { glb: 1_300_000, usdz: 11_000_000, splat: 4_000_000 },
   },
 ];
 

@@ -94,8 +94,13 @@ can; Meta Ray-Ban Display cannot).
   piece by average texture brightness (`bareAbove`/`bareBelow`, measured on
   the model). Cost: one draw of the whole mesh per shell (woolly mammoth: 16
   x 57k triangles); `?fur=off` turns it off. `look.ts` occlusion chains onto
-  the fur shader rather than replacing it. Not in the USDZ: iPhone Quick
-  Look still shows the bare model; the in-page route (App Clip) shows fur.
+  the fur shader rather than replacing it. iPhone Quick Look gets the coat
+  too: `tools/usdz_blender.py --fur` adds 6 decimated, skinned shells cut
+  by one strand map through UsdPreviewSurface `opacityThreshold` (Blender
+  writes the map but not the threshold, so it is set with pxr and repackaged),
+  and the skin under it in the root colour; +6 MB (USDZ 10.7 MB). Checked by
+  re-importing in Blender (Cycles needs `transparent_max_bounces` raised or
+  the shells render black); not yet seen in Quick Look itself.
   A glasses port grows the same coat with its own fur (Lens Studio shells).
 - **iPhone = AR Quick Look, so the USDZ IS the iPhone figure** (Caleb tests
   on an iPhone; first run 2026-10-07: "like a 2020 Snapchat filter, not

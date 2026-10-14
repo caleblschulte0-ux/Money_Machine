@@ -39,7 +39,7 @@ export const FIGURES = [
                 bareBelow: 0.026,
             },
         },
-        budgetBytes: { glb: 1_300_000, usdz: 4_600_000 },
+        budgetBytes: { glb: 1_300_000, usdz: 11_000_000 },
     },
     {
         id: "mammoth",
@@ -129,7 +129,7 @@ export const FIGURES = [
             splat: { file: "assets/figures/woolly-mammoth-test.splat", madeFrom: "model", frontYawDeg: -90 },
             fur: null,
         },
-        budgetBytes: { glb: 1_300_000, usdz: 4_600_000, splat: 4_000_000 },
+        budgetBytes: { glb: 1_300_000, usdz: 11_000_000, splat: 4_000_000 },
     },
 ];
 export const figureById = (id) => FIGURES.find((f) => f.id === id);
